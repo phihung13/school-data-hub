@@ -298,7 +298,7 @@ export function CheckinView() {
           )}
           <div className="mt-2 flex items-center justify-center gap-1">
             <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-            <span className="text-[12px] text-muted2">Chỉ thầy cô chủ nhiệm thấy</span>
+            <span className="text-[12px] text-muted2">Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy</span>
           </div>
 
           <button
@@ -341,7 +341,7 @@ export function CheckinView() {
           </div>
           <div className="mt-1.5 flex items-center justify-center gap-1">
             <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-            <span className="text-[12px] text-muted2">Chỉ thầy cô chủ nhiệm thấy</span>
+            <span className="text-[12px] text-muted2">Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy</span>
           </div>
         </div>
 

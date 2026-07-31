@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 18
+sync-version: 20
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -42,7 +42,7 @@ Dữ liệu lõi (người dùng, học sinh, giáo viên, phụ huynh, cơ sở
 ## Dữ liệu cảm xúc (§3, ADR-002) — lưu như dữ liệu thường
 
 - Không mã hóa, không khu vực khóa riêng: check-in cảm xúc nằm trong `attendance.checkins` như dữ liệu thường; `counselor_notes` trong `care`.
-- Phân quyền theo ma trận chung dưới đây, y như mọi dữ liệu khác.
+- ~~Phân quyền theo ma trận chung dưới đây, y như mọi dữ liệu khác.~~ **Sửa 31/07/2026 (`0038`):** cột `attendance.checkins.mood` **KHÔNG** đi theo hàng 1 ma trận nữa. "Lưu như dữ liệu thường" là câu về CÁCH LƯU (không mã hóa, không bảng riêng) — nó chưa bao giờ có nghĩa "ai cũng đọc được như nhau". Phạm vi đọc mood là `core.can_read_mood()` = chính em ∪ GVCN của em ∪ tâm lý cụm; xem mục "Che cột `mood`" bên dưới.
 - Cờ E chỉ ghi loại tín hiệu, không sao chép nội dung vào cờ.
 - Job xóa chi tiết mood >12 tháng (giữ aggregate `attendance.mood_trends`) — lời hứa công khai, **đã có hàm thật + test từ 31/07/2026**: `attendance.rollup_mood_trends()` chạy trước, `attendance.purge_old_emotion_details()` xóa sau (`0031`). Phần còn thiếu là bộ lập lịch gọi chúng hằng đêm — ghi `DEBT.md` #24, không được nói là đã tự chạy.
 - Báo cáo học thuật/xếp loại không dùng dữ liệu cảm xúc (§5).
@@ -55,6 +55,7 @@ Luật đọc bảng này (siết lại 31/07/2026): **ô nào không ghi `GĐ2`
 | Dữ liệu ↓ / Role → | student | guardian | teacher | homeroom | counselor | principal | board |
 |---|---|---|---|---|---|---|---|
 | core / tutor / evidence / attendance | own | children | assigned classes | homeroom class | cluster | campus | **GĐ2** |
+| ↳ **ngoại lệ: cột `attendance.checkins.mood`** (`0038`) | own | **—** | **—** | homeroom class | cluster | **—** | **GĐ2** |
 | care.flags + interventions | — | — | **GĐ2** | homeroom class | cluster | **GĐ2** | **GĐ2** |
 | health.logs (y tế) | — | children | **—** | homeroom | cluster | — | — |
 | care.counselor_notes | — | — | — | homeroom | cluster | — | — |
@@ -161,6 +162,75 @@ Các migration `0013`–`0022` đều phụ thuộc baseline `0001`–`0009`; `0
 | Policy `help_requests_scope` viết lại: `core.can_see_student()` → `core.is_me() OR core.can_see_care()` | `0037_help_requests_scope.sql` | **Lỗ riêng tư ở tầng dữ liệu, đo được trên hub_dev trước khi vá.** Chi tiết đầy đủ ở đoạn "Hàng `attendance.help_requests` tách khỏi hàng 1" trong mục Ma trận RLS phía trên. Ba điểm cần nhớ khi đọc lại file này về sau: (1) `attendance.help_requests` **không còn** đi theo vòng lặp 16 bảng của `0009` — sửa vòng lặp đó không sửa được bảng này, và đó là chủ ý; (2) phạm vi mới trùng khít policy UPDATE `help_requests_handle_care` (`0026`) nên đọc và ghi cho **cùng một kết luận quyền** — không còn cảnh ghi được mà không đọc được; (3) `care.v_signal_emotion` (`0009`, viết lại `0026`) vẫn chỉ ĐẾM tín hiệu, không đọc `note`, nên mọi cờ và mọi số tổng hợp không đổi — buồng lái GVCN vẫn bật `E_URGENT`, chỉ là nội dung không đi theo cờ. Cùng họ với `0035` trên `care.counselor_notes`: hai lần cùng một lỗi gốc — **dùng chung một hàm phạm vi cho hai câu hỏi khác nhau** ("em này có thuộc tầm quản lý của tôi không" ≠ "ai được đọc lời em kể"). |
 
 Kiểm chứng đã chạy (31/07/2026): `0037_help_requests_scope_test.sql` 13 assertion và `tests/db/help-request-rieng-tu.test.ts` 8 ca. Cả hai đã được thử ngược — trả policy về `core.can_see_student()` thì pgTAP đỏ 7/13 và vitest đỏ 3/8, trong đó có đúng câu "phụ huynh đọc ra 0 dòng".
+
+## Che cột `mood` (`0038`) — lần thứ BA của cùng một lỗi gốc
+
+Màn `/checkin` in chữ cho học sinh đọc, ngay tại chỗ em bấm bốn ô cảm xúc. Cho tới 01/08/2026 câu đó là **"Chỉ thầy cô chủ nhiệm thấy"**, và `DESIGN-GUIDELINES §9` ghi đúng câu đó. Nay câu đã sửa thành **"Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"** — vì `core.can_read_mood()` cho ĐÚNG hai vai đọc, mà nhãn cũ chỉ kể một: **nói thiếu một vai cũng là nói dối, chỉ khó bắt hơn.** Sửa ở cả bốn chỗ in nhãn (`checkin-view.tsx` ×2, `home-view.tsx`, `this-week-view.tsx`) và ở thẻ «Ai thấy gì của mình?» (`profile-view.tsx`) — màn sinh ra để nói thật thì không được là màn nói thiếu. Ở tầng dữ liệu thì không: `attendance.checkins` nằm trong vòng lặp 16 bảng của `0009:150-176` nên dùng chung `core.can_see_student()` — hàm gồm cả `is_my_child` và `principal_of`. **RLS lọc theo DÒNG, mà `mood` là một CỘT nằm chung dòng với điểm danh.**
+
+Đo trên hub_dev trước khi vá, dưới đúng danh tính từng vai: phiên **phụ huynh đọc ra 7 dòng có mood**, phiên **hiệu trưởng 8 dòng**.
+
+Quyết định nghiệp vụ chủ đầu tư 31/07/2026: mood CHỈ GVCN và tâm lý cụm thấy; phụ huynh và hiệu trưởng KHÔNG thấy mood từng ngày, nhưng phụ huynh VẪN thấy điểm danh và VẪN thấy báo cáo tổng hợp.
+
+| Đối tượng | Migration | Ghi chú |
+|---|---|---|
+| `core.can_read_mood(uuid)` | `0038_checkins_mood_scope.sql` | Hàm phạm vi **thứ tư**, đứng cạnh `can_see_student` / `can_see_care` / `can_see_health`: `core.is_me() OR core.can_see_care()`. Lý do nó phải có TÊN RIÊNG: đây là lần thứ BA trong một ngày cùng một lỗi gốc — `0035` (`care.counselor_notes`), `0037` (`attendance.help_requests`), giờ là `mood`. Cả ba đều là **dùng chung một hàm phạm vi cho hai câu hỏi khác nhau**: "ai được thấy em này" ≠ "ai được thấy em này CẢM THẤY GÌ". Không đặt tên cho câu hỏi thứ hai thì sẽ có lần thứ tư. |
+| Thu `GRANT SELECT` trên `attendance.checkins` xuống **mọi cột trừ `mood`** | `0038_checkins_mood_scope.sql` | Cùng khuôn mẫu `0025` đã dùng cho UPDATE. Postgres không cho revoke một cột ra khỏi quyền cấp ở mức bảng (chỉ WARNING), nên phải revoke cả bảng rồi grant lại theo danh sách cột. **Rủi ro đã biết:** danh sách viết tay thì lệch — thêm cột mới vào `attendance.checkins` mà quên grant là cột đó vô hình với cả hệ thống. Cả pgTAP `0038` lẫn `tests/db/mood-rieng-tu.test.ts` đều có một assertion canh đúng chỗ đó (so danh sách cột với `has_column_privilege`). |
+| View `attendance.checkins_care` | `0038_checkins_mood_scope.sql` | Đường ĐỌC mood duy nhất của người dùng cuối. **Cố ý KHÔNG `security_invoker = true`**, ngược luật chung mà `0024` đặt ra: view invoker kiểm quyền bằng quyền người gọi, mà người gọi vừa bị revoke đúng cột `mood` ⇒ view tự chặn chính nó. View chủ-quyền đọc được `mood`, đổi lại nó bỏ qua RLS nên **phạm vi dòng phải tự khai trong mệnh đề WHERE** (`core.can_read_mood`). An toàn dựa vào bất đẳng thức `can_read_mood ⊂ can_see_student` — view không mở thêm một dòng nào mà RLS đã đóng; pgTAP `0038` ghim lại. |
+| `attendance.happy_days(student, from, to)` | `0038_checkins_mood_scope.sql` | Số "ngày Vui" trong một khoảng — **SỐ TỔNG HỢP** cho Báo cáo Trưởng thành mà phụ huynh đọc, không phải mood từng ngày. Ranh giới chủ đầu tư chốt: phụ huynh mất mood từng ngày, giữ báo cáo tổng hợp. `SECURITY DEFINER` (phải đọc được `mood`) nên tự kiểm phạm vi bằng `core.can_see_student()` và **bắt buộc `revoke execute from public`** (cùng lý do `0031`). Trả **NULL** — không phải 0 — khi người gọi không được xem em này: "không được phép biết" khác "không có ngày vui nào". |
+
+**Đánh đổi đã cân, ghi lại để lần sau không phải cân lại.** PostgreSQL chỉ có đúng hai cách giấu một cột khỏi một người; đã thử cả hai trên hub_dev (PG 16.14):
+
+- **View che cột** (`case when core.can_read_mood(...) then mood end`) — ưu: không câu đọc nào trong `apps/hub` phải sửa. **Bị loại** vì hai lý do đo được: (1) cột tính bằng biểu thức thì không ghi được, muốn giữ đường ghi thì phải đổi `attendance.checkins` thành view + trigger `INSTEAD OF`, mà `INSERT … ON CONFLICT` trên view có trigger `INSTEAD OF` bị Postgres từ chối thẳng ⇒ gãy đúng `checkin.submitMood`; (2) nguy hiểm hơn — `attendance.rollup_mood_trends()` (`0031`) chạy dưới vai hệ thống, không có ngữ cảnh người dùng ⇒ `can_read_mood()` false ⇒ `avg(mood)` toàn NULL ⇒ job ghi xu hướng RỖNG rồi `purge_old_emotion_details()` xóa chi tiết ngay sau. **Mất sạch dữ liệu 12 tháng mà không một dòng lỗi nào.**
+- **Grant theo cột** (đã chọn) — bảng vẫn là BẢNG nên mọi INSERT/UPDATE, RLS, trigger `0025`, index, job nền, view nội bộ chủ-quyền (`care.v_signal_emotion`, `report.*`) và role `backup_reader` đều nguyên vẹn. Đọc sai phạm vi thì Postgres **ném lỗi 42501 ngay tại câu SQL**. Giá phải trả, nói thẳng: mọi câu ĐỌC `mood` dưới vai `authenticated` phải đổi nguồn sang `attendance.checkins_care` — danh sách đầy đủ nằm ở cuối file migration.
+
+Lý do quyết định không phải "ít việc hơn" mà là: **một lời hứa bị phá phải hỏng thành tiếng.** Với cách che cột, ngày nó che nhầm chỗ thì không ai biết cho tới lúc mở bảng xu hướng ra thấy trống.
+
+Kiểm chứng đã chạy (31/07/2026): `0038_checkins_mood_scope_test.sql` 20 assertion và `tests/db/mood-rieng-tu.test.ts` 11 ca, cả hai xanh trên Postgres thật. Hai bài test cũ đổi chiều **có chủ ý** và phải đi kèm ADR: `0023_principal_scope_test.sql` (chính file đó đã viết sẵn "nếu Hội đồng dữ liệu sau này quyết định che mood khỏi BGH thì đây là assertion đỏ đầu tiên") và `0017_checkins_self_update_test.sql` (`excluded.mood` bị Postgres tính là ĐỌC cột `mood` nên đòi quyền SELECT — gán thẳng tham số thì không).
+
+## Đợt mở cho cả khối (`0039`–`0041`, 31/07–01/08/2026)
+
+Ba migration cuối của đợt B không siết quyền — chúng trả lời ba câu hỏi mà hệ chỉ gặp khi số lớp tăng từ một lên cả khối: **ai quét cờ**, **BGH nhìn bằng gì**, và **làm sao biết job đêm qua có chạy không**. Cả ba đều là biến thể của cùng một luật: *im lặng không phải kết luận.*
+
+### `0039_flag_engine.sql` — bộ quét cờ có thật, chạy một lần, để lại dấu
+
+| Đối tượng | Ghi chú |
+|---|---|
+| `care.rules.source_key` (cột mới, FK → `ops.source_freshness`) | Khai **luật nào sống nhờ nguồn nào**, để thi hành hành vi cố định số 5 của `04-flag-engine.md` ("nguồn hết tươi thì BỎ QUA rule, không kết luận ổn"). `C_MASTERY`/`C_CEFR` để NULL **có chủ ý** — chưa connector nào ghi hạn tươi cho Tutor/COR, nên engine bỏ qua hai luật đó **kèm lý do** thay vì quét bảng rỗng rồi im. `ON DELETE SET NULL`: xoá một dòng nguồn thì luật quay về "chưa khai nguồn", không kéo theo cả dòng luật. |
+| `care.run_flag_engine(p_on_date date, p_school uuid, p_dry_run bool)` | Toàn bộ thuật toán trong MỘT hàm, chạy được từ `psql` lẫn từ job Node. Ghi `ops.job_runs` mỗi lần chạy — nhờ vậy buồng lái trả lời được "quét đêm qua lúc mấy giờ", và **buồng lái trống mà không có dòng đó là hệ hỏng, không phải lớp ổn**. Idempotent theo `(student, rule, date)` (§9): chạy hai lần không sinh cờ đôi. **KHÔNG** `grant execute to authenticated` — chỉ vai hệ thống gọi. |
+| `care.v_signal_attendance`, `care.v_signal_behavior` (viết lại) | Bỏ cửa sổ `current_date - 30` viết chết, đọc `window_days` từ `care.thresholds` qua `care.resolve_threshold` **theo từng cơ sở** (mệnh lệnh 7). Trước đó bảng ngưỡng và mã nguồn nói hai con số cho cùng một điều: người sửa bảng tưởng mình vừa đổi hành vi hệ thống, trong khi không. |
+
+`0039` **cố ý không sửa `care.ts`** — buồng lái vẫn tính trực tiếp cho tới khi có gói chuyển sang đọc `care.flags`. Hai đường cùng tồn tại và phải cho **cùng một kết quả**; đó là cách đối chiếu. Đổi cả hai cùng lúc thì hôm lệch số không biết bên nào sai.
+
+### `0040_report_aggregate.sql` — BGH nhìn bằng số tổng hợp, không nhìn bằng tên em
+
+Trước file này `principal` và `board` có **0 màn hình**: `board` không nằm trong `core.can_see_student()` nên nhìn đâu cũng trống, còn `principal` đọc được từng em nhưng không có bất kỳ con số tổng nào. `0040` là hệ luận đúng chiều của ADR-025 — đầu kia siết đường đọc **cá nhân**, đầu này mở đường đọc **tổng hợp**.
+
+| Đối tượng | Ghi chú |
+|---|---|
+| `report.min_cohort()` | Ngưỡng ẩn danh — **một con số, một chỗ**. `0009` đã đặt 10 cho `report.v_campus_trends`; hàm này giữ để hai chỗ không lệch nhau về sau. Cố ý **không** đặt vào `care.thresholds`: bảng đó là ngưỡng CẢNH BÁO (mệnh lệnh 7), còn đây là ngưỡng RIÊNG TƯ — trộn hai thứ là mở đường cho một câu `UPDATE` vận hành hạ ngưỡng ẩn danh xuống 1. |
+| `report.aggregate_school_ids()` | Cổng vai. Sai vai thì **RAISE**, không trả bảng rỗng: bảng rỗng đọc y hệt "cả khối hôm nay không có gì". |
+| `report.class_pulse_raw(p_on_date date)` | Nơi thật sự chạm dữ liệu. `SECURITY DEFINER` (phải đếm `care.care_cases` mà `principal` không đọc được), `search_path` khoá cứng, và **không cấp execute cho bất kỳ ai** — chỉ hai hàm bọc đã qua cổng vai gọi được. |
+| `report.class_pulse(...)`, `report.grade_pulse(...)` | Hai hàm bọc, viết bằng **plpgsql chứ không phải SQL thuần**, vì trong SQL thuần cổng nằm trong mệnh đề `IN` có thể không bao giờ chạy khi truy vấn ngoài đã ra 0 dòng — **cổng không chạy là cổng không tồn tại**. Đơn vị nhỏ nhất là MỘT LỚP; lớp dưới `min_cohort()` trả **NULL + `cohort_too_small = true`, không trả 0** ("không được phép nói" ≠ "không có ai vắng"). |
+
+**Cố ý không có trong `0040`:** không cột nào trả `student_id`/tên/mã học sinh kể cả gián tiếp; không tên GVCN kèm số liệu lớp (ghép "cô nào" với "tâm trạng lớp" là dựng sẵn bảng xếp hạng giáo viên bằng cảm xúc trẻ con — §5 cấm cả việc dọn sẵn đường cho nó); không nội dung cờ, ghi chú tư vấn, y tế hay "cần gặp thầy cô". Role `reporting` (§5) **không** được cấp execute, nếu không thì `revoke usage on schema attendance from reporting` của `0009` bị đi vòng.
+
+### `0041_job_schedule.sql` — máy chạy cron chết phải thành MỘT DÒNG QUÁ HẠN
+
+Đo được 31/07/2026: `select count(*) from ops.job_runs` trên hub_dev trả về **0**. `run-retention.mjs` thi hành lời hứa "xoá chi tiết cảm xúc sau 12 tháng" (mệnh lệnh 4, Luật 91/2025) — và chưa ai gọi nó lần nào. `ops.v_homeroom_drift` (`0030`) nằm im vì job giám sát chưa tồn tại.
+
+| Đối tượng | Ghi chú |
+|---|---|
+| `ops.job_schedule` (bảng) | Sổ khai job nào phải chạy, bao lâu một lần, `grace` bao lâu thì tính là quá hạn. Có khai thì mới có cái để so "đáng lẽ đã phải chạy rồi". `runner` chỉ là **TÊN FILE**, không phải câu lệnh — một dòng trong bảng này không được phép trở thành lệnh shell; `run-all.mjs` còn soi lại bằng biểu thức chính quy trước khi ghép vào `tools/jobs/`. Luật của bảng, chép từ `0011`/ADR-016: **chỉ khai job đã có bộ chạy thật** — khai trước là tự bật một cảnh báo sáng vĩnh viễn, mà cảnh báo lúc nào cũng sáng là cảnh báo đã chết. |
+| `ops.v_job_health` (view) | Một dòng một job. **`chua_chay_lan_nao` là một trạng thái RIÊNG, không phải `ok`** — đây là cả lý do view tồn tại. |
+| `ops.start_job_run` / `ops.finish_job_run` / `ops.record_job_run` | Mở, đóng, và ghi-một-phát cho một lượt chạy. Mọi job đi qua ba hàm này thay vì tự `insert` vào `ops.job_runs`, để "đã chạy" chỉ có một định nghĩa. |
+| `ops.reap_stale_runs(p_max_age interval)` | Job chết giữa chừng để lại dòng `running` treo vĩnh viễn — treo thì `v_job_health` đọc thành "đang chạy", tức là im lặng. Hàm này biến nó thành `failed` **thấy được, kèm lý do**. |
+| `ops.job_due(p_job_name text)` | "Đến giờ chưa?" — tách khỏi bộ chạy để lịch nằm trong CSDL chứ không nằm trong crontab. |
+| `ops.check_homeroom_drift()` | Job đọc `ops.v_homeroom_drift` (`0030`, ADR-020) và báo khi bản sao `user_role_scopes(homeroom)` lệch khỏi nguồn gốc `core.class_assignments`. |
+| `ops.run_sql_job(p_job_name text)` | Đường chạy cho job `kind='sql'` — việc nằm trọn trong một hàm SQL, không cần sinh tiến trình Node. |
+
+Đầu vào duy nhất của cả ba: `tools/jobs/run-all.mjs` (Task Scheduler của Windows hoặc cron). Chính bộ lịch cũng có một dòng `kind='batch'` trong `ops.job_schedule` — nhờ dòng đó, "máy chạy cron chết" trở thành **một dòng quá hạn nhìn thấy được** thay vì một buồng lái xanh không có gì để nói.
+
+Kiểm chứng đã chạy (01/08/2026): `0041_job_schedule_test.sql` 42 assertion pgTAP xanh trên database dựng lại từ đầu; `tests/db/job-schedule.test.ts` và `tests/db/flag-engine.test.ts` xanh.
 
 ## Quy tắc migration (§2)
 

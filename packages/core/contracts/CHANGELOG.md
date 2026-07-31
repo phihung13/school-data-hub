@@ -19,6 +19,21 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ### Added
 
+- Gói `man-hinh-tam-ly-cum` (31/07/2026) — hợp đồng cho **hai màn hình của tâm lý cụm**
+  trong `contracts/care.ts`. Chỉ THÊM, không đổi và không xoá field nào đang có:
+  - Hộp việc của cụm: `ClusterSchool`, `ClusterCaseRow`, `ListClusterCasesInput`,
+    `ListClusterCasesOutput`.
+  - Hồ sơ một em: `ClusterHelpSignal`, `CounselorNote`, `GetClusterCaseDetailInput`,
+    `GetClusterCaseDetailOutput`.
+
+  Ghi chú cho vibe team — hai chỗ dễ dùng sai:
+  1. `ClusterHelpSignal` **KHÔNG có `note`**, khác `StudentHelpRequest` (màn GVCN) đúng ở
+     field đó. Cố ý: màn `/can-gap-thay-co` in cho học sinh đọc rằng chỉ GVCN của em thấy
+     lời em viết, và phòng tâm lý chỉ đọc sau một lần chuyển tuyến em đã đồng ý — đường
+     chuyển tuyến đó chưa tồn tại. Đừng "hợp nhất hai schema cho gọn".
+  2. `ClusterCaseRow.daysSinceLastAction = null` nghĩa là **chưa ai ghi hành động nào**,
+     KHÔNG phải 0 ngày. Vẽ nó thành "0" là suy tin tốt từ im lặng (RULES Rev F điều 8).
+
 - (do gói việc `care` sở hữu `contracts/care.ts` thêm, ghi lại ở đây để **bản chụp bề mặt và
   sổ này không lệch nhau**): `LogInterventionOutput`, `AcknowledgeHelpRequestInput`,
   `AcknowledgeHelpRequestOutput`, `CloseCaseInput`, `CloseCaseOutput`,
@@ -79,6 +94,30 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
   `checkin.getMyHelpRequests` — em tự xem trạng thái lời mình đã gửi. Cố ý trả **chỉ
   trạng thái**: `requestedOn`, `requestedAtTime`, `acknowledged`, `acknowledgedOn`,
   `acknowledgedAtTime`. Không `topic`, không `urgency`, không `note`.
+
+- Gói `gvcn-nhieu-lop` (31/07/2026) — `care.getDashboard` **thôi cố định ở một lớp**, trong
+  `contracts/care.ts`: thêm `GetDashboardInput` (`{ classId? }`, cả object là `.optional()`)
+  và thêm `GetDashboardOutput.classId`. Chỉ THÊM, không xoá và không siết field nào đang có
+  — `care.getDashboard()` gọi không tham số vẫn hợp lệ, nên client cũ và `home-view` prefetch
+  không gãy.
+
+  Vì sao: buồng lái trước đây lấy `ctx.homeroomClassId`, tức phần tử đầu của
+  `core.v_my_scopes` — một SELECT **không** ORDER BY. Một cô chủ nhiệm hai lớp (chuyện bình
+  thường ở trường liên cấp) chỉ thấy lớp một, màn hình không nói đang xem lớp nào, và "lớp
+  một" đó không cố định giữa hai lần tải. Bốn màn con `/gvcn/*` đã có bộ chọn lớp và mặc
+  định lấy lớp đầu **theo mã lớp** (`getMyClasses` sắp `order by c.code`), nên buồng lái và
+  bốn màn con có thể mở hai lớp khác nhau trong cùng một phiên.
+
+  Hai ghi chú cho vibe team, cả hai là ràng buộc:
+
+  1. `classId` để trống KHÔNG có nghĩa "lớp bất kỳ": máy chủ chọn lớp đầu **theo mã lớp**,
+     đúng thứ tự `GetMyClassesOutput` trả về. Dùng chung `useSelectedClass`
+     (`components/gvcn/class-picker.tsx`) là cách duy nhất bảo đảm mọi màn GVCN mở cùng một
+     lớp mặc định — đừng tự viết lại phép chọn lớp đầu ở màn mới.
+  2. `GetDashboardOutput.classId` là **lớp mà mọi con số trong output thuộc về**. Màn hình
+     nào hiện `totals` / `moodDistribution` / `priorityFlags` thì phải hiện kèm lớp đang
+     xem — một con số không nói rõ của lớp nào là một con số dùng được mà sai. Đừng suy lớp
+     từ `className`: mã lớp trùng nhau giữa hai cơ sở là chuyện có thật.
 
 ## [0.1.0] — 31/07/2026
 

@@ -114,8 +114,34 @@ export const STAFF_ITEMS: NavItem[] = [
  * nhắc tới ở đâu cả. Menu mờ là bản đồ những gì sắp có CHO NGƯỜI ĐANG ĐỌC; chỉ đúng
  * khi nó đọc theo vai của họ.
  */
-export const COUNSELOR_SOON: NavItem[] = [
-  { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "#" },
+/**
+ * Trang /tam-ly ĐÃ DỰNG THẬT (31/07/2026, gói "man-hinh-tam-ly-cum") nên mục này rời
+ * khỏi nhóm mờ. Giữ nó ở "sắp có" trong khi trang đã tồn tại thì cùng một nhãn
+ * "Tâm lý cụm" dẫn đi hai nơi — sidebar bảo chưa có, tile trên trang chủ lại mở được.
+ * Bài test nav-links bắt đúng chuyện này, nên nhóm mờ của tâm lý cụm nay rỗng.
+ */
+export const COUNSELOR_ITEMS: NavItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
+  { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "/tam-ly" },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
+];
+export const COUNSELOR_SOON: NavItem[] = [];
+
+/**
+ * Hiệu trưởng cơ sở + ban điều hành: màn Điều hành (/dieu-hanh) dựng thật 31/07/2026
+ * (gói "man-hinh-bgh", migration 0040).
+ *
+ * Thêm mục này ngày 01/08/2026 vì nghiệm thu đợt B bắt được đúng một lỗ: màn đã chạy,
+ * cổng quyền đã đủ ba lớp, dữ liệu đã có — nhưng KHÔNG một mục điều hướng nào, KHÔNG
+ * một tile nào dẫn tới. Người duy nhất vào được là người đã biết sẵn phải gõ /dieu-hanh
+ * vào thanh địa chỉ, tức là chúng tôi. Một màn hình không có đường tới thì với người
+ * dùng nó không tồn tại — và cái hỏng đó im lặng y hệt mọi cái hỏng khác trong hệ này:
+ * hiệu trưởng đăng nhập, thấy Trang chủ + Hồ sơ, kết luận "GĐ1 chưa có gì cho tôi".
+ */
+export const BOARD_ITEMS: NavItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
+  { key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh" },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 export const ADMIN_SOON: NavItem[] = [
   { key: "admin", label: "Quản trị hệ thống", icon: "admin_panel_settings", href: "#" },
@@ -163,7 +189,19 @@ export function resolveNav(roles: HubRole[]): NavSet {
   // Mục mờ theo vai thật, cùng THỨ TỰ ƯU TIÊN với `known` ở trên để nhãn vai và danh
   // sách mục mờ không bao giờ nói về hai người khác nhau.
   const soon = roles.includes("counselor") ? COUNSELOR_SOON : roles.includes("admin") ? ADMIN_SOON : STAFF_SOON;
-  return { items: STAFF_ITEMS, soon, roleLabel: known ? ROLE_LABEL[known] : "TÀI KHOẢN TRƯỜNG" };
+  // Tâm lý cụm nay có màn hình nghiệp vụ thật (/tam-ly) nên nhận bộ menu riêng, không
+  // còn dùng chung bộ nhân viên tối thiểu — trước đây cô Mai đăng nhập vào chỉ thấy
+  // Trang chủ + Hồ sơ, tức là một ngõ cụt, dù việc đang chờ cô nằm ngay trong hệ.
+  // Thứ tự ba nhánh này phải khớp ROLE_PRIORITY: counselor đứng trước principal/board,
+  // nên người vừa là tâm lý cụm vừa là BGH nhận menu tâm lý — cùng vai với nhãn hiển thị
+  // ở đầu sidebar. Nhãn nói một vai còn menu bày vai khác là cách nhanh nhất để người
+  // dùng thôi tin cả hai.
+  const items = roles.includes("counselor")
+    ? COUNSELOR_ITEMS
+    : roles.includes("principal") || roles.includes("board")
+      ? BOARD_ITEMS
+      : STAFF_ITEMS;
+  return { items, soon, roleLabel: known ? ROLE_LABEL[known] : "TÀI KHOẢN TRƯỜNG" };
 }
 
 type HubSidebarBaseProps = {

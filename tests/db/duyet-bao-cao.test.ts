@@ -172,7 +172,14 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
     );
     expect(row!.preview.headline).toBe("Một tuần rực rỡ!");
     expect(row!.preview.glow).toHaveLength(2);
-    expect(row!.preview.streakDays).toBeGreaterThan(0);
+    // Ở đây TỪNG có `expect(row!.preview.streakDays).toBeGreaterThan(0)`. Bỏ 01/08/2026:
+    // câu đó xanh hay đỏ phụ thuộc HÔM NAY LÀ THỨ MẤY. seedWeek() gieo 5 ngày Hai→Sáu,
+    // còn chuỗi chỉ tính khi có check-in ĐÚNG NGÀY HÔM NAY — nên chạy trong tuần thì
+    // xanh, chạy thứ Bảy hoặc Chủ nhật thì đỏ, và không dòng nào trong bài nói lên điều
+    // đó. Bắt gặp thật: 31/07 (thứ Sáu) xanh, 01/08 (thứ Bảy) đỏ, không ai sửa gì.
+    // Một bài test đổi kết quả theo lịch là bài test không kiểm được gì — nó chỉ dạy
+    // người đọc thói quen chạy lại cho tới lúc xanh. Khẳng định về chuỗi nằm nguyên vẹn
+    // ở bài ngay dưới, nơi dữ liệu được gieo lùi từ current_date nên số ra ĐÚNG BẰNG 9.
   });
 
   it("chuỗi ngày đi học là số THẬT, không phải số ngày trong tuần đang duyệt", async ({ skip }) => {

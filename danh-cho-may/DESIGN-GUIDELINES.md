@@ -86,7 +86,7 @@
 
 ## 9. Riêng tư & phân quyền
 
-- Mood/check-in cảm xúc: chỉ GVCN thấy — ghi chú `lock` "Chỉ thầy cô chủ nhiệm thấy" ngay tại nơi nhập.
+- Mood/check-in cảm xúc: chỉ GVCN **và tâm lý cụm** thấy (`core.can_read_mood()`, migration `0038`) — ghi chú `lock` "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy" ngay tại nơi nhập. **Nhãn phải kể ĐỦ số vai đọc được**: sửa 01/08/2026 vì nhãn cũ kể một vai trong khi hệ cho hai vai đọc.
 - Ghi chú tư vấn (Tâm lý cụm): GVCN & PH không xem được — luôn hiện badge `visibility_off`.
 - BGH/Điều hành: chỉ dữ liệu **tổng hợp theo lô**, ghi rõ "không tra cứu học sinh cá nhân".
 - Cờ chỉ ghi *loại tín hiệu*, không sao chép nội dung tâm sự.

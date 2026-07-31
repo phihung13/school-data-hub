@@ -44,8 +44,10 @@ Việc lõi mà app phải làm trơn tru mỗi sáng:
 
 ## Ràng buộc không thương lượng
 
-- **Dữ liệu trẻ em, chịu Luật 91/2025.** Mood và check-in cảm xúc chỉ GVCN thấy, và phải có nhãn
-  `lock` "Chỉ thầy cô chủ nhiệm thấy" ngay tại chỗ nhập — người nhập phải biết ai đọc được.
+- **Dữ liệu trẻ em, chịu Luật 91/2025.** Mood và check-in cảm xúc chỉ GVCN và tâm lý cụm thấy
+  (`core.can_read_mood()`, migration 0038), và phải có nhãn `lock` "Chỉ thầy cô chủ nhiệm và thầy cô
+  tâm lý thấy" ngay tại chỗ nhập — người nhập phải biết ai đọc được. Nhãn phải kể ĐỦ số vai đọc
+  được: nói thiếu một vai cũng là nói dối, chỉ khó bắt hơn.
 - **Ghi chú tư vấn tâm lý**: GVCN và phụ huynh không xem được, luôn hiện badge `visibility_off`.
 - **Cờ cảnh báo chỉ ghi loại tín hiệu**, không sao chép nội dung tâm sự của trẻ.
 - **Care engine chạy ngầm**, không bao giờ hiện như một mini app với học sinh.

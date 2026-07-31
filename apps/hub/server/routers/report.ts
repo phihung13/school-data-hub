@@ -15,9 +15,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { PoolClient } from "@hub/core/db";
-import { GetGrowthReportOutput } from "@hub/core/contracts";
+import { GetGrowthReportOutput, IsoDateString } from "@hub/core/contracts";
 import { mondayOf as mondayOfDate, toLocalIsoDate } from "@/lib/date";
-import { protectedProcedure, router } from "../trpc";
+import { protectedProcedure, roleProcedure, router } from "../trpc";
 
 function mondayOf(date: Date): string {
   return toLocalIsoDate(mondayOfDate(date));
@@ -49,7 +49,13 @@ async function buildGrowthReport(client: PoolClient, studentId: string, weekStar
   }>(
     `select
        count(*) filter (where kind = 'in')::int as checkin_days,
-       count(*) filter (where mood = 4)::int as happy_days,
+       -- KHÔNG đọc cột mood ở đây, và KHÔNG đổi nguồn sang attendance.checkins_care.
+       -- Lý do (0038): phụ huynh không có quyền đọc mood, nên đọc thẳng thì 42501, còn
+       -- đổi sang view thì họ ra 0 dòng và mục "cả tuần tâm trạng vui vẻ" biến mất TRONG
+       -- IM LẶNG — đúng thứ luật "im lặng không phải kết luận" cấm. Hàm tổng hợp
+       -- attendance.happy_days (SECURITY DEFINER) trả SỐ ĐẾM chứ không trả tâm trạng
+       -- từng ngày: bố mẹ biết "tuần này con vui 4/5 ngày", không biết ngày nào con buồn.
+       attendance.happy_days($1, $2::date, $3::date) as happy_days,
        (select count(*)::int from (
           select occurred_on, occurred_on + row_number() over (order by occurred_on desc)::int as grp
             from attendance.checkins
@@ -140,6 +146,115 @@ async function getMyStudentIdForReport(client: PoolClient): Promise<string> {
   return studentId;
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+// Màn hình Điều hành (BGH) — CHỈ số tổng hợp theo lô
+//
+// DESIGN-GUIDELINES §9: "BGH/Điều hành: chỉ dữ liệu tổng hợp theo lô, ghi rõ không
+// tra cứu học sinh cá nhân." Nên procedure dưới đây KHÔNG nhận `studentId`, KHÔNG
+// nhận `classId`, và KHÔNG trả về bất kỳ trường nào nhận dạng một em. Toàn bộ phép
+// đếm nằm trong `report.class_pulse` / `report.grade_pulse` (0040) — hai hàm đó tự
+// mang cổng vai và ngưỡng ẩn danh, nên tầng này KHÔNG được tự viết câu SQL thứ hai
+// đọc thẳng bảng chi tiết rồi "tự cộng lại cho nhanh": làm vậy là dựng một đường
+// tổng hợp thứ hai không có cổng nào cả.
+//
+// Hình dạng dữ liệu ra đặt tại chỗ (không ở `packages/core/contracts`) vì gói việc
+// này chỉ sở hữu file router; chuyển sang contracts là việc bàn giao — xem ghi chú
+// bàn giao của gói "man-hinh-bgh".
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Số đo bị che khi nhóm dưới ngưỡng ẩn danh: `null` ≠ `0`. Xem 0040. */
+const SuppressibleCount = z.number().int().nonnegative().nullable();
+
+const OperationsClassRow = z.object({
+  classId: z.string().uuid(),
+  classCode: z.string(),
+  grade: z.number().int(),
+  rosterCount: z.number().int().nonnegative(),
+  /** true = lớp dưới `report.min_cohort()`; mọi số đo bên dưới là `null`, KHÔNG phải 0. */
+  cohortTooSmall: z.boolean(),
+  checkedInCount: SuppressibleCount,
+  pendingLateCount: SuppressibleCount,
+  absentCount: SuppressibleCount,
+  excusedCount: SuppressibleCount,
+  /** Em chưa có dòng check-in nào. KHÔNG phải vắng — hai cột khác nhau, cố ý. */
+  noRecordCount: SuppressibleCount,
+  moodReported: SuppressibleCount,
+  moodHappy: SuppressibleCount,
+  moodNormal: SuppressibleCount,
+  moodTired: SuppressibleCount,
+  moodSad: SuppressibleCount,
+  openCareCount: SuppressibleCount,
+});
+export type OperationsClassRow = z.infer<typeof OperationsClassRow>;
+
+const OperationsGradeRow = OperationsClassRow.omit({ classId: true, classCode: true }).extend({
+  classCount: z.number().int().nonnegative(),
+});
+export type OperationsGradeRow = z.infer<typeof OperationsGradeRow>;
+
+export const GetOperationsOverviewOutput = z.object({
+  onDate: IsoDateString,
+  /** Dấu thời gian máy chủ — "dữ liệu tính đến HH:mm" (02-database.md, luật dashboard). */
+  asOf: z.string(),
+  /** Ngưỡng ẩn danh đang áp dụng, đọc từ DB chứ không viết lại ở client. */
+  minCohort: z.number().int().positive(),
+  grades: z.array(OperationsGradeRow),
+  classes: z.array(OperationsClassRow),
+});
+export type GetOperationsOverviewOutput = z.infer<typeof GetOperationsOverviewOutput>;
+
+/** Xa nhất được phép hỏi về quá khứ. Xem chú thích `roster` trong 0040: sĩ số là sĩ số
+ *  HIỆN TẠI, nên ghép nó với điểm danh của một ngày quá xa sẽ ra tỉ lệ vô nghĩa. */
+const MAX_LOOKBACK_DAYS = 60;
+
+type PulseRow = {
+  class_id?: string;
+  class_code?: string;
+  grade: number;
+  class_count?: number;
+  roster_count: number;
+  cohort_too_small: boolean;
+  checked_in_count: number | null;
+  pending_late_count: number | null;
+  absent_count: number | null;
+  excused_count: number | null;
+  no_record_count: number | null;
+  mood_reported: number | null;
+  mood_happy: number | null;
+  mood_normal: number | null;
+  mood_tired: number | null;
+  mood_sad: number | null;
+  open_care_count: number | null;
+};
+
+function commonMeasures(r: PulseRow) {
+  return {
+    grade: Number(r.grade),
+    rosterCount: Number(r.roster_count),
+    cohortTooSmall: r.cohort_too_small,
+    checkedInCount: r.checked_in_count,
+    pendingLateCount: r.pending_late_count,
+    absentCount: r.absent_count,
+    excusedCount: r.excused_count,
+    noRecordCount: r.no_record_count,
+    moodReported: r.mood_reported,
+    moodHappy: r.mood_happy,
+    moodNormal: r.mood_normal,
+    moodTired: r.mood_tired,
+    moodSad: r.mood_sad,
+    openCareCount: r.open_care_count,
+  };
+}
+
+/**
+ * 0040 ném `42501` khi người gọi không mang vai principal/board — cố ý ném thay vì
+ * trả rỗng. Ở đây dịch nó thành FORBIDDEN; để nguyên thì người dùng nhận "lỗi kỹ
+ * thuật, mã sự cố …" cho một tình huống phân quyền hoàn toàn bình thường.
+ */
+function isRoleGateError(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: unknown }).code === "42501";
+}
+
 export const reportRouter = router({
   /** Không cần studentId — tự suy ra học sinh của người gọi (chính mình hoặc con). */
   getMyLatestReport: protectedProcedure.query(async ({ ctx }) => {
@@ -175,4 +290,75 @@ export const reportRouter = router({
       return rows;
     });
   }),
+
+  /**
+   * Màn hình Điều hành: nhịp của CẢ KHỐI và từng lớp trong phạm vi của người xem
+   * (principal = cơ sở mình · board = toàn hệ). Hai lớp cổng, cả hai đều fail closed:
+   * `roleProcedure` đối chiếu `core.v_my_scopes` ở tầng API, còn 0040 tự kiểm vai lần
+   * nữa trong hàm SQL — vì hàm đó chạy SECURITY DEFINER nên nó không được phép tin
+   * rằng người gọi đã bị chặn ở đâu đó phía trên.
+   */
+  getOperationsOverview: roleProcedure("principal", "board")
+    .input(z.object({ onDate: IsoDateString.optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const today = toLocalIsoDate(new Date());
+      const onDate = input?.onDate ?? today;
+      if (onDate > today) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Chưa có số liệu của ngày trong tương lai." });
+      }
+      const oldest = new Date();
+      oldest.setDate(oldest.getDate() - MAX_LOOKBACK_DAYS);
+      if (onDate < toLocalIsoDate(oldest)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Màn hình này chỉ tra được trong vòng ${MAX_LOOKBACK_DAYS} ngày gần đây.`,
+        });
+      }
+
+      try {
+        return await ctx.runWithDb(async (client) => {
+          const [classRes, gradeRes, metaRes] = await Promise.all([
+            client.query<PulseRow>(
+              "select class_id, class_code, grade, roster_count, cohort_too_small, checked_in_count," +
+                " pending_late_count, absent_count, excused_count, no_record_count, mood_reported," +
+                " mood_happy, mood_normal, mood_tired, mood_sad, open_care_count" +
+                " from report.class_pulse($1::date)",
+              [onDate],
+            ),
+            client.query<PulseRow>(
+              "select grade, class_count, roster_count, cohort_too_small, checked_in_count," +
+                " pending_late_count, absent_count, excused_count, no_record_count, mood_reported," +
+                " mood_happy, mood_normal, mood_tired, mood_sad, open_care_count" +
+                " from report.grade_pulse($1::date)",
+              [onDate],
+            ),
+            // Giờ máy chủ + ngưỡng lấy từ CHÍNH cơ sở dữ liệu: in "tính đến HH:mm" bằng
+            // giờ máy người xem thì hai người ở hai máy lệch giờ sẽ đọc ra hai sự thật.
+            client.query<{ as_of: string; min_cohort: number }>(
+              "select now() as as_of, report.min_cohort() as min_cohort",
+            ),
+          ]);
+
+          return GetOperationsOverviewOutput.parse({
+            onDate,
+            asOf: new Date(metaRes.rows[0]!.as_of).toISOString(),
+            minCohort: Number(metaRes.rows[0]!.min_cohort),
+            grades: gradeRes.rows.map((r) => ({ ...commonMeasures(r), classCount: Number(r.class_count) })),
+            classes: classRes.rows.map((r) => ({
+              ...commonMeasures(r),
+              classId: r.class_id!,
+              classCode: r.class_code!,
+            })),
+          });
+        });
+      } catch (err) {
+        if (isRoleGateError(err)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Màn hình Điều hành dành cho hiệu trưởng cơ sở và ban điều hành.",
+          });
+        }
+        throw err;
+      }
+    }),
 });

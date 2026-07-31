@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 10
+sync-version: 11
 ---
 
 # Architecture — Hub là NỀN TẢNG (Super App + Mini App), không phải một ứng dụng nghiệp vụ
@@ -50,7 +50,7 @@ Super App là **PWA TypeScript (Next.js + tRPC)** — đúng nền đang chạy 
 
 ## 6. Giữ nguyên từ Rev B/C (không đổi)
 
-Flag engine = pg_cron + signal views `care.v_signal_*` · connector chỉ ghi `staging`, vào kho qua `promote()` · `/api/health` một điểm đo (DB + heartbeat + last_engine_run) · không Realtime mặc định (ADR-010) · 3 môi trường dev → staging → prod, migration qua staging trước · repo vùng lõi (`packages/core`: db/migrations, auth-adapter, storage-adapter, flag-engine, pii-stripper, contracts) và vùng mở (`apps/*` = các Mini App).
+Flag engine = `care.run_flag_engine()` (`0039`) + signal views `care.v_signal_*`, gọi bởi bộ lịch job chung `ops.job_schedule` × `tools/jobs/run-all.mjs` (`0041`) — **không pg_cron**: extension đó phải bật ở tầng nhà cung cấp, và lúc sự cố thì một lịch nằm trong database là thứ không ai gỡ ra đọc được bằng `git log`. Sửa 01/08/2026; câu cũ ở đây ghi "pg_cron" và mô tả một thứ chưa bao giờ được bật · connector chỉ ghi `staging`, vào kho qua `promote()` · `/api/health` một điểm đo (DB + heartbeat + last_engine_run) · không Realtime mặc định (ADR-010) · 3 môi trường dev → staging → prod, migration qua staging trước · repo vùng lõi (`packages/core`: db/migrations, auth-adapter, storage-adapter, flag-engine, pii-stripper, contracts) và vùng mở (`apps/*` = các Mini App).
 
 ## 7. Hub là Identity Provider cho hệ ngoài (ADR-014, mở rộng ADR-016)
 

@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: none
-sync-version: 3
+sync-version: 4
 ---
 
 # API — tRPC routers, 2 đường ghi duy nhất
@@ -14,17 +14,21 @@ Bảng dưới là **bề mặt đang chạy thật** tính tới 31/07/2026 —
 | Router | Procedures | Cổng vào | Trạng thái |
 |---|---|---|---|
 | `session` | `me`, `miniApps` | public / protected | ✅ chạy |
-| `checkin` | `getTodayStatus`, `getAttendanceOverview`, `submitMood`, `requestHelp`, `getMyHomeroomTeacher` | protected | ✅ chạy. `submitMood` gọi `attendance.resolve_checkin` (ADR-007) — router **không** tự quyết `status`/`source` |
+| `checkin` | `getTodayStatus`, `getAttendanceOverview`, `submitMood`, `requestHelp`, `getMyHelpRequests`, `getMyHomeroomTeacher` | protected | ✅ chạy. `submitMood` gọi `attendance.resolve_checkin` (ADR-007) — router **không** tự quyết `status`/`source` |
 | `profile` | `getMyStudentProfile` | protected | ✅ chạy |
 | `report` | `getMyLatestReport`, `getReportForWeek`, `getMyGuardians` | protected | ✅ chạy, read-only |
-| `care` (buồng lái GVCN) | `getDashboard`, `acknowledgeLate`, `getMyClasses`, `getClassRoster`, `markAttendance`, `listReportApprovals`, `approveReport`, `listClassInterventions` | `homeroomProcedure` | ✅ chạy — bốn màn hình GVCN (31/07/2026) |
-| `care` (chăm sóc) | `acknowledgeHelpRequest`, `logIntervention`, `closeCase` | `careStaffProcedure` | ✅ chạy |
+| `care` (buồng lái GVCN) | `getDashboard`, `acknowledgeLate`, `getMyClasses`, `getClassRoster`, `markAttendance`, `listReportApprovals`, `approveReport`, `getStudentDetail` | `homeroomProcedure` | ✅ chạy — bốn màn hình GVCN (31/07/2026). **`getDashboard` nay nhận `{ classId? }`** (đợt B): một cô chủ nhiệm hai lớp trước đây chỉ thấy "lớp một" của một `SELECT` không `ORDER BY`, và màn hình không nói đang xem lớp nào. Bỏ trống `classId` = lớp đầu **theo mã lớp**, cùng thứ tự `getMyClasses` trả về; output mang thêm `classId` để mọi con số nói rõ nó thuộc lớp nào |
+| `care` (chăm sóc) | `acknowledgeHelpRequest`, `logIntervention`, `closeCase`, `listClassInterventions` | `careStaffProcedure` = `roleProcedure("homeroom","counselor")` | ✅ chạy |
+| `care` (tâm lý cụm) | `listClusterCases`, `getClusterCaseDetail` | `counselorProcedure` = `roleProcedure("counselor")` | ✅ chạy — hai màn `/tam-ly` (31/07/2026). **Cố ý KHÔNG dùng `careStaffProcedure`:** phạm vi hai màn này là CỤM chứ không phải một lớp. Output **không** mang cột `note` của `attendance.help_requests` — đường chuyển tuyến "em đồng ý cho phòng tâm lý đọc" chưa tồn tại (ADR-025) |
+| `report` (điều hành) | `getOperationsOverview` | `roleProcedure("principal","board")` | ✅ chạy — màn `/dieu-hanh` (31/07/2026). Đọc qua `report.class_pulse`/`grade_pulse` (`0040`): **không cột nào trả về học sinh cá nhân**, đơn vị nhỏ nhất là một lớp, lớp dưới 10 em trả NULL + `cohortTooSmall` chứ không trả 0 (DESIGN-GUIDELINES §9) |
 | `checkin.submitCheckout` | điểm danh ra về | — | ⛔ chưa viết (wireframe GĐ1 không có) |
 | `evidence` | `submitBehaviors`, `submitPdr`, `logDear`, `scoreRubric`, `logEventRole` | — | ⛔ chưa có router (đường vào hiện tại chỉ qua Đường 2 / embed) |
 | `fitness` | `submitTest`, `logClubAttendance` | — | ⛔ vùng vibe team, chưa mở |
-| `admin` | `updateThreshold`, `manageMapping`, `reviewImportErrors` | — | ⛔ chưa có. Vai `admin` trong DB hiện gần như chưa mở quyền nào (`02-database.md`) |
+| `admin` | `updateThreshold`, `manageMapping`, `reviewImportErrors` | — | ⛔ chưa có. Vai `admin` trong DB hiện gần như chưa mở quyền nào (`02-database.md`). Hệ quả cần biết: `04-flag-engine.md` nói "sửa ngưỡng không cần deploy" — đúng ở tầng dữ liệu (`care.thresholds` + `care.resolve_threshold`), nhưng hôm nay vẫn phải chạy tay một câu UPDATE vì màn hình chưa có |
 
-**Ba cổng vào, không phải hai** (`apps/hub/server/trpc.ts`): `publicProcedure` → `protectedProcedure` (đã đăng nhập) → `homeroomProcedure` (có lớp chủ nhiệm, gắn `ctx.homeroomClassId`) / `careStaffProcedure` (GVCN hoặc tâm lý cụm). Đường cũ chỉ có "đã đăng nhập chưa" là nguồn của lỗ leo quyền đã vá ở `0025` — `acknowledgeLate` từng là `protectedProcedure`.
+**Bốn cổng vào, không phải ba** (`apps/hub/server/trpc.ts`): `publicProcedure` → `protectedProcedure` (đã đăng nhập) → `homeroomProcedure` (có lớp chủ nhiệm, gắn `ctx.homeroomClassId`) → **`roleProcedure(...roles)`** — một hàm sinh cổng theo vai, đối chiếu `core.v_my_scopes`. `careStaffProcedure` và `counselorProcedure` không còn là hai đoạn mã riêng mà là hai lần gọi cùng một hàm đó; cổng vai điều hành (`principal`/`board`) cũng vậy. Lý do gộp: mỗi cổng viết tay là một chỗ có thể quên một nhánh, mà quên một nhánh ở đây không báo lỗi — nó chỉ lặng lẽ cho một vai đi qua. Đường cũ chỉ có "đã đăng nhập chưa" là nguồn của lỗ leo quyền đã vá ở `0025` — `acknowledgeLate` từng là `protectedProcedure`.
+
+**Cổng vai ở tầng API KHÔNG thay cổng ở tầng dữ liệu.** `getOperationsOverview` đi qua `roleProcedure("principal","board")` rồi vẫn gọi hàm `0040` tự kiểm vai một lần nữa và **RAISE** khi sai. Hai lần kiểm không phải thừa: nếu chỉ kiểm ở API thì một truy vấn viết tay lúc trực sự cố đi thẳng vào DB là đi vòng qua cổng; nếu chỉ kiểm ở DB mà trả bảng rỗng thay vì lỗi thì người gọi sai vai đọc "cả khối hôm nay không có gì" — im lặng thành kết luận, đúng thứ repo này cấm.
 
 ## Đường 2 — Connector (máy, theo lịch)
 

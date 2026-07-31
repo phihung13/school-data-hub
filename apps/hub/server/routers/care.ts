@@ -39,12 +39,17 @@ import {
   CloseCaseOutput,
   GetClassRosterInput,
   GetClassRosterOutput,
+  GetClusterCaseDetailInput,
+  GetClusterCaseDetailOutput,
+  GetDashboardInput,
   GetDashboardOutput,
   GetMyClassesOutput,
   GetStudentDetailInput,
   GetStudentDetailOutput,
   ListClassInterventionsInput,
   ListClassInterventionsOutput,
+  ListClusterCasesInput,
+  ListClusterCasesOutput,
   ListReportApprovalsInput,
   ListReportApprovalsOutput,
   LogInterventionInput,
@@ -60,7 +65,7 @@ import type {
 } from "@hub/core/contracts";
 import type { PoolClient } from "@hub/core/db";
 import { mondayOf, toLocalIsoDate } from "@/lib/date";
-import { readCareRules } from "../care-thresholds";
+import { EMOTION_FALLBACK_RULE, URGENT_FALLBACK, readCareRules } from "../care-thresholds";
 import { homeroomProcedure, roleProcedure, router } from "../trpc";
 
 /**
@@ -79,6 +84,18 @@ import { homeroomProcedure, roleProcedure, router } from "../trpc";
  * mù là quyết định sai. `listClassInterventions` nay cũng mang procedure này.
  */
 const careStaffProcedure = roleProcedure("homeroom", "counselor");
+
+/**
+ * Procedure của RIÊNG tâm lý cụm — hai màn `/tam-ly` (gói "man-hinh-tam-ly-cum").
+ *
+ * Vì sao KHÔNG dùng `careStaffProcedure` cho hai màn đó: phạm vi của chúng là CỤM (tập
+ * cơ sở ghi trong vai `counselor` của chính người gọi), không phải "lớp chủ nhiệm". Mở
+ * cho `homeroom` thì một GVCN không hề có vai counselor sẽ nhận về `scope.schools = []`
+ * và một danh sách rỗng — rỗng vì không có phạm vi, hiển thị y hệt rỗng vì cụm đang yên.
+ * Đó đúng là kiểu "im lặng bị đọc thành kết luận" mà repo này đã vấp bốn lần. Một GVCN
+ * kiêm tâm lý cụm vẫn vào được, vì lúc đó vai `counselor` có thật trong `v_my_scopes`.
+ */
+const counselorProcedure = roleProcedure("counselor");
 
 /** Lỗi RLS chặn ghi (42501) → câu tiếng Việt cho người dùng, không lộ tên bảng/policy. */
 function asScopeError(err: unknown): never {
@@ -221,6 +238,50 @@ async function requireCareClass(
   return requested;
 }
 
+/**
+ * Cụm của người đang gọi = tập CƠ SỞ ghi trong vai `counselor` của chính họ, đọc lại từ
+ * `core.schools` để có mã và tên thật.
+ *
+ * Đọc từ `core.v_my_scopes` (0015) chứ không từ JWT — cùng lý do đã ghi ở trpc.ts: token
+ * sống 15 phút, một người vừa bị thu vai vẫn cầm token ghi đúng vai cũ, mà thứ quyết
+ * định "được đọc hồ sơ chăm sóc của cơ sở nào" thì 15 phút là quá dài.
+ *
+ * Trả mảng RỖNG khi vai counselor chưa được gán cơ sở nào. Đó là một sự thật cần nói ra
+ * (màn hình hiện "chưa được gán cơ sở nào"), không phải một lỗi để ném.
+ */
+async function readMyCluster(client: PoolClient): Promise<
+  { schoolId: string; schoolCode: string; schoolName: string }[]
+> {
+  const { rows } = await client.query<{ id: string; code: string; name: string }>(
+    `select s.id, s.code, s.name
+       from core.schools s
+       join core.v_my_scopes m on m.school_id = s.id
+      where m.role_code = 'counselor'
+      order by s.name`,
+  );
+  return rows.map((r) => ({ schoolId: r.id, schoolCode: r.code, schoolName: r.name }));
+}
+
+/**
+ * Ngưỡng của TỪNG cơ sở trong cụm, đọc từ `care.thresholds` (§7 — không hằng số trong
+ * code). Một cụm có thể gồm nhiều cơ sở khai ngưỡng khác nhau (0026 cho phép), nên trả
+ * về theo cơ sở chứ không gộp thành một con số chung rồi áp cho tất cả.
+ */
+async function readClusterRules(
+  client: PoolClient,
+  schoolIds: string[],
+): Promise<Map<string, { urgentWindowDays: number; quietDays: number }>> {
+  const out = new Map<string, { urgentWindowDays: number; quietDays: number }>();
+  for (const schoolId of schoolIds) {
+    const rules = await readCareRules(client, schoolId);
+    out.set(schoolId, {
+      urgentWindowDays: rules.urgent.windowDays,
+      quietDays: rules.emotion.quietDays,
+    });
+  }
+  return out;
+}
+
 /** Mã lớp để hiện trên màn hình. Không có thì trả chuỗi rỗng — KHÔNG bịa mã lớp. */
 async function readClassCode(client: PoolClient, classId: string): Promise<string> {
   const { rows } = await client.query<{ code: string }>(
@@ -297,14 +358,45 @@ export function buildReportPreview(stats: {
 }
 
 export const careRouter = router({
-  getDashboard: homeroomProcedure.query(async ({ ctx }) => {
-    return ctx.runWithDb(async (client) => {
-      const classId = ctx.homeroomClassId;
+  /**
+   * Buồng lái GVCN, ĐÚNG MỘT lớp mỗi lần gọi.
+   *
+   * Sửa 31/07/2026 (gói "gvcn-nhieu-lop"). Bản cũ lấy `ctx.homeroomClassId` — tức phần tử
+   * đầu của `core.v_my_scopes`, một câu SELECT KHÔNG có ORDER BY. Hai hệ quả, cái sau nặng
+   * hơn cái trước:
+   *
+   *   1. Cô chủ nhiệm hai lớp chỉ thấy lớp một, và màn hình không nói đang xem lớp nào.
+   *   2. "Lớp một" đó không cố định giữa hai lần tải. Bốn màn con đã có bộ chọn lớp và
+   *      mặc định lấy lớp đầu THEO MÃ LỚP (getMyClasses `order by c.code`), nên buồng lái
+   *      và bốn màn con hoàn toàn có thể mở hai lớp khác nhau trong cùng một phiên.
+   *
+   * Nay: có `classId` thì đối chiếu `ctx.homeroomClassIds` (không tin tham số — đổi một
+   * tham số mà đọc được lớp đồng nghiệp là lỗ leo quyền ở 0025); không có thì chọn lớp đầu
+   * THEO MÃ LỚP bằng chính câu truy vấn đã cần chạy để lấy `code`/`school_id`, nên không
+   * tốn thêm vòng nào. `classId` cũng đi ra output để màn hình biết chắc mình đang xem lớp
+   * nào thay vì suy từ mã lớp (mã lớp trùng giữa hai cơ sở là chuyện có thật).
+   *
+   * KHÔNG dùng `requireMyClass(ids)` cho nhánh mặc định: hàm đó trả `ids[0]`, đúng cái
+   * thứ tự ngẫu nhiên vừa nói. Nhánh có tham số vẫn dùng nó để giữ nguyên câu từ chối.
+   */
+  getDashboard: homeroomProcedure.input(GetDashboardInput).query(async ({ ctx, input }) => {
+    const requested = input?.classId;
+    // Ném FORBIDDEN NGAY khi lớp không phải của mình — trước cả khi mở kết nối, và với
+    // đúng câu từ chối mà năm procedure GVCN còn lại đang dùng.
+    if (requested) requireMyClass(ctx.homeroomClassIds, requested);
 
-      const classRes = await client.query<{ code: string; school_id: string }>(
-        "select code, school_id from core.classes where id = $1",
-        [classId],
+    return ctx.runWithDb(async (client) => {
+      const classRes = await client.query<{ id: string; code: string; school_id: string }>(
+        `select id, code, school_id
+           from core.classes
+          where id = any($1::uuid[]) and ($2::uuid is null or id = $2::uuid)
+          order by code
+          limit 1`,
+        [ctx.homeroomClassIds, requested ?? null],
       );
+      // RLS che mất dòng lớp (chưa từng gặp, nhưng nếu xảy ra) → vẫn trả về đúng lớp đã
+      // hỏi, `className` rỗng như hành vi cũ. KHÔNG bịa mã lớp.
+      const classId = classRes.rows[0]?.id ?? requested ?? (ctx.homeroomClassIds[0] as string);
       const className = classRes.rows[0]?.code ?? "";
       const schoolId = classRes.rows[0]?.school_id ?? null;
 
@@ -329,7 +421,7 @@ export const careRouter = router({
 
       const moodRes = await client.query<{ mood: number; count: string }>(
         `select c.mood, count(*)::int as count
-           from attendance.checkins c
+           from attendance.checkins_care c
            join core.enrollments e on e.student_id = c.student_id and e.valid_to is null
           where e.class_id = $1 and c.occurred_on = current_date and c.mood is not null
           group by c.mood`,
@@ -376,7 +468,7 @@ export const careRouter = router({
            select r.student_id, c.occurred_on, c.mood,
                   row_number() over (partition by r.student_id order by c.occurred_on desc) as rn
              from roster r
-             join attendance.checkins c
+             join attendance.checkins_care c
                on c.student_id = r.student_id
               and c.kind = 'in'
               and c.mood is not null
@@ -476,6 +568,7 @@ export const careRouter = router({
       );
 
       return GetDashboardOutput.parse({
+        classId,
         className,
         asOfDate: toLocalIsoDate(new Date()),
         lastScanAt: jobRes.rows[0]?.finished_at ?? null,
@@ -714,7 +807,7 @@ export const careRouter = router({
                 (h.student_id is not null) as help_pending
            from core.enrollments e
            join core.students s on s.id = e.student_id
-           left join attendance.checkins c
+           left join attendance.checkins_care c
              on c.student_id = e.student_id and c.occurred_on = $2::date and c.kind = 'in'
            left join care.care_cases cc
              on cc.student_id = e.student_id and cc.status = 'open'
@@ -837,7 +930,7 @@ export const careRouter = router({
                     count(*) filter (where c.kind = 'in')::int as checkin_days,
                     count(*) filter (where c.mood = 4)::int as happy_days
                from roster r
-               left join attendance.checkins c
+               left join attendance.checkins_care c
                  on c.student_id = r.student_id
                 and c.occurred_on between $2::date and $2::date + 4
               group by r.student_id
@@ -855,7 +948,7 @@ export const careRouter = router({
                           partition by c.student_id order by c.occurred_on desc
                         )::int as grp
                    from roster r
-                   join attendance.checkins c on c.student_id = r.student_id
+                   join attendance.checkins_care c on c.student_id = r.student_id
                   where c.kind = 'in'
                     and c.status in ('present','late')
                     and c.occurred_on <= current_date
@@ -1105,7 +1198,7 @@ export const careRouter = router({
                 mood,
                 to_char(occurred_at, 'HH24:MI') as checked_in_at,
                 source
-           from attendance.checkins
+           from attendance.checkins_care
           where student_id = $1 and kind = 'in' and occurred_on >= $2::date
           order by occurred_on desc`,
         [input.studentId, bounds.from_date],
@@ -1232,4 +1325,378 @@ export const careRouter = router({
       });
     });
   }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // HAI MÀN CỦA TÂM LÝ CỤM (gói "man-hinh-tam-ly-cum", 31/07/2026)
+  //
+  // Vai `counselor` GHI được ba thứ nặng nhất của hệ chăm sóc — tắt cờ khẩn, ghi can
+  // thiệp, ĐÓNG hồ sơ của một đứa trẻ — nhưng cho tới hôm nay không có màn nghiệp vụ
+  // nào. `listClassInterventions` (mở 31/07 sáng) là một khe đọc, nhưng nó đòi biết
+  // trước `classId`, mà cụm là nhiều lớp: cô không có đường nào để bắt đầu từ câu hỏi
+  // thật của mình — "hôm nay ai đang chờ tôi?". Hai query dưới đây là đường đó.
+  //
+  // Cả hai đều là ĐỌC. Ba nút hành động trên màn dùng lại đúng ba mutation đã có
+  // (acknowledgeHelpRequest · logIntervention · closeCase) — không viết đường ghi thứ
+  // hai cho cùng một việc, và nhờ vậy §9 (idempotency) không phải kiểm lại từ đầu.
+  //
+  // HAI THỨ CỐ TÌNH KHÔNG ĐỌC — xem lời giải thích dài ở đầu khối tương ứng trong
+  // `contracts/care.ts`: `attendance.checkins_care.mood` (màn check-in hứa với em «Chỉ thầy
+  // cô chủ nhiệm thấy») và `attendance.help_requests.note` (màn /can-gap-thay-co hứa
+  // rằng phòng tâm lý chỉ đọc SAU một lần chuyển tuyến em đã đồng ý — đường chuyển
+  // tuyến đó chưa tồn tại). RLS hiện cho phép cả hai; lời hứa in trên màn hình thì
+  // không. Chỗ hụt ở tầng dữ liệu ghi vào canPhoiHop của gói việc, còn ở tầng này thì
+  // câu SQL đơn giản là không chọn hai cột đó.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Hộp việc của tâm lý cụm: mọi em trong cụm đang có hồ sơ chăm sóc mở HOẶC có tín
+   * hiệu «cần gặp thầy cô» chưa ai xử lý.
+   *
+   * GỐC LÀ HỢP CỦA HAI NGUỒN, không phải bảng care_cases: một em vừa bấm «cần gặp thầy
+   * cô» thì chưa có hồ sơ nào (hồ sơ chỉ sinh ra ở `resolveOpenCase`, tức khi đã có
+   * người ghi can thiệp). Lấy hồ sơ làm gốc thì đúng nhóm cần gấp nhất lại là nhóm biến
+   * mất khỏi danh sách — cùng lỗi «tín hiệu khẩn bị nuốt» đã ghi ở đầu file (số 3).
+   *
+   * BA HÀNG RÀO: `counselorProcedure` (có vai thật trong v_my_scopes) → lọc tường minh
+   * theo `st.school_id = any(cụm)` → RLS `care_cases_scope`/`help_requests_scope`
+   * (`core.can_see_care` = homeroom OR in_my_cluster). Không tầng nào tin tầng kia.
+   */
+  listClusterCases: counselorProcedure.input(ListClusterCasesInput).query(async ({ ctx, input }) => {
+    return ctx.runWithDb(async (client) => {
+      const cluster = await readMyCluster(client);
+
+      // Vai counselor chưa được gán cơ sở nào: trả về rỗng KÈM `scope.schools = []` để
+      // màn hình phân biệt được "cụm đang yên" với "chưa ai gán cụm cho tôi". Hai thứ
+      // đó nhìn giống hệt nhau nếu chỉ trả một mảng rỗng.
+      if (cluster.length === 0) {
+        return ListClusterCasesOutput.parse({
+          asOfDate: toLocalIsoDate(new Date()),
+          scope: { schools: [] },
+          totals: { openCases: 0, pendingHelp: 0, overQuietWindow: 0 },
+          urgentWindowDays: URGENT_FALLBACK.windowDays,
+          quietDays: EMOTION_FALLBACK_RULE.quietDays,
+          rows: [],
+        });
+      }
+
+      const requested = input.schoolId;
+      if (requested && !cluster.some((s) => s.schoolId === requested)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cơ sở này không thuộc cụm của thầy cô." });
+      }
+      const schools = requested ? cluster.filter((s) => s.schoolId === requested) : cluster;
+      const schoolIds = schools.map((s) => s.schoolId);
+
+      const rules = await readClusterRules(client, schoolIds);
+      const urgentWindows = schoolIds.map((id) => rules.get(id)?.urgentWindowDays ?? URGENT_FALLBACK.windowDays);
+      const quietWindows = schoolIds.map((id) => rules.get(id)?.quietDays ?? EMOTION_FALLBACK_RULE.quietDays);
+
+      const { rows } = await client.query<{
+        student_id: string;
+        student_code: string;
+        full_name: string;
+        class_code: string | null;
+        school_name: string;
+        case_id: string | null;
+        case_status: string | null;
+        opened_at: string | null;
+        help_pending: boolean;
+        help_requested_on: string | null;
+        help_topic: string | null;
+        help_urgency: string | null;
+        intervention_count: number;
+        last_intervention_at: string | null;
+        days_since_last_action: number | null;
+        over_quiet_window: boolean;
+      }>(
+        // Ngưỡng đi vào câu SQL dưới dạng THAM SỐ THEO TỪNG CƠ SỞ (bảng `rules` dựng từ
+        // unnest), không phải một con số chung áp cho cả cụm: 0026 cho phép mỗi cơ sở
+        // khai riêng, và gộp lại thành một số là làm hỏng đúng thứ §7 sinh ra để giữ.
+        `with rules as (
+           select * from unnest($1::uuid[], $2::int[], $3::int[])
+             as r(school_id, urgent_window_days, quiet_days)
+         ),
+         open_help as (
+           select h.student_id,
+                  max(h.requested_on) as requested_on
+             from attendance.help_requests h
+             join core.students st on st.id = h.student_id
+             join rules r on r.school_id = st.school_id
+            where h.handled_at is null
+              and h.requested_on >= current_date - r.urgent_window_days
+            group by h.student_id
+         ),
+         cases as (
+           select cc.student_id, cc.id, cc.status, cc.opened_at,
+                  row_number() over (
+                    partition by cc.student_id
+                    order by (cc.status = 'open') desc, cc.opened_at desc
+                  ) as rn
+             from care.care_cases cc
+             join core.students st on st.id = cc.student_id
+             join rules r on r.school_id = st.school_id
+            where cc.status = 'open' or $4::boolean
+         ),
+         inter as (
+           select cc.student_id,
+                  count(*)::int as n,
+                  max(i.occurred_at) as last_at
+             from care.interventions i
+             join care.care_cases cc on cc.id = i.case_id
+            group by cc.student_id
+         ),
+         subjects as (
+           select student_id from open_help
+           union
+           select student_id from cases where rn = 1
+         )
+         select st.id as student_id,
+                st.student_code,
+                st.full_name,
+                cl.code as class_code,
+                sc.name as school_name,
+                c.id as case_id,
+                c.status as case_status,
+                c.opened_at::text as opened_at,
+                (oh.student_id is not null) as help_pending,
+                oh.requested_on::text as help_requested_on,
+                hr.topic as help_topic,
+                hr.urgency as help_urgency,
+                coalesce(iv.n, 0) as intervention_count,
+                iv.last_at::text as last_intervention_at,
+                case when iv.last_at is null then null
+                     else (current_date - iv.last_at::date) end as days_since_last_action,
+                coalesce(iv.last_at::date <= current_date - r.quiet_days, true) as over_quiet_window
+           from subjects s
+           join core.students st on st.id = s.student_id
+           join core.schools sc on sc.id = st.school_id
+           join rules r on r.school_id = st.school_id
+           left join core.enrollments e on e.student_id = st.id and e.valid_to is null
+           left join core.classes cl on cl.id = e.class_id
+           left join cases c on c.student_id = st.id and c.rn = 1
+           left join open_help oh on oh.student_id = st.id
+           -- Chủ đề/mức khẩn của ĐÚNG lần bấm gần nhất còn treo. Cố tình KHÔNG lấy
+           -- cột note: xem lời giải thích (b) ở contracts/care.ts.
+           left join attendance.help_requests hr
+             on hr.student_id = oh.student_id and hr.requested_on = oh.requested_on
+           left join inter iv on iv.student_id = st.id
+          order by (oh.student_id is not null) desc,
+                   coalesce(iv.last_at, 'epoch'::timestamptz) asc,
+                   st.full_name
+          limit $5::int`,
+        [schoolIds, urgentWindows, quietWindows, input.includeClosed, input.limit],
+      );
+
+      const mapped = rows.map((r) => ({
+        studentId: r.student_id,
+        studentCode: r.student_code,
+        fullName: r.full_name,
+        className: r.class_code,
+        schoolName: r.school_name,
+        caseId: r.case_id,
+        caseStatus: r.case_status as "open" | "closed" | null,
+        openedAt: r.opened_at,
+        helpPending: r.help_pending,
+        helpRequestedOn: r.help_requested_on,
+        helpTopic: r.help_topic as HelpRequestTopic | null,
+        helpUrgency: r.help_urgency as HelpRequestUrgency | null,
+        interventionCount: Number(r.intervention_count),
+        lastInterventionAt: r.last_intervention_at,
+        daysSinceLastAction:
+          r.days_since_last_action === null ? null : Number(r.days_since_last_action),
+        overQuietWindow: r.over_quiet_window,
+      }));
+
+      return ListClusterCasesOutput.parse({
+        asOfDate: toLocalIsoDate(new Date()),
+        scope: { schools },
+        totals: {
+          openCases: mapped.filter((r) => r.caseStatus === "open").length,
+          pendingHelp: mapped.filter((r) => r.helpPending).length,
+          overQuietWindow: mapped.filter((r) => r.overQuietWindow).length,
+        },
+        // Cụm nhiều cơ sở khai ngưỡng khác nhau thì hai con số này là con số RỘNG NHẤT
+        // trong cụm — dùng để viết một câu chú thích trên đầu màn ("đang nhìn lại N
+        // ngày"). Việc đánh dấu từng dòng vẫn theo ngưỡng của CHÍNH cơ sở em đó
+        // (`over_quiet_window` tính trong SQL), không theo con số gộp này.
+        urgentWindowDays: Math.max(...urgentWindows),
+        quietDays: Math.max(...quietWindows),
+        rows: mapped,
+      });
+    });
+  }),
+
+  /**
+   * MỘT em trong cụm: hồ sơ, nhật ký can thiệp, ghi chú tư vấn, tín hiệu khẩn.
+   *
+   * Đây là màn phải mở TRƯỚC KHI bấm "đóng hồ sơ" — chính lỗ hổng mà gói việc này vá:
+   * trước hôm nay tâm lý cụm đóng được hồ sơ của một đứa trẻ mà không có đường nào nhìn
+   * thấy hồ sơ đó. Quyền ghi rộng hơn quyền đọc không phải "chặt hơn"; đó là bắt người
+   * ta quyết định trong bóng tối.
+   *
+   * `ghi chú tư vấn` (care.counselor_notes) CÓ mặt ở đây và chỉ ở đây: policy 0035 mở
+   * đúng cho TÁC GIẢ và TÂM LÝ CỤM. Màn GVCN (`getStudentDetail`) không đọc bảng này —
+   * hai màn trông giống nhau nhưng đọc hai tập dữ liệu khác nhau, và đó là chủ ý.
+   */
+  getClusterCaseDetail: counselorProcedure
+    .input(GetClusterCaseDetailInput)
+    .query(async ({ ctx, input }) => {
+      return ctx.runWithDb(async (client) => {
+        const cluster = await readMyCluster(client);
+        const schoolIds = cluster.map((s) => s.schoolId);
+
+        const studentRes = await client.query<{
+          student_code: string;
+          full_name: string;
+          class_code: string | null;
+          school_name: string;
+        }>(
+          `select st.student_code, st.full_name, cl.code as class_code, sc.name as school_name
+             from core.students st
+             join core.schools sc on sc.id = st.school_id
+             left join core.enrollments e on e.student_id = st.id and e.valid_to is null
+             left join core.classes cl on cl.id = e.class_id
+            where st.id = $1 and st.school_id = any($2::uuid[])`,
+          [input.studentId, schoolIds],
+        );
+        const student = studentRes.rows[0];
+        if (!student) {
+          // FORBIDDEN chứ không NOT_FOUND, và cùng một câu cho cả hai ca ("không tồn
+          // tại" / "tồn tại nhưng ngoài cụm"): hai câu trả lời khác nhau là một kênh dò
+          // danh sách học sinh (cùng lý lẽ với getStudentDetail).
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Em này không thuộc cụm chăm sóc của thầy cô.",
+          });
+        }
+
+        const boundsRes = await client.query<{ from_date: string; to_date: string }>(
+          "select (current_date - ($1::int - 1))::text as from_date, current_date::text as to_date",
+          [input.days],
+        );
+        const bounds = boundsRes.rows[0] ?? { from_date: "", to_date: "" };
+
+        // KHÔNG bó trong cửa sổ ngày: một hồ sơ mở từ tháng trước mà chưa đóng là thứ
+        // phải thấy đầu tiên, không phải thứ biến mất vì lịch sử đã trôi quá cửa sổ.
+        const caseRes = await client.query<{
+          id: string;
+          status: string;
+          opened_at: string;
+          closed_at: string | null;
+        }>(
+          `select id, status, opened_at::text, closed_at::text
+             from care.care_cases
+            where student_id = $1
+            order by (status = 'open') desc, opened_at desc
+            limit 10`,
+          [input.studentId],
+        );
+
+        const interventionRes = await client.query<{
+          id: string;
+          action: string;
+          note: string | null;
+          occurred_at: string;
+          actor_name: string | null;
+          case_status: string;
+        }>(
+          // `core.users` chỉ mở SELECT cho CHÍNH MÌNH (policy users_self, 0009) → tên
+          // đồng nghiệp ra NULL. Không bịa tên: NULL → "Thầy cô khác" ở bước map.
+          `select i.id, i.action, i.note, i.occurred_at::text as occurred_at,
+                  u.full_name as actor_name, cc.status as case_status
+             from care.interventions i
+             join care.care_cases cc on cc.id = i.case_id
+             left join core.users u on u.id = i.actor_id
+            where cc.student_id = $1
+            order by i.occurred_at desc
+            limit 50`,
+          [input.studentId],
+        );
+
+        const noteRes = await client.query<{
+          id: string;
+          body: string;
+          created_at: string;
+          author_name: string | null;
+          mine: boolean;
+        }>(
+          `select n.id, n.body, n.created_at::text as created_at,
+                  u.full_name as author_name,
+                  (n.author_id = core.current_user_id()) as mine
+             from care.counselor_notes n
+             join care.care_cases cc on cc.id = n.case_id
+             left join core.users u on u.id = n.author_id
+            where cc.student_id = $1
+            order by n.created_at desc
+            limit 50`,
+          [input.studentId],
+        );
+
+        // KHÔNG chọn cột `note`. Xem lời giải thích (b) ở contracts/care.ts — lời hứa
+        // in trên màn /can-gap-thay-co là ràng buộc kỹ thuật, và chỗ dễ vi phạm nhất
+        // chính là một màn "gộp mọi thứ về một em" như màn này.
+        const helpRes = await client.query<{
+          requested_on: string;
+          requested_at: string;
+          topic: string | null;
+          urgency: string | null;
+          handled_at: string | null;
+        }>(
+          `select requested_on::text, requested_at::text, topic, urgency, handled_at::text
+             from attendance.help_requests
+            where student_id = $1 and requested_on >= $2::date
+            order by requested_on desc`,
+          [input.studentId, bounds.from_date],
+        );
+
+        const cases = caseRes.rows.map((r) => ({
+          caseId: r.id,
+          status: r.status as "open" | "closed",
+          openedAt: r.opened_at,
+          closedAt: r.closed_at,
+        }));
+
+        return GetClusterCaseDetailOutput.parse({
+          asOfDate: toLocalIsoDate(new Date()),
+          window: { days: input.days, fromDate: bounds.from_date, toDate: bounds.to_date },
+          student: {
+            studentId: input.studentId,
+            studentCode: student.student_code,
+            fullName: student.full_name,
+            className: student.class_code,
+            schoolName: student.school_name,
+          },
+          openCase: cases.find((c) => c.status === "open") ?? null,
+          cases,
+          interventions: interventionRes.rows.map((r) => ({
+            interventionId: r.id,
+            studentId: input.studentId,
+            studentName: student.full_name,
+            action: r.action,
+            note: r.note,
+            occurredAt: r.occurred_at,
+            actorName: r.actor_name ?? "Thầy cô khác",
+            caseStatus: r.case_status as "open" | "closed",
+          })),
+          counselorNotes: noteRes.rows.map((r) => ({
+            noteId: r.id,
+            body: r.body,
+            createdAt: r.created_at,
+            authorName: r.author_name ?? "Thầy cô khác",
+            mine: r.mine,
+          })),
+          helpSignals: helpRes.rows.map((r) => ({
+            requestedOn: r.requested_on,
+            requestedAt: r.requested_at,
+            topic: r.topic as HelpRequestTopic | null,
+            urgency: r.urgency as HelpRequestUrgency | null,
+            handledAt: r.handled_at,
+          })),
+          // Hằng số, và cố ý không đọc từ DB: 0009 chỉ cấp policy SELECT cho
+          // care.counselor_notes, không có INSERT nào — Hub CHƯA ghi được ghi chú tư
+          // vấn. Nói thẳng bằng một cờ còn hơn hiện ô soạn thảo rồi bắn 42501 vào mặt
+          // người dùng. Đổi thành true trong CÙNG PR với migration mở đường ghi.
+          notesWritable: false,
+        });
+      });
+    }),
 });

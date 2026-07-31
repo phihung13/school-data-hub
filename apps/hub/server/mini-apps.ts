@@ -29,6 +29,14 @@ export function buildMiniApps(roles: HubRole[]): MiniAppTile[] {
   // ra trang chủ, không lời giải thích — tile dẫn tới trang mình không vào được cũng là
   // một dạng menu 404. Mở lại cho counselor khi buồng lái có phạm vi cụm thật.
   const isHomeroom = roles.includes("homeroom");
+  // Tâm lý cụm có màn thật từ 31/07/2026 (gói "man-hinh-tam-ly-cum"): /tam-ly là hộp
+  // việc của cụm, /tam-ly/ho-so/<em> là hồ sơ một em. Trước đó vai này đăng nhập vào
+  // Hub là ngõ cụt — không một tile nào, không một mục điều hướng nào — trong khi cô
+  // GHI được ba thứ nặng nhất của hệ chăm sóc (tắt cờ khẩn, ghi can thiệp, đóng hồ sơ).
+  // Tile này mở đúng bằng thứ đã có màn: không cấp cho vai khác, vì app/tam-ly/page.tsx
+  // tự chặn `roles.includes("counselor")` rồi đá về /home — tile dẫn tới trang mình
+  // không vào được cũng là một dạng menu 404 (xem chú thích của isHomeroom ở trên).
+  const isCounselor = roles.includes("counselor");
   const isStaff = roles.some((r) => STAFF_ROLES.includes(r));
 
   const tiles: MiniAppTile[] = [];
@@ -61,6 +69,17 @@ export function buildMiniApps(roles: HubRole[]): MiniAppTile[] {
   }
   if (isHomeroom) {
     tiles.push({ key: "cockpit", label: "Buồng lái", icon: "space_dashboard", href: "/gvcn", available: true });
+  }
+  if (isCounselor) {
+    tiles.push({ key: "counselor", label: "Tâm lý cụm", icon: "psychology", href: "/tam-ly", available: true });
+  }
+  // Màn Điều hành (/dieu-hanh) dựng thật 31/07/2026 cho hiệu trưởng cơ sở và ban điều
+  // hành; tile này thêm 01/08/2026. Trước đó màn chạy được nhưng không có đường nào dẫn
+  // tới — vào được chỉ bằng cách gõ URL. Cùng luật với hai nhánh trên: chỉ cấp cho đúng
+  // vai mà app/dieu-hanh/page.tsx cho qua (principal/board), vì tile dẫn tới trang mình
+  // bị đá ngược cũng là một dạng menu 404.
+  if (roles.includes("principal") || roles.includes("board")) {
+    tiles.push({ key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh", available: true });
   }
   if (isStaff) {
     // Tier 2 — Embed Bridge (08-embedded-apps.md mục 3), app ngoài factory.vietanh.org.

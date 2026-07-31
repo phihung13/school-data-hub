@@ -236,7 +236,8 @@ export function ThisWeekView({
                       <p className="mt-3 text-[12px] text-caption">Chưa có check-in nào tuần này.</p>
                     )}
                     <p className="mt-3 text-[11.5px] leading-relaxed text-caption">
-                      Cảm xúc là chuyện riêng của con — chỉ thầy cô chủ nhiệm xem để biết khi nào con cần giúp.
+                      Cảm xúc là chuyện riêng của con — chỉ thầy cô chủ nhiệm và thầy cô tâm lý xem để
+                      biết khi nào con cần giúp.
                     </p>
                   </div>
 

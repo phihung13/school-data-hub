@@ -544,8 +544,12 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
             <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#6B7789]">
               <span aria-hidden="true" className="msr text-[15px] text-caption">lock</span>
               {/* Đúng câu nhãn của PRODUCT.md §"Ràng buộc không thương lượng". "GVCN" là
-                  từ vựng vận hành, không được xuất hiện trước mặt học sinh (§8). */}
-              Chỉ thầy cô chủ nhiệm thấy
+                  từ vựng vận hành, không được xuất hiện trước mặt học sinh (§8).
+                  Sửa 01/08/2026: thêm "và thầy cô tâm lý". Sau 0038, cột mood đọc được bởi
+                  ĐÚNG hai vai — chủ nhiệm và tâm lý cụm (core.can_read_mood). Câu cũ hứa một
+                  vai trong khi hệ cho hai vai đọc: nhãn nói ít hơn sự thật cũng là nói dối,
+                  và đây là nhãn in ngay trên ô trẻ em ghi cảm xúc. */}
+              Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy
             </div>
             <div className="mt-5 grid w-full grid-cols-4 gap-3">
               {MOOD_ORDER.map((mood) => {

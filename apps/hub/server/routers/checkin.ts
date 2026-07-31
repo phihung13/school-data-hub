@@ -72,7 +72,7 @@ export const checkinRouter = router({
         status: string;
       }>(
         `select occurred_on::text, mood, to_char(occurred_at, 'HH24:MI') as checked_in_at, status
-           from attendance.checkins
+           from attendance.checkins_care
           where student_id = $1 and kind = 'in'
             and occurred_on between $2 and $3`,
         [studentId, toLocalIsoDate(monday), toLocalIsoDate(friday)],
@@ -103,7 +103,7 @@ export const checkinRouter = router({
         mood: number | null;
       }>(
         `select occurred_on::text, to_char(occurred_at, 'HH24:MI') as checked_in_at, status, mood
-           from attendance.checkins
+           from attendance.checkins_care
           where student_id = $1 and kind = 'in'
           order by occurred_on desc
           limit 8`,
@@ -127,7 +127,7 @@ export const checkinRouter = router({
       const studentId = await getMyStudentId(client);
       const { rows } = await client.query<{ mood: number | null; checked_in_at: string | null }>(
         `select mood, to_char(occurred_at, 'HH24:MI') as checked_in_at
-           from attendance.checkins
+           from attendance.checkins_care
           where student_id = $1 and occurred_on = current_date and kind = 'in'`,
         [studentId],
       );
@@ -174,10 +174,18 @@ export const checkinRouter = router({
       // 'queued_late' lúc 11 giờ hôm trước thành 'present', và 0025 cũng đã thu quyền
       // UPDATE xuống đúng ba cột (mood, status, confirmed_by) ở tầng dữ liệu.
       const { rows } = await client.query<{ id: string; status: string }>(
+        // GHI vào BẢNG GỐC, không phải view checkins_care: view chỉ là đường ĐỌC mood
+        // (0038). Postgres không cho INSERT ... ON CONFLICT lên view thiếu ràng buộc duy
+        // nhất, nên đổi nhầm chỗ này là gãy đúng đường bấm check-in hằng ngày của em.
+        //
+        // Dùng tham số $3 thay cho excluded.mood: Postgres tính excluded.mood là một lần
+        // ĐỌC cột mood của bảng đích nên nó đòi quyền SELECT trên cột đó — mà 0038 vừa
+        // thu quyền đọc mood khỏi vai authenticated. Gán thẳng tham số cho cùng kết quả
+        // mà không cần quyền đọc; ngữ nghĩa §9 (bấm lại chỉ cập nhật) giữ nguyên.
         `insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
          values ($1, $2::date, 'in', $3, $4, $5)
          on conflict (student_id, occurred_on, kind)
-         do update set mood = excluded.mood
+         do update set mood = $3
          returning id, status`,
         [studentId, rule.occurred_on, input.mood, rule.status, rule.source],
       );

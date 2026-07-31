@@ -35,7 +35,10 @@ describe("§9 · mutation gọi hai lần không sinh dòng đôi", () => {
           `insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
            values ($1, current_date, 'in', $2, 'present', 'app')
            on conflict (student_id, occurred_on, kind)
-           do update set mood = excluded.mood
+           -- Bám đúng câu router thật chạy: từ 0038, đọc cột mood cần quyền riêng nên
+           -- submitMood gán tham số thay vì excluded.mood (xem checkin.ts). Test mô phỏng
+           -- câu cũ thì nó kiểm một câu không còn ai chạy.
+           do update set mood = $2
            returning id`,
           [FIXTURE.studentMinh, mood],
         );

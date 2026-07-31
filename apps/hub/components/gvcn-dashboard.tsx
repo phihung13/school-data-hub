@@ -37,6 +37,14 @@
 //     sự, không phải thiếu dữ liệu" kể cả khi `lastScanAt = null`, tức chưa có
 //     lần quét cảnh báo nào chạy xong. Nay câu kết luận đó chỉ in ra khi có mốc
 //     quét CỦA HÔM NAY đứng sau nó — xem `boardEmptyPresentation`.
+//
+//  7. (31/07/2026, gói "gvcn-nhieu-lop") BUỒNG LÁI CỐ ĐỊNH Ở LỚP ĐẦU TIÊN. Trang gọi
+//     `care.getDashboard()` không tham số, máy chủ lấy lớp chủ nhiệm đầu tiên, và màn
+//     hình không có bộ chọn lớp nào. Cô chủ nhiệm hai lớp mở buồng lái chỉ thấy lớp
+//     một — bốn màn con (/gvcn/lop, diem-danh, duyet-bao-cao, ghi-chu) đã có bộ chọn
+//     từ trước, nên buồng lái là chỗ cuối cùng còn đoán hộ. Nay dùng CHUNG
+//     `useSelectedClass`/`ClassPicker` với bốn màn đó: cùng một hàm chọn lớp mặc định
+//     thì hai bên không thể mở hai lớp khác nhau trong cùng một phiên.
 "use client";
 
 import { useState } from "react";
@@ -47,8 +55,9 @@ import Link from "next/link";
 import { HubSidebar } from "./hub-sidebar";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
-import { ErrorState, LoadingState, MutationError, MutationSuccess } from "./ui/query-state";
-import { personName } from "./ui/labels";
+import { ClassPicker, useSelectedClass } from "./gvcn/class-picker";
+import { EmptyState, ErrorState, LoadingState, MutationError, MutationSuccess } from "./ui/query-state";
+import { classLabel, personName } from "./ui/labels";
 
 const MOOD_META: Record<1 | 2 | 3 | 4, { label: string; dot: string; grad: string }> = {
   4: { label: "Vui", dot: "#00C96F", grad: "linear-gradient(160deg,#00D97A,#00A85E)" },
@@ -255,15 +264,26 @@ export function GvcnDashboard({
   classCode?: string | null;
 }) {
   const utils = trpc.useUtils();
-  const dashboard = trpc.care.getDashboard.useQuery();
+
+  // Cùng nguồn lớp và cùng hàm chọn mặc định với bốn màn con — xem ghi chú 7 đầu file.
+  const classesQuery = trpc.care.getMyClasses.useQuery();
+  const myClasses = classesQuery.data?.classes ?? [];
+  const { classId, classCode: pickedCode, select } = useSelectedClass(classesQuery.data?.classes);
+
+  // `enabled` chờ biết lớp thật: gửi query khi chưa biết lớp thì máy chủ tự chọn hộ, và
+  // lần render sau lớp lại đổi trước mắt người dùng (cùng lý do đã ghi ở class-roster-view).
+  const dashboard = trpc.care.getDashboard.useQuery(
+    { classId: classId ?? undefined },
+    { enabled: classId !== null },
+  );
   const acknowledgeLate = trpc.care.acknowledgeLate.useMutation({
     onSuccess: () => utils.care.getDashboard.invalidate(),
   });
 
   const greetName = personName(displayName) || displayName;
-  // Lớp thật ưu tiên lấy từ chính buồng lái (đúng lớp đang xem); `classCode` từ
-  // phiên là bản dự phòng khi query chưa xong.
-  const sidebarClass = dashboard.data?.className ?? classCode;
+  // Lớp thật ưu tiên lấy từ chính buồng lái (đúng lớp đang xem); mã lớp vừa chọn rồi tới
+  // `classCode` của phiên là hai bản dự phòng khi query chưa xong.
+  const sidebarClass = dashboard.data?.className ?? pickedCode ?? classCode;
 
   const sidebar = (
     <div className="hidden md:flex md:w-[240px] md:flex-none">
@@ -291,10 +311,66 @@ export function GvcnDashboard({
     </div>
   );
 
-  if (dashboard.isPending) return frame(<LoadingState label="Đang tải buồng lái…" />);
+  // Danh sách lớp đi TRƯỚC: buồng lái không được vẽ một con số nào khi còn chưa biết
+  // con số đó thuộc lớp nào. Ba trạng thái riêng, không gộp vào trạng thái của dashboard —
+  // gộp thì lỗi tải danh sách lớp sẽ hiện thành "đang tải buồng lái" mãi mãi.
+  if (classesQuery.isPending) return frame(<LoadingState label="Đang tìm lớp của thầy cô…" />);
+  if (classesQuery.error) {
+    return frame(
+      <ErrorState
+        error={classesQuery.error}
+        label="danh sách lớp"
+        onRetry={() => void classesQuery.refetch()}
+      />,
+    );
+  }
+  if (myClasses.length === 0) {
+    return frame(
+      <EmptyState
+        icon="school"
+        title="Thầy cô chưa được phân công chủ nhiệm lớp nào"
+        hint="Phân công chủ nhiệm do văn phòng nhập. Khi có lớp, buồng lái sẽ tự hiện tình hình lớp đó."
+      />,
+    );
+  }
+
+  // Bộ chọn lớp tự ẩn khi chỉ có một lớp (ClassPicker) — nên khối này chỉ hiện với người
+  // chủ nhiệm từ hai lớp trở lên. Hai điều cố ý:
+  //
+  //   · Nút sáng theo `classId` của BỘ CHỌN, không theo lớp trong `dashboard.data`. Đổi
+  //     lớp làm đổi khoá truy vấn nên có một nhịp đang tải; nút phải sáng ngay tại cú
+  //     bấm, nếu không người ta bấm lần hai vì tưởng hụt.
+  //   · Câu dưới nút không phải trang trí: bốn thẻ số, biểu đồ cảm xúc và mọi thẻ cờ bên
+  //     dưới đều là của MỘT lớp, và một con số không nói rõ của lớp nào là một con số
+  //     dùng được mà sai.
+  const picker =
+    myClasses.length > 1 ? (
+      <div className="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <ClassPicker classes={myClasses} selectedId={classId} onSelect={select} />
+        <span className="text-[11.5px] font-semibold text-muted">
+          Thầy cô chủ nhiệm {myClasses.length} lớp — buồng lái đang xem{" "}
+          <b className="font-black text-[#33507C]">lớp {pickedCode}</b>.
+        </span>
+      </div>
+    ) : null;
+
+  // Bộ chọn lớp đi kèm CẢ nhánh đang tải và nhánh lỗi: bấm sang lớp khác mà bộ chọn biến
+  // mất trong lúc tải thì không còn đường bấm ngược lại, và lỗi tải lớp B sẽ khoá luôn
+  // người dùng ở một màn không có lối về lớp A.
+  if (dashboard.isPending) {
+    return frame(
+      <div className="p-4 md:p-7">
+        {picker}
+        <LoadingState label="Đang tải buồng lái…" />
+      </div>,
+    );
+  }
   if (dashboard.error || !dashboard.data) {
     return frame(
-      <ErrorState error={dashboard.error} label="buồng lái" onRetry={() => void dashboard.refetch()} />,
+      <div className="p-4 md:p-7">
+        {picker}
+        <ErrorState error={dashboard.error} label="buồng lái" onRetry={() => void dashboard.refetch()} />
+      </div>,
     );
   }
 
@@ -302,12 +378,16 @@ export function GvcnDashboard({
   const totalMood = d.moodDistribution.reduce((s, m) => s + m.count, 0) || 1;
 
   return frame(
-    <div className="flex-1 p-4 md:overflow-y-auto md:p-7">
+    // `key` là lớp do MÁY CHỦ chốt (không phải lớp client vừa bấm): đổi lớp thì cả bảng
+    // dựng lại từ đầu — ô cuộn về đỉnh, ghi chú đang soạn dở trong thẻ cờ không sống sót
+    // sang lớp khác. Một ghi chú viết cho em này mà nằm lại dưới tên em kia là đúng loại
+    // lỗi không ai phát hiện cho tới lúc đã lưu.
+    <div key={d.classId} className="flex-1 p-4 md:overflow-y-auto md:p-7">
       <div className="flex flex-wrap items-end justify-between gap-3.5">
         <div>
           <div className="text-[20px] font-black text-navy md:text-[24px]">Chào {greetName} 👋</div>
           <div className="mt-1 text-[13px] font-semibold text-[#5B6B80]">
-            GVCN lớp {d.className} · {d.totals.totalStudents} học sinh
+            GVCN {classLabel(d.className)} · {d.totals.totalStudents} học sinh
           </div>
         </div>
         <span className="flex items-center gap-1.5 rounded-full border border-[#E9ECF2] bg-white px-[15px] py-2.5">
@@ -317,6 +397,8 @@ export function GvcnDashboard({
           </span>
         </span>
       </div>
+
+      {picker}
 
       {d.staleSources.length > 0 && (
         <div className="mt-3.5 flex items-center gap-2 rounded-xl bg-[#FFF1C9] px-4 py-2.5 text-[11.5px] font-bold text-gold-textDark">

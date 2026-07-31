@@ -19,16 +19,36 @@ export interface DevAccount {
   audience: "staff" | "student"; // tab "Học sinh & Thầy cô"
 }
 
-/** Khớp UUID trong packages/core/db/seed/seed.mjs (và test_support.seed_basic()). */
+/**
+ * Khớp UUID trong packages/core/db/seed/seed.mjs (và test_support.seed_basic() +
+ * test_support.seed_khoi()). Danh sách này là CỬA duy nhất để thử một vai trong dev:
+ * vai nào không có mặt ở đây thì trên thực tế không ai chạy thử được, dù RLS đã có
+ * policy cho nó — và một policy chưa ai từng đi qua thì chưa biết là đúng hay sai.
+ *
+ * Cả khối 6 (5 lớp) nên có đủ bốn kiểu người lớn, không phải một GVCN mẫu:
+ *   · GVCN một lớp   — Cô Lan (6A1), Cô Hạnh (6A2), Thầy Kiên (6A5)
+ *   · GVCN HAI lớp   — Cô Vân (6A3 và 6A4): kiểm bộ chọn lớp, lớp mặc định, và
+ *                      chuyện số liệu hai lớp không được lẫn vào nhau
+ *   · Giáo viên bộ môn — Thầy Nam (Toán 6A1·6A2·6A3), Cô Diệp (Ngữ văn 6A3·6A4·6A5).
+ *     Hai người CỐ Ý không dạy hết khối: chỗ trống là mẫu số của mọi câu "thầy cô bộ
+ *     môn không thấy em ở lớp mình không dạy". Trước 31/07/2026 seed dev không có
+ *     phân công bộ môn nào, nên câu đó xanh vì rỗng chứ không phải vì bị chặn.
+ *   · Tâm lý cụm, quản trị kiêm hiệu trưởng cơ sở — như cũ.
+ */
 export const DEV_ACCOUNTS: DevAccount[] = [
   { authUid: "90000000-0000-0000-0000-000000000001", email: "gvcn@va.edu.vn", displayName: "Cô Lan (GVCN 6A1)", audience: "staff" },
-  // Thầy Nam (bộ môn 6A1, auth_uid …0002) đã bỏ 31/07/2026 để nhường chỗ cho tài khoản quản
-  // trị dưới đây. Bỏ luôn cả trong seed — vai "teacher" (giáo viên bộ môn) tạm không còn tài
-  // khoản demo nào; cần thử lại vai đó thì thêm lại vào cả hai file.
-  { authUid: "90000000-0000-0000-0000-000000000003", email: "tamly@va.edu.vn", displayName: "Cô Mai (tâm lý cụm)", audience: "staff" },
-  { authUid: "90000000-0000-0000-0000-000000000005", email: "minh@va.edu.vn", displayName: "Học sinh Minh", audience: "student" },
   { authUid: "90000000-0000-0000-0000-000000000006", email: "gvcn2@va.edu.vn", displayName: "Cô Hạnh (GVCN 6A2)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000008", email: "gvcn3@va.edu.vn", displayName: "Cô Vân (GVCN 6A3 và 6A4)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000009", email: "gvcn4@va.edu.vn", displayName: "Thầy Kiên (GVCN 6A5)", audience: "staff" },
+  // Thầy Nam (…0002) bị bỏ 31/07/2026 để nhường chỗ cho tài khoản quản trị, và cùng lúc
+  // đó vai "teacher" mất luôn tài khoản demo cuối cùng. Trả lại ở đây — không phải cho
+  // đủ danh sách, mà vì không có nó thì nhánh "giáo viên bộ môn" của mọi màn hình và
+  // mọi policy chưa từng được ai đi qua một lần nào.
+  { authUid: "90000000-0000-0000-0000-000000000002", email: "gvbomon@va.edu.vn", displayName: "Thầy Nam (bộ môn Toán)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-00000000000a", email: "gvbomon2@va.edu.vn", displayName: "Cô Diệp (bộ môn Ngữ văn)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000003", email: "tamly@va.edu.vn", displayName: "Cô Mai (tâm lý cụm)", audience: "staff" },
   { authUid: "90000000-0000-0000-0000-000000000007", email: "admin.hung@va.edu.vn", displayName: "Hùng (Quản trị)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000005", email: "minh@va.edu.vn", displayName: "Học sinh Minh", audience: "student" },
 ];
 
 export function findDevAccount(authUid: string): DevAccount | undefined {
@@ -65,6 +85,12 @@ export interface ResolvedIdentity {
    * dán thẳng lên sidebar sẽ ra một chuỗi 36 ký tự vô nghĩa. Với GVCN là lớp chủ
    * nhiệm; với học sinh là lớp đang học. Người không thuộc hai nhóm đó (phụ huynh,
    * tâm lý cụm, quản trị) là `null` — nơi hiển thị phải bỏ hẳn hậu tố, không bịa.
+   *
+   * GVCN NHIỀU LỚP (Cô Vân chủ nhiệm 6A3 và 6A4 trong seed): hai trường này trả về
+   * lớp ĐẦU TIÊN THEO MÃ LỚP, cùng quy tắc mà `care.getMyClasses` dùng để chọn lớp
+   * mặc định — nên nhãn trên sidebar và lớp mà buồng lái mở ra là một. Đây vẫn là
+   * NỬA SỰ THẬT khi cô có hai lớp: nhãn ghi "6A3" trong khi cô còn 6A4. Chỗ sửa đúng
+   * là bộ chọn lớp ở tầng giao diện, không phải ở đây (xem canPhoiHop của gói việc).
    */
   className: string | null;
 }
@@ -99,11 +125,18 @@ export async function resolveIdentity(authUid: string): Promise<ResolvedIdentity
           where auth_uid = $1
        ),
        scopes as (
+         -- ORDER BY cl.code KHÔNG phải trang trí. Với một GVCN hai lớp (Cô Vân:
+         -- 6A3 + 6A4), array_agg không ORDER BY trả về thứ tự của planner: hôm nay
+         -- ra 6A3, sau một lần VACUUM ra 6A4, và người dùng thấy tên lớp trên sidebar
+         -- tự đổi giữa hai lần đăng nhập. Sắp theo mã lớp cho ra CÙNG một lớp mà
+         -- care.getMyClasses chọn làm mặc định — hai nơi không còn trả lời khác nhau.
          select array_agg(distinct s.role_code) as roles,
-                (array_agg(s.class_id) filter (where s.role_code = 'homeroom'))[1]
+                (array_agg(s.class_id order by cl.code)
+                   filter (where s.role_code = 'homeroom'))[1]
                   as homeroom_class_id
            from core.user_role_scopes s
            join u on u.id = s.user_id
+           left join core.classes cl on cl.id = s.class_id
        ),
        st as (
          select s.id from core.students s join u on u.id = s.user_id

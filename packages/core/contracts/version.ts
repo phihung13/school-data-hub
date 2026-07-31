@@ -149,7 +149,11 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "action",
 //       "occurredAt"
 //     ],
+//     "GetDashboardInput": [
+//       "classId"
+//     ],
 //     "GetDashboardOutput": [
+//       "classId",
 //       "className",
 //       "asOfDate",
 //       "lastScanAt",
@@ -362,6 +366,83 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "careCases",
 //       "interventions",
 //       "reportApprovals"
+//     ],
+//     "ClusterSchool": [
+//       "schoolId",
+//       "schoolCode",
+//       "schoolName"
+//     ],
+//     "ClusterCaseRow": [
+//       "studentId",
+//       "studentCode",
+//       "fullName",
+//       "className",
+//       "schoolName",
+//       "caseId",
+//       "caseStatus",
+//       "openedAt",
+//       "helpPending",
+//       "helpRequestedOn",
+//       "helpTopic",
+//       "helpUrgency",
+//       "interventionCount",
+//       "lastInterventionAt",
+//       "daysSinceLastAction",
+//       "overQuietWindow"
+//     ],
+//     "ListClusterCasesInput": [
+//       "schoolId",
+//       "includeClosed",
+//       "limit"
+//     ],
+//     "ListClusterCasesOutput": [
+//       "asOfDate",
+//       "scope",
+//       "scope.schools",
+//       "totals",
+//       "totals.openCases",
+//       "totals.pendingHelp",
+//       "totals.overQuietWindow",
+//       "urgentWindowDays",
+//       "quietDays",
+//       "rows"
+//     ],
+//     "ClusterHelpSignal": [
+//       "requestedOn",
+//       "requestedAt",
+//       "topic",
+//       "urgency",
+//       "handledAt"
+//     ],
+//     "CounselorNote": [
+//       "noteId",
+//       "body",
+//       "createdAt",
+//       "authorName",
+//       "mine"
+//     ],
+//     "GetClusterCaseDetailInput": [
+//       "studentId",
+//       "days"
+//     ],
+//     "GetClusterCaseDetailOutput": [
+//       "asOfDate",
+//       "window",
+//       "window.days",
+//       "window.fromDate",
+//       "window.toDate",
+//       "student",
+//       "student.studentId",
+//       "student.studentCode",
+//       "student.fullName",
+//       "student.className",
+//       "student.schoolName",
+//       "openCase",
+//       "cases",
+//       "interventions",
+//       "counselorNotes",
+//       "helpSignals",
+//       "notesWritable"
 //     ],
 //     "MoodBucket": [
 //       "mood",

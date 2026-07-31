@@ -1,26 +1,56 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 7
+sync-version: 8
 ---
 
 # Flag Engine — spec thuật toán
 
-Chạy `pg_cron` 01:00 mỗi đêm. Toàn bộ là SQL if-then — không ML (quyết định đã chốt, đổi phải qua ADR).
+Toàn bộ là SQL if-then — không ML (quyết định đã chốt, đổi phải qua ADR).
+
+**Ai gọi nó, tính tới 31/07/2026** (sửa câu cũ "chạy `pg_cron` 01:00 mỗi đêm" — câu đó mô tả một
+thứ chưa bao giờ tồn tại): thuật toán nằm trong hàm `care.run_flag_engine(as_of date, mode text)`
+(`0039`), và người gọi là bộ lịch job chung — `tools/jobs/run-all.mjs` đọc bảng `ops.job_schedule`
+(`0041`), thấy dòng `flag_engine` tới lượt thì sinh `tools/jobs/run-flag-engine.mjs`. Không dùng
+`pg_cron`: extension đó phải bật ở tầng nhà cung cấp, và lúc sự cố thì một lịch nằm trong database
+là thứ không ai gỡ ra đọc được bằng `git log`. Cắm Task Scheduler/cron **mỗi giờ**, không phải mỗi
+đêm — `ops.job_due()` gác nên chạy 24 lượt/ngày vẫn chỉ ra một lần chạy thật (§9), đổi lại một đêm
+máy tắt được bù ở lượt kế thay vì mất trọn một chu kỳ. Chi tiết vận hành: `tools/jobs/README.md`.
 
 ## Bảng ngưỡng (§6)
 
 ```
-care.thresholds (rule_code text PK, params jsonb, active bool, updated_by uuid, updated_at timestamptz)
+care.rules       (rule_code text PK, label, source_key → ops.source_freshness, …)
+care.thresholds  (id uuid PK, rule_code → care.rules, school_id uuid NULL, params jsonb,
+                  active bool, updated_by uuid, updated_at timestamptz)
+                  UNIQUE NULLS NOT DISTINCT (rule_code, school_id)
 ──────────────────────────────────────────────────────────────
 A_ATTENDANCE   {"window_days": 30, "min_rate": 0.90}
 B_BEHAVIOR     {"window_days": 30, "max_incidents": 2}
 C_MASTERY      {"strands": 2, "weeks": 2}
 C_CEFR         {"periods_below_trajectory": 2}
-E_MOOD         {"negative_days_streak": 5}
+E_MOOD         {"negative_days_streak": 5, "mode": "streak"}
 E_URGENT       {"help_request": true, "tutor_minutes_drop_pct": 60}
 ```
 
-Sửa ngưỡng qua `admin.updateThreshold` (có audit log) — không deploy, không sửa code.
+Ba điểm đã đổi so với bản đầu, đều do migration thật, đừng đọc bảng trên như bản gốc bất biến:
+
+1. **Ngưỡng khai được theo TỪNG CƠ SỞ** (`0026`). Khóa chính không còn là `rule_code`; `school_id`
+   NULL nghĩa là dòng mặc định toàn hệ. Engine luôn đọc qua `care.resolve_threshold(rule_code,
+   school_id)` — hàm tự lấy dòng riêng của cơ sở, không có thì rơi về dòng mặc định. Không truy
+   vấn thẳng `care.thresholds` ở bất kỳ đâu.
+2. **`E_MOOD.mode`** (`0026`, ADR-023): `"streak"` (mặc định) = 5 ngày mood xấu **liên tiếp**;
+   `"window"` = 5 ngày bất kỳ trong cửa sổ. Tên tham số `negative_days_streak` từng ngụ ý liên
+   tiếp trong khi view đếm ngày bất kỳ — hai cách đếm cho ra hai tập học sinh khác nhau và không
+   ai từng chọn. Nay chọn rồi, và chọn bằng một câu UPDATE chứ không bằng một lần deploy.
+   `care.v_signal_emotion` khai cả hai cột `negative_days` và `negative_streak` để đổi `mode`
+   không phải sửa view.
+3. **`care.rules.source_key`** (`0039`) khai mỗi luật sống nhờ nguồn nào, FK về
+   `ops.source_freshness`. Đây là thứ làm hành vi cố định số 5 bên dưới thi hành được: không có
+   cột này thì "nguồn hết tươi thì bỏ qua rule" chỉ là một mảng tên viết chết trong hàm, và ngày
+   connector mới ra đời sẽ không ai đi tìm nó.
+
+Sửa ngưỡng qua `admin.updateThreshold` (có audit log) — không deploy, không sửa code. **Chưa cài**:
+router `admin` chưa tồn tại (`03-api.md`), nên hôm nay đổi ngưỡng vẫn là một câu UPDATE chạy tay.
 
 ## Thuật toán (pseudocode — bản lưu đồ cho người duyệt ở file đối ứng)
 
@@ -62,6 +92,21 @@ else:
 ## Đầu ra
 
 `care.flags` → buồng lái GVCN fetch khi mở (không Realtime — ADR-010), kèm dòng freshness "Quét đêm qua: HH:mm". Ngôn ngữ hướng HS/PH luôn Glow & Grow — từ vựng "cờ/ngưỡng/nguy cơ" chỉ trong buồng lái nội bộ.
+
+## Đã cài đặt thật tới đâu (`0039`, 31/07/2026)
+
+Mục này tồn tại vì một spec không nói rõ phần nào đã chạy thì đọc y như một spec đã chạy hết.
+
+| Phần của spec | Trạng thái | Ghi chú |
+|---|---|---|
+| `care.run_flag_engine(as_of, mode)` | ✅ chạy | Toàn bộ thuật toán trong MỘT transaction: job chết giữa chừng không để lại nửa hồ sơ can thiệp |
+| A_ATTENDANCE · B_BEHAVIOR · C_MASTERY · E_MOOD · E_URGENT | ✅ chạy | Đọc **chỉ** qua `care.v_signal_*` (ADR-010) |
+| C_CEFR | ⛔ chưa | Chưa có signal view nào cho lộ trình CEFR. Engine **bỏ qua kèm lý do ghi vào metrics**, không chấm bằng dữ liệu không tồn tại |
+| Gộp cờ · định mức 5 · leo thang 7 ngày | ✅ chạy | Định mức là hằng số `c_owner_quota` trong hàm, **cố ý không nằm trong `care.thresholds`** — nó là hành vi cố định (đổi phải qua ADR), không phải ngưỡng cảnh báo |
+| Nguồn hết tươi ⇒ bỏ qua rule | ✅ chạy | Qua `care.rules.source_key` × `ops.source_freshness`; luật chưa khai nguồn cũng bị bỏ qua với lý do riêng `chua_khai_nguon_tuoi` |
+| `mode='backfill'` không mở hồ sơ, không leo thang | ✅ chạy | Chỉ ghi `care.flags` + MỘT bản tóm tắt vào `ops.outbox_messages` |
+| Ghi `ops.job_runs` mỗi lần chạy | ✅ chạy | Kèm `degraded_sources`; `ops.v_job_health` (`0041`) biến "chưa chạy lần nào" thành một trạng thái riêng, không phải `ok` |
+| Buồng lái GVCN đọc `care.flags` | ⛔ chưa | `care.getDashboard` vẫn **tự tính tín hiệu thô mỗi lần mở màn**. Hai đường đang song song và PHẢI cho cùng kết quả — đó là cách đối chiếu trước khi chuyển. Nợ có tên: `DEBT.md` #32 |
 
 ## Test bắt buộc
 

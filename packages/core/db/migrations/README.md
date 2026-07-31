@@ -40,12 +40,25 @@
 | `0032` | Đường ghi cho 4 màn hình GVCN: policy điểm danh hộ + `report.growth_report_approvals` (sổ duyệt Báo cáo Trưởng thành) |
 | `0033` | Vòng đời tài khoản: `core.anonymize_user()` + chính sách `ON DELETE` nhất quán + trigger chặn xóa cứng có thông điệp tiếng Việt (Luật 91/2025) |
 | `0034` | `health.read_logs()` + thu GRANT cột `category`/`detail` — thi hành thật tuyên bố "mọi lượt đọc y tế đều ghi audit", rồi viết lại tuyên bố cho đúng phạm vi làm được |
+| `0035` | **Siết thứ nhất trong ba (ADR-025):** `care.counselor_notes` từ `core.can_see_care()` (= GVCN cũng đọc được nguyên văn buổi tư vấn) về **tác giả + tâm lý cụm**. Chú thích cũ ở `0009` ghi "hẹp nhất trong care" trong khi điều kiện y hệt hai policy phía trên nó |
+| `0036` | Mã mời phụ huynh thành **vé dùng một lần** + cửa sổ nhắc lại 15 phút, kèm `revoked_at`/`revoked_by`/`full_name` (ADR-024). `0013` trả lại phiên MỖI LẦN mã được nhập cho tới ngày hết hạn, và ghi lý do là "§9 idempotent" — §9 nói về mutation, không nói một chứng danh phải dùng lại được mãi |
+| `0037` | **Siết thứ hai (ADR-025):** `attendance.help_requests` ra khỏi vòng lặp 16 bảng của `0009`, đổi sang `core.is_me() OR core.can_see_care()`. Trước đó phụ huynh và hiệu trưởng SELECT được cột `note` — nguyên văn lời em viết khi bấm "cần gặp thầy cô" — trong khi màn hình in cho em đọc rằng bố mẹ không nhìn thấy |
+| `0038` | **Siết thứ ba (ADR-025):** che cột `mood` khỏi phụ huynh và hiệu trưởng bằng **GRANT theo CỘT** + view chủ-quyền `attendance.checkins_care` + hàm phạm vi mới `core.can_read_mood()`. Giữ nguyên DÒNG điểm danh (phụ huynh vẫn thấy có mặt/vắng/muộn). Chọn GRANT-theo-cột thay vì view che cột vì view làm gãy `INSERT … ON CONFLICT` của check-in **và** khiến `rollup_mood_trends()` đọc ra toàn NULL rồi job xoá chi tiết ngay sau đó — mất 12 tháng dữ liệu không một dòng lỗi |
+| `0039` | **Flag engine cài đặt thật:** `care.run_flag_engine(as_of, mode)` — 5/6 luật (C_CEFR chưa có signal view, bỏ qua kèm lý do), gộp cờ, định mức 5 hồ sơ, leo thang 7 ngày, nhánh `backfill` chỉ ghi lịch sử. Thêm `care.rules.source_key` (FK về `ops.source_freshness`) và bỏ cửa sổ 30 ngày viết chết trong hai signal view — nay đọc từ `care.thresholds` theo đúng cơ sở của em |
+| `0040` | Đường đọc **tổng hợp** cho `principal`/`board`: `report.class_pulse`/`grade_pulse` + `report.min_cohort()` = 10. Không cột nào trả về học sinh cá nhân; lớp dưới ngưỡng trả NULL + `cohort_too_small`, KHÔNG trả 0 ("không được phép nói" ≠ "lớp không có ai vắng"); gọi sai vai nhận LỖI, không nhận bảng rỗng |
+| `0041` | **Lịch chạy job:** `ops.job_schedule` + `ops.v_job_health` (7 trạng thái, `chua_chay` là trạng thái riêng chứ không phải `ok`) + `ops.reap_stale_runs()`. Chính bộ lịch tự khai một dòng cho mình, nên máy chạy cron chết là `qua_han` sáng lên thay vì im lặng tuyệt đối. Luật chép từ `0011`: chỉ khai job đã có bộ chạy — viết thành mệnh đề `WHERE`, không nằm trong comment |
 
 ## Đã kiểm chứng trên PostgreSQL thật
 
-Ngày 31/07/2026, PostgreSQL 16 + pgTAP: **34 migration chạy sạch theo thứ tự · 32/32 file test xanh · 358 assertion** trên database dựng lại từ đầu (Docker, không phải mô phỏng). Đo bằng chính `tools/run-db-tests.sh`, không phải bằng cách cộng các con số ghi rải rác trong tài liệu.
+**Lần đo mới nhất — 22:10 ngày 31/07/2026, PostgreSQL 16 + pgTAP, database `hub_docs` dựng lại từ số 0** (Docker, không phải mô phỏng; đo bằng chính `tools/run-db-tests.sh`, không phải bằng cách cộng các con số ghi rải rác trong tài liệu):
 
-Mốc trước đó: 29/07/2026 — 18 migration · 16 file test · ~150 assertion. `0013`–`0018` được viết và kiểm chứng trong cùng phiên xây `apps/hub` GĐ1; 2 trong số đó (`0016`, `0017`) là lỗ hổng thật do `0001`–`0012` chưa từng chạy cùng một ứng dụng thật gọi tới. `0023`–`0034` là đợt rà toàn hệ thống trước go-live: phần lớn không phải thêm tính năng mà là **cài đặt thật những kiểm soát đã được tuyên bố mà chưa tồn tại** — xem cột ghi chú ở bảng trên.
+**41 migration chạy sạch theo thứ tự · 517 assertion trên 39 file test · 37/39 file xanh, 2 file ĐỎ.**
+
+Hai file đỏ ghi ra đây thay vì làm tròn thành "xong": `0017_checkins_self_update_test.sql` và `0023_principal_scope_test.sql`, cả hai cùng một câu lỗi `permission denied for table checkins`. Đây là **hệ quả đã biết trước** của `0038` (thu quyền `SELECT` cột `mood`, ADR-025) — đợt rà đường đọc chưa quét hết hai file test này. Chọn hỏng ồn ào hơn hỏng im lặng là chủ ý của `0038`; nhưng "đã biết trước" không phải là "đã xong", nên nó nằm ở `DEBT.md` #34 với điều kiện đóng rõ ràng, không nằm trong một dòng ghi chú.
+
+Mốc trước đó: 31/07/2026 (đợt A) — 34 migration · 32 file test · 358 assertion, xanh toàn bộ. 29/07/2026 — 18 migration · 16 file test · ~150 assertion. `0013`–`0018` được viết và kiểm chứng trong cùng phiên xây `apps/hub` GĐ1; 2 trong số đó (`0016`, `0017`) là lỗ hổng thật do `0001`–`0012` chưa từng chạy cùng một ứng dụng thật gọi tới. `0023`–`0034` là đợt rà toàn hệ thống trước go-live: phần lớn không phải thêm tính năng mà là **cài đặt thật những kiểm soát đã được tuyên bố mà chưa tồn tại**. `0035`–`0041` là đợt mở từ một lớp lên cả khối, và ba file đầu (`0035`/`0037`/`0038`) là ba lần cùng một lỗi gốc — xem ADR-025.
+
+**Không có bảng ghi migration đã chạy** (`DEBT.md` #23), nên con số "41 migration chạy sạch" ở trên chỉ đúng cho đường dựng-lại-từ-đầu. Áp một file mới lên database đang sống vẫn là việc phải làm tay và tự nhớ.
 
 Yêu cầu phiên bản: **PostgreSQL 15 trở lên** (`UNIQUE NULLS NOT DISTINCT` ở `0003`).
 
@@ -61,6 +74,21 @@ docker run -d --name pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=hub_test -p
 docker exec pg bash -c "apt-get update -qq && apt-get install -y -qq postgresql-16-pgtap"
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_test ./tools/run-db-tests.sh
 ```
+
+**Máy không cài `psql` thì chạy script BÊN TRONG container** — nó chỉ cần `psql` và các file `.sql`, không cần Node:
+
+```bash
+docker exec pg_hub psql -U postgres -c "drop database if exists hub_test" -c "create database hub_test"
+docker exec pg_hub mkdir -p /tmp/repo/tools /tmp/repo/packages/core
+docker cp packages/core/db pg_hub:/tmp/repo/packages/core/
+docker cp tools/run-db-tests.sh pg_hub:/tmp/repo/tools/
+docker exec -e DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_test pg_hub \
+  bash /tmp/repo/tools/run-db-tests.sh
+# Git Bash trên Windows: thêm MSYS_NO_PATHCONV=1 trước `docker exec`, nếu không nó
+# dịch /tmp/repo/... thành một đường dẫn Windows và container báo "No such file".
+```
+
+**Dựng một database RIÊNG, đừng trỏ vào `hub_dev`.** Script chạy migration từ đầu rồi nạp fixture: trỏ vào database đang có dữ liệu là vừa hỏng ngay ở `0002` (`relation "school_networks" already exists`) vừa đè fixture lên thứ người khác đang dùng.
 
 ## Kiểm tra bắt buộc trước khi merge (§2, `02-database.md`)
 

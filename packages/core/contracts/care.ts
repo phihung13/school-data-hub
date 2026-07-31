@@ -41,7 +41,35 @@ export const RecentAction = z.object({
 });
 export type RecentAction = z.infer<typeof RecentAction>;
 
+/**
+ * Buồng lái nhìn ĐÚNG MỘT lớp mỗi lần.
+ *
+ * Trước 31/07/2026 procedure không nhận tham số nào: nó lấy cứng lớp chủ nhiệm đầu tiên
+ * (`ctx.homeroomClassId`). Một người chủ nhiệm hai lớp mở buồng lái chỉ thấy lớp một, và
+ * màn hình không nói đang xem lớp nào — cả khối thì chuyện đó xảy ra thật. Bốn màn con
+ * (/gvcn/lop, diem-danh, duyet-bao-cao, ghi-chu) đã có bộ chọn lớp từ trước; buồng lái là
+ * chỗ cuối cùng còn đoán hộ.
+ *
+ * `classId` để trống KHÔNG còn nghĩa là "lớp bất kỳ": máy chủ chọn lớp đầu theo MÃ LỚP,
+ * đúng thứ tự `GetMyClassesOutput` trả về, nên bộ chọn của bốn màn con và buồng lái luôn
+ * mở cùng một lớp. Truyền lớp không phải của mình → FORBIDDEN (đối chiếu
+ * `ctx.homeroomClassIds`, không tin tham số).
+ *
+ * Cả object là `.optional()` có chủ ý — `care.getDashboard()` gọi không tham số vẫn hợp lệ,
+ * nên client cũ và `home-view` prefetch không gãy.
+ */
+export const GetDashboardInput = z
+  .object({ classId: z.string().uuid().optional() })
+  .optional();
+export type GetDashboardInput = z.infer<typeof GetDashboardInput>;
+
 export const GetDashboardOutput = z.object({
+  /**
+   * Lớp mà MỌI con số bên dưới thuộc về. Bắt buộc, không optional: thiếu nó thì màn hình
+   * chỉ có `className` để đối chiếu, mà mã lớp trùng nhau giữa hai cơ sở là chuyện có
+   * thật — bộ chọn lớp sẽ sáng nhầm nút và không ai nhận ra.
+   */
+  classId: z.string().uuid(),
   className: z.string(),
   asOfDate: z.string(),
   lastScanAt: z.string().nullable(), // ops.job_runs.finished_at gần nhất — "Quét đêm qua HH:mm"
@@ -426,3 +454,184 @@ export const GetStudentDetailOutput = z.object({
   reportApprovals: z.array(StudentReportApproval),
 });
 export type GetStudentDetailOutput = z.infer<typeof GetStudentDetailOutput>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// HAI MÀN HÌNH CỦA TÂM LÝ CỤM (gói "man-hinh-tam-ly-cum", 31/07/2026)
+//
+// Vai `counselor` cho tới hôm nay có ĐÚNG 0 màn nghiệp vụ: đăng nhập vào là ngõ cụt,
+// trong khi cô GHI ĐƯỢC ba thứ nặng nhất của hệ chăm sóc — tắt cờ khẩn
+// (`acknowledgeHelpRequest`), ghi can thiệp (`logIntervention`) và ĐÓNG hồ sơ của một
+// đứa trẻ (`closeCase`). `listClassInterventions` đã mở một khe đọc, nhưng nó bắt phải
+// biết trước `classId`, mà cụm là nhiều lớp: cô không có đường nào để bắt đầu từ câu
+// hỏi thật của mình — "hôm nay ai đang chờ tôi?".
+//
+// Hai màn ở đây trả lời đúng câu đó:
+//   1. `ListClusterCasesOutput` — danh sách việc đang chờ trong CỤM (hồ sơ chăm sóc
+//      đang mở + tín hiệu «cần gặp thầy cô» chưa ai xử lý), gộp theo TỪNG EM.
+//   2. `GetClusterCaseDetailOutput` — một em, đủ thứ cần đọc TRƯỚC KHI bấm ba nút kia.
+//
+// ── HAI THỨ CỐ TÌNH KHÔNG CÓ TRONG HAI HỢP ĐỒNG NÀY ───────────────────────
+//
+// (a) `mood` / dải check-in cảm xúc. Màn check-in in cho học sinh đọc, ngay tại chỗ
+//     nhập: «Chỉ thầy cô chủ nhiệm thấy» (checkin-view.tsx). DESIGN-GUIDELINES §9 nói
+//     lại đúng câu đó. Tâm lý cụm KHÔNG nằm trong "thầy cô chủ nhiệm".
+//
+// (b) `note` của «cần gặp thầy cô» — nguyên văn lời em viết. Màn /can-gap-thay-co in
+//     cho em đọc TRƯỚC KHI gửi: dấu tích xanh cho ĐÚNG một người (GVCN của em), dấu đỏ
+//     cho "thầy cô khác", và một câu nữa ở dưới: «Nếu chuyện cần người chuyên môn hỗ
+//     trợ, cô sẽ hỏi ý con trước khi chuyển tới phòng tâm lý». Nghĩa là phòng tâm lý
+//     đọc lời em SAU một lần chuyển tuyến mà em đã đồng ý — và đường chuyển tuyến đó
+//     chưa tồn tại (GĐ2, xem `intervention-notes-view.tsx`). Nên ở đây tâm lý cụm chỉ
+//     nhận LOẠI tín hiệu (chủ đề, mức khẩn, ngày, đã xử lý chưa) — đúng bằng luật "cờ E
+//     gọn" của `care.flags.detail`, không hơn một milimet. Đó là lý do có
+//     `ClusterHelpSignal` riêng thay vì dùng lại `StudentHelpRequest`.
+//
+// Lời hứa in trên màn hình là ràng buộc kỹ thuật: hoặc hợp đồng giữ đúng nó, hoặc phải
+// đi bỏ câu hứa. Ở đây chọn cách thứ nhất — hình dạng dữ liệu không cho phép màn hình
+// lỡ tay hiện ra thứ đã hứa là không hiện.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Một cơ sở trong cụm phụ trách. Màn hình phải NÓI RA cụm gồm những gì, không để cô đoán. */
+export const ClusterSchool = z.object({
+  schoolId: z.string().uuid(),
+  schoolCode: z.string(),
+  schoolName: z.string(),
+});
+export type ClusterSchool = z.infer<typeof ClusterSchool>;
+
+/**
+ * Một EM đang có việc trong cụm — không phải "một hồ sơ".
+ *
+ * Vì sao khoá là học sinh chứ không phải `care_cases.id`: một em vừa bấm «cần gặp thầy
+ * cô» thì CHƯA có hồ sơ nào (hồ sơ chỉ sinh ra khi có người ghi can thiệp đầu tiên —
+ * `resolveOpenCase` trong routers/care.ts). Lấy hồ sơ làm gốc thì đúng nhóm cần gấp
+ * nhất lại là nhóm biến mất khỏi danh sách.
+ */
+export const ClusterCaseRow = z.object({
+  studentId: z.string().uuid(),
+  studentCode: z.string(),
+  fullName: z.string(),
+  /** null = em không có ghi danh đang hiệu lực. KHÔNG bịa mã lớp (labels.ts). */
+  className: z.string().nullable(),
+  schoolName: z.string(),
+  /** null = chưa ai mở hồ sơ cho em. Đây là trạng thái THẬT, không phải dữ liệu thiếu. */
+  caseId: z.string().uuid().nullable(),
+  caseStatus: z.enum(["open", "closed"]).nullable(),
+  openedAt: z.string().nullable(),
+  /** Có tín hiệu «cần gặp thầy cô» chưa ai bấm "đã gặp em rồi". */
+  helpPending: z.boolean(),
+  helpRequestedOn: IsoDate.nullable(),
+  helpTopic: HelpRequestTopic.nullable(),
+  helpUrgency: HelpRequestUrgency.nullable(),
+  interventionCount: z.number().int().nonnegative(),
+  lastInterventionAt: z.string().nullable(),
+  /**
+   * Số ngày kể từ hành động gần nhất. `null` = CHƯA CÓ hành động nào — khác hẳn 0, và
+   * màn hình phải nói ra sự khác nhau đó ("chưa ai làm gì" ≠ "vừa làm hôm nay").
+   */
+  daysSinceLastAction: z.number().int().nonnegative().nullable(),
+  /**
+   * Quá ngưỡng im lặng (`care.thresholds.E_MOOD.quiet_days`, §7 — KHÔNG viết số trong
+   * code). Đây là con số của ĐÚNG cơ sở em đang học, không phải một hằng số toàn hệ.
+   */
+  overQuietWindow: z.boolean(),
+});
+export type ClusterCaseRow = z.infer<typeof ClusterCaseRow>;
+
+export const ListClusterCasesInput = z.object({
+  /** Lọc theo một cơ sở trong cụm. Không truyền = cả cụm. Cơ sở ngoài cụm → FORBIDDEN. */
+  schoolId: z.string().uuid().optional(),
+  /** Xem cả hồ sơ đã đóng. Mặc định chỉ việc ĐANG chờ — màn này là hộp việc, không phải kho lưu trữ. */
+  includeClosed: z.boolean().default(false),
+  limit: z.number().int().min(1).max(200).default(100),
+});
+export type ListClusterCasesInput = z.infer<typeof ListClusterCasesInput>;
+
+export const ListClusterCasesOutput = z.object({
+  asOfDate: IsoDate,
+  /** Cụm gồm những cơ sở nào — rỗng nghĩa là vai counselor chưa được gán cơ sở nào. */
+  scope: z.object({ schools: z.array(ClusterSchool) }),
+  totals: z.object({
+    openCases: z.number().int().nonnegative(),
+    pendingHelp: z.number().int().nonnegative(),
+    /** Trong số trên, bao nhiêu em đã quá ngưỡng im lặng — cột "leo thang" của màn. */
+    overQuietWindow: z.number().int().nonnegative(),
+  }),
+  /** Cửa sổ nhìn lại của tín hiệu khẩn, đọc từ `care.thresholds` — hiện lên màn để cô biết mình đang nhìn bao xa. */
+  urgentWindowDays: z.number().int().positive(),
+  quietDays: z.number().int().positive(),
+  rows: z.array(ClusterCaseRow),
+});
+export type ListClusterCasesOutput = z.infer<typeof ListClusterCasesOutput>;
+
+/**
+ * Một lần em bấm «cần gặp thầy cô», NHÌN TỪ PHÍA TÂM LÝ CỤM.
+ *
+ * Giống `StudentHelpRequest` (màn GVCN) đúng mọi field trừ MỘT: không có `note`. Xem
+ * lời giải thích (b) ở đầu khối. Đây là chỗ duy nhất trong hợp đồng mà hai vai nhìn
+ * cùng một hàng dữ liệu bằng hai hình dạng khác nhau, và sự khác nhau đó là cố ý —
+ * gộp lại làm một schema là mở lại đúng thứ vừa đóng.
+ */
+export const ClusterHelpSignal = z.object({
+  requestedOn: IsoDate,
+  requestedAt: z.string(),
+  topic: HelpRequestTopic.nullable(),
+  urgency: HelpRequestUrgency.nullable(),
+  /** null = chưa ai bấm "đã gặp em rồi". KHÔNG đồng nghĩa với "chưa ai đọc". */
+  handledAt: z.string().nullable(),
+});
+export type ClusterHelpSignal = z.infer<typeof ClusterHelpSignal>;
+
+/**
+ * Một ghi chú tư vấn (`care.counselor_notes`) — hẹp nhất trong care.
+ *
+ * Chỉ TÁC GIẢ và TÂM LÝ CỤM đọc được, cưỡng chế ở tầng dữ liệu bởi policy
+ * `counselor_notes_scope` (0035). Hợp đồng này nằm trong `contracts/care.ts` nhưng KHÔNG
+ * được dùng trong bất kỳ output nào của màn GVCN — xem ghi chú cuối khối «màn chi tiết
+ * một học sinh»: 0035 vừa đóng ghi chú tư vấn lại với GVCN.
+ */
+export const CounselorNote = z.object({
+  noteId: z.string().uuid(),
+  body: z.string(),
+  createdAt: z.string(),
+  /** Tên người viết; "Thầy cô khác" khi `core.users` không mở tên đồng nghiệp (policy users_self). */
+  authorName: z.string(),
+  /** Do CHÍNH người đang xem viết — để màn hình khỏi phải so id ở client. */
+  mine: z.boolean(),
+});
+export type CounselorNote = z.infer<typeof CounselorNote>;
+
+export const GetClusterCaseDetailInput = z.object({
+  studentId: z.string().uuid(),
+  /** Cửa sổ ngày của tín hiệu khẩn hiển thị. Giới hạn CỦA MÀN HÌNH, không phải ngưỡng cảnh báo (§6). */
+  days: z.number().int().min(7).max(90).default(30),
+});
+export type GetClusterCaseDetailInput = z.infer<typeof GetClusterCaseDetailInput>;
+
+export const GetClusterCaseDetailOutput = z.object({
+  asOfDate: IsoDate,
+  window: z.object({ days: z.number().int(), fromDate: IsoDate, toDate: IsoDate }),
+  student: z.object({
+    studentId: z.string().uuid(),
+    studentCode: z.string(),
+    fullName: z.string(),
+    className: z.string().nullable(),
+    schoolName: z.string(),
+  }),
+  /** Hồ sơ đang mở, nếu có. `null` = em chưa có hồ sơ nào đang mở (trạng thái thật). */
+  openCase: StudentCareCase.nullable(),
+  /** Lịch sử hồ sơ, mới nhất trước. Rỗng = chưa ai từng mở hồ sơ cho em. */
+  cases: z.array(StudentCareCase),
+  /** Nhật ký HÀNH ĐỘNG của người lớn — không phải lời em kể. Dùng lại `ClassInterventionRow`. */
+  interventions: z.array(ClassInterventionRow),
+  counselorNotes: z.array(CounselorNote),
+  helpSignals: z.array(ClusterHelpSignal),
+  /**
+   * Hub CHƯA có đường ghi `care.counselor_notes` (0009 chỉ cấp policy SELECT; không có
+   * INSERT nào). Cờ này để màn hình nói THẲNG điều đó thay vì hiện một ô soạn thảo mà
+   * bấm Lưu sẽ báo lỗi quyền — và cũng để không ai đọc ô trống thành "em chưa từng được
+   * tư vấn". Sự thật là: chỗ này chưa ghi được, không phải chưa có gì để ghi.
+   */
+  notesWritable: z.boolean(),
+});
+export type GetClusterCaseDetailOutput = z.infer<typeof GetClusterCaseDetailOutput>;

@@ -136,7 +136,29 @@ export const GUARDIAN_TABBAR_ITEMS: TabItem[] = [
 ];
 
 /**
- * Vai nhân viên chưa có màn riêng (tư vấn cụm, hiệu trưởng, BGH, giáo viên bộ
+ * Tâm lý cụm và BGH — thêm 01/08/2026.
+ *
+ * Chú thích của `resolveTabs()` ngay dưới đây đã tự đặt luật: "cùng THỨ TỰ ƯU TIÊN
+ * với resolveNav() của sidebar — hai thanh điều hướng của cùng một người mà nói
+ * khác nhau thì bản thân điều đó đã là lỗi". Luật đúng, nhưng hàm thì chưa theo:
+ * sidebar đã có COUNSELOR_ITEMS (/tam-ly) và BOARD_ITEMS (/dieu-hanh), còn ở đây
+ * cả hai vai vẫn rơi vào nhánh nhân viên tối thiểu. Hệ quả: cô Mai mở Hub trên
+ * MÁY TÍNH thì thấy hộp việc tâm lý; mở trên ĐIỆN THOẠI — thứ mà §3 nói là thiết
+ * bị chính — thì không thấy đâu cả, và không có gì báo là nó tồn tại.
+ */
+export const COUNSELOR_TABBAR_ITEMS: TabItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
+  { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "/tam-ly" },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
+];
+export const BOARD_TABBAR_ITEMS: TabItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
+  { key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh" },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
+];
+
+/**
+ * Vai nhân viên chưa có màn riêng (giáo viên bộ
  * môn, quản trị) và cả tài khoản CHƯA được gán vai nào. Tối thiểu 2 mục — cùng
  * chủ ý với STAFF_ITEMS của sidebar: thà ít mục vào được còn hơn nhiều mục dẫn
  * tới trang chặn quyền. Nhưng "ít" không bao giờ được ít tới mức mất /ho-so:
@@ -159,6 +181,8 @@ export function resolveTabs(roles: HubRole[]): TabItem[] {
   if (roles.includes("student")) return STUDENT_TABBAR_ITEMS;
   if (roles.includes("homeroom")) return TEACHER_TABBAR_ITEMS;
   if (roles.includes("guardian")) return GUARDIAN_TABBAR_ITEMS;
+  if (roles.includes("counselor")) return COUNSELOR_TABBAR_ITEMS;
+  if (roles.includes("principal") || roles.includes("board")) return BOARD_TABBAR_ITEMS;
   return STAFF_TABBAR_ITEMS;
 }
 

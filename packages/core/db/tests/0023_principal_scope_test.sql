@@ -18,7 +18,7 @@
 -- không phải một cửa sau lặng lẽ.
 
 begin;
-select plan(6);
+select plan(8);
 select test_support.seed_basic();
 
 -- Dữ liệu để soi: Minh ở cơ sở Q7 (cùng cơ sở với hiệu trưởng), Cường ở Q2.
@@ -55,16 +55,37 @@ select is_empty(
   'Hiệu trưởng KHÔNG thấy học sinh cơ sở khác (Cường, Q2) — "campus" không phải "toàn hệ"'
 );
 
--- ── Hàng 1 áp cho attendance: ma trận ghi `campus`, KHÔNG loại trừ cột mood ──
--- Ghi lại hành vi THẬT ở đây thay vì suy diễn: §5 là tường lửa cho BỘ SINH BÁO CÁO
--- học thuật (role `reporting`), không phải cho hiệu trưởng cơ sở — 02-database.md
--- nói rõ mood "phân quyền theo ma trận chung, y như mọi dữ liệu khác". Nếu Hội đồng
--- dữ liệu sau này quyết định che mood khỏi BGH thì đây là assertion đỏ đầu tiên,
--- và việc đổi luật phải đi qua ADR chứ không phải sửa lặng lẽ.
+-- ── Hàng 1 áp cho attendance: campus CÓ, nhưng cột `mood` thì KHÔNG ────────────
+-- LẬT CHIỀU 01/08/2026 (ADR-025, migration 0038). Bản cũ của file này khẳng định
+-- "Hiệu trưởng đọc được check-in KÈM mood", và tự nói trước: nếu sau này che mood
+-- khỏi BGH thì "đây là assertion đỏ đầu tiên, và việc đổi luật phải đi qua ADR chứ
+-- không phải sửa lặng lẽ". Đúng chuyện đó đã xảy ra — nên lật kèm ADR, không xoá.
+--
+-- Vì sao lật: màn /checkin in cho trẻ câu "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý
+-- thấy". Câu đó là một lời hứa với trẻ em, không phải nhãn trang trí; nếu hiệu trưởng
+-- vẫn đọc được thì lời hứa sai, và cái sai nằm ở chỗ đứa trẻ không bao giờ kiểm được.
+-- 0038 giữ nguyên phạm vi DÒNG (BGH vẫn thấy đủ điểm danh cơ sở mình) và chỉ rút
+-- quyền CỘT mood — nên hai assertion dưới đây phải đi thành cặp: một cho phần còn
+-- thấy, một cho phần bị che. Chỉ giữ vế "bị che" thì lần sau ai đó siết quá tay,
+-- khoá luôn cả điểm danh, test này vẫn xanh.
 select isnt_empty(
   $$ select 1 from attendance.checkins
+      where student_id = '70000000-0000-0000-0000-000000000001' $$,
+  'Hiệu trưởng vẫn đọc được DÒNG check-in của cơ sở mình — 0038 không đụng phạm vi dòng'
+);
+select throws_ok(
+  $$ select 1 from attendance.checkins
       where student_id = '70000000-0000-0000-0000-000000000001' and mood is not null $$,
-  'Hiệu trưởng đọc được check-in (kèm mood) của cơ sở mình — đúng ô "attendance = campus"'
+  '42501',
+  null,
+  'Hiệu trưởng KHÔNG đọc được cột mood — quyền cột bị rút ở 0038, Postgres từ chối thẳng'
+);
+-- Và đường đọc hợp lệ (view `checkins_care`) trả 0 dòng chứ không nổ: BGH mở màn
+-- Điều hành thì thấy trống, không thấy lỗi 500. "Không có quyền" và "hỏng" là hai
+-- thứ khác nhau, người dùng phải phân biệt được.
+select is_empty(
+  $$ select 1 from attendance.checkins_care $$,
+  'Hiệu trưởng qua view checkins_care ra 0 dòng — bị che, không phải bị vỡ'
 );
 
 -- ── Hàng care: không tra cứu tự do ──────────────────────────────────────────

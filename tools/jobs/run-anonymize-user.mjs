@@ -72,7 +72,22 @@ if (unknown.length > 0) {
   process.exit(1);
 }
 
+// Ghim múi giờ Việt Nam cho MỌI kết nối của pool — cùng một lựa chọn với
+// packages/core/db/client.ts:66 và tools/jobs/run-flag-engine.mjs.
+//
+// Vì sao "set time zone" chứ không phải quy ước: Postgres mặc định chạy UTC, mà job
+// nền của trường chạy lúc 01:00 giờ VN = 18:00 UTC HÔM TRƯỚC. Không ghim thì mọi
+// current_date trong phiên này lùi đúng một ngày trong khung 00:00–06:59 giờ VN —
+// âm thầm, không lỗi, và chỉ lộ ra khi có người ngồi đối chiếu hai cái sổ.
+// Bắt gặp thật 01/08/2026 lúc 00:38 giờ VN: seed gieo dữ liệu vào ngày 31/07 trong
+// khi app (đã ghim múi giờ) hỏi ngày 01/08 — màn Điều hành của BGH hiện gần như
+// trống, và không một dòng lỗi nào nói vì sao.
+// Dùng sự kiện "connect" thay vì một câu query sau khi mở: pool có thể mở thêm
+// kết nối bất cứ lúc nào, và kết nối mở sau sẽ không chạy câu lệnh viết tay đó.
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
+pool.on("connect", (c) => {
+  c.query("set time zone 'Asia/Ho_Chi_Minh'").catch(() => {});
+});
 
 async function run() {
   const client = await pool.connect();

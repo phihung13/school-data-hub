@@ -769,7 +769,7 @@
         <div class="callout"><div class="callout-title"><span class="dot"></span>Đầu ra thật sự chỉ có năm loại</div><p>Hồ sơ của học sinh · buồng lái GVCN · bản tin phụ huynh · gói dữ liệu cải tiến chuyên môn · chỉ báo VAAR cấp cơ sở. Không xây dashboard nếu chưa biết ai sẽ dùng nó để làm gì.</p></div>
       </section>
 
-      <section class="part" id="kien-truc" data-pair="danh-cho-may/01-architecture.md" data-sync-version="10">
+      <section class="part" id="kien-truc" data-pair="danh-cho-may/01-architecture.md" data-sync-version="11">
         <div class="part-group-banner"><b>Phần A &middot; Thiết kế Backend</b></div>
         <div class="section-head">
           <div class="section-no">03</div>
@@ -850,8 +850,8 @@
             <text class="label" x="544" y="534">STORAGE</text><text class="body" x="544" y="558">evidence files</text>
             <text class="body" x="544" y="578">signed URLs</text><text class="body" x="544" y="598">policy qua adapter</text>
             <rect class="box" x="712" y="506" width="162" height="142" rx="14" />
-            <text class="label" x="732" y="534">SCHEDULER</text><text class="body" x="732" y="558">pg_cron 01:00</text>
-            <text class="body" x="732" y="578">flag engine</text><text class="body" x="732" y="598">retention jobs</text>
+            <text class="label" x="732" y="534">SCHEDULER</text><text class="body" x="732" y="558">sổ lịch job · mỗi giờ</text>
+            <text class="body" x="732" y="578">quét cảnh báo</text><text class="body" x="732" y="598">job xóa dữ liệu cũ</text>
             <rect class="box-external" x="900" y="506" width="172" height="142" rx="14" />
             <text class="label" x="920" y="534">EXTERNAL SERVICES</text>
             <text class="body" x="920" y="558">AI provider</text><text class="body" x="920" y="578">Zalo OA / ZNS</text>
@@ -1139,16 +1139,16 @@
         <div class="callout good"><div class="callout-title"><span class="dot green"></span>MD-07 đã chốt: PWA, không Flutter</div><p>Super App tiếp tục là PWA TypeScript (Next.js + tRPC) &mdash; đúng nền đang chạy hôm nay. Phương án Flutter (cả bản thuần lẫn vỏ Flutter + Mini App webview) không dùng; hợp đồng tRPC/Zod giữ nguyên, không cần sinh OpenAPI cho Dart.</p></div>
       </section>
 
-      <section class="part" id="canh-bao" data-pair="danh-cho-may/04-flag-engine.md" data-sync-version="7">
+      <section class="part" id="canh-bao" data-pair="danh-cho-may/04-flag-engine.md" data-sync-version="8">
         <div class="section-head">
           <div class="section-no">05</div>
           <div><p class="eyebrow">Algorithm · Care orchestration</p><h2>Giải thuật Flag Engine: phát hiện, gộp, giao và leo thang</h2></div>
         </div>
-        <p class="lede">Bộ quét chạy mỗi đêm bằng luật if–then minh bạch. Không dùng machine learning trong ít nhất năm đầu. Ngưỡng nằm trong bảng cấu hình để nhà trường hiệu chỉnh mà không sửa code.</p>
+        <p class="lede">Bộ quét chạy bằng luật “nếu… thì…” viết ra được thành câu, không dùng trí tuệ nhân tạo trong ít nhất năm đầu — ai cũng kiểm tra được vì sao một em bị gắn cờ. Ngưỡng nằm trong bảng cấu hình để nhà trường tự chỉnh mà không phải sửa phần mềm. Từ 31/07/2026 bộ quét <b>đã là mã chạy thật</b>, không còn là mô tả trên giấy.</p>
 
         <div class="diagram-head">
           <div><h3>View 04 · Batch decision flow</h3><p>Job phải chạy lại an toàn và luôn kết thúc bằng trạng thái freshness có thể quan sát.</p></div>
-          <span class="pill amber">01:00 hằng ngày</span>
+          <span class="pill amber">Máy hỏi sổ lịch mỗi giờ</span>
         </div>
         <div class="zoom-wrap">
           <div class="zoom-bar"><button type="button" class="zoom-btn" aria-expanded="false"><span class="zoom-icon">&#10530;</span> Phóng to</button></div>
@@ -1159,7 +1159,7 @@
             <rect class="lane" x="20" y="24" width="1080" height="112" rx="16" />
             <text class="zone-label" x="40" y="49">SCHEDULE &amp; CONTROL</text>
             <rect class="step" x="48" y="68" width="180" height="46" rx="11" />
-            <text class="label" x="68" y="96">pg_cron · 01:00</text>
+            <text class="label" x="68" y="96">Sổ lịch job · mỗi giờ</text>
             <rect class="step" x="278" y="68" width="212" height="46" rx="11" />
             <text class="label" x="298" y="88">Advisory lock</text><text class="tiny" x="298" y="105">tạo ops.job_runs = running</text>
             <rect class="step" x="540" y="68" width="250" height="46" rx="11" />
@@ -1305,7 +1305,8 @@
           <summary>Chi tiết kỹ thuật · nhịp chạy, signal views và idempotency</summary>
           <div class="detail-body">
             <ul class="plain-list">
-              <li><code>pg_cron</code> chạy lúc 01:00; buồng lái phải hiển thị “Quét đêm qua: HH:mm”. Trễ quá 26 giờ là SEV2. Sổ nhật ký chạy máy có <b>đúng một tên</b>: <code>ops.job_runs</code> (trước đây ba tài liệu gọi ba tên khác nhau — đã thống nhất 27/07/2026).</li>
+              <li><b>Sửa 01/08/2026 — câu cũ ở đây mô tả một thứ chưa bao giờ tồn tại.</b> Tài liệu trước ghi “<code>pg_cron</code> chạy lúc 01:00”; thực tế extension đó chưa từng được bật. Bộ chạy thật: thuật toán nằm trong hàm <code>care.run_flag_engine()</code>, và người gọi là <b>sổ lịch job chung</b> (<code>ops.job_schedule</code> + <code>tools/jobs/run-all.mjs</code>). Máy chủ hỏi sổ <b>mỗi giờ</b> chứ không phải mỗi đêm — hỏi 24 lượt/ngày vẫn chỉ ra một lần quét thật, đổi lại một đêm máy chết thì sáng hôm sau tự bù, không phải chờ hết 24 giờ. Buồng lái phải hiển thị “Quét đêm qua: HH:mm”. Trễ quá 26 giờ là SEV2. Sổ nhật ký chạy máy có <b>đúng một tên</b>: <code>ops.job_runs</code>.</li>
+              <li><b>Đã cài đặt thật tới đâu (nói thẳng phần chưa xong).</b> Chạy được: 5/6 luật cảnh báo, gộp cờ, định mức 5 hồ sơ mỗi người, leo thang sau 7 ngày, bỏ qua luật khi nguồn dữ liệu hết tươi, ghi nhật ký mỗi lần chạy. <b>Chưa xong hai chỗ, đều đã ghi vào sổ nợ:</b> (1) luật C_CEFR chưa có nguồn dữ liệu nên engine <b>bỏ qua kèm lý do</b>, không chấm bằng dữ liệu không tồn tại; (2) buồng lái GVCN hiện vẫn <b>tự tính lại tín hiệu mỗi lần mở màn</b> thay vì đọc bảng cờ. Hai đường đang chạy song song và phải cho cùng một kết quả — đó chính là cách đối chiếu trước khi chuyển hẳn. Một bảng tiến độ ghi “xong hết” trong khi hai chỗ chưa xong thì tệ hơn không có bảng nào.</li>
               <li>Engine chỉ đọc qua <code>care.v_signal_*</code>, không đọc thẳng bảng nội bộ của Mini App khác.</li>
               <li>Mỗi signal view khai hạn tươi tối đa trong <code>ops.source_freshness</code>; quá hạn thì rule phụ thuộc nguồn đó bị bỏ qua và ghi vào <code>ops.job_runs.degraded_sources</code> — buồng lái đọc cột này để hiện băng vàng.</li>
               <li>Cờ mang <code>origin</code> = <code>live</code> hoặc <code>backfill</code>; nhánh <code>backfill</code> không tạo <code>care_cases</code> và không vào hàng đợi leo thang. Test bắt buộc: nạp bù 90 ngày dữ liệu sinh 0 hồ sơ can thiệp mới.</li>
@@ -1456,6 +1457,7 @@
             <thead><tr><th>Vai trò</th><th>Được xem</th><th>Không được xem tự do</th></tr></thead>
             <tbody>
               <tr><td>Học sinh / phụ huynh</td><td>Hồ sơ của mình / con mình theo phạm vi công bố</td><td>Hồ sơ care nội bộ, dữ liệu của người khác</td></tr>
+              <tr><td>Phụ huynh &mdash; riêng ô <b>tâm trạng</b> mỗi sáng<br><span class="micro muted">chốt 31/07/2026</span></td><td>Con đi học hay nghỉ, đúng giờ hay muộn; Báo cáo Trưởng thành có số tổng hợp cả tuần (&laquo;4/5 ngày vui vẻ&raquo;)</td><td>Tâm trạng của <b>từng ngày</b>. Ô đó chỉ chính em, giáo viên chủ nhiệm của em và phòng tâm lý đọc được &mdash; đúng câu đang in trên màn hình check-in.</td></tr>
               <tr><td>Giáo viên bộ môn</td><td>Lớp được phân công, evidence và học thuật cần cho việc dạy</td><td>Ghi chú tư vấn, y tế, care case không thuộc nhiệm vụ</td></tr>
               <tr><td>GVCN</td><td>Lớp chủ nhiệm, cờ và can thiệp cần xử lý</td><td>Tra cứu học sinh ngoài lớp</td></tr>
               <tr><td>Tâm lý cụm</td><td>Care case trong cụm, theo vai trò chuyên môn</td><td>Dữ liệu ngoài phạm vi cụm</td></tr>
@@ -1872,7 +1874,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="18">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="20">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -2047,7 +2049,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <h3>Bản đồ dữ liệu ở mức dev cần nhớ</h3>
         <div class="grid-3">
           <div class="card blue"><h4><code>core</code> · nguồn sự thật</h4><p>Users, students, teachers, parents, schools, classes, roles, permissions, và <b>hai sổ đối chiếu</b>: <code>id_mappings</code> (mã học sinh ở hệ ngoài) + <code>identity_links</code> (tài khoản đăng nhập ở hệ ngoài). Thêm <code>parent_invite_codes</code> (28/07/2026) — mã mời 6 ký tự để phụ huynh tự tạo tài khoản lần đầu, giống hệt cách sổ đối chiếu khác: không ai đọc/ghi thẳng bảng này, chỉ một hàm riêng được chạm. <b>Sửa 29/07/2026:</b> khi dựng thử ứng dụng thật, phát hiện <code>parents</code>/<code>parent_students</code> trước đó không ai đọc được (thiếu quyền hoàn toàn, không phải chủ ý) — đã mở đúng phạm vi: phụ huynh tự tra được chính con mình, không hơn.</p></div>
-          <div class="card"><h4><code>attendance</code></h4><p>Check-in, điểm danh, khung giờ, yêu cầu gặp thầy cô. <b>Thêm 30/07/2026:</b> yêu cầu gặp thầy cô giờ ghi thêm chủ đề + mức khẩn + lời nhắn (trước chỉ ghi "đã bấm nút") — vẫn là dữ liệu cảm xúc thường, không kho riêng. Tên GVCN hiển thị cho học sinh cũng được dọn lại (bỏ hậu tố "(GVCN 6A1)" chỉ dùng để phân biệt tài khoản thử ở màn đăng nhập). <b>Sửa 31/07/2026:</b> khoá lại danh sách người đọc được <b>lời nhắn</b> của em &mdash; nay chỉ còn chính em và giáo viên chủ nhiệm (thêm phòng tâm lý khi được chuyển tiếp). Xem thẻ &laquo;Lời nhắn của con&raquo; trong bảng rà soát ngay dưới đây.</p></div>
+          <div class="card"><h4><code>attendance</code></h4><p>Check-in, điểm danh, khung giờ, yêu cầu gặp thầy cô. <b>Thêm 30/07/2026:</b> yêu cầu gặp thầy cô giờ ghi thêm chủ đề + mức khẩn + lời nhắn (trước chỉ ghi "đã bấm nút") — vẫn là dữ liệu cảm xúc thường, không kho riêng. Tên GVCN hiển thị cho học sinh cũng được dọn lại (bỏ hậu tố "(GVCN 6A1)" chỉ dùng để phân biệt tài khoản thử ở màn đăng nhập). <b>Sửa 31/07/2026:</b> khoá lại danh sách người đọc được <b>lời nhắn</b> của em &mdash; nay chỉ còn chính em và giáo viên chủ nhiệm (thêm phòng tâm lý khi được chuyển tiếp). Xem thẻ &laquo;Lời nhắn của con&raquo; trong bảng rà soát ngay dưới đây. <b>Sửa tiếp 31/07/2026:</b> ô <b>tâm trạng</b> của mỗi buổi check-in cũng được tách riêng khỏi ô điểm danh &mdash; bố mẹ và Ban giám hiệu xem được con đi học hay nghỉ nhưng không xem được hôm nay con thấy thế nào. Xem thẻ &laquo;Chỉ thầy cô chủ nhiệm thấy&raquo; trong cùng bảng.</p></div>
           <div class="card"><h4><code>care</code></h4><p>Cờ, hồ sơ, can thiệp, ngưỡng, leo thang, ghi chú tư vấn. <b>Thêm 31/07/2026:</b> một cuốn <b>sổ luật cảnh báo</b> tách riêng khỏi bảng ngưỡng. Trước đó mỗi luật cảnh báo chỉ được đặt đúng một con số cho cả sáu cơ sở &mdash; thiết kế có hứa &laquo;mỗi cơ sở một ngưỡng riêng&raquo; nhưng cấu trúc bảng không cho phép, nên lời hứa đó không bao giờ dùng được. Nay mỗi cơ sở đặt được ngưỡng riêng, và cơ sở nào chưa đặt thì dùng con số chung của trường.</p></div>
           <div class="card"><h4><code>evidence</code></h4><p>5 Giá trị, sự kiện, PDR, DEAR, rubric, fitness, khảo sát.</p></div>
           <div class="card"><h4><code>tutor</code></h4><p>Mastery snapshot, CEFR, quỹ đạo, milestone, tiến độ Moodle.</p></div>
@@ -2085,6 +2087,11 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
                 <td>Đã khoá lại đúng danh sách mà màn hình hứa: <b>chính em</b>, <b>giáo viên chủ nhiệm của em</b>, và <b>phòng tâm lý</b> khi chuyện được chuyển tiếp. Bố mẹ, thầy cô bộ môn, hiệu trưởng, quản trị viên: không còn đọc được, kể cả hỏi thẳng cơ sở dữ liệu. Hai điều <b>không</b> thay đổi: cô chủ nhiệm vẫn nhận được tín hiệu khẩn ngay trên màn hình lớp, và tín hiệu đó vẫn chỉ nói &laquo;em này cần gặp cô&raquo; chứ không chép theo lời em kể. Có bài kiểm tự động cho cả hai chiều, và đã thử ngược: trả lại như cũ thì bài kiểm đỏ ngay ở đúng câu &laquo;bố mẹ đọc ra không dòng nào&raquo;.</td>
               </tr>
               <tr>
+                <td><b>&laquo;Chỉ thầy cô chủ nhiệm thấy&raquo;</b> &mdash; câu này <b>đang in ngay trên màn hình</b>, ngay dưới bốn ô mặt cười mà học sinh bấm mỗi sáng để nói hôm nay mình thấy thế nào</td>
+                <td>Câu đó chưa đúng ở tầng dữ liệu. Tâm trạng của em nằm <b>cùng một dòng</b> với ô điểm danh, mà khóa của hệ thống chỉ khóa được cả dòng chứ không khóa riêng một ô. Ai được xem điểm danh thì xem luôn được tâm trạng. Đếm thật trên máy dev: đăng nhập bằng tài khoản <b>phụ huynh</b> rồi hỏi thẳng cơ sở dữ liệu &mdash; đọc ra <b>7 ngày</b> tâm trạng của con; bằng tài khoản <b>hiệu trưởng cơ sở</b> &mdash; <b>8 ngày</b>. Bảy, tám ngày đó là bảy, tám lần một đứa trẻ nói &laquo;hôm nay con buồn&raquo; cho một người mà em được hứa là sẽ không thấy.</td>
+                <td>Đã tách riêng ô tâm trạng ra khỏi dòng điểm danh ở tầng quyền: <b>chỉ chính em, giáo viên chủ nhiệm của em, và phòng tâm lý</b> đọc được. Bố mẹ, hiệu trưởng, thầy cô bộ môn: không, kể cả hỏi thẳng cơ sở dữ liệu &mdash; máy trả về <b>lỗi từ chối</b>, không phải một con số 0 im lặng. Ba điều <b>không</b> đổi: bố mẹ vẫn xem đầy đủ con đi học hay nghỉ, đúng giờ hay muộn; Báo cáo Trưởng thành gửi bố mẹ vẫn giữ mục &laquo;cả tuần đến lớp với tâm trạng vui vẻ &middot; 4/5 ngày&raquo; vì đó là <b>số tổng hợp cả tuần</b>, không phải nhật ký từng ngày; và Ban giám hiệu vẫn xem được các bảng tổng hợp theo lớp, theo khối. Việc đổi này lật ngược một quyết định cũ đã ghi trong hồ sơ (&laquo;tâm trạng phân quyền y như mọi dữ liệu khác&raquo;) nên <b>phải đi kèm một phiếu quyết định</b>, không được sửa lặng lẽ. <b>Sửa nốt 01/08/2026:</b> chính câu in trên màn hình cũng được viết lại thành &laquo;<b>Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy</b>&raquo;. Lý do: sau khi khoá xong thì có <b>hai</b> vai đọc được, mà nhãn cũ chỉ kể <b>một</b> &mdash; nói thiếu một vai cũng là nói sai, chỉ khó bắt hơn. Sửa ở cả bốn chỗ in nhãn và ở thẻ &laquo;Ai thấy gì của mình?&raquo; trong trang hồ sơ của em.</td>
+              </tr>
+              <tr>
                 <td><b>&laquo;Mọi lượt xem dữ liệu y tế đều ghi nhật ký&raquo;</b></td>
                 <td>Câu này được viết ngay trong máy, cạnh chính bảng y tế. Không có gì thi hành nó.</td>
                 <td>Đã xây thật cho nội dung y tế (xem thẻ <code>health</code> ở trên), và <b>viết lại câu đó cho đúng phạm vi đã làm được</b> thay vì để nguyên.</td>
@@ -2107,6 +2114,14 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           <div class="callout-title"><span class="dot"></span>Chỉ một quyển sổ được ghi tên cô chủ nhiệm</div>
           <p>Trường đang có <b>hai quyển sổ</b> cùng ghi &laquo;lớp này ai chủ nhiệm&raquo;, và không quyển nào biết quyển kia. Chưa có màn hình quản trị nên phải chép tay vào cả hai &mdash; lệch là chuyện sớm muộn. Kiểu lệch nguy hiểm nhất không phải là báo lỗi: nếu sổ phụ có tên cô mà sổ chính chưa có, <b>cô mở màn hình lớp mình lên và thấy trống rỗng</b> &mdash; rồi hiểu thành &laquo;cả lớp chưa em nào check-in&raquo;. Im lặng bị đọc thành tin tốt, đúng điều mà nguyên tắc số 8 của hệ cấm.</p>
           <p>Đã chốt: <b>sổ phân công lớp là sổ chính</b>, quyển còn lại chỉ được chép lại và không được tự viết thêm &mdash; máy từ chối ghi nếu chưa có phân công tương ứng. Từ nay muốn đổi giáo viên chủ nhiệm của một lớp thì <b>sửa đúng một chỗ</b>. Phần lệch còn sót lại (nếu có, chẳng hạn sinh ra khi khôi phục một bản sao lưu cũ) sẽ <b>hiện ra trong một bảng theo dõi riêng</b> thay vì nằm im.</p>
+        </div>
+
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Ba việc mở đường cho cả khối dùng (31/07&ndash;01/08/2026)</div>
+          <p>Ba thay đổi cuối không phải để khoá thêm, mà để trả lời ba câu hỏi chỉ xuất hiện khi số lớp tăng từ một lên cả khối.</p>
+          <p><b>1. Ai quét cảnh báo, và làm sao biết đêm qua có quét.</b> Trước đây mỗi lần một cô mở buồng lái là máy tính lại toàn bộ tín hiệu của lớp ngay lúc đó. Một lớp thì chịu được; cả khối thì mỗi sáng vài chục cô cùng mở, cùng một phép tính lặp lại vài chục lần, và <b>không để lại dấu vết nào</b> để trả lời câu &laquo;hệ có quét không, quét lúc mấy giờ&raquo;. Nay bộ quét là một việc chạy có lịch, mỗi lần chạy ghi vào nhật ký. Buồng lái trống mà <b>không</b> có dòng &laquo;Quét đêm qua HH:mm&raquo; nghĩa là hệ hỏng &mdash; không phải &laquo;lớp ổn&raquo;.</p>
+          <p><b>2. Ban giám hiệu nhìn bằng gì.</b> Trước đây hiệu trưởng cơ sở và ban điều hành <b>không có màn hình nào</b>: mở lên là trống. Nay có màn Điều hành, nhưng chỉ bằng <b>số tổng hợp</b>, và <b>đơn vị nhỏ nhất là một lớp</b> &mdash; không có tên em nào, không có mã số em nào, kể cả gián tiếp. Hai điều được cài cứng vào máy chứ không phải quy ước miệng: <b>lớp dưới 10 em thì máy trả về &laquo;chưa đủ để nói&raquo;, không trả về số 0</b> (vì với nhóm quá nhỏ, con số của lớp chính là dữ liệu của một em cụ thể); và <b>không có bảng nào ghép tên giáo viên chủ nhiệm với tâm trạng lớp</b> &mdash; ghép hai thứ đó là dựng sẵn một bảng xếp hạng giáo viên bằng cảm xúc trẻ con, thứ mà nguyên tắc số 5 cấm, và cấm cả việc dọn sẵn đường cho nó.</p>
+          <p><b>3. Nếu máy chạy việc nền chết thì ai biết.</b> Đo thật ngày 31/07: sổ nhật ký chạy máy có <b>0 dòng</b> &mdash; nghĩa là việc &laquo;xóa chi tiết cảm xúc sau 12 tháng&raquo;, một lời hứa in cho phụ huynh đọc, <b>chưa từng chạy lần nào</b>. Nay có một sổ khai &laquo;việc nào phải chạy, bao lâu một lần&raquo;, và một bảng theo dõi trong đó <b>&laquo;chưa chạy lần nào&raquo; là một trạng thái riêng, không được tính là &laquo;ổn&raquo;</b>. Chính bộ lịch cũng tự khai một dòng cho mình &mdash; nhờ vậy &laquo;máy chạy lịch chết&raquo; hiện ra thành <b>một dòng quá hạn nhìn thấy được</b>, thay vì một bảng theo dõi toàn màu xanh không có gì để nói.</p>
         </div>
 
         <div class="callout good">
@@ -2153,7 +2168,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           <div class="arch-canvas">
           <svg class="arch-svg wide" viewBox="0 0 1120 640" role="img" aria-labelledby="deploy-title deploy-desc">
             <title id="deploy-title">Sơ đồ triển khai production</title>
-            <desc id="deploy-desc">Thiết bị truy cập qua Cloudflare tới ứng dụng modular monolith chạy trên một VPS tự quản; ứng dụng dùng Supabase Auth, Postgres, Storage và pg_cron; backup hằng ngày mặc định của Supabase, cộng bản pg_dump hằng tuần chép thẳng ra ổ cứng tại trường.</desc>
+            <desc id="deploy-desc">Thiết bị truy cập qua Cloudflare tới ứng dụng modular monolith chạy trên một VPS tự quản; ứng dụng dùng Supabase Auth, Postgres và Storage, cộng một sổ lịch job trong chính cơ sở dữ liệu để chạy bộ quét cảnh báo và job xóa dữ liệu cũ; backup hằng ngày mặc định của Supabase, cộng bản pg_dump hằng tuần chép thẳng ra ổ cứng tại trường.</desc>
             <rect class="zone" x="18" y="22" width="1084" height="596" rx="20" />
             <text class="zone-label" x="40" y="48">PRODUCTION ENVIRONMENT · secrets và database tách khỏi dev/staging</text>
 
@@ -2191,7 +2206,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
             <text class="body" x="302" y="390">domain schemas + RLS</text><text class="body" x="302" y="410">transactions + audit</text>
             <text class="body" x="302" y="430">backup hằng ngày · connection pool</text>
             <rect class="note" x="302" y="456" width="206" height="48" rx="8" />
-            <text class="tiny" x="317" y="476">pg_cron 01:00 · flag engine</text><text class="tiny" x="317" y="492">retention · materialized views</text>
+            <text class="tiny" x="317" y="476">sổ lịch job · bộ quét cảnh báo</text><text class="tiny" x="317" y="492">xóa dữ liệu cũ · bảng tổng hợp</text>
             <rect class="box" x="554" y="350" width="166" height="164" rx="14" />
             <text class="label" x="574" y="379">STORAGE</text>
             <text class="body" x="574" y="404">evidence objects</text><text class="body" x="574" y="424">signed URL</text>

@@ -180,7 +180,15 @@ describe("tab bar và sidebar nói cùng một điều", () => {
     expect(resolveTabs(["guardian", "homeroom"])).toBe(TEACHER_TABBAR_ITEMS);
     expect(resolveNav(["guardian", "homeroom"]).roleLabel).toBe("GVCN");
     expect(resolveTabs(["student", "guardian"])).toBe(STUDENT_TABBAR_ITEMS);
-    expect(resolveTabs(["counselor"])).toBe(STAFF_TABBAR_ITEMS);
+    // Sửa 01/08/2026: tâm lý cụm và BGH KHÔNG còn rơi vào bộ nhân viên tối thiểu.
+    // Câu cũ ở đây khẳng định `counselor → STAFF_TABBAR_ITEMS` và nó ĐÚNG với mã lúc đó,
+    // nhưng cái đúng ấy là một lỗi: sidebar đã có /tam-ly còn tab bar thì chưa, nên cô
+    // Mai mở Hub trên máy tính thấy hộp việc của mình, mở trên điện thoại thì không —
+    // trong khi §3 nói điện thoại mới là thiết bị chính. Bài test đang ghim đúng chỗ lệch.
+    expect(resolveTabs(["counselor"]).map((i) => i.href)).toContain("/tam-ly");
+    expect(resolveTabs(["principal"]).map((i) => i.href)).toContain("/dieu-hanh");
+    expect(resolveTabs(["board"]).map((i) => i.href)).toContain("/dieu-hanh");
+    expect(resolveTabs(["teacher"])).toBe(STAFF_TABBAR_ITEMS);
   });
 
   it("mọi đích trong tab bar người lớn cũng có trong sidebar cùng vai", () => {

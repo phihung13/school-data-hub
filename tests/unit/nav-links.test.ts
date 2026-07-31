@@ -213,12 +213,38 @@ describe("sidebar: menu chọn theo vai thật", () => {
     expect(nav.roleLabel).not.toContain("GVCN");
   });
 
-  it("quản trị/hiệu trưởng nhận menu nhân viên tối thiểu, không phải menu GVCN", () => {
-    for (const roles of [["admin", "principal"], ["principal"], ["board"], ["counselor"], ["teacher"]] as HubRole[][]) {
+  it("giáo viên bộ môn nhận menu nhân viên tối thiểu, không phải menu GVCN", () => {
+    // Danh sách này rụng dần theo đúng nhịp các vai có màn hình thật, và đó là chủ ý:
+    //   · 31/07/2026 — `counselor` rời đi (có /tam-ly), ca riêng nằm ngay dưới;
+    //   · 01/08/2026 — `principal`/`board` rời đi (có /dieu-hanh), ca riêng nằm dưới nữa.
+    // Còn lại đúng `teacher`: giáo viên bộ môn GĐ1 chưa có màn nghiệp vụ nào, nên hai
+    // mục vào được thật vẫn tốt hơn một mục dẫn tới trang chặn quyền rồi đá ngược.
+    for (const roles of [["teacher"], ["admin"]] as HubRole[][]) {
       const nav = resolveNav(roles);
       expect(nav.items, `vai ${roles.join("+")}`).toBe(STAFF_ITEMS);
       expect(nav.roleLabel).not.toBe("GVCN");
     }
+  });
+
+  it("hiệu trưởng và ban điều hành có menu riêng dẫn tới màn Điều hành", () => {
+    // Màn /dieu-hanh dựng xong 31/07 nhưng tới 01/08 vẫn KHÔNG đường nào dẫn tới — vào
+    // được chỉ bằng cách gõ URL. Bài này ghim lại chuyện đó: một màn hình không có lối
+    // vào thì với người dùng nó không tồn tại, và cái hỏng đó không kêu một tiếng nào.
+    for (const roles of [["principal"], ["board"], ["admin", "principal"]] as HubRole[][]) {
+      const nav = resolveNav(roles);
+      expect(nav.items.map((i) => i.href), `vai ${roles.join("+")}`).toContain("/dieu-hanh");
+      // Không được là ngõ cụt: vẫn phải có đường về trang chủ và tới hồ sơ (nơi đăng xuất).
+      expect(nav.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/home", "/ho-so"]));
+      expect(nav.roleLabel).not.toBe("GVCN");
+    }
+  });
+
+  it("tâm lý cụm có menu riêng dẫn tới màn hình thật của mình", () => {
+    const nav = resolveNav(["counselor"]);
+    expect(nav.roleLabel).toBe("TÂM LÝ CỤM");
+    expect(nav.items.map((i) => i.href)).toContain("/tam-ly");
+    // Và không được là ngõ cụt: phải có đường về trang chủ và tới hồ sơ (nơi đăng xuất).
+    expect(nav.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/home", "/ho-so"]));
   });
 
   it("tài khoản chưa được gán vai nào không rơi vào menu của ai cả", () => {
@@ -382,8 +408,11 @@ describe("một nhãn chỉ được có một đích", () => {
 describe("mục mờ nói về màn hình của CHÍNH vai đang đọc", () => {
   const soonLabels = (roles: HubRole[]) => resolveNav(roles).soon.map((i) => i.label);
 
-  it("tâm lý cụm thấy «Tâm lý cụm», không thấy «Quản trị hệ thống»", () => {
-    expect(soonLabels(["counselor"])).toContain("Tâm lý cụm");
+  it("tâm lý cụm không còn mục mờ nào — màn hình của cô đã có thật", () => {
+    // Trước 31/07/2026 mục «Tâm lý cụm» nằm ở nhóm mờ "sắp có". Khi trang /tam-ly được
+    // dựng thật mà mục mờ vẫn còn, cùng một nhãn dẫn đi hai nơi: sidebar bảo chưa có,
+    // tile trên trang chủ lại mở được. Nhóm mờ của vai này nay rỗng.
+    expect(soonLabels(["counselor"])).toEqual([]);
     expect(soonLabels(["counselor"])).not.toContain("Quản trị hệ thống");
   });
 

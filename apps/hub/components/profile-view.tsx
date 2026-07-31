@@ -108,6 +108,15 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
           <b>{teacher}</b> — cảm xúc, điểm danh, lời nhắn «cần gặp thầy cô»
         </span>
       </div>
+      {/* Thêm 01/08/2026: sau 0038, `core.can_read_mood()` cho ĐÚNG hai vai đọc cảm xúc —
+          chủ nhiệm và tâm lý cụm. Trước đó khối này chỉ kể chủ nhiệm, nên màn «Ai thấy gì
+          của mình?» — đúng cái màn sinh ra để nói thật — lại là màn duy nhất nói thiếu. */}
+      <div className="flex items-start gap-2.5">
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
+        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+          <b>Thầy cô tâm lý</b> — cảm xúc và lời nhắn, để giúp khi con gặp chuyện khó
+        </span>
+      </div>
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
         <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">

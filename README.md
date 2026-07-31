@@ -8,7 +8,7 @@ Hệ thống theo dõi & chăm sóc học sinh, Hệ thống Trường Việt An
 - **Bạn là dev / vibe team / Claude:** `CLAUDE.md` tự nạp khi mở Claude Code tại đây. Đọc [`danh-cho-may/RULES.md`](danh-cho-may/RULES.md) trước khi làm bất cứ việc gì.
 - **Bạn muốn chạy thử ứng dụng:** xem mục "Chạy local" bên dưới.
 
-## Trạng thái: 31/07/2026 — GĐ1 chạy thật + đợt củng cố trước go-live
+## Trạng thái: 31/07/2026 — GĐ1 chạy thật + hai đợt củng cố (A: đủ bật một lớp · B: đủ bật cả khối)
 
 Đã xây: monorepo + `packages/core` (contracts có version + changelog, auth-adapter dev, db
 client RLS-aware) + `apps/hub` (Next.js App Router): đăng nhập (SSO dev + mã mời PH), trang chủ
@@ -25,15 +25,31 @@ khung giờ và dải IP chống gian lận điểm danh nằm trong bảng mà 
 (nay `attendance.resolve_checkin` là nơi duy nhất quyết định); tuyên bố "mọi lượt đọc y tế đều
 ghi audit" được viết ngay cạnh bảng y tế mà chưa từng được xây (nay có `health.read_logs`).
 
+**Đợt B 31/07/2026 (migration `0035`–`0041`)** — từ "đủ bật một lớp" lên "đủ bật cả khối":
+ba lần siết phạm vi đọc dữ liệu cảm xúc trong cùng một ngày (`0035` ghi chú tư vấn, `0037`
+lời nhắn "cần gặp thầy cô", `0038` cột mood) vì cả ba đang phơi ra cho người mà **màn hình
+đã in chữ hứa là sẽ không thấy** — quyết định kiến trúc rút ra nằm ở **ADR-025**: *"ai được
+thấy em này" là một câu hỏi, "ai được thấy em này cảm thấy gì" là câu hỏi khác*. Kèm theo:
+mã mời phụ huynh thành vé dùng một lần (`0036`, ADR-024), flag engine cài đặt thật (`0039`),
+đường đọc tổng hợp cho BGH/điều hành (`0040`), lịch chạy job có sổ và có trạng thái (`0041`).
+Màn hình mới: `/tam-ly` + `/tam-ly/ho-so/<em>` (tâm lý cụm), `/dieu-hanh` (BGH/điều hành);
+buồng lái GVCN thôi cố định một lớp.
+
 **Chưa xây (để làm tiếp):**
-1. Flag engine tự động (pg_cron, `04-flag-engine.md`) — buồng lái hiện tính cờ trực tiếp
-   từ tín hiệu thô, xem ghi chú đầu file `apps/hub/server/routers/care.ts`.
+1. **Buồng lái đọc `care.flags`.** Bộ quét cờ đã có thật (`care.run_flag_engine`, `0039`),
+   nhưng `care.getDashboard` vẫn tự tính tín hiệu thô mỗi lần mở màn. Hai đường cố ý chạy
+   song song một thời gian để đối chiếu (`DEBT.md` #32).
 2. Google/Zalo OAuth thật — vẫn dùng dev provider giả lập vì hạ tầng OAuth chưa mua. **Cửa
    dev-login đang mở ra Internet là nợ #19 trong `DEBT.md`, bắt buộc bịt trước dữ liệu thật.**
 3. `submitCheckout` (điểm danh ra về, có trong `03-api.md`) — wireframe GĐ1 không cần, chưa viết.
-4. Màn hình cho vai `principal`/`board` và cho tâm lý cụm — quyền DB có, đường API chưa (`DEBT.md` #25).
-5. Bộ lập lịch gọi job xóa cảm xúc + job dò lệch GVCN hằng đêm (`DEBT.md` #24).
-6. **Layout desktop riêng cho check-in/báo cáo/hồ sơ** — chỉ responsive đơn giản (co giãn
+4. **Cắm lịch job lên máy thật.** `ops.job_schedule` + `tools/jobs/run-all.mjs` chạy được bằng
+   tay, nhưng chưa Task Scheduler/cron nào gọi nó theo giờ — nên lời hứa "xóa chi tiết cảm xúc
+   sau 12 tháng" vẫn chưa được thi hành lần nào (`DEBT.md` #33).
+5. Router `admin` (`updateThreshold`, `manageMapping`, `reviewImportErrors`) và router
+   `evidence` — hôm nay đổi ngưỡng cảnh báo vẫn là một câu UPDATE chạy tay.
+6. Luật **C_CEFR**: 5/6 luật cờ đã cài; C_CEFR chưa có nguồn dữ liệu nên engine bỏ qua **kèm
+   lý do ghi vào metrics**, không chấm bằng dữ liệu không tồn tại (`DEBT.md` #35).
+7. **Layout desktop riêng cho check-in/báo cáo/hồ sơ** — chỉ responsive đơn giản (co giãn
    max-width trong khung thẻ). **Đăng nhập và trang chủ đã có layout desktop riêng thật**
    (29/07/2026, xem mục ngay dưới) vì `Hub Desktop.dc.html` có bản thiết kế desktop cho 2 màn
    này (D1, D2); check-in/báo cáo/hồ sơ thì KHÔNG có bản D-series tương ứng trong nguồn thiết
@@ -65,7 +81,8 @@ lưới mini app, `flex-direction:row` thẻ check-in — đúng cấu trúc D2,
 
 **Đã tự kiểm tra thật, không chỉ đoán** (dựng Postgres 16 qua Docker, chạy hết 17
 migration + toàn bộ 16 file pgTAP ~150 assertion xanh — con số ngày 29/07; số mới nhất
-31/07 là **34 migration · 32 file test · 358 assertion**, seed dữ liệu demo, chạy
+22:10 ngày 31/07 là **41 migration · 39 file test · 517 assertion, trong đó 2 file đỏ**
+(hệ quả đã biết của `0038`, `DEBT.md` #34), seed dữ liệu demo, chạy
 `next dev`, gọi thật từng tRPC procedure qua HTTP, và bấm thật trong Chrome ở cả
 2 vai trò):
 - Đăng nhập dev (Google giả + mã mời PH) → tạo/khớp đúng phiên
@@ -87,18 +104,26 @@ migration + toàn bộ 16 file pgTAP ~150 assertion xanh — con số ngày 29/0
 
 Cần: Node 20+, pnpm (`corepack enable`), Docker (để chạy Postgres).
 
+**Máy dev đã dựng sẵn thì chỉ cần một lệnh:** `bash tools/start-local.sh` — script bật lại
+Postgres (container `pg_hub`, cổng **5434**), Hub và đường hầm Cloudflare theo đúng thứ tự phụ
+thuộc, vì cả ba đều là tiến trình rời và không cái nào tự khởi động lại. Các bước dưới đây là
+lần dựng ĐẦU TIÊN. Lưu ý `psql` không có sẵn trên máy Windows — bước 2 và 3 chạy bên trong
+container, xem `packages/core/db/migrations/README.md`.
+
 ```bash
 # 1. Cài dependency
 pnpm install
 
 # 2. Dựng Postgres 16 + chạy migrations
-docker run -d --name pg_hub -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=hub_dev -p 5432:5432 postgres:16
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_dev
+docker run -d --name pg_hub -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=hub_dev -p 5434:5432 postgres:16
+export DATABASE_URL=postgres://postgres:postgres@localhost:5434/hub_dev
 for f in packages/core/db/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"; done
 
-# 3. (khuyến nghị) Chạy pgTAP trước khi tin seed/app — script tự dựng lại từ đầu + nạp fixture
+# 3. (khuyến nghị) Chạy pgTAP trước khi tin seed/app — script chạy migration từ đầu + nạp fixture,
+#    nên trỏ nó vào một database RIÊNG (hub_test), KHÔNG phải hub_dev đang dùng
 docker exec pg_hub bash -c "apt-get update -qq && apt-get install -y -qq postgresql-16-pgtap"
-./tools/run-db-tests.sh
+docker exec pg_hub psql -U postgres -c "create database hub_test"
+DATABASE_URL=postgres://postgres:postgres@localhost:5434/hub_test ./tools/run-db-tests.sh
 
 # 4. Nạp dữ liệu demo (tài khoản dev + lịch sử check-in mẫu)
 pnpm db:seed
@@ -157,12 +182,12 @@ school-data-hub/
 
 ## Kiểm tra trước khi merge
 
-- `node tools/check-sync.mjs` — hồ sơ người/máy đồng bộ. **Hai cổng, không phải một:** cổng 1 so `sync-version` hai phía; cổng 2 đối chiếu từng bảng/view/hàm mà migration tạo ra với `02-database.md`. Cổng 1 một mình là xanh giả — không ai sờ vào tài liệu thì hai con số vẫn bằng nhau kể cả khi database đã đi trước tài liệu 8 migration (đúng chuyện đã xảy ra).
+- `node tools/check-sync.mjs` — hồ sơ người/máy đồng bộ. **Hai cổng, không phải một:** cổng 1 so `sync-version` hai phía; cổng 2 đối chiếu từng bảng/view/hàm mà migration tạo ra với `02-database.md`. Cổng 1 một mình là xanh giả — không ai sờ vào tài liệu thì hai con số vẫn bằng nhau kể cả khi database đã đi trước tài liệu 8 migration (đúng chuyện đã xảy ra). **Tính tới 22:15 ngày 31/07/2026 cả hai cổng đang ĐỎ** và đều đúng việc chúng sinh ra để làm: cổng 2 kể tên 15 đối tượng do `0039`–`0041` tạo mà `02-database.md` chưa nhắc; cổng 1 báo `04-flag-engine.md` (v8) đã đi trước mục "Bộ quét cảnh báo" của hồ sơ HTML (v7). Chi tiết và ai phải đóng: `DEBT.md` #36.
 - `node tools/schema-lint.mjs` — §1/§2/ADR-011, chặn trùng số migration, và bắt mọi bảng/policy/GRANT từ `0023` trở đi phải có pgTAP gọi tên. Lý do có tầng cuối: **bảng sai thì app vỡ ngay, policy sai thì im lặng lộ dữ liệu.**
 - `node tools/check-html.mjs` — hồ sơ HTML: id trùng, link neo gãy, cân bằng thẻ, đủ mục
 - `node tools/contracts-lint.mjs` — hợp đồng Zod đổi mà chưa ghi CHANGELOG
 - `node tools/secret-scan.mjs` — §4
 - `pnpm typecheck` — cả hai package sạch kiểu (đã xác nhận pass)
-- `./tools/run-db-tests.sh` — pgTAP trên Postgres thật (**đã xác nhận pass 31/07/2026: 34 migration, 32/32 file test, 358 assertion xanh** trên database dựng lại từ đầu)
-- `npx vitest run` — bộ test TypeScript
+- `./tools/run-db-tests.sh` — pgTAP trên Postgres thật, **trên một database dựng lại từ đầu, không phải `hub_dev`**. Đo 22:10 ngày 31/07/2026: 41 migration chạy sạch, 517 assertion trên 39 file, **37 xanh / 2 đỏ** (`DEBT.md` #34). Máy không có `psql` thì chạy script bên trong container — cách làm ghi ở `packages/core/db/migrations/README.md`.
+- `npx vitest run` — bộ test TypeScript. Đo cùng lúc: **420 ca, 410 xanh / 10 đỏ trên 12 file**; trừ một ca điều hướng, tất cả cùng một câu lỗi `permission denied for table checkins` (cùng gốc `0038`).
 - `pnpm --filter @hub/app build` — đã xác nhận pass, 13 route

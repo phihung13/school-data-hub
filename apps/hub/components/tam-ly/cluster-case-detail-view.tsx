@@ -1,0 +1,421 @@
+// apps/hub/components/tam-ly/cluster-case-detail-view.tsx — hồ sơ MỘT em, cho tâm lý cụm.
+//
+// Đây là màn vá đúng lỗ hổng mà audit nêu: trước hôm nay tâm lý cụm TẮT được cờ khẩn và
+// ĐÓNG được hồ sơ chăm sóc của một đứa trẻ mà KHÔNG có đường nào nhìn thấy hồ sơ đó
+// trước khi tắt. Quyền ghi rộng hơn quyền đọc không phải "chặt hơn" — đó là bắt người
+// ta quyết định trong bóng tối, và với hồ sơ chăm sóc thì quyết định mù là quyết định sai.
+//
+// Vì thế thứ tự trên màn là: ĐỌC trước, NÚT sau. Ba nút hành động (đã gặp em rồi · ghi
+// can thiệp · đóng hồ sơ) đặt SAU khối nhật ký và khối tín hiệu, không đặt lên đầu.
+//
+// Ba nút đó dùng lại ĐÚNG ba mutation đã có (`acknowledgeHelpRequest`, `logIntervention`,
+// `closeCase`) — không viết đường ghi thứ hai cho cùng một việc, nên §9 (idempotency) vẫn
+// do đúng một chỗ chịu trách nhiệm.
+"use client";
+
+import { useState } from "react";
+import { HELP_REQUEST_TOPIC_LABEL, HELP_REQUEST_URGENCY_LABEL } from "@hub/core/contracts";
+import type { ClusterHelpSignal } from "@hub/core/contracts";
+import { trpc } from "@/lib/trpc-client";
+import { toLocalIsoDate } from "@/lib/date";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  MutationError,
+  MutationSuccess,
+} from "../ui/query-state";
+import { classLabel, personName } from "../ui/labels";
+import { newMutationId } from "../gvcn/mutation-id";
+import { Card, ScopeNotice, TamLyShell } from "./tam-ly-shell";
+
+/**
+ * Hành động hay dùng của tâm lý cụm. Nhãn nói đúng việc ĐÃ LÀM, không nói việc hệ thống
+ * sẽ làm hộ — cùng luật đã ghi ở `intervention-notes-view.tsx` (nút «đã chuyển tâm lý
+ * cụm» từng khiến GVCN tin là ca đã sang tay người khác trong khi đầu kia không ai biết).
+ */
+const QUICK_ACTIONS = [
+  "Đã gặp và trò chuyện với em",
+  "Đã trao đổi với giáo viên chủ nhiệm",
+  "Đã trao đổi với phụ huynh",
+  "Đã hẹn lịch gặp tiếp",
+];
+
+export function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString("vi-VN");
+}
+
+export function formatDate(value: string): string {
+  return new Date(`${value}T00:00:00`).toLocaleDateString("vi-VN");
+}
+
+/** Loại tín hiệu — KHÔNG có nội dung lời em viết (xem ScopeNotice và contracts/care.ts). */
+export function signalLabel(signal: Pick<ClusterHelpSignal, "topic" | "urgency">): string {
+  const parts = [
+    signal.topic ? HELP_REQUEST_TOPIC_LABEL[signal.topic] : null,
+    signal.urgency ? HELP_REQUEST_URGENCY_LABEL[signal.urgency] : null,
+  ].filter((p): p is string => p !== null);
+  return parts.length > 0 ? parts.join(" · ") : "Không ghi loại";
+}
+
+export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
+  const utils = trpc.useUtils();
+  const query = trpc.care.getClusterCaseDetail.useQuery({ studentId });
+
+  const [action, setAction] = useState(QUICK_ACTIONS[0] as string);
+  const [note, setNote] = useState("");
+  // Sinh MỘT LẦN mỗi lần soạn (§9); đổi mã sau khi ghi xong để lần ghi kế tiếp là một
+  // hành động mới thật sự, không bị gộp vào hành động vừa rồi.
+  const [mutationId, setMutationId] = useState(newMutationId);
+  const [resolution, setResolution] = useState("");
+
+  const refreshAll = () => {
+    utils.care.getClusterCaseDetail.invalidate();
+    utils.care.listClusterCases.invalidate();
+  };
+
+  const logIntervention = trpc.care.logIntervention.useMutation({
+    onSuccess: () => {
+      setNote("");
+      setMutationId(newMutationId());
+      refreshAll();
+    },
+  });
+  const acknowledgeHelp = trpc.care.acknowledgeHelpRequest.useMutation({ onSuccess: refreshAll });
+  const closeCase = trpc.care.closeCase.useMutation({ onSuccess: refreshAll });
+
+  const data = query.data;
+  const openCase = data?.openCase ?? null;
+  const pendingSignals = (data?.helpSignals ?? []).filter((s) => s.handledAt === null);
+
+  return (
+    <TamLyShell
+      title="Hồ sơ chăm sóc"
+      subtitle={data ? data.student.schoolName : undefined}
+      backHref="/tam-ly"
+      backLabel="Về danh sách việc đang chờ"
+    >
+      {query.isPending ? (
+        <LoadingState label="Đang mở hồ sơ…" />
+      ) : query.error ? (
+        <ErrorState error={query.error} label="hồ sơ chăm sóc" onRetry={() => query.refetch()} />
+      ) : (
+        <>
+          <div>
+            <h1 className="text-[22px] font-black text-navy md:text-[24px]">{data!.student.fullName}</h1>
+            <p className="mt-1 text-[12.5px] font-semibold text-[#5B6B80]">
+              {[data!.student.studentCode, classLabel(data!.student.className), data!.student.schoolName]
+                .filter((p) => p !== "")
+                .join(" · ")}
+            </p>
+          </div>
+
+          <ScopeNotice />
+
+          {/* ── Trạng thái hồ sơ ───────────────────────────────────────── */}
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[15px] font-black text-navy">Hồ sơ chăm sóc</div>
+                <div className="mt-1 text-[12.5px] font-semibold text-[#4A5460]">
+                  {openCase
+                    ? `Đang mở từ ${formatDateTime(openCase.openedAt)}`
+                    : "Chưa có hồ sơ nào đang mở cho em"}
+                </div>
+                {!openCase && (
+                  // "Chưa có hồ sơ" là một trạng thái THẬT, không phải dữ liệu thiếu:
+                  // hồ sơ chỉ sinh ra khi có người ghi hành động đầu tiên.
+                  <div className="mt-1 text-[11px] leading-relaxed text-caption">
+                    Hồ sơ mở ra khi có người ghi hành động đầu tiên. Ghi một dòng ở dưới là hồ sơ tự mở.
+                  </div>
+                )}
+              </div>
+              {data!.cases.length > 1 && (
+                <div className="text-[11px] font-bold text-caption">
+                  {data!.cases.length} hồ sơ trong lịch sử
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+            {/* ── Cột trái: những gì ĐÃ XẢY RA ────────────────────────── */}
+            <div className="flex min-w-0 flex-1 basis-[460px] flex-col gap-4">
+              <Card>
+                <div className="text-[15px] font-black text-navy">Tín hiệu «cần gặp thầy cô»</div>
+                <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                  Loại tín hiệu và ngày em bấm, trong {data!.window.days} ngày gần nhất. Nội dung em viết
+                  chỉ GVCN của em đọc được.
+                </p>
+                {data!.helpSignals.length === 0 ? (
+                  <EmptyState
+                    icon="search_off"
+                    title="Chưa có tín hiệu nào trong khoảng này"
+                    hint="Trống ở đây nghĩa là em chưa bấm nút nào trong khoảng thời gian trên — không phải em không có chuyện gì."
+                  />
+                ) : (
+                  <ul className="mt-3 flex flex-col gap-2.5">
+                    {data!.helpSignals.map((s) => (
+                      <li key={s.requestedOn} className="flex items-start gap-2.5">
+                        <span
+                          className={`mt-[6px] h-2 w-2 flex-none rounded-full ${s.handledAt ? "bg-[#C9D2DE]" : "bg-[#F0474D]"}`}
+                          aria-hidden
+                        />
+                        <div className="min-w-0">
+                          <div className="text-[12.5px] font-extrabold text-ink">{signalLabel(s)}</div>
+                          <div className="mt-0.5 text-[11px] text-caption">
+                            {formatDate(s.requestedOn)} ·{" "}
+                            {s.handledAt
+                              ? `đã có người bấm "đã gặp em rồi" lúc ${formatDateTime(s.handledAt)}`
+                              : "chưa ai bấm “đã gặp em rồi”"}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+
+              <Card>
+                <div className="text-[15px] font-black text-navy">Nhật ký can thiệp</div>
+                <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                  Việc con người đã làm với em — của cả GVCN lẫn tâm lý cụm.
+                </p>
+                {data!.interventions.length === 0 ? (
+                  <EmptyState
+                    icon="edit_note"
+                    title="Chưa ai ghi hành động nào"
+                    hint="Trống ở đây nghĩa là chưa ai ghi việc gì vào hệ thống — không phải mất dữ liệu, cũng không phải chưa ai làm gì ngoài đời."
+                  />
+                ) : (
+                  <ul className="mt-3 flex flex-col gap-3">
+                    {data!.interventions.map((i) => (
+                      <li key={i.interventionId} className="flex items-start gap-2.5">
+                        <span
+                          className={`mt-[6px] h-2 w-2 flex-none rounded-full ${i.caseStatus === "open" ? "bg-[#2C7BF2]" : "bg-[#C9D2DE]"}`}
+                          aria-hidden
+                        />
+                        <div className="min-w-0">
+                          <div className="text-[12.5px] font-extrabold text-ink">{i.action}</div>
+                          {i.note && (
+                            <div className="mt-0.5 text-[12px] leading-relaxed text-[#4A5460]">{i.note}</div>
+                          )}
+                          <div className="mt-0.5 text-[10.5px] text-caption">
+                            {personName(i.actorName)} · {formatDateTime(i.occurredAt)}
+                            {i.caseStatus === "closed" ? " · hồ sơ đã đóng" : ""}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-1.5">
+                  <span className="msr text-[17px] text-domain-counselor" aria-hidden>
+                    lock
+                  </span>
+                  <div className="text-[15px] font-black text-navy">Ghi chú tư vấn</div>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                  Chỉ người viết và tâm lý cụm đọc được. GVCN và phụ huynh không xem được khối này.
+                </p>
+                {data!.counselorNotes.length === 0 ? (
+                  <EmptyState
+                    icon="sticky_note_2"
+                    title="Chưa có ghi chú tư vấn nào"
+                    hint="Hub chưa có màn nhập ghi chú tư vấn, nên trống ở đây không nói được gì về việc em đã được tư vấn hay chưa."
+                  />
+                ) : (
+                  <ul className="mt-3 flex flex-col gap-3">
+                    {data!.counselorNotes.map((n) => (
+                      <li key={n.noteId} className="rounded-[14px] bg-[#F7F3FF] px-3.5 py-3">
+                        <div className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-[#332154]">
+                          {n.body}
+                        </div>
+                        <div className="mt-1 text-[10.5px] text-[#6B5A94]">
+                          {n.mine ? "Thầy cô ghi" : personName(n.authorName)} · {formatDateTime(n.createdAt)}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {!data!.notesWritable && (
+                  // Nói THẲNG là chưa ghi được, thay vì hiện một ô soạn thảo rồi bắn lỗi
+                  // quyền vào mặt người dùng lúc bấm Lưu.
+                  <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-[#FFF7E0] px-3 py-2 text-[11.5px] font-semibold leading-relaxed text-[#8A5A00]">
+                    <span className="msr mt-[1px] flex-none text-[15px]" aria-hidden>
+                      info
+                    </span>
+                    Hub chưa có đường ghi ghi chú tư vấn — hiện chỉ đọc được ghi chú đã có sẵn trong cơ sở
+                    dữ liệu. Ghi mới vẫn phải làm ngoài hệ thống.
+                  </p>
+                )}
+              </Card>
+            </div>
+
+            {/* ── Cột phải: những gì CÔ SẮP LÀM ───────────────────────── */}
+            <div className="flex min-w-0 flex-1 basis-[380px] flex-col gap-4">
+              {pendingSignals.length > 0 && (
+                <Card>
+                  <div className="text-[15px] font-black text-navy">Cờ khẩn đang chờ</div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                    Bấm khi đã thật sự gặp em. Tín hiệu tắt khỏi hộp việc của cả GVCN lẫn tâm lý cụm.
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {pendingSignals.map((s) => (
+                      <li key={s.requestedOn} className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[12px] font-bold text-ink">
+                          {formatDate(s.requestedOn)} · {signalLabel(s)}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={acknowledgeHelp.isPending}
+                          onClick={() =>
+                            acknowledgeHelp.mutate({ studentId, requestedOn: s.requestedOn })
+                          }
+                          className="rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12px] font-black text-gold-textDark disabled:opacity-40"
+                        >
+                          Cô đã gặp em rồi
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    {acknowledgeHelp.error && <MutationError error={acknowledgeHelp.error} />}
+                    {acknowledgeHelp.isSuccess && !acknowledgeHelp.error && (
+                      <MutationSuccess>
+                        {acknowledgeHelp.data?.alreadyHandled
+                          ? "Người khác đã xử lý trước"
+                          : "Đã tắt cờ khẩn"}
+                      </MutationSuccess>
+                    )}
+                  </div>
+                </Card>
+              )}
+
+              <Card>
+                <div className="text-[15px] font-black text-navy">Ghi một việc vừa làm</div>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
+                  Có dòng ở đây thì hồ sơ không còn là «đo rồi để đó», và đồng hồ nhắc{" "}
+                  {/* Ngưỡng đọc từ bảng, không viết số ở đây (§7) — nên câu này nói chung. */}
+                  được đặt lại.
+                </p>
+
+                <div className="mt-3">
+                  <span className="text-[11.5px] font-extrabold text-[#33507C]">Việc đã làm</span>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {QUICK_ACTIONS.map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        aria-pressed={action === a}
+                        onClick={() => setAction(a)}
+                        className={
+                          action === a
+                            ? "rounded-full bg-domain-counselor px-3 py-1.5 text-[11.5px] font-black text-white"
+                            : "rounded-full border border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-[#33507C] hover:bg-[#F5F8FC]"
+                        }
+                      >
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={action}
+                    onChange={(e) => setAction(e.target.value)}
+                    maxLength={200}
+                    aria-label="Việc đã làm"
+                    className="mt-2 w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] focus:border-navy"
+                  />
+                </div>
+
+                <label className="mt-3 block">
+                  <span className="text-[11.5px] font-extrabold text-[#33507C]">Ghi chú (không bắt buộc)</span>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={3}
+                    maxLength={2000}
+                    placeholder="Nội dung ngắn gọn, đủ để lần sau đọc lại còn hiểu…"
+                    className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] focus:border-navy"
+                  />
+                </label>
+                <p className="mt-1 text-[10.5px] leading-relaxed text-caption">
+                  Ô này là nhật ký hành động — GVCN của em đọc được. Nội dung buổi tư vấn thì không ghi
+                  vào đây.
+                </p>
+
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={action.trim().length === 0 || logIntervention.isPending}
+                    onClick={() =>
+                      logIntervention.mutate({
+                        // Có hồ sơ mở thì ghi thẳng vào đó; chưa có thì gửi khoá ghép
+                        // "studentId:ngày" — `resolveOpenCase` tự mở hồ sơ đúng một lần.
+                        caseId: openCase?.caseId ?? `${studentId}:${toLocalIsoDate(new Date())}`,
+                        action: action.trim(),
+                        note: note.trim() || undefined,
+                        clientMutationId: mutationId,
+                      })
+                    }
+                    className="rounded-xl bg-gradient-to-br from-domain-counselor to-domain-counselorDark px-5 py-3 text-[12.5px] font-black text-white shadow-[0_7px_16px_rgba(106,52,224,.28)] disabled:opacity-40 disabled:shadow-none"
+                  >
+                    {logIntervention.isPending ? "Đang ghi…" : "Ghi can thiệp"}
+                  </button>
+                  {logIntervention.error && <MutationError error={logIntervention.error} />}
+                  {logIntervention.isSuccess && !logIntervention.error && (
+                    <MutationSuccess>
+                      {logIntervention.data?.deduplicated
+                        ? "Việc này đã được ghi trước đó"
+                        : "Đã ghi vào hồ sơ"}
+                    </MutationSuccess>
+                  )}
+                </div>
+              </Card>
+
+              {openCase && (
+                <Card>
+                  <div className="text-[15px] font-black text-navy">Đóng hồ sơ</div>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
+                    Chỉ đóng khi việc đã xong. Hồ sơ đóng thì em không còn trong hộp việc của cụm — nên
+                    lý do phải ghi lại để lần sau đọc còn hiểu vì sao.
+                  </p>
+                  <textarea
+                    value={resolution}
+                    onChange={(e) => setResolution(e.target.value)}
+                    rows={3}
+                    maxLength={2000}
+                    aria-label="Lý do đóng hồ sơ"
+                    placeholder="Vì sao đóng: em đã ổn định, đã bàn giao, gia đình đã phối hợp…"
+                    className="mt-2 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] focus:border-navy"
+                  />
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={resolution.trim().length === 0 || closeCase.isPending}
+                      onClick={() =>
+                        closeCase.mutate({ caseId: openCase.caseId, resolution: resolution.trim() })
+                      }
+                      className="rounded-xl border-[1.6px] border-line bg-white px-5 py-3 text-[12.5px] font-black text-[#33507C] disabled:opacity-40"
+                    >
+                      {closeCase.isPending ? "Đang đóng…" : "Đóng hồ sơ này"}
+                    </button>
+                    {closeCase.error && <MutationError error={closeCase.error} />}
+                    {closeCase.isSuccess && !closeCase.error && (
+                      <MutationSuccess>
+                        {closeCase.data?.alreadyClosed ? "Hồ sơ đã đóng từ trước" : "Đã đóng hồ sơ"}
+                      </MutationSuccess>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </TamLyShell>
+  );
+}
