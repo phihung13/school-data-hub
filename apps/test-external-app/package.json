@@ -1,0 +1,12 @@
+{
+  "name": "@hub/test-external-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs"
+  },
+  "dependencies": {
+    "jose": "^5.6.3"
+  }
+}

@@ -1,0 +1,141 @@
+---
+ban-doi-ung: none
+sync-version: 2
+---
+
+# API — tRPC routers, 2 đường ghi duy nhất
+
+Chỉ có **hai đường ghi** vào Hub. PR mở đường thứ ba bị từ chối.
+
+## Đường 1 — tRPC (người dùng, realtime)
+
+| Router | Procedures chính | Ghi chú |
+|---|---|---|
+| `checkin` | `submitMood`, `submitCheckout`, `requestHelp` | 1 mutation = 1 transaction (mood + attendance); ghi evidence + core |
+| `evidence` | `submitBehaviors`, `submitPdr`, `logDear`, `scoreRubric`, `logEventRole` | |
+| `care` | `getDashboard`, `acknowledgeFlag`, `logIntervention`, `closeCase` | homeroom/counselor only (RLS) |
+| `fitness` | `submitTest`, `logClubAttendance` | vibe team gọi, không tự viết SQL |
+| `report` | `getGrowthReport`, `getCampusTrends` | read-only |
+| `admin` | `updateThreshold`, `manageMapping`, `reviewImportErrors` | role-gated |
+
+## Đường 2 — Connector (máy, theo lịch)
+
+- Tutor/Class → `staging`: batch mỗi giờ.
+- Moodle → `staging`: webhook completion + cron đối soát đêm.
+- COR → `staging`: upload file theo kỳ, màn hình xử lỗi map.
+- `promote()`: validate + gắn `student_id` → ghi `core`/`academic`; lỗi → `import_errors`.
+- Role DB connector: INSERT-only trên `staging` (§8).
+
+## Luật endpoint (mọi router)
+
+1. **Idempotent (§9):** unique constraint tự nhiên (vd `(student_id, date, type)`) + upsert. Contract test bắn 2 lần.
+2. **Check-in một round-trip:** đỉnh sáng ~5.000 user là ~100–150 req/s (xem `05-capacity-ops.md`) — mutation gọn, không N+1.
+3. **Zod tại biên:** mọi input/output khai báo trong `packages/core/contracts/` — là hợp đồng chung cho dev + vibe team. Không `any`.
+4. **Lỗi có mã:** `TRPCError` với code chuẩn; message tiếng Việt thân thiện ở client, chi tiết kỹ thuật chỉ trong log server.
+5. **Rate limit:** per-user token bucket ở middleware tRPC (60 req/phút mặc định, `checkin` 10 req/phút). Embed API của app ngoài: 30 req/phút/app (`08-embedded-apps.md` mục 4).
+6. **Hợp đồng nội bộ có version (bổ sung 27/07/2026):** `packages/core/contracts` mang số phiên bản + changelog; đổi phá tương thích đi theo expand–contract y như migration (thêm mới → chuyển dần → gỡ cũ). Lý do: hợp đồng giữa lõi và Mini App là ranh giới giữa **hai đội khác nhau** (2 dev core ↔ vibe team) — không có version thì vibe team phát hiện gãy lúc chạy thật, không phải lúc build.
+
+## Sẵn sàng lên CH Play / App Store (lộ trình đã chốt: sau khi hệ chạy tốt)
+
+Đường lên store: bọc PWA hiện có bằng **Capacitor** (Android + iOS) hoặc TWA (Android). Không viết lại; tRPC + Supabase auth chạy nguyên trong webview. Ba quy tắc phải giữ NGAY TỪ BÂY GIỜ để ngày đó không đau:
+
+1. **Version gate:** client gửi `app_version` trong header; server có endpoint `meta.minSupportedVersion`. App bản store không ép update được như web — bản cũ phải nhận màn hình "vui lòng cập nhật" thay vì lỗi khó hiểu. Mọi thay đổi breaking của API phải qua deprecation window ≥ 1 phiên bản.
+2. **Không dùng API chỉ-có-trên-trình-duyệt** ngoài lớp adapter (để webview Capacitor chạy được nguyên vẹn).
+3. **Xóa tài khoản trong app:** Apple bắt buộc app có tạo tài khoản phải cho xóa tài khoản ngay trong app — quyền xóa theo Hiến chương điều 7 đã có sẵn ở backend, chỉ cần màn hình gọi nó.
+
+Việc chỉ làm khi phát hành store (không làm trước): đăng ký Google Play Console + Apple Developer, khai Data safety form / Privacy nutrition label cho dữ liệu trẻ em (DPIA và Hiến chương là nguồn khai sẵn), trang privacy policy công khai, thêm 1–2 tính năng native (push APNs/FCM, đăng nhập sinh trắc học) để qua cửa Apple Guideline 4.2 «minimum functionality» — Apple từ chối app chỉ là website bọc vỏ trần.
+
+## Định danh ra ngoài — Hub là Identity Provider (ADR-014, không phải đường ghi thứ ba)
+
+"Chỉ có hai đường ghi" ở đầu file nói về **dữ liệu**; đây là chuyện khác — **định danh** chảy từ Hub ra ngoài, không phải dữ liệu chảy vào. Người dùng đăng nhập Hub một lần; hệ ngoài (Moodle, và các RP tương lai) tin định danh đó qua chuẩn OIDC, không giữ mật khẩu riêng, không cần đường ghi mới vào `staging`/`core`.
+
+### Kiến trúc
+
+- Thư viện chuẩn **`node-oidc-provider`** — không tự viết OAuth/OIDC (dễ lộ lỗi PKCE, replay token, xoay JWKS sai).
+- Mount ở `/oidc/*` **trong cùng deployable** — không phải service riêng, giữ đúng modular monolith.
+- Bridge **không tự giữ mật khẩu**: `/oidc/authorize` đọc session Supabase Auth đã đăng nhập của Hub qua `auth-adapter` hiện có trong `packages/core` — không import SDK Supabase ở nơi khác (đúng luật cách ly hạ tầng, `01-architecture.md` §4).
+- `sub` (định danh trong token) = `core.users.id` — không phải `auth.users.id` (cấm đọc trực tiếp), không phải `student_code` (mã hiển thị, không dùng làm khóa kỹ thuật).
+
+### Endpoint bắt buộc
+
+`/.well-known/openid-configuration` · `/oidc/authorize` · `/oidc/token` · `/oidc/userinfo` · `/oidc/jwks` · **`/oidc/session/end`** (`end_session_endpoint`) — theo chuẩn OIDC, thư viện tự sinh, không tự implement tay.
+
+### Đăng xuất chung và thu hồi (ADR-016, 27/07/2026)
+
+Đăng nhập một lần mà không có đường thoát chung thì chỉ làm xong một nửa.
+
+- **`end_session_endpoint`**: thoát ở Hub → gọi back-channel logout tới mọi RP đang có phiên (mỗi RP khai `backchannel_logout_uri` trong config RP). Ca vận hành thật: phòng máy dùng chung, em sau ngồi vào không được thừa hưởng phiên Moodle của em trước.
+- **Token sống ngắn:** `id_token`/`access_token` TTL ≤ 15 phút; refresh token có, nhưng **mỗi lần refresh kiểm `core.users.status`** — `disabled` thì từ chối. Tài khoản bị khóa mất đường vào mọi hệ trong tối đa một chu kỳ token, không cần đuổi theo thu hồi từng token đã phát.
+- **Nguồn sự thật của trạng thái là `core.users`**, không phải phiên đã cấp. RP không được cache hồ sơ người dùng quá TTL token.
+
+### Claims vai trò — để Moodle tự xếp lớp (ADR-016)
+
+Scope `hub_profile` (RP phải khai mới nhận được; mặc định vẫn chỉ là định danh trần):
+
+| Claim | Kiểu | Ví dụ |
+|---|---|---|
+| `hub_role` | enum | `student` \| `teacher` \| `parent` \| `staff` |
+| `hub_school` | string | `VA-Q7` (mã cơ sở) |
+| `hub_classes` | array | `["6A1"]` — lớp đang học / đang dạy |
+
+Không có claim nào chứa tên thật, `student_code`, số điện thoại hay địa chỉ. Cập nhật theo **lần đăng nhập kế tiếp** của user — Hub không đẩy thông báo chủ động sang RP khi em chuyển lớp (thêm một đường là thêm một thứ hỏng được; độ trễ thực tế thường dưới một ngày).
+
+### Đăng ký Relying Party (RP)
+
+Danh sách RP (Moodle là RP đầu tiên) khai báo qua **config tĩnh** (env/JSON): `client_id`, `client_secret` (hash), `redirect_uris` (allowlist khớp chính xác chuỗi, không wildcard), `scopes` cho phép. Chưa xây bảng + màn hình quản trị riêng cho tới khi có ≥3–4 RP thật — không xây thứ chưa cần (khớp tinh thần `DEBT.md`).
+
+### Khớp tài khoản — idempotent, dùng `core.identity_links` (sửa 27/07/2026)
+
+Trước đây file này ghi `core.id_mappings(..., student_id/user_id)`. **Sai**: bảng đó FK về `core.students.id`, không có cột `user_id`, nên giáo viên và phụ huynh không map được — mà Moodle thì có giáo viên. Đã tách bảng (`02-database.md`, ADR-016):
+
+- `core.id_mappings` = **sổ dữ liệu**, chỉ học sinh.
+- `core.identity_links(system, external_id, user_id)` = **sổ đăng nhập**, mọi loại tài khoản.
+
+Luật khớp:
+
+- Lần đầu RP xác thực một user: upsert `core.identity_links(system='moodle', external_id=<id bên Moodle>, user_id)` (§9) — đăng nhập lần sau không tạo bản ghi đôi.
+- **`UQ(system, external_id)`** — external_id RP báo về đã map user khác: chặn, ghi log, chờ người xử, không tự đoán (§8).
+- **`UQ(system, user_id)`** — một user Hub chỉ có một tài khoản trong mỗi hệ ngoài. Thiếu ràng buộc này thì một người sinh nhiều tài khoản Moodle mà không ai thấy, và điểm/tiến độ nằm rải rác giữa các tài khoản.
+
+### Bảo mật bắt buộc
+
+- **PKCE bắt buộc** cho mọi client, kể cả confidential client.
+- **Redirect URI** khớp chính xác chuỗi, không match theo prefix.
+- Authorization code dùng một lần, hết hạn ≤60 giây.
+- JWKS xoay vòng theo mặc định thư viện; không tự đặt khóa tĩnh vĩnh viễn.
+- Mỗi lần issue token ghi audit log (ai, RP nào, khi nào) — khớp yêu cầu audit chung `06-resilience-security.md`.
+- **Phạm vi cố định:** bridge chỉ cấp định danh (`openid profile`), KHÔNG cấp quyền gọi API/dữ liệu Hub cho RP — Moodle biết "đây là ai", không có nghĩa Moodle gọi được tRPC của Hub.
+
+### Test bắt buộc
+
+- Đăng nhập lần 2 cùng user → không tạo `identity_links` đôi (idempotency test theo mẫu chung §9).
+- External_id đã map user khác → bị chặn, không tự gán.
+- **Cùng user đăng nhập RP bằng external_id thứ hai → bị chặn** (`UQ(system, user_id)`), không sinh tài khoản trùng.
+- Thiếu PKCE / redirect URI sai → `/authorize` từ chối, có log.
+- **Đăng xuất chung:** gọi `end_session` → RP nhận back-channel logout; mở lại RP phải hỏi đăng nhập.
+- **Khóa là cắt:** đặt `core.users.status='disabled'` → refresh token bị từ chối; sau khi token cũ hết hạn, RP không vào được.
+- **Claims:** RP không khai scope `hub_profile` → token không chứa `hub_role`/`hub_school`/`hub_classes`; RP có khai → nhận đúng lớp hiện tại của user.
+
+### Đã triển khai + chạy thật đầu-cuối (29/07/2026)
+
+Không còn là spec — đã cắm thử một app ngoài thật (tiến trình Node độc lập, ngoài repo build của
+Hub) qua toàn bộ luồng: SSO im lặng (đã có session Hub → 0 lần nhập lại), PKCE, đổi token, đọc
+`hub_role`/`hub_school`/`hub_classes` qua `/oidc/me`, và đăng xuất chung (back-channel logout xóa
+đúng phiên phía RP). Code: `apps/hub/server/oidc/{provider,interaction-handler,claims,clients}.ts`,
+mount qua custom server `apps/hub/server.mjs`; app RP mẫu ở `apps/test-external-app/server.mjs`.
+
+**Bẫy kỹ thuật đã gặp, ghi lại để không lặp lại:** `server.mjs` nạp `provider.ts` bằng Node ESM gốc
+(Type Stripping) — MỘT instance Provider duy nhất, giữ đúng MỘT khóa ký JWKS ephemeral cho cả tiến
+trình. Route handler nào nằm trong `app/api/**` được Next.js build bằng webpack RIÊNG — nếu route đó
+`import` thẳng `provider.ts`, webpack tạo ra một module instance THỨ HAI, tự gọi `buildProvider()` lần
+nữa, sinh một khóa RSA ephemeral KHÁC — ký `logout_token` bằng khóa không khớp JWKS thật đang phục vụ
+ở `/oidc/jwks`, RP xác minh chữ ký luôn thất bại. Cách đúng: route handler gọi HTTP nội bộ vào
+`server.mjs` (`POST /internal/oidc/backchannel-logout`, có `x-internal-secret`), không bao giờ
+`import` thẳng bất kỳ file nào giữ state của Provider đang sống. Áp dụng cho MỌI route mới cần chạm
+Provider thật, không riêng đăng xuất.
+
+Vì sao endpoint mặc định của `oidc-provider` (`/auth`, `/token`, `/me`, `/jwks`, `/session/end`, `/request`)
+KHÔNG tự nằm dưới `/oidc/*`: thư viện mount ở gốc issuer theo mặc định. `server.mjs` chỉ chuyển tiếp
+path bắt đầu bằng `/oidc/*` sang Provider, nên phải khai `routes: {...}` trong cấu hình Provider để dịch
+lại từng endpoint vào dưới `/oidc/` — thiếu bước này thì discovery document tự quảng cáo đúng nhưng
+điều hướng ra ngoài phạm vi routing của `server.mjs`, mọi endpoint trả 404 từ chính Next.js.

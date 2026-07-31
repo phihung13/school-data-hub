@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Lộ trình 5 tuần đưa School Data Hub vào thí điểm ngày 05/09/2026, kèm checklist điều kiện mở cửa và trang ký duyệt.">
+<title>School Data Hub: Lộ trình go-live 05/09/2026</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink:#172033; --muted:#5f6879; --faint:#8991a0;
+    --paper:#fbfaf6; --surface:#ffffff; --surface-2:#f3f5f8; --line:#dfe3e8;
+    --navy:#142c52; --blue:#2f6edb; --blue-soft:#eaf1ff;
+    --green:#277c5a; --green-soft:#e8f5ee;
+    --amber:#a66513; --amber-soft:#fff3dc;
+    --red:#b0443d; --red-soft:#fdecea;
+    --violet:#6f50a5; --violet-soft:#f0ebfb;
+    --shadow:0 18px 45px rgba(19,32,54,.08);
+    --radius:18px;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:0 20px 90px;
+    background:var(--paper); color:var(--ink);
+    font-family:"Be Vietnam Pro","Segoe UI",system-ui,sans-serif;
+    font-size:15.5px; line-height:1.62;
+  }
+  .wrap { max-width:1080px; margin:0 auto; }
+  h1,h2,h3,h4 { color:var(--navy); text-wrap:balance; }
+  h1 { margin:0; font-size:clamp(2rem,4.4vw,3.5rem); line-height:1.03; letter-spacing:-.045em; }
+  h2 { margin:0 0 6px; font-size:clamp(1.4rem,2.5vw,2rem); line-height:1.15; letter-spacing:-.03em; }
+  h3 { margin:26px 0 10px; font-size:1.12rem; letter-spacing:-.01em; }
+  h4 { margin:0 0 6px; font-size:.95rem; }
+  p { max-width:80ch; }
+  .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.7rem; font-weight:850; letter-spacing:.13em; text-transform:uppercase; }
+  .muted { color:var(--muted); }
+  .small { font-size:.85rem; }
+  .micro { font-size:.74rem; }
+  code { font-family:Consolas,monospace; font-size:.85em; padding:.1em .35em; border-radius:5px; color:var(--violet); background:var(--violet-soft); }
+
+  section { padding:34px 0; border-top:1px solid var(--line); }
+  section:first-of-type { border-top:0; }
+
+  .hero {
+    margin:26px 0 8px; padding:clamp(26px,4.5vw,52px);
+    background:var(--surface); border:1px solid color-mix(in srgb, var(--blue) 24%, var(--line));
+    border-radius:26px; box-shadow:var(--shadow);
+  }
+  .stat-row { display:flex; flex-wrap:wrap; gap:14px; margin-top:26px; }
+  .stat { flex:1 1 170px; padding:16px 18px; background:var(--surface-2); border-radius:14px; border:1px solid var(--line); }
+  .stat b { display:block; font-size:1.75rem; line-height:1.1; color:var(--navy); letter-spacing:-.03em; }
+
+  .card { padding:20px 22px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .grid3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+
+  .tag { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.7rem; font-weight:800; letter-spacing:.03em; }
+  .t-done { background:var(--green-soft); color:var(--green); }
+  .t-doing { background:var(--blue-soft); color:var(--blue); }
+  .t-todo { background:var(--surface-2); color:var(--muted); }
+  .t-waive { background:var(--amber-soft); color:var(--amber); }
+  .t-risk { background:var(--red-soft); color:var(--red); }
+
+  table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.9rem; }
+  th, td { text-align:left; vertical-align:top; padding:9px 11px; border-bottom:1px solid var(--line); }
+  th { color:var(--navy); font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; background:var(--surface-2); }
+
+  .tl { list-style:none; margin:18px 0 0; padding:0 0 0 26px; border-left:2px solid var(--line); }
+  .tl > li { position:relative; padding:0 0 26px 22px; }
+  .tl > li::before {
+    content:""; position:absolute; left:-33px; top:6px; width:14px; height:14px;
+    border-radius:50%; background:var(--blue); border:3px solid var(--paper);
+  }
+  .tl > li.last::before { background:var(--green); }
+  .tl .when { font-size:.76rem; font-weight:850; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); }
+  .tl .goal { margin:2px 0 8px; font-size:1.08rem; font-weight:800; color:var(--navy); }
+  .tl ul { margin:6px 0 0; padding-left:18px; }
+  .tl ul li { margin-bottom:3px; }
+
+  .chk { list-style:none; margin:10px 0 0; padding:0; }
+  .chk li { display:flex; gap:11px; align-items:flex-start; padding:8px 0; border-bottom:1px dashed var(--line); }
+  .chk input { margin-top:4px; width:16px; height:16px; flex:none; accent-color:var(--blue); }
+  .chk .who { color:var(--faint); font-size:.76rem; }
+
+  .callout { padding:18px 20px; border-radius:14px; border:1px solid; margin:14px 0; }
+  .c-red { background:var(--red-soft); border-color:color-mix(in srgb,var(--red) 30%,var(--line)); }
+  .c-amber { background:var(--amber-soft); border-color:color-mix(in srgb,var(--amber) 30%,var(--line)); }
+  .c-green { background:var(--green-soft); border-color:color-mix(in srgb,var(--green) 30%,var(--line)); }
+  .callout h4 { margin-top:0; }
+
+  .sign { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; margin-top:22px; }
+  .sign div { padding-top:56px; border-top:1px solid var(--ink); font-size:.85rem; }
+
+  .mono { font-family:Consolas,monospace; font-size:.95em; font-weight:700; color:var(--navy); }
+  .prog { margin-top:16px; padding:18px 20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
+  .prog-row { display:flex; align-items:center; gap:14px; margin-bottom:11px; }
+  .prog-label { flex:0 0 190px; font-size:.85rem; font-weight:700; color:var(--muted); }
+  .prog-track { flex:1; height:10px; border-radius:6px; background:var(--surface-2); overflow:hidden; }
+  .prog-track i { display:block; height:100%; width:0; border-radius:6px; background:var(--blue); transition:width .25s ease; }
+  .prog-row b { flex:0 0 52px; text-align:right; font-size:.95rem; color:var(--navy); font-variant-numeric:tabular-nums; }
+  .prog-row.total { margin:14px 0 0; padding-top:13px; border-top:1px solid var(--line); }
+  .prog-row.total .prog-label { color:var(--navy); font-weight:850; }
+  .prog-row.total .prog-track i { background:var(--green); }
+  .prog-row.total b { font-size:1.25rem; font-weight:850; }
+
+  @media print {
+    @page { size:A4; margin:13mm 14mm; }
+    :root { --paper:#fff; --surface:#fff; --surface-2:#f4f5f7; --ink:#111827; --muted:#4b5563; --line:#d7dbe1; }
+    body { background:#fff; font-size:10.2pt; padding:0; }
+    .hero { box-shadow:none; }
+    section { break-inside:auto; page-break-inside:auto; }
+    .card, .callout, .tl > li { break-inside:avoid; }
+    .page-break { break-before:page; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Hồ sơ trình duyệt · lập ngày 31/07/2026</p>
+    <h1>Lộ trình mở cửa<br>School Data Hub</h1>
+    <p class="muted" style="font-size:1.08rem;margin-top:16px;max-width:66ch">
+      Đưa hệ thống vào dùng thật cho <b>một đến hai lớp</b> đúng ngày khai giảng
+      <b>05/09/2026</b>, nhưng <b>xây cho cả khối ngay từ đầu</b> để mở rộng không phải làm lại.
+      Bản này nêu rõ: còn bao nhiêu việc, ai làm, việc gì nhà trường phải quyết ngay,
+      và ngày mở cửa được tính là đạt khi nào.
+    </p>
+    <div class="stat-row">
+      <div class="stat"><b>36 ngày</b><span class="small muted">từ hôm nay tới khai giảng</span></div>
+      <div class="stat"><b>15/08</b><span class="small muted">đóng cửa tính năng, ba tuần sau chỉ kiểm thử và sửa lỗi</span></div>
+      <div class="stat"><b>1–2 lớp</b><span class="small muted">bật thật ngày đầu, phần mềm xây sẵn cho mọi khối</span></div>
+      <div class="stat"><b>3 việc</b><span class="small muted">cần nhà trường duyệt trong tuần này</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p class="eyebrow">Phần 1</p>
+    <h2>Ba việc cần nhà trường quyết ngay trong tuần này</h2>
+    <p class="muted">Đây là những việc đội kỹ thuật không tự làm được. Chậm một tuần ở đây là chậm một tuần ở ngày mở cửa, không bù được bằng cách làm thêm giờ.</p>
+
+    <div class="grid3" style="margin-top:16px">
+      <div class="card">
+        <span class="tag t-risk">chặn tiến độ</span>
+        <h4 style="margin-top:10px">1 · Bàn giao quyền cấu hình đăng nhập</h4>
+        <p class="small">Trường <b>đã có sẵn</b> Google Workspace và tài khoản Zalo chính thức, nên không phải mua thêm. Việc còn lại là cấp cho đội kỹ thuật quyền quản trị trên hai nơi đó để khai báo ứng dụng đăng nhập, và chốt dùng tên miền nào cho tài khoản giáo viên, học sinh.</p>
+        <p class="small muted"><b>Nếu chậm bàn giao:</b> hệ thống buộc phải chạy bằng cửa đăng nhập tạm của admin. Cửa đó không được phép dùng với dữ liệu học sinh thật, nên ngày mở cửa phải hoãn.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-risk">chặn tiến độ</span>
+        <h4 style="margin-top:10px">2 · Thuê máy chủ</h4>
+        <p class="small">Hôm nay toàn bộ hệ thống đang chạy trên máy tính cá nhân của admin, phát ra ngoài qua một đường tạm.</p>
+        <p class="small muted"><b>Nếu không duyệt:</b> máy tắt là cả trường mất Hub, không ai chịu trách nhiệm được. Không thể mở cho lớp thật.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-waive">cần chấp thuận</span>
+        <h4 style="margin-top:10px">3 · Chấp thuận thu hẹp phạm vi</h4>
+        <p class="small">Bật thật cho một đến hai lớp (phần mềm vẫn xây cho cả khối), và <b>bỏ qua hồ sơ DPIA</b> cho đợt đầu. Chi tiết ở Phần 6.</p>
+        <p class="small muted"><b>Nếu không chấp thuận:</b> phải làm đủ mọi hạng mục: mốc thực tế lùi sang khoảng tháng 12/2026.</p>
+      </div>
+    </div>
+
+  </section>
+
+  <section>
+    <p class="eyebrow">Phần 2</p>
+    <h2>Hôm nay đã có những gì</h2>
+    <p class="muted">Để tránh hiểu nhầm rằng hệ thống mới chỉ là bản vẽ: những thứ dưới đây đã chạy thật, đã đăng nhập được, đã lưu dữ liệu xuống cơ sở dữ liệu thật.</p>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <h4>Tính năng dùng được ngay</h4>
+        <ul class="small" style="padding-left:18px">
+          <li><b>Check-in cảm xúc buổi sáng</b>: học sinh chọn tâm trạng, có cả chế độ mất mạng vẫn lưu rồi tự gửi sau.</li>
+          <li><b>Buồng lái giáo viên chủ nhiệm</b>: xem lớp mình sáng nay, cờ ưu tiên, tâm trạng chung.</li>
+          <li><b>Báo cáo Trưởng thành</b>: tổng hợp tuần của từng em.</li>
+          <li><b>Điểm danh</b> và <b>"Mình cần gặp thầy cô"</b>: kênh học sinh chủ động xin gặp.</li>
+          <li><b>Mã mời phụ huynh</b>: phụ huynh tự nhận tài khoản bằng mã, không cần admin tạo tay.</li>
+          <li><b>Cổng đăng nhập chung cho ứng dụng ngoài</b>: đã cắm thật một ứng dụng đối tác (Factory, 30/07/2026), đăng nhập một lần dùng được cả hai. Sửa lỗi giật hình lúc mới vào trang giáo viên (icon và lưới mini app nhảy hình sau khi tải).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Nền móng phía dưới</h4>
+        <ul class="small" style="padding-left:18px">
+          <li><b>Luật ai-thấy-gì</b> cài thẳng trong cơ sở dữ liệu: không phải khoá bằng giao diện, mà khoá ở tầng dữ liệu.</li>
+          <li><b>Bộ kiểm thử tự động</b> cho luật đó, chạy lại mỗi lần sửa code.</li>
+          <li><b>Bốn chốt kiểm tự động</b> mỗi lần đẩy code: đồng bộ hồ sơ, cấu trúc dữ liệu, rà chìa khoá lọt ra ngoài, kiểm thử cơ sở dữ liệu.</li>
+          <li><b>Đổi khoá bí mật với ứng dụng đối tác không làm gãy nhau giữa chừng</b>: có khoảng thời gian khoá cũ và khoá mới cùng dùng được, đã dựng và kiểm chứng thật 30/07/2026 &mdash; bài học từ chính một lần gãy thật.</li>
+          <li><b>Sổ quyết định và sổ nợ kỹ thuật</b>: mọi thứ chưa làm đều được ghi lại kèm hạn rà.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:14px">Việc kể trên là thật và đáng ghi nhận, nhưng phần lớn thuộc nhánh <b>hạ tầng nhúng ứng dụng đối tác</b> (app quản lý dạy học nội bộ), không nằm trong 11 hạng mục code hay 22 ô điều kiện mở cửa của lộ trình 5 tuần &mdash; hai thanh tiến độ ở Phần 6 đo đúng phạm vi hẹp đó, nên chưa nhích dù việc thật đã làm không ít.</p>
+  </section>
+
+  <section class="page-break">
+    <p class="eyebrow">Phần 3</p>
+    <h2>Lộ trình 5 tuần</h2>
+    <p class="muted">Mỗi tuần có một đầu ra kiểm chứng được: không phải "đang làm dở", mà là thứ bật lên xem được.</p>
+
+    <ol class="tl">
+      <li>
+        <div class="when">Tuần 1 · 03 – 09/08</div>
+        <div class="goal">Dựng nền và viết code phần đầu</div>
+        <ul class="small">
+          <li>Nhà trường quyết ba việc ở Phần 1: <b>đây là việc quan trọng nhất của tuần</b>.</li>
+          <li>Nhận bàn giao quyền quản trị Google Workspace và Zalo chính thức, khai báo ứng dụng đăng nhập.</li>
+          <li>Thuê máy chủ, chuyển hệ thống khỏi máy cá nhân, gắn tên miền, bật xác thực hai lớp.</li>
+          <li>Viết code: đổi đăng nhập từ giả sang thật rồi gỡ cửa tạm; sửa nhãn lớp hiển thị sai người và bốn mục menu không có trang; ba đầu API mới kèm kiểm thử phân quyền.</li>
+        </ul>
+        <p class="micro muted">Đầu ra: hệ thống chạy trên máy chủ thật, đăng nhập bằng tài khoản thật.</p>
+      </li>
+      <li>
+        <div class="when">Tuần 2 · 10 – 15/08</div>
+        <div class="goal">Viết nốt code, rồi đóng cửa tính năng</div>
+        <ul class="small">
+          <li>Bốn màn hình giáo viên chủ nhiệm: danh sách lớp, điểm danh lớp, duyệt báo cáo, ghi chú can thiệp.</li>
+          <li>Màn hình điều khoản kèm nút đồng ý cho phụ huynh, lưu lại ai bấm và lúc nào.</li>
+          <li><b>Ngày 15/08: demo trình Chủ tịch và Ban giám hiệu</b>, trên bản đã đủ tính năng chứ không phải bản chắp vá.</li>
+          <li><b>Hết ngày 15/08 là mốc đóng cửa tính năng.</b> Từ đó tới khai giảng chỉ sửa lỗi, không thêm gì mới. Thứ gì chưa có trong bản demo thì để sau thí điểm.</li>
+        </ul>
+        <p class="micro muted">Đầu ra: bản đủ tính năng · biên bản phản hồi sau demo · danh sách việc bị gạt sang sau thí điểm.</p>
+      </li>
+      <li>
+        <div class="when">Tuần 3 · 17 – 23/08</div>
+        <div class="goal">Vòng kiểm thứ nhất và sửa lỗi</div>
+        <ul class="small">
+          <li>Đội kỹ thuật tự kiểm: nhiều lớp thuộc nhiều khối, mỗi giáo viên chỉ thấy lớp mình; chạy thử trọn một buổi sáng từ máy học sinh tới buồng lái; đo tải 500 lượt đồng thời.</li>
+          <li>Sửa hết lỗi từ vòng kiểm và từ demo. Đây là tuần tốn thời gian nhất, và tốn theo cách không đoán trước được.</li>
+          <li>Bật sao lưu tự động và <b>diễn tập khôi phục</b>: bấm nút phục hồi thật, bấm giờ, ghi biên bản.</li>
+          <li>Hoàn thiện nhật ký thao tác và kiểm chống gian lận điểm danh.</li>
+          <li>Mở màn hình đồng ý cho phụ huynh bấm, chạy rải từ đây tới cuối tháng.</li>
+        </ul>
+        <p class="micro muted">Đầu ra: danh sách lỗi về không · biên bản diễn tập khôi phục có số đo thật.</p>
+      </li>
+      <li>
+        <div class="when">Tuần 4 · 24 – 30/08</div>
+        <div class="goal">Người thật dùng thử, lỗi thật lộ ra</div>
+        <ul class="small">
+          <li><b>Tập huấn giáo viên chủ nhiệm, rồi cho thầy cô tự check-in trọn một tuần.</b> Đây là vòng kiểm giá trị nhất: người thật dùng luôn tìm ra thứ đội kỹ thuật không nghĩ tới.</li>
+          <li>Sửa ngay những gì thầy cô vấp phải trong tuần đó.</li>
+          <li>Nạp danh sách <b>cả khối</b> vào hệ thống, chỉ bật tài khoản cho một đến hai lớp chạy thật.</li>
+          <li>Viết 5 kịch bản xử lý sự cố hay gặp nhất, in ra để cạnh máy.</li>
+          <li>Bắn thử kênh báo động: hệ thống trục trặc thì ai nhận tin, sau bao lâu.</li>
+        </ul>
+        <p class="micro muted">Đầu ra: giáo viên dùng thạo · người trực có tên và số điện thoại.</p>
+      </li>
+      <li>
+        <div class="when">Tuần 5 · 31/08 – 04/09</div>
+        <div class="goal">Đóng băng và soát lần cuối</div>
+        <ul class="small">
+          <li>Đóng băng hoàn toàn: không sửa gì nữa trừ lỗi chặn đường.</li>
+          <li>Chạy lại lần cuối trọn một buổi sáng, lần này với dữ liệu thật của lớp thí điểm.</li>
+          <li>Diễn tập <b>kế hoạch rút lui</b> trên giấy: nếu phải dừng, lớp quay về sổ giấy trong một ngày.</li>
+          <li>Ký duyệt checklist ở Phần 6.</li>
+        </ul>
+        <p class="micro muted">Đầu ra: bản checklist có đủ chữ ký.</p>
+      </li>
+      <li class="last">
+        <div class="when">Thứ Bảy 05/09 · khai giảng</div>
+        <div class="goal">Mở cửa cho lớp thí điểm</div>
+        <ul class="small">
+          <li>Mở tài khoản cho một đến hai lớp chạy thật, đúng ngày khai giảng.</li>
+          <li>Lượt check-in thật đầu tiên vào <b>Thứ Hai 07/09</b>, buổi học chính thức đầu tiên.</li>
+          <li>Hai tuần đầu: người trực theo sát mỗi sáng, ghi lại mọi trục trặc.</li>
+        </ul>
+      </li>
+    </ol>
+
+  </section>
+
+  <section class="page-break">
+    <p class="eyebrow">Phần 4</p>
+    <h2>Bóc tách kỹ thuật: mỗi tuần xây cái gì</h2>
+    <p class="muted">Phần 3 nói theo ngôn ngữ nhà trường. Phần này nói theo ngôn ngữ admin, cùng một kế hoạch nhìn từ phía xây dựng, để đội kỹ thuật và nhà trường không hiểu hai nghĩa khác nhau về chữ "xong".</p>
+
+    <div class="callout c-green">
+      <h4>Vì sao lịch 5 tuần trông ít việc backend</h4>
+      <p class="small" style="margin:0">Vì phần nền đã xây gần xong từ trước, không phải vì bỏ sót. Tính tới hôm nay: <b>22 lần dựng và sửa cấu trúc cơ sở dữ liệu</b>, <b>12 đầu API</b> đang chạy, <b>16 bộ kiểm thử tự động</b> cho luật phân quyền, cùng cổng đăng nhập chung và khung cắm ứng dụng con đã chạy thật với một đối tác. Việc còn lại của 5 tuần chủ yếu là <b>giao diện giáo viên</b> và <b>đổi cách đăng nhập từ giả sang thật</b>, gói gọn trong <b>hai tuần đầu, chốt ngày 15/08</b>. Ba tuần sau đó không phải để xây thêm, mà để kiểm thử, sửa lỗi và cho người thật dùng thử.</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:11%">Tuần</th>
+          <th style="width:24%">Cơ sở dữ liệu &amp; backend</th>
+          <th style="width:22%">API</th>
+          <th style="width:24%">Giao diện</th>
+          <th style="width:19%">Tích hợp &amp; ứng dụng con</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>1</b><br><span class="micro muted">03 – 09/08</span></td>
+          <td>Thay lớp đăng nhập giả bằng Google và Zalo thật; nối tài khoản trường vào bảng người dùng; gỡ cửa đăng nhập tạm. Chốt phạm vi quyền của vai quản trị.</td>
+          <td>Ba đầu API còn thiếu (danh sách lớp, duyệt báo cáo, liệt kê ghi chú can thiệp), mỗi đầu kèm kiểm thử phân quyền. Gắn số phiên bản cho bộ hợp đồng dữ liệu.</td>
+          <td>Màn đăng nhập thật; sửa nhãn lớp và các mục menu không có trang.</td>
+          <td>Rà lại ứng dụng đối tác sau khi đổi tên miền và đổi cách đăng nhập.</td>
+        </tr>
+        <tr>
+          <td><b>2</b><br><span class="micro muted">10 – 15/08</span></td>
+          <td>Bảng lưu bản ghi đồng ý: ai bấm, lúc nào, bản điều khoản số mấy.</td>
+          <td>Đầu API ghi nhận đồng ý, gọi hai lần không sinh bản ghi đôi.</td>
+          <td>Bốn màn giáo viên chủ nhiệm; màn hình điều khoản kèm nút đồng ý.</td>
+          <td>Không thêm gì mới.</td>
+        </tr>
+        <tr>
+          <td colspan="5" style="background:var(--surface-2)"><b>15/08 · đóng cửa tính năng.</b> Từ đây tới khai giảng chỉ sửa lỗi. Ba tuần còn lại không có ô nào ở cột &quot;viết mới&quot;, và đó là chủ ý.</td>
+        </tr>
+        <tr>
+          <td><b>3</b><br><span class="micro muted">17 – 23/08</span></td>
+          <td colspan="4">Vòng kiểm thứ nhất: nhiều lớp thuộc nhiều khối, chạy thử trọn một buổi sáng, đo tải 500 lượt đồng thời. Sửa lỗi từ vòng kiểm và từ demo. Hoàn thiện nhật ký thao tác, bật sao lưu tự động, diễn tập khôi phục, kiểm chống gian lận điểm danh.</td>
+        </tr>
+        <tr>
+          <td><b>4</b><br><span class="micro muted">24 – 30/08</span></td>
+          <td colspan="4">Giáo viên dùng thật trọn một tuần, đội kỹ thuật sửa theo cái họ vấp phải. Đây là vòng kiểm tìm ra nhiều lỗi nhất, và là lý do không nên để code kéo sang tuần này. Job nạp danh sách cả khối, chạy lại không sinh dòng trùng.</td>
+        </tr>
+        <tr>
+          <td><b>5</b><br><span class="micro muted">31/08 – 04/09</span></td>
+          <td colspan="4">Đóng băng, chỉ sửa lỗi chặn đường. Chạy lại lần cuối với dữ liệu thật của lớp thí điểm. Diễn tập rút lui.</td>
+        </tr>
+</tbody>
+    </table>
+
+    <h3>Ràng buộc xuyên suốt: bật một hai lớp, nhưng xây cho mọi khối</h3>
+    <p class="small">Đây là yêu cầu của Chủ tịch và nó đúng: phần mềm không được đóng cứng cho lớp nào, khối nào, cơ sở nào. Phần nền vốn đã làm đúng như vậy từ đầu, dữ liệu tổ chức theo cơ sở, khối, lớp, và luật phân quyền tính theo phạm vi của từng người chứ không theo một lớp cố định. Chỗ duy nhất đang vi phạm là <b>giao diện</b>: thanh menu bên trái hiện đang ghi chết "Lớp 6A1" cho mọi giáo viên, kể cả cô chủ nhiệm lớp khác. Sửa nằm ở tuần 1.</p>
+    <p class="small">Cách kiểm chứng, đặt trong tuần 5: nạp dữ liệu <b>nhiều lớp thuộc nhiều khối</b> rồi đăng nhập bằng vài tài khoản giáo viên khác nhau. Mỗi người phải thấy đúng lớp mình và không thấy lớp người khác. Đạt bài kiểm này thì mở rộng về sau chỉ là bật thêm tài khoản, không phải viết lại.</p>
+
+    <h3>Về ứng dụng con (mini app)</h3>
+    <p class="small">Trong đợt thí điểm này <b>không cắm thêm ứng dụng con nào</b>. Khung cắm đã dựng xong và đã chạy thật với một đối tác, nên về kỹ thuật thì thêm app mới không khó. Cái khó nằm chỗ khác: mỗi ứng dụng cắm vào là thêm một đường dữ liệu học sinh chảy ra ngoài, phải rà pháp lý riêng và ghi vào hồ sơ đánh giá tác động. Làm việc đó song song với 5 tuần này là ôm quá sức. Ứng dụng con thứ hai để sau khi thí điểm chạy ổn.</p>
+
+    <h3>Ba thứ cố tình chưa xây, dù biết là nợ</h3>
+    <p class="small">Thư viện giao diện dùng chung (hiện mỗi màn tự viết lại nút, thẻ, bóng đổ), xử lý lỗi tập trung, và hệ thống chạy việc nền theo lịch. Cả ba đều đúng là nên có, nhưng chúng làm cho <b>tốc độ về sau</b> nhanh hơn chứ không làm cho <b>ngày 05/09</b> đến sớm hơn. Xây chúng ngay bây giờ là đánh đổi sai. Đưa vào ngay sau thí điểm, trước khi mở rộng ra nhiều lớp.</p>
+  </section>
+
+  <section class="page-break">
+    <p class="eyebrow">Phần 5</p>
+    <h2>Ngày 05/09 có gì và không có gì</h2>
+    <p class="muted">Phần này để nhà trường không kỳ vọng nhầm. Cắt bớt là quyết định có chủ ý, không phải làm không kịp.</p>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="card" style="border-color:color-mix(in srgb,var(--green) 34%,var(--line))">
+        <h4 style="color:var(--green)">Có: bật cho một đến hai lớp</h4>
+        <ul class="small" style="padding-left:18px">
+          <li>Check-in cảm xúc buổi sáng cho học sinh</li>
+          <li>Buồng lái giáo viên chủ nhiệm: xem lớp, cờ ưu tiên, tâm trạng chung</li>
+          <li>Điểm danh lớp và duyệt báo cáo</li>
+          <li>Ghi chú can thiệp của giáo viên chủ nhiệm</li>
+          <li>Kênh "Mình cần gặp thầy cô"</li>
+          <li>Phụ huynh xem báo cáo con mình</li>
+          <li>Đăng nhập thật, xác thực hai lớp, nhật ký thao tác đầy đủ</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:color-mix(in srgb,var(--amber) 34%,var(--line))">
+        <h4 style="color:var(--amber)">Chưa có: làm sau khi thí điểm ổn</h4>
+        <ul class="small" style="padding-left:18px">
+          <li>Màn hình quản trị (tạo tài khoản, chỉnh ngưỡng cảnh báo): giai đoạn thí điểm do admin trực làm tay theo biểu mẫu</li>
+          <li>Văn phòng số</li>
+          <li>Bảng số liệu và phân tích cho ban giám hiệu</li>
+          <li>Các ứng dụng con khác ngoài ứng dụng đối tác đã cắm</li>
+          <li>Bộ quét cảnh báo chạy tự động theo lịch: hiện tính trực tiếp mỗi lần mở, đủ cho một lớp</li>
+          <li>Điểm danh giờ ra về</li>
+          <li>Tìm kiếm, thông báo đẩy, tải file</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <p class="eyebrow">Phần 6</p>
+    <h2>Checklist mở cửa: tám nhóm</h2>
+    <p class="muted">Đây là bộ điều kiện đã quy định sẵn trong hồ sơ vận hành. Ô vuông để đánh dấu khi rà; cột cuối ghi ai chịu trách nhiệm ký.</p>
+
+    <h3>Nhóm 1 · Kỹ thuật <span class="tag t-doing">phần lớn đã có</span></h3>
+    <ul class="chk">
+      <li><input type="checkbox" checked><span>Bộ kiểm thử luật ai-thấy-gì chạy xanh <span class="tag t-done">đã có</span><br><span class="who">dev trưởng ký</span></span></li>
+      <li><input type="checkbox" checked><span>Kiểm thử chống ghi trùng: gọi hai lần chỉ ghi một dòng <span class="tag t-done">đã có</span><br><span class="who">dev trưởng ký</span></span></li>
+      <li><input type="checkbox" checked><span>Rà tự động chìa khoá bí mật lọt vào mã nguồn <span class="tag t-done">đã có</span><br><span class="who">dev trưởng ký</span></span></li>
+      <li><input type="checkbox"><span>Đo tải: <b>500 lượt check-in đồng thời</b>, dư sức cho một lớp và đủ chứng minh mở rộng được sang cả một khối. Mốc đầy đủ 3.000 lượt đo lại trước khi mở toàn cơ sở <span class="tag t-waive">thu hẹp</span><br><span class="who">dev trưởng ký</span></span></li>
+      <li><input type="checkbox"><span>Đồng hồ theo dõi sức khoẻ hệ thống chạy và có người nhận cảnh báo<br><span class="who">dev trưởng ký</span></span></li>
+    </ul>
+
+    <h3>Nhóm 2 · Chống gian lận điểm danh</h3>
+    <ul class="chk">
+      <li><input type="checkbox"><span>Check-in ngoài trường không được tính là có mặt<br><span class="who">vai kiểm thử ký</span></span></li>
+      <li><input type="checkbox"><span>Phiếu gửi muộn do mất mạng vào đúng danh sách chờ xác nhận, không lẫn vào phiếu thường<br><span class="who">vai kiểm thử ký</span></span></li>
+    </ul>
+
+    <h3>Nhóm 3 · An toàn dữ liệu</h3>
+    <ul class="chk">
+      <li><input type="checkbox"><span>Sao lưu tự động chạy hằng ngày, kiểm tra được bằng mắt<br><span class="who">dev trưởng ký</span></span></li>
+      <li><input type="checkbox"><span><b>Diễn tập khôi phục thật</b>, có biên bản ghi số phút phục hồi<br><span class="who">dev trưởng ký</span></span></li>
+    </ul>
+
+    <h3>Nhóm 4 · Bảo mật</h3>
+    <ul class="chk">
+      <li><input type="checkbox"><span>Gỡ bỏ cửa đăng nhập tạm của admin, chặn truy cập từ ngoài vào môi trường thử <span class="tag t-risk">đang là lỗ hổng đã biết</span><br><span class="who">dev trưởng ký</span></span></li>
+      <li><input type="checkbox"><span>Bật xác thực hai lớp cho 100% tài khoản giáo viên và quản trị<br><span class="who">dev trưởng ký</span></span></li>
+    </ul>
+
+    <h3>Nhóm 5 · Pháp lý <span class="tag t-risk">có hạng mục bỏ qua</span></h3>
+    <ul class="chk">
+      <li><input type="checkbox"><span><b>Màn hình điều khoản kèm nút đồng ý</b> hiện ra lần đầu vào app. Phụ huynh bấm bằng <b>chính tài khoản Zalo của mình</b>, hệ thống lưu lại ai bấm, lúc mấy giờ, bản điều khoản số mấy. Chưa bấm thì tài khoản của con chưa bật<br><span class="who">hiệu trưởng ký</span></span></li>
+      <li><input type="checkbox"><span>Hồ sơ đánh giá tác động dữ liệu cá nhân (DPIA): <span class="tag t-risk">bỏ qua có chủ ý</span> theo quyết định 31/07/2026. <b>Lưu ý: đây là nghĩa vụ theo Luật 91/2025, không phải cổng chất lượng nội bộ</b>, nên bỏ qua là chấp nhận một khoảng chưa tuân thủ chứ không chỉ là chấp nhận rủi ro kỹ thuật. <b>Hạn phải trả: trước khi mở rộng quá hai lớp.</b><br><span class="who">Chủ tịch ký chấp thuận</span></span></li>
+    </ul>
+
+    <h3>Nhóm 6 · Quản trị</h3>
+    <ul class="chk">
+      <li><input type="checkbox"><span>Quy trình cấp và thu hồi tài khoản: giai đoạn thí điểm dùng biểu mẫu giấy, admin trực thao tác <span class="tag t-waive">tạm thời</span><br><span class="who">Chủ tịch ký</span></span></li>
+      <li><input type="checkbox"><span>Nội quy dùng điện thoại trong giờ check-in<br><span class="who">Chủ tịch ký</span></span></li>
+      <li><input type="checkbox"><span>Có tên và số điện thoại người trực hệ thống, dán công khai<br><span class="who">Chủ tịch ký</span></span></li>
+      <li><input type="checkbox"><span>Mọi tài khoản dịch vụ mua ngoài đứng tên nhà trường<br><span class="who">Chủ tịch ký</span></span></li>
+    </ul>
+
+    <h3>Nhóm 7 · Con người</h3>
+    <ul class="chk">
+      <li><input type="checkbox"><span>Giáo viên chủ nhiệm lớp thí điểm đã tập huấn và <b>tự check-in một tuần</b> trước khi học sinh dùng<br><span class="who">hiệu trưởng ký</span></span></li>
+      <li><input type="checkbox"><span>Có một người trong trường nắm được hai kịch bản xử lý sự cố hay gặp nhất<br><span class="who">hiệu trưởng ký</span></span></li>
+      <li><input type="checkbox"><span>Bảng bốn màu tâm trạng in sẵn, dán trong lớp<br><span class="who">hiệu trưởng ký</span></span></li>
+    </ul>
+
+    <h3>Nhóm 8 · Vận hành</h3>
+    <ul class="chk">
+      <li><input type="checkbox"><span>Năm kịch bản xử lý sự cố đã viết đủ và in ra <span class="tag t-waive">rút gọn từ 10</span><br><span class="who">vai vận hành ký</span></span></li>
+      <li><input type="checkbox"><span>Dữ liệu lớp thí điểm đã nạp và kiểm tra đúng<br><span class="who">vai vận hành ký</span></span></li>
+      <li><input type="checkbox"><span>Kênh báo động đã bắn thử, người trực xác nhận nhận được<br><span class="who">vai vận hành ký</span></span></li>
+    </ul>
+
+    <div class="callout c-green">
+      <h4>Quy tắc mở cửa</h4>
+      <p class="small" style="margin:0">Mở cửa khi <b>tất cả ô không thuộc diện bỏ qua đều đã tick</b>. Hai hạng mục bỏ qua (hồ sơ DPIA và màn hình quản trị) phải có <b>chữ ký chấp thuận của Chủ tịch</b> kèm <b>hạn phải trả ghi rõ trên giấy</b>. Thiếu một ô bắt buộc thì lùi ngày mở, không mở trước rồi bổ sung sau.</p>
+    </div>
+
+    <h3>Cách tính tiến độ theo phần trăm</h3>
+    <p class="small">Con số tiến độ chỉ đáng tin khi nó tính ra được từ những thứ đúng hoặc sai rõ ràng, không phải từ cảm giác của người báo cáo. Vì vậy nó gồm đúng hai phần, mỗi phần đếm ô đã tick:</p>
+
+    <table>
+      <thead><tr><th style="width:32%">Thành phần</th><th style="width:14%">Trọng số</th><th>Đếm cái gì</th></tr></thead>
+      <tbody>
+        <tr><td><b>A. Viết code</b></td><td>30%</td><td>11 hạng mục kỹ thuật ở danh sách ngay dưới. Chiếm hai tuần đầu, chốt ngày 15/08.</td></tr>
+        <tr><td><b>B. Kiểm thử, sửa lỗi và điều kiện mở cửa</b></td><td>70%</td><td>22 ô trong checklist 8 nhóm phía trên, mỗi ô khoảng 3,2%. Không tính ô đã bỏ qua có chủ ý. Chiếm phần lớn vì ba tuần cuối đều nằm ở đây.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="small" style="margin-top:14px"><b>Công thức:</b> <span class="mono">Tiến độ = 30 × (X ÷ 11) + 70 × (Đ ÷ 22)</span><br>
+    <span class="micro muted">X là số hạng mục xây dựng đã xong. Đ là số ô điều kiện mở cửa đã tick.</span></p>
+
+    <div class="prog">
+      <div class="prog-row"><span class="prog-label">A · Viết code</span><span class="prog-track"><i id="bar-build"></i></span><b id="p-build">0%</b></div>
+      <div class="prog-row"><span class="prog-label">B · Kiểm thử và mở cửa</span><span class="prog-track"><i id="bar-gate"></i></span><b id="p-gate">0%</b></div>
+      <div class="prog-row total"><span class="prog-label">Tiến độ chung</span><span class="prog-track"><i id="bar-total"></i></span><b id="p-total">0%</b></div>
+      <p class="micro muted" style="margin:10px 0 0">Tick ô trên màn hình thì ba con số này tự đổi. Bản in ra giấy thì đếm tay theo công thức trên.</p>
+    </div>
+
+    <h4 style="margin-top:26px">Mười một hạng mục viết code (phần A)</h4>
+    <ul class="chk" id="build-list">
+      <li><input type="checkbox"><span>Sửa nhãn lớp hiển thị sai người và bốn mục menu bấm vào không có trang</span></li>
+      <li><input type="checkbox"><span>Chốt vai quản trị được thấy gì, sửa được gì</span></li>
+      <li><input type="checkbox"><span>Gắn số phiên bản cho bộ hợp đồng dữ liệu</span></li>
+      <li><input type="checkbox"><span>Đăng nhập Google và Zalo thật chạy được đầu cuối</span></li>
+      <li><input type="checkbox"><span>Gỡ hẳn cửa đăng nhập tạm</span></li>
+      <li><input type="checkbox"><span>Chuyển sang máy chủ thuê, gắn tên miền, bật xác thực hai lớp</span></li>
+      <li><input type="checkbox"><span>Bốn màn hình giáo viên chủ nhiệm</span></li>
+      <li><input type="checkbox"><span>Ba đầu API mới, mỗi đầu kèm kiểm thử phân quyền</span></li>
+      <li><input type="checkbox"><span>Nhật ký thao tác đầy đủ và job nạp danh sách cả khối</span></li>
+      <li><input type="checkbox"><span>Bài kiểm nhiều lớp thuộc nhiều khối: mỗi giáo viên chỉ thấy lớp mình</span></li>
+      <li><input type="checkbox"><span>Màn hình điều khoản kèm nút đồng ý, lưu lại ai bấm và lúc nào</span></li>
+    </ul>
+
+    <div class="callout c-amber">
+      <h4>Ba luật để con số này không nói dối</h4>
+      <p class="small" style="margin:0"><b>Một:</b> mỗi hạng mục chỉ nhận 0% hoặc 100%, không có "đang làm được 70%". Cụm từ "gần xong" là cách tiến độ dự án nói dối phổ biến nhất.<br>
+      <b>Hai:</b> hai ô bỏ qua có chủ ý không nằm trong mẫu số. Nếu tính vào, con số sẽ đẹp lên nhờ chính việc mình không làm.<br>
+      <b>Ba:</b> phần trăm không thay cho điều kiện mở cửa. Đạt 96% mà thiếu một ô bắt buộc thì vẫn là chưa mở được. Con số dùng để biết còn cách bao xa, không dùng để quyết định mở.</p>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <p class="eyebrow">Phần 7</p>
+    <h2>Rủi ro và cách chặn</h2>
+    <table>
+      <thead><tr><th style="width:26%">Rủi ro</th><th style="width:9%">Mức</th><th>Cách chặn</th><th style="width:16%">Ai canh</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Chậm bàn giao quyền quản trị đăng nhập</td>
+          <td><span class="tag t-risk">cao</span></td>
+          <td>Bàn giao trong tuần 1. Quá ngày 09/08 chưa có quyền thì báo lùi ngày mở cửa ngay, không cố.</td>
+          <td>Chủ tịch</td>
+        </tr>
+        <tr>
+          <td>Mở cửa khi chưa kiểm định an ninh và chưa có DPIA</td>
+          <td><span class="tag t-risk">cao</span></td>
+          <td>Quyết định của Chủ tịch, đội kỹ thuật thực hiện. Giảm thiệt hại nếu xảy ra: giữ đúng một đến hai lớp, nạp dữ liệu tối thiểu, chặn người ngoài truy cập, và <b>không mở rộng quá hai lớp cho tới khi trả xong hai hạng mục này</b>.</td>
+          <td>Đầu mối pháp lý</td>
+        </tr>
+        <tr>
+          <td>Hệ thống còn chạy trên máy cá nhân tới sát ngày</td>
+          <td><span class="tag t-risk">cao</span></td>
+          <td>Chuyển máy chủ xong trong tuần 2, không để sang tuần 3.</td>
+          <td>Dev trưởng</td>
+        </tr>
+        <tr>
+          <td>Thiếu phiếu đồng thuận của một số phụ huynh</td>
+          <td><span class="tag t-doing">vừa</span></td>
+          <td>Em nào chưa có phiếu thì không bật tài khoản. Lớp vẫn chạy được với số em còn lại.</td>
+          <td>Hiệu trưởng</td>
+        </tr>
+        <tr>
+          <td>Giáo viên chưa quen, sáng đầu tiên rối</td>
+          <td><span class="tag t-doing">vừa</span></td>
+          <td>Tuần tập huấn + thầy cô tự dùng trước một tuần. Hai tuần đầu có người trực mỗi sáng.</td>
+          <td>Hiệu trưởng</td>
+        </tr>
+        <tr>
+          <td>Phát sinh lỗi lớn sau khi mở</td>
+          <td><span class="tag t-doing">vừa</span></td>
+          <td>Kế hoạch rút lui đã diễn tập: chuyển hệ thống sang chỉ-đọc, lớp về sổ giấy trong một ngày.</td>
+          <td>Dev trưởng</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <p class="eyebrow">Phần 8</p>
+    <h2>Khi nào thì dừng</h2>
+    <p>Thí điểm không phải cam kết một chiều. Nếu chạm một trong các dấu hiệu dưới đây, nhà trường dừng mà không cần tranh luận:</p>
+    <ul>
+      <li>Rò rỉ dữ liệu học sinh, dù chỉ một lần.</li>
+      <li>Giáo viên chủ nhiệm phải làm thêm việc thay vì đỡ việc, kéo dài quá hai tuần.</li>
+      <li>Hệ thống hỏng vào giờ cao điểm buổi sáng quá ba lần trong một tháng.</li>
+      <li>Phụ huynh phản ứng về chuyện ghi nhận cảm xúc của con.</li>
+    </ul>
+    <p class="small muted">Khi dừng: hệ chuyển sang chỉ-đọc trong một ngày, lớp quay về quy trình giấy đã tập; toàn bộ dữ liệu xuất ra bàn giao hiệu trưởng; dữ liệu cảm xúc xử lý theo đúng cam kết đã ký; họp rút kinh nghiệm trước khi bàn chuyện làm tiếp.</p>
+  </section>
+
+  <section>
+    <h2>Ký duyệt</h2>
+    <p class="muted small">Chữ ký dưới đây xác nhận đã đọc phạm vi thí điểm ở Phần 5, các hạng mục xin miễn ở Phần 6, và điều kiện dừng ở Phần 8.</p>
+    <div class="sign">
+      <div>Chủ tịch<br><span class="muted micro">ngày …… / …… / 2026</span></div>
+      <div>Hiệu trưởng cơ sở<br><span class="muted micro">ngày …… / …… / 2026</span></div>
+      <div>Dev trưởng<br><span class="muted micro">ngày …… / …… / 2026</span></div>
+      <div>Đầu mối pháp lý<br><span class="muted micro">ngày …… / …… / 2026</span></div>
+    </div>
+    <p class="micro muted" style="margin-top:28px">School Data Hub · Hệ thống Trường Việt Anh · bản lập ngày 31/07/2026 · in bằng Ctrl+P</p>
+  </section>
+
+</div>
+<script>
+(function () {
+  "use strict";
+  var buildList = document.getElementById("build-list");
+  if (!buildList) return;
+
+  // Ô "điều kiện mở cửa" = mọi ô tick trong checklist 8 nhóm, TRỪ các ô nằm trong danh sách
+  // xây dựng và TRỪ các ô đã bỏ qua có chủ ý. Bỏ qua mà vẫn tính vào mẫu số thì con số đẹp
+  // lên nhờ chính việc mình không làm, đúng thứ luật số 2 trong hồ sơ cấm.
+  function gateBoxes() {
+    var all = Array.prototype.slice.call(document.querySelectorAll(".chk input[type=checkbox]"));
+    return all.filter(function (box) {
+      if (buildList.contains(box)) return false;
+      var row = box.closest("li");
+      return !(row && row.textContent.indexOf("bỏ qua có chủ ý") >= 0);
+    });
+  }
+
+  function paint(id, barId, done, total) {
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById(id).textContent = pct + "%";
+    document.getElementById(barId).style.width = pct + "%";
+    return total ? done / total : 0;
+  }
+
+  function recalc() {
+    var build = Array.prototype.slice.call(buildList.querySelectorAll("input[type=checkbox]"));
+    var gate = gateBoxes();
+    var a = paint("p-build", "bar-build", build.filter(function (b) { return b.checked; }).length, build.length);
+    var b = paint("p-gate", "bar-gate", gate.filter(function (g) { return g.checked; }).length, gate.length);
+    var total = Math.round((0.3 * a + 0.7 * b) * 100);
+    document.getElementById("p-total").textContent = total + "%";
+    document.getElementById("bar-total").style.width = total + "%";
+  }
+
+  document.addEventListener("change", function (e) {
+    if (e.target && e.target.type === "checkbox") recalc();
+  });
+  recalc();
+})();
+</script>
+</body>
+</html>

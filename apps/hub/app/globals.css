@@ -1,0 +1,115 @@
+/* Font tự host qua next/font/google (apps/hub/app/layout.tsx) — không còn phụ thuộc
+   fonts.googleapis.com, nên không còn bị tiện ích chặn quảng cáo xóa mất <link> gây lệch
+   hydration (29/07/2026). Dùng biến CSS Next tự sinh, không hard-code tên font nữa. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #f7f9fc;
+  font-family: var(--font-be-vietnam-pro), system-ui, sans-serif;
+  color: #0f172a;
+  /* Khóa hiệu ứng "lò xo" (rubber-band/overscroll bounce) khi trang không có gì để cuộn —
+     lướt 2 ngón trên trackpad kéo lộ màu trắng ngoài viền trang (bắt gặp thật ở khung
+     Embed Bridge, 29/07/2026). overscroll-behavior chặn browser tự bounce khi đã hết nội
+     dung, không ảnh hưởng cuộn bình thường khi trang thật sự dài hơn màn hình. */
+  overscroll-behavior: none;
+}
+
+html {
+  overscroll-behavior: none;
+}
+
+/* DESIGN-GUIDELINES §4 — Material Symbols Rounded, FILL 1. Cấm emoji làm icon UI.
+   Font nạp bằng components/icon-font-loader.tsx (client, sau khi hydrate) — không qua
+   next/font (không hỗ trợ font icon biến thể), tên font vẫn là literal string bình thường.
+   Ẩn (visibility: hidden, giữ nguyên chỗ chiếm — không dùng display:none để khỏi giật layout)
+   cho tới khi icon-font-loader xác nhận font sẵn sàng — trước đó DOM hiện đúng chữ
+   "more_horiz"/"close"/... vì đó chính là nội dung, chưa có font để thay bằng glyph
+   (bắt gặp thật lúc trang vừa tải lại, 29/07/2026). */
+.msr {
+  font-family: "Material Symbols Rounded";
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1;
+  display: inline-block;
+  font-variation-settings: "FILL" 1;
+  vertical-align: middle;
+  visibility: hidden;
+  /* Giữ ĐÚNG chỗ chiếm của icon ngay từ lúc chưa có font. Glyph Material Symbols rộng tròn
+     1em, nên đặt cứng 1em là hộp trước và sau khi font về khớp nhau tuyệt đối — không giật.
+     Thiếu ba dòng này, hộp rộng bằng CHỮ trong DOM ("notifications" ~9em) nên menu trái bị
+     đẩy lệch, chữ xuống hai dòng, rồi font về mới sập lại đúng (bắt gặp thật 30/07/2026).
+     nowrap + hidden là bắt buộc đi kèm: bó chữ dài vào ô 1em mà cho xuống dòng thì hộp cao
+     vọt lên chục dòng, còn giật mạnh hơn cả không đặt. */
+  width: 1em;
+  white-space: nowrap;
+  overflow: hidden;
+  flex: none;
+}
+html.msr-ready .msr {
+  visibility: visible;
+}
+
+/* Thanh cuộn thương hiệu: vàng trên nền navy — chỉ áp dụng cho vùng Hub TỰ cuộn. Không
+   xuyên qua được vào bên trong iframe khác domain (Factory...) — giới hạn bảo mật trình
+   duyệt, không phải thiếu sót ở đây (yêu cầu 29/07/2026). */
+* {
+  scrollbar-color: #ffc629 #0a2a5e; /* Firefox: thumb rồi track */
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: #0a2a5e;
+}
+*::-webkit-scrollbar-thumb {
+  background: #ffc629;
+  border-radius: 999px;
+  border: 2px solid #0a2a5e;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #e6b023;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mascot sprite — lưới 4x2, ô tỉ lệ 2:3 (DESIGN-GUIDELINES §5).
+   ĐÂY LÀ NƠI DUY NHẤT GIỮ ĐƯỜNG DẪN SPRITE. components/mascot.tsx chỉ chọn tư thế.
+
+   Sửa 31/07/2026: dòng này còn trỏ "/mascot-sheet.png" trong khi file PNG ĐÃ BỊ XOÁ
+   (gói tài nguyên tĩnh đổi sprite sang WebP 704×528, 52.346 B, vì bản PNG nặng 1,12 MB
+   mà chỉ hiển thị ở 42–88px). Chưa ai nhìn thấy hỏng vì <Mascot> đặt background-image
+   bằng inline style đè lên rule này — nhưng đó đúng là kiểu hỏng tệ nhất: ai viết
+   class "mascot" bằng tay (wireframe trong danh-cho-nguoi/ đang viết đúng như vậy) sẽ
+   nhận một ô trống kèm 404 im lặng, không thông báo, không log. Nay gộp về một chỗ.
+
+   ?v=<8 ký tự đầu sha256> là BẮT BUỘC, không phải trang trí: next.config.mjs phục vụ
+   mọi ảnh trong public/ với Cache-Control: public, max-age=31536000, immutable. Đổi ảnh
+   mà giữ nguyên URL = máy học sinh giữ bản cũ tới hết năm, không có cách gỡ.
+   ĐỔI SPRITE THÌ ĐỔI CẢ CHUỖI BĂM NÀY (sha256 file, lấy 8 ký tự đầu). */
+.mascot {
+  background-image: url("/mascot-sheet.webp?v=d9e590f0");
+  background-repeat: no-repeat;
+  background-size: 400% 200%;
+  flex: none;
+}
+.mascot-wave { background-position: 0% 0%; }
+.mascot-thumbsup { background-position: 33.333% 0%; }
+.mascot-point { background-position: 66.667% 0%; }
+.mascot-read { background-position: 100% 0%; }
+.mascot-celebrate { background-position: 0% 100%; }
+.mascot-run { background-position: 33.333% 100%; }
+.mascot-think { background-position: 66.667% 100%; }
+.mascot-laptop { background-position: 100% 100%; }

@@ -1,0 +1,303 @@
+// components/growth-report-view.tsx — V8 Báo cáo Trưởng thành (Hub Desktop V2, 30/07/2026).
+// Phụ huynh vẫn mở từ link Zalo trên điện thoại (P3 GĐ1 gốc) — giữ nguyên bản
+// mobile compact. Học sinh dùng máy tính ở trường thì thấy bản desktop có
+// sidebar theo V2. KHÔNG có "cô X đã duyệt"/"đã đọc lúc.../chia sẻ cho ông bà"
+// như bản vẽ tay — chưa có bảng duyệt báo cáo hay theo dõi đã đọc, không bịa
+// (chỉ hiện tên + quan hệ người giám hộ thật qua report.getMyGuardians).
+"use client";
+
+import { useState } from "react";
+import { trpc } from "@/lib/trpc-client";
+import type { GetGrowthReportOutput } from "@hub/core/contracts";
+import { mondayOf, toLocalIsoDate } from "@/lib/date";
+import { Mascot } from "./mascot";
+import { PageShell } from "./page-shell";
+import { HubSidebar } from "./hub-sidebar";
+
+type Report = GetGrowthReportOutput;
+
+const ACCENT_BORDER: Record<"green" | "blue" | "amber", string> = {
+  green: "border-mood-happy",
+  blue: "border-domain-attendance",
+  amber: "border-domain-activity",
+};
+const GLOW_BG: Record<"green" | "blue" | "amber", string> = {
+  green: "bg-[#F6FEF9]",
+  blue: "bg-[#F6FAFF]",
+  amber: "bg-[#FFFBF2]",
+};
+const GLOW_ICON_BG: Record<"green" | "blue" | "amber", string> = {
+  green: "bg-[#E3F8ED]",
+  blue: "bg-[#E2F0FC]",
+  amber: "bg-[#FFF1C9]",
+};
+const GLOW_ICON_COLOR: Record<"green" | "blue" | "amber", string> = {
+  green: "text-[#00A05F]",
+  blue: "text-[#2C7BF2]",
+  amber: "text-[#E8940D]",
+};
+
+function mondayOffsetIso(weeksFromNow: number): string {
+  const base = new Date();
+  base.setDate(base.getDate() + weeksFromNow * 7);
+  return toLocalIsoDate(mondayOf(base));
+}
+
+export function GrowthReportView({
+  isStudent,
+  displayName,
+  email,
+}: {
+  isStudent: boolean;
+  displayName: string;
+  email: string;
+}) {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const query = trpc.report.getReportForWeek.useQuery({ weekStart: mondayOffsetIso(weekOffset) });
+
+  if (query.isLoading) {
+    return <div className="p-8 text-center text-[13px] text-muted">Đang soạn báo cáo…</div>;
+  }
+  if (query.error || !query.data) {
+    return (
+      <div className="p-8 text-center text-[13px] text-mood-sadDark">
+        {query.error?.message ?? "Không tải được báo cáo."}
+      </div>
+    );
+  }
+  const { report } = query.data;
+
+  return (
+    <>
+      <div className={isStudent ? "md:hidden" : ""}>
+        <MobileReport report={report} />
+      </div>
+      {isStudent && (
+        <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
+          <div className="flex w-[240px] flex-none">
+            <HubSidebar role="student" active="report" fullName={displayName} email={email} />
+          </div>
+          <DesktopReport
+            report={report}
+            weekOffset={weekOffset}
+            onPrevWeek={() => setWeekOffset((w) => w - 1)}
+            onNextWeek={() => setWeekOffset((w) => w + 1)}
+          />
+        </div>
+      )}
+    </>
+  );
+}
+
+function MobileReport({ report }: { report: Report | undefined }) {
+  if (!report) return null;
+  return (
+    <PageShell>
+      <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light px-5 pb-12 pt-4">
+        <div
+          aria-hidden
+          className="absolute -right-11 -top-16 h-[190px] w-[190px] rounded-full"
+          style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.55), rgba(255,198,41,.06) 72%)" }}
+        />
+        <div className="relative">
+          <div className="text-[17px] font-black text-white">Báo cáo Trưởng thành</div>
+          <div className="mt-0.5 text-[11px] text-[#D6E6FF]">
+            {report.studentName} · {report.className} · {report.weekLabel}
+          </div>
+        </div>
+      </div>
+      <div className="relative -mt-7 h-7 rounded-t-[100%] bg-pagebg" aria-hidden />
+
+      <div className="relative z-[2] -mt-8 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-[0_12px_30px_rgba(10,42,94,.13)]">
+        <Mascot pose="celebrate" width={52} />
+        <div>
+          <div className="text-[14px] font-black text-navy">{report.headline}</div>
+          <div className="mt-0.5 text-[11.5px] text-muted2">
+            {report.glow.length} tỏa sáng · {report.grow.length} đang lớn lên
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 px-4 pb-8 pt-4">
+        <div className="flex items-center gap-2">
+          <span className="msr text-[17px] text-gold-dark">sunny</span>
+          <span className="text-[13.5px] font-black text-navy">Tỏa sáng (Glow)</span>
+        </div>
+        {report.glow.length === 0 && (
+          <p className="text-[12px] text-muted">Tuần này chưa có mục nào nổi bật — tuần sau cùng cố gắng nhé!</p>
+        )}
+        {report.glow.map((item, i) => (
+          <div key={i} className={`rounded-2xl border-l-4 bg-white p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)] ${ACCENT_BORDER[item.accentColor]}`}>
+            <div className="text-[12.5px] font-black text-navy">{item.title}</div>
+            <div className="mt-0.5 text-[11px] text-muted2">{item.detail}</div>
+          </div>
+        ))}
+
+        {report.grow.length > 0 && (
+          <>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="msr text-[17px] text-domain-studyDark">psychiatry</span>
+              <span className="text-[13.5px] font-black text-navy">Đang lớn lên (Grow)</span>
+            </div>
+            {report.grow.map((item, i) => (
+              <div key={i} className="rounded-2xl bg-white p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)]">
+                <div className="text-[12.5px] font-black text-navy">{item.title}</div>
+                <div className="mt-1 text-[11.5px] leading-relaxed text-muted2">{item.detail}</div>
+              </div>
+            ))}
+          </>
+        )}
+
+        <div className="mt-2 flex items-center justify-center gap-2 rounded-2xl bg-[#F0F7FF] px-3 py-2.5">
+          <span className="msr text-[16px] text-domain-attendance">chat</span>
+          <span className="text-[10.5px] font-semibold leading-relaxed text-[#1D4E8F]">
+            GĐ1: phụ huynh mở báo cáo từ link Zalo — chưa cần cài đặt gì.
+          </span>
+        </div>
+      </div>
+    </PageShell>
+  );
+}
+
+function DesktopReport({
+  report,
+  weekOffset,
+  onPrevWeek,
+  onNextWeek,
+}: {
+  report: Report;
+  weekOffset: number;
+  onPrevWeek: () => void;
+  onNextWeek: () => void;
+}) {
+  const guardians = trpc.report.getMyGuardians.useQuery();
+  if (!report) return null;
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
+      <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
+        <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-[#9D6BFF] to-[#7434E8]">
+          <span className="msr text-[19px] text-white">workspace_premium</span>
+        </span>
+        <div className="flex-1">
+          <div className="text-[16px] font-black text-ink">Báo cáo Trưởng thành</div>
+          <div className="text-[11.5px] text-caption">{report.weekLabel}</div>
+        </div>
+        <button
+          onClick={onPrevWeek}
+          className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:border-[#C9D6E6]"
+        >
+          <span className="msr text-[17px] text-[#5B6B80]">chevron_left</span>
+          Tuần trước
+        </button>
+        {weekOffset < 0 && (
+          <button
+            onClick={onNextWeek}
+            className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:border-[#C9D6E6]"
+          >
+            Tuần sau
+            <span className="msr text-[17px] text-[#5B6B80]">chevron_right</span>
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-7">
+        <div className="flex flex-wrap items-start gap-5">
+          <div className="min-w-0 flex-[2.2_1_560px] flex flex-col gap-[18px]">
+            <div className="relative flex flex-wrap items-center gap-5 overflow-hidden rounded-[24px] bg-gradient-to-br from-navy to-[#1E5FB8] p-[26px]">
+              <div
+                aria-hidden
+                className="absolute -right-10 -top-[90px] h-[280px] w-[280px] rounded-full"
+                style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.4), transparent 70%)" }}
+              />
+              <Mascot pose="celebrate" width={88} />
+              <div className="relative min-w-0 flex-1 basis-[280px]">
+                <div className="text-[24px] font-black text-white">{report.headline}</div>
+                <div className="mt-1.5 text-[13.5px] leading-relaxed text-[#D6E6FF]">
+                  {report.glow.length} điều con đang tỏa sáng · {report.grow.length} điều con đang lớn lên.
+                </div>
+              </div>
+              <div className="relative flex gap-2.5">
+                <div className="rounded-2xl border border-white/15 bg-white/15 px-[18px] py-3.5 text-center">
+                  <div className="text-[22px] font-black text-gold">{report.checkinDaysThisWeek}/5</div>
+                  <div className="mt-0.5 text-[10px] font-bold text-[#C7D8F0]">ngày đến lớp</div>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/15 px-[18px] py-3.5 text-center">
+                  <div className="text-[22px] font-black text-white">{report.streakDays}</div>
+                  <div className="mt-0.5 text-[10px] font-bold text-[#C7D8F0]">chuỗi check-in</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="flex items-center gap-2">
+                <span className="msr text-[21px] text-[#F5A300]">sunny</span>
+                <span className="text-[17px] font-black text-navy">Tỏa sáng (Glow)</span>
+              </div>
+              <div className="mt-4 flex flex-col gap-3">
+                {report.glow.length === 0 && (
+                  <p className="text-[13px] text-caption">Tuần này chưa có mục nào nổi bật — tuần sau cùng cố gắng nhé!</p>
+                )}
+                {report.glow.map((item, i) => (
+                  <div key={i} className={`flex items-start gap-3.5 rounded-xl px-[18px] py-4 ${GLOW_BG[item.accentColor]}`}>
+                    <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${GLOW_ICON_BG[item.accentColor]}`}>
+                      <span className={`msr text-[20px] ${GLOW_ICON_COLOR[item.accentColor]}`}>
+                        {item.accentColor === "green" ? "event_available" : item.accentColor === "blue" ? "pool" : "menu_book"}
+                      </span>
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-[14.5px] font-black text-ink">{item.title}</div>
+                      <div className="mt-0.5 text-[12.5px] leading-relaxed text-caption">{item.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {report.grow.length > 0 && (
+              <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+                <div className="flex items-center gap-2">
+                  <span className="msr text-[21px] text-[#00A05F]">psychiatry</span>
+                  <span className="text-[17px] font-black text-navy">Đang lớn lên (Grow)</span>
+                </div>
+                <div className="mt-4 flex flex-wrap items-start gap-4">
+                  <Mascot pose="think" width={56} />
+                  <div className="min-w-0 flex-1 basis-[320px]">
+                    <div className="text-[15px] font-black text-ink">{report.grow[0]!.title}</div>
+                    <div className="mt-1.5 text-[13px] leading-relaxed text-[#5B6B80]">{report.grow[0]!.detail}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-[1_1_300px] flex flex-col gap-4">
+            <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="text-[15px] font-black text-navy">Báo cáo này gửi cho ai?</div>
+              <div className="mt-3.5 flex flex-col gap-3">
+                {guardians.data?.length ? (
+                  guardians.data.map((g, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-[#ECE7DD] text-[12.5px] font-black text-[#7D6A3A]">
+                        {g.full_name.trim().slice(0, 1).toUpperCase() || "?"}
+                      </span>
+                      <div className="min-w-0 flex-1 text-[12.5px] font-bold text-ink">{g.full_name}</div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[12px] text-caption">Chưa có phụ huynh nào gắn với tài khoản này.</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5 rounded-[20px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-[18px]">
+              <span className="msr flex-none text-[19px] text-[#E8940D]">verified_user</span>
+              <span className="text-[12px] font-semibold leading-relaxed text-[#8A5A00]">
+                Báo cáo chỉ nói về điều con làm được và điều con đang tập — không có xếp hạng, không so sánh với bạn khác.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

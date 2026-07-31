@@ -1,0 +1,9 @@
+# Vùng lõi và luật — cần approve của cả 2 dev chính (§10)
+# TODO: thay @dev1 @dev2 bằng GitHub username thật khi lập repo trên GitHub.
+
+packages/core/**                  @dev1 @dev2
+danh-cho-may/RULES.md             @dev1 @dev2
+danh-cho-may/02-database.md       @dev1 @dev2
+danh-cho-nguoi/ho-so-he-thong.html  @dev1 @dev2
+tools/check-sync.mjs              @dev1 @dev2
+.github/**                        @dev1 @dev2

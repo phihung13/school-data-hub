@@ -1,0 +1,15 @@
+# Sinh ra bởi tools/check-html.mjs để node --check kiểm cú pháp JS nhúng
+tools/.tmp-inline.js
+
+node_modules/
+dist/
+build/
+.next/
+coverage/
+
+# Secret không bao giờ vào repo (§4)
+.env
+.env.*
+!.env.example
+*.pem
+*.key

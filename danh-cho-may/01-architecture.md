@@ -1,0 +1,64 @@
+---
+ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
+sync-version: 10
+---
+
+# Architecture — Hub là NỀN TẢNG (Super App + Mini App), không phải một ứng dụng nghiệp vụ
+
+## 1. Định vị (quyết định Chủ tịch — ADR-011)
+
+Hub là nền tảng thống nhất **dữ liệu** và **trải nghiệm người dùng**. Một **Super App** làm vỏ (đăng nhập một lần, điều hướng, hồ sơ, thông báo) và nhiều **Mini App** nghiệp vụ chạy bên trong. Mỗi Mini App chỉ sở hữu dữ liệu nghiệp vụ của chính mình và tham chiếu dữ liệu lõi bằng khóa ngoại — không bao giờ tạo bản sao.
+
+Mini App hiện tại và kế hoạch: `attendance` (check-in cảm xúc + điểm danh), `care` (cờ ABC+E, hồ sơ can thiệp), `evidence` (dấu chân hoạt động, fitness), `tutor` (snapshot học thuật; tương lai: courses, lessons), `health` (y tế), và các Mini App tương lai đã đặt chỗ schema: `finance` (invoices, payments), `social` (posts, comments), `ai` (conversations, prompts).
+
+## 2. Bốn lớp — Supabase CHỈ là hạ tầng
+
+```
+Super App + Mini Apps  (PWA — xem MD-07 / ADR-013)
+        │
+        ▼
+Business Layer — API (tRPC/Fastify): TOÀN BỘ luật nghiệp vụ nằm đây
+        │
+        ▼
+Data Layer — PostgreSQL: schema theo domain + RLS
+        │
+        ▼
+Hosting — Supabase (Postgres + Auth + Storage; Realtime CHỈ khi thật cần)
+```
+
+**Luật cách ly hạ tầng:** business layer không gọi SDK Supabase rải rác trong code nghiệp vụ; mọi truy cập Database/Auth/Storage đi qua adapter tập trung trong `packages/core/`. **Không có đường tắt:** Mini App không được gọi thẳng Domain Service, bỏ qua tRPC Router — mọi mutation đi đúng chuỗi Client → tRPC Router → Auth/Policy → Domain Service (khớp View 08A). Nhờ vậy nếu một ngày Supabase không còn phù hợp: Supabase → Neon / self-host PostgreSQL / Cloud SQL = đổi adapter + biến kết nối, ứng dụng gần như không phải viết lại. (Khớp cơ chế thoát vendor + restore drill ở 06.)
+
+## 3. Core Data Model — Single Source of Truth
+
+- Schema `core` giữ **bản duy nhất** của: `users`, `students`, `teachers`, `parents`, `schools` (cơ sở), `classes`, `roles`, `permissions`, `id_mappings`, `school_networks`.
+- Mọi Mini App dùng chung `core.students`, `core.users`, `core.schools`, `core.roles` — **không bao giờ có `finance.students` hay `attendance.students`**.
+- Đường tiến hóa: một Mini App phát triển rất lớn có thể tách thành service riêng mà không đổi Core Data Model (nó vốn chỉ tham chiếu core bằng khóa, không ôm bản sao).
+
+## 4. Auth indirection — không phụ thuộc trực tiếp Supabase Auth
+
+Vẫn dùng Supabase Auth + JWT + RLS, nhưng nghiệp vụ không biết tới nó:
+
+```
+Supabase Auth UID → core.users → roles → permissions → Mini App
+```
+
+**CẤM Mini App đọc `auth.users` trực tiếp.** Mọi nghiệp vụ chỉ biết `core.users`; ánh xạ UID ↔ core.users nằm trong adapter auth của platform. Storage (avatar, ảnh check-in, tài liệu, file AI) dùng Supabase Storage, cũng qua adapter.
+
+## 5. Frontend — MD-07 (ĐÃ CHỐT, ADR-013)
+
+Super App là **PWA TypeScript (Next.js + tRPC)** — đúng nền đang chạy hôm nay, giữ nguyên. Không chuyển sang Flutter, dù ở dạng thuần (Fastify + Zod→OpenAPI→Dart client) hay vỏ Flutter + Mini App webview. Contract vẫn viết bằng Zod trong `packages/core/contracts`; không cần sinh OpenAPI cho client Dart vì không có client Dart.
+
+## 6. Giữ nguyên từ Rev B/C (không đổi)
+
+Flag engine = pg_cron + signal views `care.v_signal_*` · connector chỉ ghi `staging`, vào kho qua `promote()` · `/api/health` một điểm đo (DB + heartbeat + last_engine_run) · không Realtime mặc định (ADR-010) · 3 môi trường dev → staging → prod, migration qua staging trước · repo vùng lõi (`packages/core`: db/migrations, auth-adapter, storage-adapter, flag-engine, pii-stripper, contracts) và vùng mở (`apps/*` = các Mini App).
+
+## 7. Hub là Identity Provider cho hệ ngoài (ADR-014, mở rộng ADR-016)
+
+Đăng nhập chỉ có một chỗ: Hub. Hệ ngoài (Moodle, và RP tương lai) không giữ mật khẩu riêng — tin định danh từ Hub qua **OIDC bridge** (`node-oidc-provider`, mount `/oidc/*` trong cùng deployable, không phải service riêng). Bridge đọc session qua `auth-adapter` hiện có, không import SDK Supabase ở nơi khác (đúng §4). `sub` = `core.users.id`. Bridge chỉ cấp định danh — không cấp quyền gọi API Hub cho RP. Chi tiết endpoint, đăng ký RP, bảo mật (PKCE, redirect allowlist), test bắt buộc: xem `03-api.md`.
+
+**Bổ sung ADR-016 (27/07/2026) — vòng đời phải khép kín, không chỉ có chiều mở:**
+
+- **Đăng xuất chung:** `end_session_endpoint` + back-channel logout (mỗi RP khai URI nhận trong config). Thoát Hub = thoát mọi RP đang mở. Lý do vận hành: phòng máy dùng chung, em sau ngồi vào không được thừa hưởng phiên của em trước.
+- **Khóa là cắt:** token sống ≤15 phút; mỗi lần làm mới kiểm `core.users.status` — tài khoản disabled thì mất đường vào mọi hệ trong một chu kỳ token. Không đuổi theo thu hồi từng token đã phát.
+- **Vai trò trong token:** scope `hub_profile` trả `hub_role` (student/teacher/parent/staff), `hub_school`, `hub_classes` — đủ để Moodle tự phân vai và xếp lớp. RP không khai scope thì không nhận. Cập nhật ở lần đăng nhập kế tiếp của user (không đẩy thông báo chủ động sang RP — thêm đường là thêm thứ hỏng được, lợi ích không tương xứng).
+- **Tách sổ đối chiếu:** khớp tài khoản dùng `core.identity_links(system, external_id, user_id)`, KHÔNG dùng `core.id_mappings` (sổ đó FK về `core.students.id` nên không chứa được giáo viên/phụ huynh). Khóa duy nhất cả hai chiều: `UQ(system, external_id)` và `UQ(system, user_id)` — chặn cả ca một mã ngoài thuộc hai người lẫn ca một người sinh hai tài khoản trong cùng hệ ngoài. Upsert idempotent (§9).

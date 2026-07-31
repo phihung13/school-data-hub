@@ -1,0 +1,260 @@
+// Đăng nhập — bản parallax (Login Parallax.dc.html, "Tiếp tục trang đăng nhập.zip" 30/07/2026).
+// Hai bố cục THẬT SỰ khác nhau, không phải co giãn một bản:
+// - Mobile (<md): dải hero navy tĩnh ở trên (không chạy parallax — máy Android rẻ
+//   không nên tải 6 lớp ảnh + vòng lặp rAF chỉ để trang trí, xem login-parallax-bg.tsx).
+// - Desktop (≥md): nền minh hoạ lớp học parallax theo chuột toàn màn hình, thẻ đăng
+//   nhập nổi bên phải. Một nút "Đăng nhập bằng Google" (tự nhận vai trò sau khi
+//   đăng nhập, không chọn tab) + một nút Zalo riêng cho phụ huynh.
+"use client";
+
+import { useState } from "react";
+import { Mascot } from "./mascot";
+import { LoginParallaxBg } from "./login-parallax-bg";
+import { resolveThenPath } from "@/lib/trpc-client";
+
+interface DevAccount {
+  authUid: string;
+  email: string;
+  displayName: string;
+  audience: "staff" | "student";
+}
+
+export function LoginForm({
+  devAccounts,
+  then,
+}: {
+  devAccounts: DevAccount[];
+  /** Đích đã hẹn trong `?then=` (app/login/page.tsx đã lọc). Không có thì về /home. */
+  then?: string | null;
+}) {
+  const [guardianOpen, setGuardianOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  /**
+   * Lọc LẦN HAI ngay tại client. Trang cha đã lọc rồi, nhưng đây là biến duy nhất trong màn
+   * đăng nhập đi thẳng vào `location.assign` — chi phí một lời gọi thuần, đổi lại thì dù sau
+   * này ai đó render LoginForm từ chỗ khác và quên lọc, chỗ này vẫn không thành open redirect.
+   */
+  const target = resolveThenPath(then);
+
+  /**
+   * Nạp lại cả trang thay vì `router.push`: (a) cookie phiên vừa được Set-Cookie ở response
+   * trên, hard navigation là cách chắc chắn nhất để mọi Server Component đọc được nó thay vì
+   * dùng lại cache RSC dựng lúc CHƯA đăng nhập; (b) `?then=` hợp lệ có thể là
+   * `/oidc/interaction/<uid>` — đường do server.mjs phục vụ, router của Next không biết tới.
+   */
+  function goAfterLogin() {
+    window.location.assign(target);
+  }
+
+  async function loginDev(authUid: string) {
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/auth/dev-login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ authUid }),
+    });
+    if (!res.ok) {
+      setLoading(false);
+      setError("Đăng nhập thất bại — đã seed dữ liệu dev chưa?");
+      return;
+    }
+    // KHÔNG tắt `loading` ở nhánh thành công: trang đang được nạp lại, mở khoá các nút lúc này
+    // chỉ mời người dùng bấm lần hai và tạo thêm một phiên nữa.
+    goAfterLogin();
+  }
+
+  async function redeemCode(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/auth/invite", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    if (!res.ok) {
+      setLoading(false);
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Mã mời không hợp lệ");
+      return;
+    }
+    goAfterLogin();
+  }
+
+  return (
+    <div className="flex min-h-screen w-full flex-col md:block">
+      <MobileHeroBand />
+
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-pagebg md:h-screen md:justify-end md:bg-[#F4E9D8] md:px-[54px] md:py-11">
+        <div className="hidden md:block">
+          <LoginParallaxBg />
+        </div>
+
+        <div className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#EFE6D6] md:bg-white/[.94] md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)] md:backdrop-blur-[6px]">
+          <div>
+            <div className="hidden text-[12.5px] font-extrabold uppercase tracking-[.14em] text-[#9A8F6E] md:block">
+              Chào mừng trở lại
+            </div>
+            <h1 className="text-[24px] font-black leading-[1.15] tracking-[-.015em] text-ink md:mt-[7px] md:text-[31px] md:text-[#26275D]">
+              Viet Anh{" "}
+              <span className="relative inline-block">
+                School Hub
+                <span aria-hidden className="absolute inset-x-0 bottom-[2px] -z-10 h-[9px] rounded-full bg-gold opacity-55" />
+              </span>
+            </h1>
+          </div>
+
+          {error && (
+            <div role="alert" className="flex items-start gap-[9px] rounded-2xl border border-[#F6D2D2] bg-[#FFF1F1] p-[11px_13px] animate-popIn">
+              <span className="msr flex-none text-[19px] text-[#D2383E]">error</span>
+              <span className="text-[12.5px] font-bold leading-[1.45] text-[#A32127]">{error}</span>
+            </div>
+          )}
+
+          <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />
+
+          <div className="flex items-center gap-2.5">
+            <span className="h-px flex-1 bg-[#EFE9DC]" />
+            <span className="text-[11px] font-extrabold text-[#9AA0B2]">hoặc</span>
+            <span className="h-px flex-1 bg-[#EFE9DC]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setGuardianOpen((v) => !v)}
+            className="flex h-[52px] items-center justify-center gap-2.5 rounded-[15px] bg-[#0068FF] text-[14.5px] font-black text-white shadow-[0_8px_20px_rgba(0,104,255,.26)] transition-transform hover:-translate-y-0.5 active:scale-[.985]"
+          >
+            <span className="msr text-[19px]">chat_bubble</span>
+            Dành cho phụ huynh · Zalo
+          </button>
+
+          {guardianOpen && <GuardianPanel code={code} setCode={setCode} loading={loading} onSubmit={redeemCode} />}
+
+          <div className="flex justify-center gap-3 border-t border-[#F1EADD] pt-[14px] text-[11px] font-bold text-[#9AA0B2]">
+            <a href="#">Quyền riêng tư</a>
+            <span>·</span>
+            <a href="#">Hỗ trợ</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Hero cong mobile (M1) — chỉ hiện <md. Không dùng LoginParallaxBg ở đây,
+// xem lý do ở ghi chú đầu file.
+// ---------------------------------------------------------------------------
+function MobileHeroBand() {
+  return (
+    <div
+      className="relative h-[200px] flex-none overflow-hidden bg-gradient-to-br from-navy to-navy-light md:hidden"
+      style={{ borderRadius: "0 0 58% 58% / 0 0 20% 20%" }}
+    >
+      <div
+        aria-hidden
+        className="absolute -right-11 -top-[74px] h-[210px] w-[210px] rounded-full"
+        style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.6), rgba(255,198,41,.08) 72%)" }}
+      />
+      <div className="relative mt-6 flex flex-col items-center gap-2.5">
+        <div className="flex h-[72px] w-[72px] animate-floaty items-center justify-center rounded-[21px] bg-white shadow-[0_10px_26px_rgba(6,32,74,.34)]">
+          <img src="/logo.jpg" alt="" className="h-[58px] w-[58px] rounded-2xl object-cover" />
+        </div>
+        <div className="text-center">
+          <div className="text-[20px] font-black text-white">School Hub</div>
+          <div className="mt-0.5 text-[12px] font-bold text-[#FFD98A]">Hệ thống Trường Việt Anh</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StaffPanel({
+  devAccounts,
+  loading,
+  onPick,
+}: {
+  devAccounts: DevAccount[];
+  loading: boolean;
+  onPick: (authUid: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="flex items-center gap-2 text-[11px] font-bold text-caption">
+        <span className="rounded bg-chip px-2 py-0.5 text-[10px] font-black uppercase text-caption">DEV</span>
+        Chọn tài khoản thử (thay Google SSO thật)
+      </p>
+      <div className="flex flex-col gap-2.5">
+        {devAccounts.map((acc) => (
+          <button
+            key={acc.authUid}
+            type="button"
+            disabled={loading}
+            onClick={() => onPick(acc.authUid)}
+            className="flex h-14 items-center gap-[11px] rounded-[15px] border-[1.6px] border-[#E4DFD3] bg-white px-4 text-left shadow-[0_6px_16px_rgba(38,39,93,.10)] transition-all hover:-translate-y-0.5 hover:border-[#CFC8B8] hover:shadow-[0_12px_26px_rgba(38,39,93,.14)] disabled:opacity-50"
+          >
+            <GoogleMark />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13.5px] font-black text-[#1B1C3A]">{acc.displayName}</div>
+              <div className="truncate text-[11px] text-muted">{acc.email}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GuardianPanel({
+  code,
+  setCode,
+  loading,
+  onSubmit,
+}: {
+  code: string;
+  setCode: (v: string) => void;
+  loading: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-2xl bg-chip/60 p-4 animate-popIn">
+      <div className="flex flex-col items-center gap-1">
+        <Mascot pose="thumbsup" width={52} />
+        <div className="text-[15px] font-black text-ink">Chào bố mẹ!</div>
+        <p className="text-center text-[11.5px] text-muted">Mở link mời trong Zalo, hoặc nhập mã mời GVCN đã gửi.</p>
+      </div>
+      <input
+        value={code}
+        onChange={(e) => setCode(e.target.value.toUpperCase())}
+        maxLength={6}
+        placeholder="ABC123"
+        className="rounded-xl border border-line px-4 py-3 text-center text-[18px] font-black tracking-[0.3em] text-navy outline-none focus:border-navy"
+      />
+      <button
+        type="submit"
+        disabled={loading || code.length !== 6}
+        className="rounded-[15px] bg-gradient-to-br from-navy to-navy-light py-3.5 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.3)] disabled:opacity-50"
+      >
+        Xác nhận mã mời
+      </button>
+      <p className="text-center text-[11px] text-caption">
+        Thất lạc mã? <b className="text-navy">Nhắn GVCN</b>
+      </p>
+    </form>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" className="flex-none">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}

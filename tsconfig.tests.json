@@ -1,0 +1,31 @@
+// tsconfig.tests.json — typecheck cho thư mục `tests/` ở gốc monorepo.
+//
+// Vì sao cần file riêng: `pnpm -r typecheck` chỉ chạy tsconfig của từng package
+// (apps/hub, packages/core). Thư mục `tests/` nằm NGOÀI mọi package nên trước file
+// này không có một trình biên dịch nào nhìn tới nó — test viết sai kiểu, gọi hàm
+// không tồn tại, import sai alias đều lọt qua CI và chỉ vỡ lúc chạy. Test là lớp
+// chặn cuối của hệ dữ liệu trẻ em; bản thân nó phải được kiểm như code sản phẩm.
+//
+// `paths` ở đây BẮT BUỘC khớp `resolve.alias` trong vitest.config.ts. Lệch một
+// dòng là tsc xanh còn vitest đỏ (hoặc ngược lại) — sửa một bên thì sửa cả hai.
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "preserve",
+    // Thư mục tests/ không thuộc package nào nên không có node_modules/@types
+    // của riêng nó; trỏ thẳng vào kho type của hai package trong workspace
+    // (pnpm không hoist lên gốc). Không có dòng này thì `process.env` trong
+    // tests/helpers/db.ts báo lỗi "Cannot find name 'process'".
+    "typeRoots": ["./apps/hub/node_modules/@types", "./packages/core/node_modules/@types"],
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@hub/core/contracts": ["./packages/core/contracts/index.ts"],
+      "@hub/core/auth-adapter": ["./packages/core/auth-adapter/index.ts"],
+      "@hub/core/db": ["./packages/core/db/client.ts"],
+      "@/*": ["./apps/hub/*"]
+    }
+  },
+  "include": ["tests/**/*.ts", "vitest.config.ts"]
+}

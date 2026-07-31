@@ -1,0 +1,22 @@
+{
+  "name": "school-data-hub",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter @hub/app dev",
+    "build": "pnpm --filter @hub/app build",
+    "typecheck": "pnpm -r typecheck",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:db": "vitest run tests/db",
+    "test:watch": "vitest",
+    "db:test": "bash tools/run-db-tests.sh",
+    "db:seed": "pnpm --filter @hub/core exec node db/seed/seed.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.9"
+  }
+}

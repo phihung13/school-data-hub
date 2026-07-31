@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0" rel="stylesheet">
+<style>
+body{margin:0;background:#EAEFF6;font-family:'Be Vietnam Pro',system-ui,sans-serif}
+a{color:#0A2A5E}a:hover{color:#E8940D}
+.msr{font-family:'Material Symbols Rounded';font-weight:500;font-style:normal;line-height:1;display:inline-block;font-variation-settings:'FILL' 1}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+@keyframes pulseDot{0%{box-shadow:0 0 0 0 rgba(255,198,41,.6)}70%{box-shadow:0 0 0 12px rgba(255,198,41,0)}100%{box-shadow:0 0 0 0 rgba(255,198,41,0)}}
+@keyframes confetti{0%{transform:translateY(-12px) rotate(0);opacity:0}15%{opacity:1}100%{transform:translateY(120px) rotate(260deg);opacity:0}}
+@keyframes popIn{0%{transform:scale(.7);opacity:0}62%{transform:scale(1.07)}100%{transform:scale(1);opacity:1}}
+</style></helmet>
+<section style="padding:40px 44px 56px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+<img src="uploads/channels4_profile.jpg" style="width:46px;height:46px;border-radius:12px;box-shadow:0 3px 10px rgba(10,42,94,.15)">
+<div><div style="font-size:17px;font-weight:900;color:#0A2A5E">Viet Anh School Hub — Mobile Web · 390×844</div><div style="font-size:12px;color:#4E5F78;margin-top:2px">Web app chạy trên Safari/Chrome · brand navy <b style="color:#0A2A5E">#0A2A5E</b> + vàng <b style="color:#E8940D">#FFC629</b> · trắng chủ đạo · mascot sư tử Việt Anh · nội bộ (thầy cô + học sinh): SSO Google mail trường — phụ huynh: link mời Zalo · người lớn dùng chung giao diện, lưới app đổi theo quyền (M13)</div></div>
+</div>
+
+<div style="display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;margin-top:10px">
+
+<div id="m1" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M1 · ĐĂNG NHẬP — Học sinh &amp; Thầy cô (SSO Google) chiếm 2/3</div>
+<div data-screen-label="M1 Đăng nhập" style="width:390px;height:844px;background:#fff;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#F6F7F9;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#0F172A"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #0F172A;border-radius:2.5px;position:relative"><span style="position:absolute;inset:1.5px;right:4px;background:#0F172A;border-radius:1px"></span></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:#8A94A6">chevron_left</span><div style="flex:1;background:#E8EAEE;border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#5B6478">lock</span><span style="font-size:12.5px;color:#3A4356;font-weight:600">hub.truongvietanh.com</span></div><span class="msr" style="font-size:18px;color:#8A94A6">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);height:200px;border-radius:0 0 58% 58%/0 0 20% 20%;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-74px;right:-44px;width:210px;height:210px;border-radius:50%;background:radial-gradient(circle at 36% 36%,rgba(255,198,41,.6),rgba(255,198,41,.08) 72%)"></div>
+      <div style="position:absolute;bottom:-34px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,198,41,.14)"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:24px;position:relative">
+        <div style="width:72px;height:72px;border-radius:21px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(6,32,74,.34);animation:floaty 4s ease-in-out infinite"><img src="uploads/channels4_profile.jpg" style="width:58px;height:58px;border-radius:14px"></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#fff">School Hub</div><div style="font-size:12px;color:#FFD98A;margin-top:2px;font-weight:700">Hệ thống Trường Việt Anh · 8 cơ sở</div></div>
+      </div>
+    </div>
+    <div style="padding:14px 24px 0;display:flex;flex-direction:column;gap:10px;flex:1">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px"><div style="flex:1;min-width:0"><div style="font-size:19px;font-weight:900;color:#0F172A">Đăng nhập</div><div style="font-size:11.5px;color:#6B7789;margin-top:2px;white-space:nowrap">Một chạm với Google nội bộ</div></div><div style="width:70px;aspect-ratio:.67;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:0% 0%;animation:floaty 3.6s ease-in-out infinite;flex:none"></div></div>
+      <div style="display:flex;gap:6px;background:#F1F4F8;border-radius:15px;padding:5px">
+        <span style="flex:2;text-align:center;font-size:13px;font-weight:900;color:#0A2A5E;background:#fff;border-radius:11px;padding:11px 0;box-shadow:0 3px 8px rgba(10,42,94,.12);display:flex;align-items:center;justify-content:center;gap:7px"><span class="msr" style="font-size:18px;color:#F5A300">school</span>Học sinh &amp; Thầy cô</span>
+        <span style="flex:1;text-align:center;font-size:12.5px;font-weight:700;color:#6B7789;padding:11px 0">Phụ huynh</span>
+      </div>
+      <button style="margin-top:8px;border:1.6px solid #E4E9F0;border-radius:15px;padding:15px;background:#fff;color:#0F172A;font-family:inherit;font-size:14.5px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 14px rgba(10,42,94,.08);position:relative;overflow:hidden"><svg width="20" height="20" viewBox="0 0 48 48" style="flex:none"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Đăng nhập bằng Google</button>
+      <div style="display:flex;justify-content:center"><span style="display:flex;align-items:center;gap:6px;background:#F1F4F8;border-radius:99px;padding:6px 14px"><span class="msr" style="font-size:14px;color:#8A94A6">mail</span><span style="font-size:11.5px;color:#3A4356;font-weight:800">@vietanh.edu.vn</span></span></div>
+      <div style="margin-top:auto;margin-bottom:10px"></div>
+    </div>
+  </div>
+  <div style="background:#F6F7F9;border-top:1px solid #DFE3EA;display:flex;justify-content:space-between;align-items:center;padding:11px 30px 6px;flex:none"><span class="msr" style="font-size:21px;color:#0A2A5E">arrow_back_ios_new</span><span class="msr" style="font-size:21px;color:#B6BECB">arrow_forward_ios</span><span class="msr" style="font-size:21px;color:#0A2A5E">ios_share</span><span class="msr" style="font-size:21px;color:#0A2A5E">book</span><span class="msr" style="font-size:21px;color:#0A2A5E">tab</span></div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:0 auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> mascot + logo trôi nhẹ 4s · tab pill trượt &amp; giãn 2fr↔1fr 260ms cubic-bezier(.4,0,.2,1) · nút Google nhấn scale .97 → màn chọn tài khoản, quay lại spinner navy · vai trò tự nhận từ mail nội bộ.</div>
+</div>
+
+<div id="m2" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M2 · ĐĂNG NHẬP — tab Phụ huynh chiếm 2/3 (link mời, không mật khẩu)</div>
+<div data-screen-label="M2 Đăng nhập phụ huynh" style="width:390px;height:844px;background:#fff;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#F6F7F9;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#0F172A"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #0F172A;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:#8A94A6">chevron_left</span><div style="flex:1;background:#E8EAEE;border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#5B6478">lock</span><span style="font-size:12.5px;color:#3A4356;font-weight:600">hub.truongvietanh.com</span></div><span class="msr" style="font-size:18px;color:#8A94A6">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);height:126px;border-radius:0 0 58% 58%/0 0 30% 30%;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-64px;right:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle at 36% 36%,rgba(255,198,41,.55),rgba(255,198,41,.08) 72%)"></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:22px 24px 0;position:relative">
+        <div style="width:46px;height:46px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(6,32,74,.3)"><img src="uploads/channels4_profile.jpg" style="width:36px;height:36px;border-radius:9px"></div>
+        <div><div style="font-size:17px;font-weight:900;color:#fff">School Hub</div><div style="font-size:11.5px;color:#FFD98A;font-weight:700">Dành cho bố mẹ học sinh</div></div>
+      </div>
+    </div>
+    <div style="padding:14px 24px 0;display:flex;flex-direction:column;gap:10px;flex:1;overflow:hidden">
+      <div style="display:flex;gap:6px;background:#F1F4F8;border-radius:15px;padding:5px">
+        <span style="flex:1;text-align:center;font-size:12.5px;font-weight:700;color:#6B7789;padding:11px 0">Học sinh &amp; Thầy cô</span>
+        <span style="flex:2;text-align:center;font-size:13px;font-weight:900;color:#0A2A5E;background:#fff;border-radius:11px;padding:11px 0;box-shadow:0 3px 8px rgba(10,42,94,.12);display:flex;align-items:center;justify-content:center;gap:7px"><span class="msr" style="font-size:18px;color:#F5A300">family_restroom</span>Phụ huynh</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:2px"><div style="width:52px;height:78px;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:33.333% 0%"></div><div style="font-size:15px;font-weight:900;color:#0F172A">Chào bố mẹ!</div></div>
+      <button style="border:none;border-radius:15px;padding:14px;background:#0068FF;color:#fff;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 8px 20px rgba(0,104,255,.3)"><span class="msr" style="font-size:20px">chat</span>Mở link mời trong Zalo</button>
+      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;height:1px;background:#E4E9F0"></span><span style="font-size:11px;color:#9AA5B5;font-weight:700">hoặc nhập mã mời</span><span style="flex:1;height:1px;background:#E4E9F0"></span></div>
+      <div style="display:flex;gap:7px;justify-content:center">
+        <span style="width:44px;height:52px;border:1.5px solid #E4E9F0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#0A2A5E;background:#fff">V</span>
+        <span style="width:44px;height:52px;border:1.5px solid #E4E9F0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#0A2A5E;background:#fff">A</span>
+        <span style="width:44px;height:52px;border:1.5px solid #E4E9F0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#0A2A5E;background:#fff">4</span>
+        <span style="width:44px;height:52px;border:1.5px solid #E4E9F0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#0A2A5E;background:#fff">1</span>
+        <span style="width:44px;height:52px;border:1.5px solid #E4E9F0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#0A2A5E;background:#fff">7</span>
+        <span style="width:44px;height:52px;border:1.7px solid #0A2A5E;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px rgba(30,95,184,.12);background:#fff"><span style="width:1.6px;height:20px;background:#F5A300"></span></span>
+      </div>
+      <button style="border:none;border-radius:15px;padding:13px;background:linear-gradient(120deg,#0A2A5E,#1E5FB8);color:#fff;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 9px 22px rgba(10,42,94,.3)">Xác nhận mã mời</button>
+      <div style="margin-top:auto;margin-bottom:10px;text-align:center;font-size:11px;color:#8A94A6">Thất lạc mã? <b style="color:#0A2A5E">Nhắn GVCN</b></div>
+    </div>
+  </div>
+  <div style="background:#F6F7F9;border-top:1px solid #DFE3EA;display:flex;justify-content:space-between;align-items:center;padding:11px 30px 6px;flex:none"><span class="msr" style="font-size:21px;color:#0A2A5E">arrow_back_ios_new</span><span class="msr" style="font-size:21px;color:#B6BECB">arrow_forward_ios</span><span class="msr" style="font-size:21px;color:#0A2A5E">ios_share</span><span class="msr" style="font-size:21px;color:#0A2A5E">book</span><span class="msr" style="font-size:21px;color:#0A2A5E">tab</span></div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:0 auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> hero co 200→126px khi sang tab Phụ huynh (260ms) · ô mã mời tự nhảy sang ô kế khi gõ, caret vàng nháy · dán cả mã 6 ký tự tự điền hết · nút xác nhận sáng dần khi đủ mã · mascot thumbs-up khích lệ.</div>
+</div>
+
+<div id="m3" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M3 · TRANG CHỦ HỌC SINH</div>
+<div data-screen-label="M3 Trang chủ HS" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);padding-bottom:58px;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-72px;right:-44px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 36% 36%,rgba(255,198,41,.58),rgba(255,198,41,.08) 72%)"></div>
+      <div style="padding:12px 18px 0;display:flex;align-items:center;gap:11px;position:relative">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(150deg,#FFC629,#F5A300);color:#0A2A5E;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;box-shadow:0 4px 12px rgba(6,32,74,.3)">M</div>
+        <div style="flex:1"><div style="font-size:17px;font-weight:900;color:#fff">Chào Minh 👋</div><div style="font-size:11.5px;color:#D6E6FF;margin-top:1px">Lớp 6A1 · Thứ Tư, 23/07</div></div>
+        <span class="msr" style="font-size:22px;color:#fff">qr_code_scanner</span>
+        <span style="position:relative"><span class="msr" style="font-size:22px;color:#fff">notifications</span><span style="position:absolute;top:-3px;right:-4px;min-width:15px;height:15px;border-radius:99px;background:#FFC629;color:#0A2A5E;font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #16407C">2</span></span>
+      </div>
+      <div style="margin:12px 18px 0;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:10px 15px;display:flex;align-items:center;gap:8px;position:relative"><span class="msr" style="font-size:17px;color:#EAF2FF">search</span><span style="font-size:12px;color:#EAF2FF">Tìm mini app, hoạt động…</span></div>
+    </div>
+    <div style="height:32px;background:#F7F9FC;border-radius:100% 100% 0 0;margin-top:-32px;position:relative;flex:none"></div>
+    <div style="flex:1;display:flex;flex-direction:column">
+      <div style="margin:-54px 15px 0;background:#fff;border-radius:22px;padding:13px;box-shadow:0 14px 32px rgba(10,42,94,.14);display:flex;flex-direction:column;gap:9px;position:relative;z-index:2;flex:none">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14.5px;font-weight:900;color:#0A2A5E">Check-in cảm xúc</span><span style="font-size:10px;font-weight:900;color:#8A5A00;background:#FFF1C9;border-radius:99px;padding:4px 9px">TRƯỚC 8:00</span></div>
+        <div style="display:flex;align-items:center;gap:11px"><div style="width:42px;height:63px;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:0% 0%;flex:none"></div><div style="font-size:12px;color:#4E5F78;line-height:1.55;flex:1">Hôm nay con thấy thế nào?</div></div>
+        <button style="border:none;border-radius:13px;padding:12px;background:linear-gradient(120deg,#0A2A5E,#1E5FB8);color:#fff;font-family:inherit;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 7px 16px rgba(10,42,94,.28)">Check-in ngay →</button>
+        <div style="display:flex;align-items:center;gap:6px;justify-content:center"><span class="msr" style="font-size:14px;color:#AEB7C4">cloud_off</span><span style="font-size:10.5px;color:#9AA5B5">Offline vẫn lưu — tự gửi sau.</span></div>
+      </div>
+      <div style="padding:12px 20px 7px;display:flex;justify-content:space-between;align-items:baseline;flex:none"><span style="font-size:14px;font-weight:900;color:#0A2A5E">Mini App</span><span style="font-size:11px;font-weight:800;color:#E8940D">Tất cả</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:11px 6px;padding:0 15px;flex:none">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#2C7BF2,#0A4FBF);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(10,79,191,.3)"><span class="msr" style="font-size:24px;color:#fff">fact_check</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Điểm danh</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#FFB01F,#F58F00);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(245,143,0,.32)"><span class="msr" style="font-size:24px;color:#fff">directions_run</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Hoạt động</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#00D97A,#00A05F);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(0,160,95,.3)"><span class="msr" style="font-size:24px;color:#fff">menu_book</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Học tập</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#FF6B70,#E23A41);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(226,58,65,.3)"><span class="msr" style="font-size:24px;color:#fff">favorite</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Y tế</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#9D6BFF,#7434E8);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(116,52,232,.28)"><span class="msr" style="font-size:24px;color:#fff">workspace_premium</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Báo cáo</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#00D3E8,#00A6BE);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(0,166,190,.28)"><span class="msr" style="font-size:24px;color:#fff">photo_camera</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Dấu chân</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;opacity:.45"><span style="width:50px;height:50px;border-radius:16px;background:#E9ECF2;display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:24px;color:#8A94A6">smart_toy</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Trợ lý · sắp</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:#fff;border:1.5px solid #E4E9F0;display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:24px;color:#0A2A5E">apps</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Tất cả</span></div>
+      </div>
+      <div style="margin:11px 15px 0;background:linear-gradient(115deg,#FFC629,#FFDD66);border-radius:18px;padding:9px 14px;display:flex;align-items:center;gap:11px;position:relative;overflow:hidden;flex:none">
+        <div style="position:absolute;right:-26px;bottom:-42px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.35)"></div>
+        <div style="width:46px;height:60px;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:66.667% 0%;flex:none;position:relative"></div>
+        <div style="flex:1;position:relative"><div style="font-size:12.5px;font-weight:900;color:#0A2A5E">Báo cáo Trưởng thành tuần 42</div><div style="font-size:10.5px;color:#6B4A00;margin-top:2px">Xem tuần này mình lớn lên thế nào →</div></div>
+      </div>
+      <div style="margin:10px 15px 0;background:#fff;border-radius:18px;padding:10px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);flex:none">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12.5px;font-weight:900;color:#0A2A5E">Tuần này của mình</span><span style="font-size:10.5px;color:#8A94A6">tuần 42</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span class="msr" style="font-size:17px;color:#00A05F">menu_book</span><div style="flex:1"><div style="height:6px;border-radius:4px;background:#EEF1F6"><div style="width:60%;height:6px;border-radius:4px;background:linear-gradient(90deg,#00D97A,#00A05F)"></div></div></div><span style="font-size:11px;font-weight:900;color:#00A05F">3/5</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><span class="msr" style="font-size:17px;color:#E8940D">record_voice_over</span><div style="flex:1"><div style="height:6px;border-radius:4px;background:#EEF1F6"><div style="width:35%;height:6px;border-radius:4px;background:linear-gradient(90deg,#FFC833,#E8940D)"></div></div></div><span style="font-size:11px;font-weight:900;color:#E8940D">Đang lớn</span></div>
+      </div>
+    </div>
+    <div style="background:#fff;border-top:1px solid #E9ECF2;display:flex;justify-content:space-between;padding:9px 16px 10px;align-items:flex-end;box-shadow:0 -5px 18px rgba(10,42,94,.06);flex:none">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#0A2A5E">home</span><span style="font-size:9.5px;font-weight:900;color:#0A2A5E">Trang chủ</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">directions_run</span><span style="font-size:9.5px;color:#AEB7C4">Hoạt động</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:62px;margin-top:-28px"><span style="width:52px;height:52px;border-radius:50%;background:linear-gradient(150deg,#FFC629,#F5A300);border:4px solid #fff;box-shadow:0 8px 18px rgba(232,148,13,.42);display:flex;align-items:center;justify-content:center;animation:pulseDot 2.6s ease-out infinite"><span class="msr" style="font-size:25px;color:#0A2A5E">sentiment_satisfied</span></span><span style="font-size:9.5px;font-weight:900;color:#E8940D">Check-in</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">workspace_premium</span><span style="font-size:9.5px;color:#AEB7C4">Báo cáo</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">person</span><span style="font-size:9.5px;color:#AEB7C4">Hồ sơ</span></div>
+    </div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:6px auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> theme-color navy cho thanh Safari · thẻ check-in trồi lên 240ms khi load · nút «Check-in ngay» và nút tròn tab bar cùng mở màn M4 · vòng vàng lan 2.6s · sau khi gửi, thẻ lật thành «Đã check-in: Vui 😊 lúc 07:38» (flip 300ms) · icon mini app nhấn scale .94 bật lại · progress bar chạy từ 0 (700ms).</div>
+</div>
+
+<div id="m4pick" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M4 · CHECK-IN — CHỌN CẢM XÚC (mở từ nút Check-in)</div>
+<div data-screen-label="M4 Chọn cảm xúc" style="width:390px;height:844px;background:#fff;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>7:36</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com/checkin</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);padding:14px 20px 16px;display:flex;align-items:center;gap:12px;flex:none">
+      <span class="msr" style="font-size:22px;color:#fff">arrow_back</span>
+      <div style="flex:1"><div style="font-size:16px;font-weight:900;color:#fff">Check-in cảm xúc</div><div style="font-size:11px;color:#D6E6FF">Thứ Tư 23/07 · 07:36 · trước 8:00</div></div>
+      <div style="width:36px;height:54px;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:0% 0%;flex:none"></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;padding:20px 22px 0">
+      <div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#0F172A">Hôm nay Minh thấy thế nào?</div><div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px"><span class="msr" style="font-size:13px;color:#8A94A6">lock</span><span style="font-size:12px;color:#6B7789">Chỉ thầy cô chủ nhiệm thấy</span></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px">
+        <div style="height:148px;border-radius:20px;background:linear-gradient(160deg,#00D97A,#00A85E);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 18px rgba(0,168,94,.32);cursor:pointer"><span class="msr" style="font-size:44px;color:#fff">sentiment_very_satisfied</span><span style="font-size:14px;font-weight:900;color:#fff">Vui</span></div>
+        <div style="height:148px;border-radius:20px;background:linear-gradient(160deg,#4E9BFF,#2C7BF2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 18px rgba(44,123,242,.32);cursor:pointer"><span class="msr" style="font-size:44px;color:#fff">sentiment_neutral</span><span style="font-size:14px;font-weight:900;color:#fff">Bình thường</span></div>
+        <div style="height:148px;border-radius:20px;background:linear-gradient(160deg,#FFC833,#F5A300);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 18px rgba(245,163,0,.32);cursor:pointer"><span class="msr" style="font-size:44px;color:#6B4A00">sentiment_dissatisfied</span><span style="font-size:14px;font-weight:900;color:#6B4A00">Mệt</span></div>
+        <div style="height:148px;border-radius:20px;background:linear-gradient(160deg,#FF7A7F,#F0474D);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 18px rgba(240,71,77,.32);cursor:pointer"><span class="msr" style="font-size:44px;color:#fff">sentiment_sad</span><span style="font-size:14px;font-weight:900;color:#fff">Buồn</span></div>
+      </div>
+      <button style="margin-top:16px;border:1.6px solid #FFC629;border-radius:14px;padding:12px;background:#FFFBEE;color:#8A5A00;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><span class="msr" style="font-size:18px;color:#E8940D">waving_hand</span>Mình cần gặp thầy cô</button>
+      <div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-top:11px"><span class="msr" style="font-size:14px;color:#AEB7C4">cloud_off</span><span style="font-size:10.5px;color:#9AA5B5">Offline vẫn lưu — tự gửi sau.</span></div>
+      <div style="margin-top:auto;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:5px"><span class="msr" style="font-size:15px;color:#F58F00">local_fire_department</span><span style="font-size:11px;font-weight:800;color:#6B7789">11 ngày liên tiếp</span></div>
+    </div>
+  </div>
+  <div style="background:#F6F7F9;border-top:1px solid #DFE3EA;display:flex;justify-content:space-between;align-items:center;padding:11px 30px 6px;flex:none"><span class="msr" style="font-size:21px;color:#0A2A5E">arrow_back_ios_new</span><span class="msr" style="font-size:21px;color:#B6BECB">arrow_forward_ios</span><span class="msr" style="font-size:21px;color:#0A2A5E">ios_share</span><span class="msr" style="font-size:21px;color:#0A2A5E">book</span><span class="msr" style="font-size:21px;color:#0A2A5E">tab</span></div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:0 auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> chạm ô: scale .95 + viền trắng 3px + tick góc phải trên, rung nhẹ (haptic) · tự sang màn M5 sau 350ms · 4 màu mood thống nhất bản giấy của trường · offline vẫn chọn được (vào hàng đợi gửi).</div>
+</div>
+
+<div id="m4" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M5 · CHECK-IN THÀNH CÔNG — mascot ăn mừng</div>
+<div data-screen-label="M5 Check-in xong" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>7:38</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_off</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com/checkin</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;background:#fff;position:relative;overflow:hidden">
+    <span style="position:absolute;top:110px;left:70px;width:9px;height:14px;background:#FFC629;border-radius:2px;animation:confetti 2.8s linear infinite"></span>
+    <span style="position:absolute;top:100px;left:150px;width:8px;height:8px;background:#00D97A;border-radius:50%;animation:confetti 3.3s .4s linear infinite"></span>
+    <span style="position:absolute;top:96px;right:120px;width:9px;height:13px;background:#2C7BF2;border-radius:2px;animation:confetti 3s .8s linear infinite"></span>
+    <span style="position:absolute;top:112px;right:64px;width:8px;height:8px;background:#FF6B70;border-radius:50%;animation:confetti 2.6s .2s linear infinite"></span>
+    <span style="position:absolute;top:90px;left:44%;width:9px;height:13px;background:#9D6BFF;border-radius:2px;animation:confetti 3.5s .6s linear infinite"></span>
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);padding:14px 20px 20px;display:flex;align-items:center;gap:12px;flex:none">
+      <span class="msr" style="font-size:22px;color:#fff">arrow_back</span>
+      <div style="flex:1"><div style="font-size:16px;font-weight:900;color:#fff">Check-in buổi sáng</div><div style="font-size:11px;color:#D6E6FF">Thứ Tư 23/07 · 07:38</div></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:34px 26px 0;text-align:center">
+      <div style="width:150px;aspect-ratio:.67;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:0% 100%;animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both"></div>
+      <div style="font-size:21px;font-weight:900;color:#0F172A;margin-top:14px">Tuyệt vời, Minh! 🎉</div>
+      <div style="font-size:13px;color:#6B7789;margin-top:6px;line-height:1.6">Hôm nay bạn thấy <b style="color:#00A05F">Vui</b>.<br>Check-in đã ghi lúc <b>07:38</b> — trước 8:00.</div>
+      <div style="margin-top:16px;background:#FFF7E0;border:1.5px solid #FFE29A;border-radius:14px;padding:11px 15px;display:flex;align-items:center;gap:9px;max-width:300px"><span class="msr" style="font-size:18px;color:#E8940D">cloud_off</span><span style="font-size:11.5px;color:#8A5A00;font-weight:700;text-align:left;line-height:1.5">Mất mạng — đã lưu, sẽ tự gửi.</span></div>
+      <div style="display:flex;gap:9px;margin-top:20px;width:100%;max-width:320px">
+        <button style="flex:1;border:none;border-radius:14px;padding:13px;background:linear-gradient(120deg,#0A2A5E,#1E5FB8);color:#fff;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 8px 20px rgba(10,42,94,.28)">Về trang chủ</button>
+        <button style="border:1.6px solid #FFC629;border-radius:14px;padding:13px 16px;background:#FFFBEE;color:#8A5A00;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer">Gặp thầy cô</button>
+      </div>
+      <div style="margin-top:auto;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:5px"><span class="msr" style="font-size:15px;color:#F58F00">local_fire_department</span><span style="font-size:11px;font-weight:800;color:#6B7789">12 ngày liên tiếp</span></div>
+    </div>
+  </div>
+  <div style="background:#F6F7F9;border-top:1px solid #DFE3EA;display:flex;justify-content:space-between;align-items:center;padding:11px 30px 6px;flex:none"><span class="msr" style="font-size:21px;color:#0A2A5E">arrow_back_ios_new</span><span class="msr" style="font-size:21px;color:#B6BECB">arrow_forward_ios</span><span class="msr" style="font-size:21px;color:#0A2A5E">ios_share</span><span class="msr" style="font-size:21px;color:#0A2A5E">book</span><span class="msr" style="font-size:21px;color:#0A2A5E">tab</span></div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:0 auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> mascot popIn nảy 500ms · confetti 5 mảnh rơi lặp (2.6–3.5s, lệch pha) · banner offline chỉ hiện khi <code>navigator.onLine=false</code> · chuỗi ngày 🔥 đếm lên từng số.</div>
+</div>
+
+<div id="m6open" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M6 · MỞ MINI APP — màn chuyển tiếp</div>
+<div data-screen-label="M6 Mở mini app" style="width:390px;height:844px;background:#fff;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#F6F7F9;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#0F172A"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #0F172A;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:#8A94A6">chevron_left</span><div style="flex:1;background:#E8EAEE;border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#5B6478">lock</span><span style="font-size:12.5px;color:#3A4356;font-weight:600">hub.truongvietanh.com/mini/hoc-tap</span></div><span class="msr" style="font-size:18px;color:#8A94A6">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;position:relative">
+    <div style="display:flex;justify-content:flex-end;padding:12px 16px 0"><span style="display:flex;align-items:center;background:#fff;border:1px solid #E4E9F0;border-radius:99px;padding:4px 2px;box-shadow:0 2px 8px rgba(10,42,94,.08)"><span class="msr" style="font-size:16px;color:#4E5F78;padding:0 8px">more_horiz</span><span style="width:1px;height:14px;background:#E4E9F0"></span><span class="msr" style="font-size:15px;color:#4E5F78;padding:0 8px">close</span></span></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;margin-top:-40px">
+      <div style="width:88px;height:88px;border-radius:26px;background:linear-gradient(150deg,#00D97A,#00A05F);display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,160,95,.3);animation:floaty 3.5s ease-in-out infinite"><span class="msr" style="font-size:42px;color:#fff">menu_book</span></div>
+      <div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#0F172A">Học tập</div><div style="font-size:11px;color:#8A94A6;margin-top:3px;font-weight:600">Mini app · Trường Việt Anh</div></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#00A05F;animation:floaty 1s ease-in-out infinite"></span><span style="width:8px;height:8px;border-radius:50%;background:#00A05F;opacity:.6;animation:floaty 1s .15s ease-in-out infinite"></span><span style="width:8px;height:8px;border-radius:50%;background:#00A05F;opacity:.3;animation:floaty 1s .3s ease-in-out infinite"></span></div>
+    </div>
+    <div style="text-align:center;font-size:10px;color:#B6BECB;padding-bottom:14px">Chạy trong Hub · dữ liệu theo tài khoản Google nội bộ</div>
+  </div>
+  <div style="background:#F6F7F9;border-top:1px solid #DFE3EA;display:flex;justify-content:space-between;align-items:center;padding:11px 30px 6px;flex:none"><span class="msr" style="font-size:21px;color:#0A2A5E">arrow_back_ios_new</span><span class="msr" style="font-size:21px;color:#B6BECB">arrow_forward_ios</span><span class="msr" style="font-size:21px;color:#0A2A5E">ios_share</span><span class="msr" style="font-size:21px;color:#0A2A5E">book</span><span class="msr" style="font-size:21px;color:#0A2A5E">tab</span></div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:0 auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> Hub thu nhỏ scale .96 + mờ dần, mini app trượt từ đáy lên 320ms · 3 chấm nhún lệch pha · capsule ⋯/✕ luôn nổi (⋯ = về Hub, chia sẻ, báo lỗi · ✕ = đóng mini app).</div>
+</div>
+
+<div id="m7tutor" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M7 · TRONG MINI APP HỌC TẬP — shell riêng, không còn tab bar Hub</div>
+<div data-screen-label="M7 Mini app Học tập" style="width:390px;height:844px;background:#F5F8F5;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#F6F7F9;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#0F172A"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #0F172A;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:#8A94A6">chevron_left</span><div style="flex:1;background:#E8EAEE;border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#5B6478">lock</span><span style="font-size:12.5px;color:#3A4356;font-weight:600">hub.truongvietanh.com/mini/hoc-tap</span></div><span class="msr" style="font-size:18px;color:#8A94A6">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:#fff;border-bottom:1px solid #E9EEE9;display:flex;align-items:center;gap:10px;padding:10px 14px;flex:none">
+      <span style="width:34px;height:34px;border-radius:11px;background:linear-gradient(150deg,#00D97A,#00A05F);display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:19px;color:#fff">menu_book</span></span>
+      <div style="flex:1"><div style="font-size:15px;font-weight:900;color:#0F172A">Học tập</div><div style="font-size:9.5px;color:#8A94A6;font-weight:700">MINI APP</div></div>
+      <span style="display:flex;align-items:center;background:#fff;border:1px solid #E4E9F0;border-radius:99px;padding:4px 2px"><span class="msr" style="font-size:16px;color:#4E5F78;padding:0 8px">more_horiz</span><span style="width:1px;height:14px;background:#E4E9F0"></span><span class="msr" style="font-size:15px;color:#4E5F78;padding:0 8px">close</span></span>
+    </div>
+    <div style="background:linear-gradient(150deg,#00A05F,#00C96F);padding:16px 18px 20px;display:flex;align-items:center;gap:14px;flex:none">
+      <div style="position:relative;width:74px;height:74px;flex:none">
+        <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(#fff 0 216deg,rgba(255,255,255,.25) 216deg 360deg)"></div>
+        <div style="position:absolute;inset:7px;border-radius:50%;background:#00A05F;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:17px;font-weight:900;color:#fff">3/5</span><span style="font-size:8px;color:#BFF2D8;font-weight:800">BUỔI ĐỌC</span></div>
+      </div>
+      <div style="flex:1"><div style="font-size:15px;font-weight:900;color:#fff">Thử thách đọc sách</div><div style="font-size:11px;color:#BFF2D8;margin-top:2px">Còn 2 buổi tuần này</div><button style="margin-top:8px;border:none;border-radius:99px;padding:8px 14px;background:#fff;color:#00804C;font-family:inherit;font-size:11.5px;font-weight:900;cursor:pointer">Đọc 20 phút hôm nay</button></div>
+      <div style="width:46px;height:69px;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:100% 0%;flex:none"></div>
+    </div>
+    <div style="padding:16px 18px 8px;display:flex;justify-content:space-between;align-items:baseline;flex:none"><span style="font-size:13.5px;font-weight:900;color:#0F172A">Bài tập hôm nay</span><span style="font-size:10.5px;font-weight:800;color:#00804C">Từ Moodle</span></div>
+    <div style="margin:0 14px;display:flex;flex-direction:column;gap:9px;flex:none">
+      <div style="background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 3px 10px rgba(15,40,20,.06);display:flex;gap:12px;align-items:center">
+        <span style="width:40px;height:40px;border-radius:13px;background:#EAF0F8;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:21px;color:#2C7BF2">calculate</span></span>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:900;color:#0F172A">Toán — Bài 12: Phân số</div><div style="font-size:10.5px;color:#8A94A6;margin-top:2px">Nộp trước 15:00 hôm nay</div></div>
+        <span style="font-size:9px;font-weight:900;color:#D2383E;background:#FFF0F0;border-radius:99px;padding:3px 8px;flex:none">CHƯA NỘP</span>
+      </div>
+      <div style="background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 3px 10px rgba(15,40,20,.06);display:flex;gap:12px;align-items:center">
+        <span style="width:40px;height:40px;border-radius:13px;background:#F0E9FD;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:21px;color:#7434E8">translate</span></span>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:900;color:#0F172A">Tiếng Anh — Quiz Unit 5</div><div style="font-size:10.5px;color:#8A94A6;margin-top:2px">Đã nộp 09:12</div></div>
+        <span class="msr" style="font-size:19px;color:#00A05F;flex:none">check_circle</span>
+      </div>
+      <div style="background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 3px 10px rgba(15,40,20,.06);display:flex;gap:12px;align-items:center">
+        <span style="width:40px;height:40px;border-radius:13px;background:#E3F8ED;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:21px;color:#00A05F">auto_stories</span></span>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:900;color:#0F172A">Đọc «Dế Mèn phiêu lưu ký»</div><div style="font-size:10.5px;color:#8A94A6;margin-top:2px">Chương 4 · 20 phút</div></div>
+        <span class="msr" style="font-size:18px;color:#C9D2DE;flex:none">chevron_right</span>
+      </div>
+    </div>
+    <div style="padding:16px 18px 8px;font-size:13.5px;font-weight:900;color:#0F172A;flex:none">Tuần này</div>
+    <div style="margin:0 14px;background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 3px 10px rgba(15,40,20,.06);display:flex;gap:8px;flex:none">
+      <div style="flex:1;text-align:center"><div style="font-size:18px;font-weight:900;color:#00A05F">7/9</div><div style="font-size:9.5px;color:#6B7789;font-weight:700">bài đã nộp</div></div>
+      <div style="width:1px;background:#EEF1F6"></div>
+      <div style="flex:1;text-align:center"><div style="font-size:18px;font-weight:900;color:#2C7BF2">2</div><div style="font-size:9.5px;color:#6B7789;font-weight:700">đến hạn hôm nay</div></div>
+      <div style="width:1px;background:#EEF1F6"></div>
+      <div style="flex:1;text-align:center"><div style="font-size:18px;font-weight:900;color:#F58F00">140′</div><div style="font-size:9.5px;color:#6B7789;font-weight:700">đọc sách</div></div>
+    </div>
+    <div style="margin-top:auto;padding:10px 40px 12px;flex:none">
+      <div style="background:#fff;border:1px solid #E9EEE9;border-radius:99px;display:flex;padding:5px;box-shadow:0 6px 18px rgba(15,40,20,.08)">
+        <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(150deg,#00C96F,#00A05F);border-radius:99px;padding:9px 0"><span class="msr" style="font-size:17px;color:#fff">assignment</span><span style="font-size:11px;font-weight:900;color:#fff">Bài tập</span></span>
+        <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 0"><span class="msr" style="font-size:17px;color:#8A94A6">emoji_events</span><span style="font-size:11px;font-weight:800;color:#8A94A6">Thử thách</span></span>
+        <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 0"><span class="msr" style="font-size:17px;color:#8A94A6">person</span><span style="font-size:11px;font-weight:800;color:#8A94A6">Của tôi</span></span>
+      </div>
+    </div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:0 auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> shell hoàn toàn riêng — theme xanh lá, tab pill nổi riêng của mini app, KHÔNG còn tab bar Hub · ring đọc sách vẽ 800ms · capsule ⋯/✕ cố định để thoát · thẻ bài tập vuốt trái để đánh dấu xong.</div>
+</div>
+
+<div id="m5" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M8 · MINI APP HOẠT ĐỘNG — shell riêng</div>
+<div data-screen-label="M8 Hoạt động" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com/hoat-dong</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:linear-gradient(155deg,#F58F00 0%,#FFB01F 100%);padding:14px 20px 46px;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-60px;right:-40px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.22)"></div>
+      <div style="display:flex;align-items:center;gap:12px;position:relative">
+        <span class="msr" style="font-size:22px;color:#fff">arrow_back</span>
+        <div style="flex:1"><div style="font-size:17px;font-weight:900;color:#fff">Hoạt động</div><div style="font-size:11px;color:#FFF1C9">Dấu chân của Minh · CLB & sự kiện</div></div>
+        <span style="display:flex;align-items:center;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:4px 2px;flex:none"><span class="msr" style="font-size:16px;color:#fff;padding:0 8px">more_horiz</span><span style="width:1px;height:14px;background:rgba(255,255,255,.45)"></span><span class="msr" style="font-size:15px;color:#fff;padding:0 8px">close</span></span>
+      </div>
+    </div>
+    <div style="height:30px;background:#F7F9FC;border-radius:100% 100% 0 0;margin-top:-30px;position:relative;flex:none"></div>
+    <div style="margin:-32px 15px 0;background:#fff;border-radius:18px;padding:13px 16px;box-shadow:0 10px 26px rgba(10,42,94,.12);display:flex;gap:10px;position:relative;z-index:2;flex:none">
+      <div style="flex:1;text-align:center"><div style="font-size:20px;font-weight:900;color:#F58F00">14</div><div style="font-size:10px;color:#6B7789;font-weight:700">hoạt động kỳ này</div></div>
+      <div style="width:1px;background:#EEF1F6"></div>
+      <div style="flex:1;text-align:center"><div style="font-size:20px;font-weight:900;color:#00A05F">2</div><div style="font-size:10px;color:#6B7789;font-weight:700">CLB đang theo</div></div>
+      <div style="width:1px;background:#EEF1F6"></div>
+      <div style="flex:1;text-align:center"><div style="font-size:20px;font-weight:900;color:#2C7BF2">86%</div><div style="font-size:10px;color:#6B7789;font-weight:700">chuyên cần CLB</div></div>
+    </div>
+    <div style="padding:16px 20px 8px;font-size:13.5px;font-weight:900;color:#0A2A5E;flex:none">Tuần này</div>
+    <div style="margin:0 15px;display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 3px 12px rgba(10,42,94,.07)">
+        <div style="height:120px;background:repeating-linear-gradient(45deg,#DCEDFC,#DCEDFC 10px,#E9F3FD 10px,#E9F3FD 20px);display:flex;align-items:center;justify-content:center;position:relative"><span style="font:10.5px ui-monospace,monospace;color:#6C93C0">ảnh buổi tập CLB bơi (2)</span><span style="position:absolute;bottom:8px;right:10px;background:rgba(10,42,94,.75);color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:3px 9px">+1 ảnh</span></div>
+        <div style="padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:900;color:#0A2A5E">CLB bơi — buổi tập chiều</span><span style="font-size:10px;font-weight:800;color:#00A05F;background:#E3F8ED;border-radius:99px;padding:3px 8px">CÓ MẶT ✓</span></div>
+          <div style="font-size:11px;color:#6B7789;margin-top:3px">Hôm qua 16:00 · hồ bơi cơ sở 1 · HLV Tuấn</div>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);display:flex;gap:12px;align-items:center">
+        <span style="width:40px;height:40px;border-radius:13px;background:linear-gradient(150deg,#00D97A,#00A05F);display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:20px;color:#fff">emoji_events</span></span>
+        <div style="flex:1"><div style="font-size:12.5px;font-weight:900;color:#0A2A5E">Ngày hội thể thao — đã đăng ký</div><div style="font-size:10.5px;color:#6B7789;margin-top:2px">Thứ Sáu 01/08 · sân cơ sở 1 · môn: bơi 50m</div></div>
+        <span class="msr" style="font-size:18px;color:#AEB7C4">chevron_right</span>
+      </div>
+      <div style="background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);display:flex;gap:12px;align-items:center">
+        <span style="width:40px;height:40px;border-radius:13px;background:linear-gradient(150deg,#9D6BFF,#7434E8);display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:20px;color:#fff">theater_comedy</span></span>
+        <div style="flex:1"><div style="font-size:12.5px;font-weight:900;color:#0A2A5E">CLB kịch — mở đăng ký học kỳ mới</div><div style="font-size:10.5px;color:#6B7789;margin-top:2px">Thứ Ba & Năm · 15:45 · phòng đa năng</div></div>
+        <button style="border:none;border-radius:99px;padding:8px 13px;background:linear-gradient(150deg,#FFC629,#F5A300);color:#0A2A5E;font-family:inherit;font-size:11px;font-weight:900;cursor:pointer;flex:none">Đăng ký</button>
+      </div>
+    </div>
+    <div style="padding:16px 20px 8px;font-size:13.5px;font-weight:900;color:#0A2A5E;flex:none">Dấu chân gần đây</div>
+    <div style="margin:0 15px;background:#fff;border-radius:18px;padding:4px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);flex:none">
+      <div style="display:flex;gap:11px;align-items:center;padding:10px 0;border-bottom:1px solid #F1F4F8"><span style="width:8px;height:8px;border-radius:50%;background:#00D97A;flex:none"></span><span style="font-size:11.5px;color:#2A3444;flex:1">Hoàn thành thử thách đọc sách buổi 3/5</span><span style="font-size:10px;color:#9AA5B5">T2</span></div>
+      <div style="display:flex;gap:11px;align-items:center;padding:10px 0"><span style="width:8px;height:8px;border-radius:50%;background:#FFB01F;flex:none"></span><span style="font-size:11.5px;color:#2A3444;flex:1">Nhận huy hiệu «Bạn đồng hành» từ cô Thu</span><span style="font-size:10px;color:#9AA5B5">T6 tuần trước</span></div>
+    </div>
+    <div style="margin-top:auto"></div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:6px auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> shell riêng — header cam (mỗi mini app một màu chủ), capsule ⋯/✕ thoát về Hub, không còn tab bar Hub · thẻ ảnh mở lightbox vuốt ngang · huy hiệu lắc nhẹ khi mới nhận.</div>
+</div>
+
+<div id="m7att" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M9 · MINI APP ĐIỂM DANH — shell riêng</div>
+<div data-screen-label="M9 Điểm danh" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com/diem-danh</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:linear-gradient(155deg,#2C7BF2 0%,#0A4FBF 100%);padding:14px 20px 46px;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-60px;right:-40px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.16)"></div>
+      <div style="display:flex;align-items:center;gap:12px;position:relative">
+        <span class="msr" style="font-size:22px;color:#fff">arrow_back</span>
+        <div style="flex:1"><div style="font-size:17px;font-weight:900;color:#fff">Điểm danh</div><div style="font-size:11px;color:#D6E6FF">Minh · 6A1 · học kỳ I</div></div>
+        <span style="display:flex;align-items:center;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:4px 2px;flex:none"><span class="msr" style="font-size:16px;color:#fff;padding:0 8px">more_horiz</span><span style="width:1px;height:14px;background:rgba(255,255,255,.45)"></span><span class="msr" style="font-size:15px;color:#fff;padding:0 8px">close</span></span>
+      </div>
+    </div>
+    <div style="height:30px;background:#F7F9FC;border-radius:100% 100% 0 0;margin-top:-30px;position:relative;flex:none"></div>
+    <div style="margin:-32px 15px 0;background:#fff;border-radius:18px;padding:13px 16px;box-shadow:0 10px 26px rgba(10,42,94,.12);display:flex;gap:10px;position:relative;z-index:2;flex:none">
+      <div style="flex:1;text-align:center"><div style="font-size:20px;font-weight:900;color:#2C7BF2">98%</div><div style="font-size:10px;color:#6B7789;font-weight:700">chuyên cần kỳ này</div></div>
+      <div style="width:1px;background:#EEF1F6"></div>
+      <div style="flex:1;text-align:center"><div style="font-size:20px;font-weight:900;color:#00A05F">47/48</div><div style="font-size:10px;color:#6B7789;font-weight:700">ngày có mặt</div></div>
+      <div style="width:1px;background:#EEF1F6"></div>
+      <div style="flex:1;text-align:center"><div style="font-size:20px;font-weight:900;color:#E8940D">1</div><div style="font-size:10px;color:#6B7789;font-weight:700">muộn · đã xác nhận</div></div>
+    </div>
+    <div style="padding:16px 20px 8px;font-size:13.5px;font-weight:900;color:#0A2A5E;flex:none">Tuần này</div>
+    <div style="margin:0 15px;background:#fff;border-radius:18px;padding:14px;box-shadow:0 3px 12px rgba(10,42,94,.07);display:flex;gap:8px;flex:none">
+      <div style="flex:1;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font-size:10px;font-weight:800;color:#6B7789">T2</span><span style="width:34px;height:34px;border-radius:50%;background:#E3F8ED;display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:17px;color:#00A05F">check</span></span><span style="font-size:9.5px;color:#9AA5B5">07:48</span></div>
+      <div style="flex:1;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font-size:10px;font-weight:800;color:#6B7789">T3</span><span style="width:34px;height:34px;border-radius:50%;background:#E3F8ED;display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:17px;color:#00A05F">check</span></span><span style="font-size:9.5px;color:#9AA5B5">07:51</span></div>
+      <div style="flex:1;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font-size:10px;font-weight:800;color:#0A2A5E">T4</span><span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(150deg,#00D97A,#00A85E);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,168,94,.35)"><span class="msr" style="font-size:17px;color:#fff">check</span></span><span style="font-size:9.5px;font-weight:800;color:#00A05F">07:52</span></div>
+      <div style="flex:1;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font-size:10px;font-weight:800;color:#6B7789">T5</span><span style="width:34px;height:34px;border-radius:50%;border:1.6px dashed #C9D2DE"></span><span style="font-size:9.5px;color:#C9D2DE">—</span></div>
+      <div style="flex:1;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font-size:10px;font-weight:800;color:#6B7789">T6</span><span style="width:34px;height:34px;border-radius:50%;border:1.6px dashed #C9D2DE"></span><span style="font-size:9.5px;color:#C9D2DE">—</span></div>
+    </div>
+    <div style="padding:16px 20px 8px;font-size:13.5px;font-weight:900;color:#0A2A5E;flex:none">Gần đây</div>
+    <div style="margin:0 15px;background:#fff;border-radius:18px;padding:4px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);flex:none">
+      <div style="display:flex;gap:11px;align-items:center;padding:11px 0;border-bottom:1px solid #F1F4F8"><span style="width:9px;height:9px;border-radius:50%;background:#00D97A;flex:none"></span><span style="font-size:12px;color:#2A3444;flex:1;font-weight:700">Hôm nay — có mặt, check-in 07:52</span><span class="msr" style="font-size:16px;color:#00A05F">verified</span></div>
+      <div style="display:flex;gap:11px;align-items:center;padding:11px 0;border-bottom:1px solid #F1F4F8"><span style="width:9px;height:9px;border-radius:50%;background:#00D97A;flex:none"></span><span style="font-size:12px;color:#2A3444;flex:1;font-weight:700">Hôm qua — có mặt, check-in 07:48</span><span class="msr" style="font-size:16px;color:#00A05F">verified</span></div>
+      <div style="display:flex;gap:11px;align-items:center;padding:11px 0"><span style="width:9px;height:9px;border-radius:50%;background:#FFB01F;flex:none"></span><div style="flex:1"><div style="font-size:12px;color:#2A3444;font-weight:700">Thứ Sáu 18/07 — gửi muộn 08:12</div><div style="font-size:10.5px;color:#9AA5B5;margin-top:1px">Cô Thu xác nhận «đã điểm danh» — khác với vắng</div></div></div>
+    </div>
+    <div style="margin:12px 15px 0;background:#F0F7FF;border:1.5px solid #CFE4FB;border-radius:14px;padding:10px 13px;display:flex;gap:9px;align-items:flex-start;flex:none"><span class="msr" style="font-size:16px;color:#2C7BF2;flex:none;margin-top:1px">info</span><span style="font-size:10.5px;color:#1D4E8F;line-height:1.55;font-weight:600">Trước 8:00 = điểm danh · sau 8:00 chờ thầy cô xác nhận.</span></div>
+    <div style="margin-top:auto"></div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:6px auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> header xanh dương riêng của mini app · dot tuần popIn lệch 50ms, hôm nay có shadow đậm · % chuyên cần đếm từ 0 (600ms) · hàng «gửi muộn» màu vàng, không bao giờ hiển thị như «vắng».</div>
+</div>
+
+<div id="m6" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M10 · BÁO CÁO TRƯỞNG THÀNH — Glow & Grow</div>
+<div data-screen-label="M10 Báo cáo Trưởng thành" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com/bao-cao/42</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);padding:14px 20px 52px;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-64px;right:-44px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 36% 36%,rgba(255,198,41,.55),rgba(255,198,41,.06) 72%)"></div>
+      <div style="display:flex;align-items:center;gap:12px;position:relative">
+        <span class="msr" style="font-size:22px;color:#fff">arrow_back</span>
+        <div style="flex:1"><div style="font-size:17px;font-weight:900;color:#fff">Báo cáo Trưởng thành</div><div style="font-size:11px;color:#D6E6FF">Minh · lớp 6A1 · tuần 42 (21–25/07)</div></div>
+        <span class="msr" style="font-size:21px;color:#fff">ios_share</span>
+      </div>
+    </div>
+    <div style="height:30px;background:#F7F9FC;border-radius:100% 100% 0 0;margin-top:-30px;position:relative;flex:none"></div>
+    <div style="margin:-36px 15px 0;background:#fff;border-radius:20px;padding:16px;box-shadow:0 12px 30px rgba(10,42,94,.13);position:relative;z-index:2;display:flex;align-items:center;gap:13px;flex:none">
+      <div style="width:64px;aspect-ratio:.67;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:0% 100%;flex:none"></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:900;color:#0A2A5E">Một tuần rực rỡ!</div><div style="font-size:11.5px;color:#6B7789;margin-top:3px;line-height:1.55">3 tỏa sáng · 1 đang lớn lên</div></div>
+    </div>
+    <div style="padding:12px 20px 7px;display:flex;align-items:center;gap:8px;flex:none"><span class="msr" style="font-size:17px;color:#F5A300">sunny</span><span style="font-size:13.5px;font-weight:900;color:#0A2A5E">Tỏa sáng (Glow)</span></div>
+    <div style="margin:0 15px;display:flex;flex-direction:column;gap:8px;flex:none">
+      <div style="background:#fff;border-radius:16px;padding:10px 13px;box-shadow:0 3px 12px rgba(10,42,94,.07);border-left:4px solid #00D97A"><div style="font-size:12.5px;font-weight:900;color:#0A2A5E">Đi học đủ 5/5 ngày, check-in đúng giờ cả tuần</div><div style="font-size:11px;color:#6B7789;margin-top:2px">Điểm danh · chuỗi 12 ngày 🔥</div></div>
+      <div style="background:#fff;border-radius:16px;padding:10px 13px;box-shadow:0 3px 12px rgba(10,42,94,.07);border-left:4px solid #2C7BF2"><div style="font-size:12.5px;font-weight:900;color:#0A2A5E">CLB bơi đều đặn — HLV khen kỹ thuật thở</div><div style="font-size:11px;color:#6B7789;margin-top:2px">Hoạt động · 2 buổi/tuần</div></div>
+      <div style="background:#fff;border-radius:16px;padding:10px 13px;box-shadow:0 3px 12px rgba(10,42,94,.07);border-left:4px solid #FFB01F"><div style="font-size:12.5px;font-weight:900;color:#0A2A5E">Đọc sách 3/5 buổi — thích «Dế Mèn phiêu lưu ký»</div><div style="font-size:11px;color:#6B7789;margin-top:2px">Học tập · thử thách đọc sách</div></div>
+    </div>
+    <div style="padding:12px 20px 7px;display:flex;align-items:center;gap:8px;flex:none"><span class="msr" style="font-size:17px;color:#00A05F">psychiatry</span><span style="font-size:13.5px;font-weight:900;color:#0A2A5E">Đang lớn lên (Grow)</span></div>
+    <div style="margin:0 15px;background:#fff;border-radius:16px;padding:11px 13px;box-shadow:0 3px 12px rgba(10,42,94,.07);flex:none">
+      <div style="font-size:12.5px;font-weight:900;color:#0A2A5E">Kỹ năng thuyết trình</div>
+      <div style="font-size:11.5px;color:#4E5F78;margin-top:4px;line-height:1.55">Minh còn ngại nói trước đông người. Tuần này em đã thử nói trước nhóm 3 bạn — một bước tiến nhỏ nhưng quý.</div>
+      <div style="margin-top:8px;background:#F0F7FF;border-radius:12px;padding:9px 11px;display:flex;gap:9px"><span class="msr" style="font-size:17px;color:#2C7BF2;flex:none">tips_and_updates</span><span style="font-size:11px;color:#1D4E8F;line-height:1.5;font-weight:600">Cả nhà thử: mỗi tối nghe Minh kể lại một câu chuyện 5 phút — khen cụ thể một điểm em làm tốt.</span></div>
+    </div>
+    <button style="margin:11px 15px 0;border:none;border-radius:14px;padding:12px;background:linear-gradient(120deg,#FFC629,#F5A300);color:#0A2A5E;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 8px 20px rgba(245,163,0,.35);display:flex;align-items:center;justify-content:center;gap:8px;flex:none"><span class="msr" style="font-size:18px">share</span>Chia sẻ cho ông bà</button>
+    <div style="text-align:center;font-size:10.5px;color:#9AA5B5;margin-top:6px;flex:none">GVCN duyệt · gửi thứ Sáu qua Zalo OA · link chia sẻ hết hạn sau 7 ngày</div>
+    <div style="margin-top:auto;background:#fff;border-top:1px solid #E9ECF2;display:flex;justify-content:space-between;padding:9px 16px 10px;align-items:flex-end;flex:none">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">home</span><span style="font-size:9.5px;color:#AEB7C4">Trang chủ</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">directions_run</span><span style="font-size:9.5px;color:#AEB7C4">Hoạt động</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:62px;margin-top:-28px"><span style="width:52px;height:52px;border-radius:50%;background:linear-gradient(150deg,#FFC629,#F5A300);border:4px solid #fff;box-shadow:0 8px 18px rgba(232,148,13,.42);display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:25px;color:#0A2A5E">sentiment_satisfied</span></span><span style="font-size:9.5px;font-weight:900;color:#E8940D">Check-in</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#0A2A5E">workspace_premium</span><span style="font-size:9.5px;font-weight:900;color:#0A2A5E">Báo cáo</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">person</span><span style="font-size:9.5px;color:#AEB7C4">Hồ sơ</span></div>
+    </div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:6px auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> thẻ Glow trượt vào lần lượt (stagger 60ms) · mascot celebrate ở thẻ tổng quan · nút chia sẻ tạo link ký tên có hạn 7 ngày · ngôn ngữ 100% Glow & Grow, không có «cờ/ngưỡng/nguy cơ».</div>
+</div>
+
+<div id="m7" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M11 · TRANG CHỦ PHỤ HUYNH</div>
+<div data-screen-label="M11 Trang chủ PH" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>20:15</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);padding-bottom:56px;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-72px;right:-44px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 36% 36%,rgba(255,198,41,.55),rgba(255,198,41,.06) 72%)"></div>
+      <div style="padding:12px 18px 0;display:flex;align-items:center;gap:11px;position:relative">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(150deg,#FFC629,#F5A300);color:#0A2A5E;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px">H</div>
+        <div style="flex:1"><div style="font-size:17px;font-weight:900;color:#fff">Chào chị Hà</div><div style="font-size:11.5px;color:#D6E6FF;margin-top:1px">Phụ huynh em Minh · 6A1 · CS Gò Vấp</div></div>
+        <button style="border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.14);border-radius:99px;padding:6px 12px;font-family:inherit;font-size:11px;font-weight:800;color:#fff;cursor:pointer">Đổi con ▾</button>
+      </div>
+      <div style="margin:12px 18px 0;display:flex;gap:8px;position:relative">
+        <div style="flex:1;background:rgba(255,255,255,.16);border-radius:14px;padding:9px 6px;text-align:center"><div style="font-size:16px;font-weight:900;color:#fff">07:52</div><div style="font-size:9.5px;color:#D6E6FF;font-weight:700">đến trường ✓</div></div>
+        <div style="flex:1;background:rgba(255,255,255,.16);border-radius:14px;padding:9px 6px;text-align:center"><div style="font-size:16px;font-weight:900;color:#FFC629">5/5</div><div style="font-size:9.5px;color:#D6E6FF;font-weight:700">ngày tuần này</div></div>
+        <div style="flex:1;background:rgba(255,255,255,.16);border-radius:14px;padding:9px 6px;text-align:center"><div style="font-size:16px;font-weight:900;color:#fff">😊</div><div style="font-size:9.5px;color:#D6E6FF;font-weight:700">sáng nay vui</div></div>
+      </div>
+    </div>
+    <div style="height:32px;background:#F7F9FC;border-radius:100% 100% 0 0;margin-top:-32px;position:relative;flex:none"></div>
+    <div style="margin:-50px 15px 0;background:linear-gradient(115deg,#FFC629,#FFDD66);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;position:relative;z-index:2;overflow:hidden;flex:none">
+      <div style="position:absolute;right:-26px;bottom:-42px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.35)"></div>
+      <div style="width:42px;height:63px;background:url('uploads/mascot-sheet.png') no-repeat;background-size:400% 200%;background-position:100% 0%;flex:none;position:relative"></div>
+      <div style="flex:1;position:relative"><div style="font-size:13px;font-weight:900;color:#0A2A5E">Báo cáo Trưởng thành tuần 42 đã có</div><div style="font-size:11px;color:#6B4A00;margin-top:2px">3 tỏa sáng · 1 đang lớn · 2 phút →</div></div>
+      <span style="position:relative;min-width:16px;height:16px;border-radius:99px;background:#0A2A5E;color:#FFC629;font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center">1</span>
+    </div>
+    <div style="padding:16px 20px 8px;font-size:13.5px;font-weight:900;color:#0A2A5E;flex:none">Dịch vụ</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;padding:0 15px;flex:none">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#2C7BF2,#0A4FBF);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(10,79,191,.3)"><span class="msr" style="font-size:24px;color:#fff">fact_check</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Điểm danh</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#9D6BFF,#7434E8);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(116,52,232,.28)"><span class="msr" style="font-size:24px;color:#fff">workspace_premium</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Báo cáo</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#FFB01F,#F58F00);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(245,143,0,.32)"><span class="msr" style="font-size:24px;color:#fff">photo_library</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Hoạt động</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#FF6B70,#E23A41);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(226,58,65,.3)"><span class="msr" style="font-size:24px;color:#fff">favorite</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Y tế</span></div>
+    </div>
+    <div style="padding:16px 20px 8px;font-size:13.5px;font-weight:900;color:#0A2A5E;flex:none">Hôm nay của Minh</div>
+    <div style="margin:0 15px;display:flex;flex-direction:column;gap:9px;flex:none">
+      <div style="background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);display:flex;gap:11px;align-items:center"><span style="width:38px;height:38px;border-radius:12px;background:#E3F8ED;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:19px;color:#00A05F">event_available</span></span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#0A2A5E">Đã đến trường lúc 07:52</div><div style="font-size:10.5px;color:#9AA5B5;margin-top:1px">Sáng nay · điểm danh tự động</div></div></div>
+      <div style="background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);display:flex;gap:11px;align-items:center"><span style="width:38px;height:38px;border-radius:12px;background:#FFF1C9;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:19px;color:#E8940D">photo_library</span></span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#0A2A5E">CLB bơi — 2 ảnh buổi tập mới</div><div style="font-size:10.5px;color:#9AA5B5;margin-top:1px">Hôm qua 16:40</div></div><span class="msr" style="font-size:18px;color:#AEB7C4">chevron_right</span></div>
+      <div style="background:#F0F7FF;border:1.5px solid #CFE4FB;border-radius:16px;padding:11px 14px;display:flex;gap:10px;align-items:center"><span class="msr" style="font-size:18px;color:#2C7BF2;flex:none">chat</span><span style="font-size:11px;color:#1D4E8F;line-height:1.5;font-weight:600">Nhắc quan trọng gửi qua <b>Zalo OA của trường</b>.</span></div>
+    </div>
+    <div style="margin-top:auto;background:#fff;border-top:1px solid #E9ECF2;display:flex;justify-content:space-around;padding:9px 0 10px;flex:none">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#0A2A5E">home</span><span style="font-size:9.5px;font-weight:900;color:#0A2A5E">Trang chủ</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#AEB7C4">workspace_premium</span><span style="font-size:9.5px;color:#AEB7C4">Báo cáo</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#AEB7C4">photo_library</span><span style="font-size:9.5px;color:#AEB7C4">Hoạt động</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#AEB7C4">person</span><span style="font-size:9.5px;color:#AEB7C4">Hồ sơ</span></div>
+    </div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:6px auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> 3 ô trạng thái đầu ngày lật số khi mở (counter 400ms) · banner báo cáo: mascot đọc sách + badge chưa đọc · không có nút check-in (PH không check-in hộ con) · tab bar 4 mục.</div>
+</div>
+
+<div id="m10" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M12 · HỒ SƠ HỌC SINH</div>
+<div data-screen-label="M12 Hồ sơ" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com/ho-so</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);padding:14px 20px 54px;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-64px;right:-44px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle at 36% 36%,rgba(255,198,41,.5),rgba(255,198,41,.06) 72%)"></div>
+      <div style="display:flex;align-items:center;gap:12px;position:relative"><div style="font-size:17px;font-weight:900;color:#fff;flex:1">Hồ sơ của mình</div><span class="msr" style="font-size:21px;color:#fff">settings</span></div>
+    </div>
+    <div style="height:30px;background:#F7F9FC;border-radius:100% 100% 0 0;margin-top:-30px;position:relative;flex:none"></div>
+    <div style="margin:-42px 15px 0;background:#fff;border-radius:20px;padding:16px;box-shadow:0 12px 30px rgba(10,42,94,.13);position:relative;z-index:2;flex:none">
+      <div style="display:flex;align-items:center;gap:13px">
+        <div style="width:62px;height:62px;border-radius:50%;background:linear-gradient(150deg,#FFC629,#F5A300);color:#0A2A5E;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:23px;box-shadow:0 6px 14px rgba(232,148,13,.32)">M</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:16px;font-weight:900;color:#0F172A">Nguyễn Nhật Minh</div>
+          <div style="font-size:11.5px;color:#6B7789;margin-top:2px">Lớp 6A1 · CS Gò Vấp · VA-2026-00417</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span class="msr" style="font-size:14px;color:#9AA5B5">mail</span><span style="font-size:11px;color:#3A4356;font-weight:700">minh.nguyen@vietanh.edu.vn</span><span style="font-size:9px;font-weight:900;color:#00915B;background:#E3F8ED;border-radius:99px;padding:2px 7px">SSO</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:14px">
+        <div style="flex:1;background:#FFF7E0;border-radius:14px;padding:10px 6px;text-align:center"><div style="display:flex;align-items:center;justify-content:center;gap:3px"><span class="msr" style="font-size:16px;color:#F58F00">local_fire_department</span><span style="font-size:16px;font-weight:900;color:#E8940D">12</span></div><div style="font-size:9.5px;color:#8A5A00;font-weight:700;margin-top:2px">chuỗi check-in</div></div>
+        <div style="flex:1;background:#F0F7FF;border-radius:14px;padding:10px 6px;text-align:center"><div style="display:flex;align-items:center;justify-content:center;gap:3px"><span class="msr" style="font-size:16px;color:#2C7BF2">military_tech</span><span style="font-size:16px;font-weight:900;color:#2C7BF2">3</span></div><div style="font-size:9.5px;color:#1D4E8F;font-weight:700;margin-top:2px">huy hiệu</div></div>
+        <div style="flex:1;background:#E3F8ED;border-radius:14px;padding:10px 6px;text-align:center"><div style="display:flex;align-items:center;justify-content:center;gap:3px"><span class="msr" style="font-size:16px;color:#00A05F">menu_book</span><span style="font-size:16px;font-weight:900;color:#00A05F">3/5</span></div><div style="font-size:9.5px;color:#00693F;font-weight:700;margin-top:2px">đọc sách tuần</div></div>
+      </div>
+    </div>
+    <div style="padding:16px 20px 8px;font-size:13.5px;font-weight:900;color:#0A2A5E;flex:none">Tài khoản</div>
+    <div style="margin:0 15px;background:#fff;border-radius:18px;padding:4px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);flex:none">
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #F1F4F8"><span style="width:36px;height:36px;border-radius:12px;background:#F0F7FF;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:19px;color:#2C7BF2">verified_user</span></span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#0F172A">Đăng nhập Google nội bộ</div><div style="font-size:10.5px;color:#9AA5B5">Không dùng mật khẩu riêng</div></div><span style="font-size:9px;font-weight:900;color:#00915B;background:#E3F8ED;border-radius:99px;padding:3px 8px">ĐANG DÙNG</span></div>
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #F1F4F8"><span style="width:36px;height:36px;border-radius:12px;background:#FFF7E0;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:19px;color:#E8940D">devices</span></span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#0F172A">Thiết bị &amp; phiên đăng nhập</div><div style="font-size:10.5px;color:#9AA5B5">iPad lớp học · điện thoại của mẹ</div></div><span class="msr" style="font-size:18px;color:#C9D2DE">chevron_right</span></div>
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #F1F4F8"><span style="width:36px;height:36px;border-radius:12px;background:#F0E9FD;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:19px;color:#7434E8">shield_person</span></span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#0F172A">Ai thấy gì của mình?</div><div style="font-size:10.5px;color:#9AA5B5">Cảm xúc chỉ GVCN thấy · bạn bè không thấy</div></div><span class="msr" style="font-size:18px;color:#C9D2DE">chevron_right</span></div>
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 0"><span style="width:36px;height:36px;border-radius:12px;background:#E3F8ED;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:19px;color:#00A05F">support_agent</span></span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#0F172A">Trợ giúp &amp; liên hệ GVCN</div><div style="font-size:10.5px;color:#9AA5B5">Cô Thu · phản hồi trong ngày</div></div><span class="msr" style="font-size:18px;color:#C9D2DE">chevron_right</span></div>
+    </div>
+    <button style="margin:14px 15px 0;border:1.5px solid #FFD5D6;border-radius:14px;padding:12px;background:#FFF5F5;color:#D2383E;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;flex:none">Đăng xuất</button>
+    <div style="text-align:center;font-size:10px;color:#B6BECB;margin-top:8px;flex:none">School Hub v1.0 · Trường Việt Anh</div>
+    <div style="margin-top:auto;background:#fff;border-top:1px solid #E9ECF2;display:flex;justify-content:space-between;padding:9px 16px 10px;align-items:flex-end;flex:none">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">home</span><span style="font-size:9.5px;color:#AEB7C4">Trang chủ</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">directions_run</span><span style="font-size:9.5px;color:#AEB7C4">Hoạt động</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:62px;margin-top:-28px"><span style="width:52px;height:52px;border-radius:50%;background:linear-gradient(150deg,#FFC629,#F5A300);border:4px solid #fff;box-shadow:0 8px 18px rgba(232,148,13,.42);display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:25px;color:#0A2A5E">sentiment_satisfied</span></span><span style="font-size:9.5px;font-weight:900;color:#E8940D">Check-in</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#AEB7C4">workspace_premium</span><span style="font-size:9.5px;color:#AEB7C4">Báo cáo</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:58px"><span class="msr" style="font-size:22px;color:#0A2A5E">person</span><span style="font-size:9.5px;font-weight:900;color:#0A2A5E">Hồ sơ</span></div>
+    </div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:6px auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> thẻ hồ sơ trồi lên 240ms · 3 ô thành tích popIn lệch 60ms · hàng cài đặt nhấn: nền #F7F9FC · «Đăng xuất» hỏi xác nhận 2 bước · mục «Ai thấy gì của mình?» nói thẳng quyền riêng tư với học sinh.</div>
+</div>
+
+<div id="m13" style="display:flex;flex-direction:column;gap:9px;width:390px">
+<div style="font:700 11px ui-monospace,Menlo,monospace;color:#4E5F78">M13 · TRANG CHỦ — GIÁO VIÊN trên mobile (cùng giao diện, lưới app theo quyền)</div>
+<div data-screen-label="M13 Trang chủ GV mobile" style="width:390px;height:844px;background:#F7F9FC;border-radius:44px;box-shadow:0 18px 46px rgba(10,42,94,.26);overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#0A2A5E;flex:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 26px 4px;font-size:13px;font-weight:700;color:#fff"><span>7:15</span><span style="display:flex;gap:5px;align-items:center"><span class="msr" style="font-size:14px">signal_cellular_alt</span><span class="msr" style="font-size:14px">wifi</span><span style="width:17px;height:9px;border:1.4px solid #fff;border-radius:2.5px"></span></span></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:5px 14px 9px"><span class="msr" style="font-size:19px;color:rgba(255,255,255,.6)">chevron_left</span><div style="flex:1;background:rgba(255,255,255,.16);border-radius:11px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:6px"><span class="msr" style="font-size:13px;color:#D6E6FF">lock</span><span style="font-size:12.5px;color:#EAF2FF;font-weight:600">hub.truongvietanh.com</span></div><span class="msr" style="font-size:18px;color:rgba(255,255,255,.6)">refresh</span></div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div style="background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);padding-bottom:56px;position:relative;overflow:hidden;flex:none">
+      <div style="position:absolute;top:-72px;right:-44px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 36% 36%,rgba(255,198,41,.55),rgba(255,198,41,.06) 72%)"></div>
+      <div style="padding:12px 18px 0;display:flex;align-items:center;gap:11px;position:relative">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(150deg,#FFC629,#F5A300);color:#0A2A5E;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px">T</div>
+        <div style="flex:1"><div style="font-size:17px;font-weight:900;color:#fff">Chào cô Thu 👋</div><div style="font-size:11.5px;color:#D6E6FF;margin-top:1px">GVCN 6A1 · CS Gò Vấp · Thứ Tư 23/07</div></div>
+        <span style="position:relative"><span class="msr" style="font-size:22px;color:#fff">notifications</span><span style="position:absolute;top:-3px;right:-4px;min-width:15px;height:15px;border-radius:99px;background:#FFC629;color:#0A2A5E;font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #16407C">3</span></span>
+      </div>
+      <div style="margin:12px 18px 0;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:10px 15px;display:flex;align-items:center;gap:8px;position:relative"><span class="msr" style="font-size:17px;color:#EAF2FF">search</span><span style="font-size:12px;color:#EAF2FF">Tìm mini app, học sinh…</span></div>
+    </div>
+    <div style="height:32px;background:#F7F9FC;border-radius:100% 100% 0 0;margin-top:-32px;position:relative;flex:none"></div>
+    <div style="flex:1;display:flex;flex-direction:column">
+      <div style="margin:-54px 15px 0;background:#fff;border-radius:22px;padding:13px;box-shadow:0 14px 32px rgba(10,42,94,.14);display:flex;flex-direction:column;gap:10px;position:relative;z-index:2;flex:none">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14.5px;font-weight:900;color:#0A2A5E">Sáng nay cần chú ý</span><span style="font-size:10px;font-weight:900;color:#00693F;background:#E3F8ED;border-radius:99px;padding:4px 9px">QUÉT 01:12 ✓</span></div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;background:#FFF0F0;border-radius:13px;padding:9px 6px;text-align:center"><div style="font-size:19px;font-weight:900;color:#D2383E">2</div><div style="font-size:9.5px;color:#8A3A3E;font-weight:700">cờ đang mở</div></div>
+          <div style="flex:1;background:#E2F0FC;border-radius:13px;padding:9px 6px;text-align:center"><div style="font-size:19px;font-weight:900;color:#1D4E8F">3</div><div style="font-size:9.5px;color:#33507C;font-weight:700">gửi muộn</div></div>
+          <div style="flex:1;background:#E3F8ED;border-radius:13px;padding:9px 6px;text-align:center"><div style="font-size:19px;font-weight:900;color:#00693F">27/30</div><div style="font-size:9.5px;color:#33664A;font-weight:700">đã check-in</div></div>
+        </div>
+        <button style="border:none;border-radius:13px;padding:12px;background:linear-gradient(120deg,#0A2A5E,#1E5FB8);color:#fff;font-family:inherit;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 7px 16px rgba(10,42,94,.28)">Mở Buồng lái →</button>
+      </div>
+      <div style="padding:12px 20px 7px;display:flex;justify-content:space-between;align-items:baseline;flex:none"><span style="font-size:14px;font-weight:900;color:#0A2A5E">Mini App</span><span style="font-size:11px;font-weight:800;color:#E8940D">Tất cả</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:11px 6px;padding:0 15px;flex:none">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="position:relative;width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#2A5DA8,#0A2A5E);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(10,42,94,.3)"><span class="msr" style="font-size:24px;color:#fff">space_dashboard</span><span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:99px;background:#F0474D;color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #F7F9FC">2</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Buồng lái</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#54A2F0,#2C7BF2);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(44,123,242,.3)"><span class="msr" style="font-size:24px;color:#fff">groups</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Lớp 6A1</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#00D97A,#00A05F);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(0,160,95,.3)"><span class="msr" style="font-size:24px;color:#fff">fact_check</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Điểm danh lớp</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#FFB01F,#F58F00);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(245,143,0,.32)"><span class="msr" style="font-size:24px;color:#fff">edit_note</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Ghi chú</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="position:relative;width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#9D6BFF,#7434E8);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(116,52,232,.28)"><span class="msr" style="font-size:24px;color:#fff">workspace_premium</span><span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:99px;background:#FFC629;color:#0A2A5E;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #F7F9FC">30</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Duyệt báo cáo</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:linear-gradient(150deg,#FF6B70,#E23A41);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 12px rgba(226,58,65,.3)"><span class="msr" style="font-size:24px;color:#fff">favorite</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Y tế</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;opacity:.45"><span style="width:50px;height:50px;border-radius:16px;background:#E9ECF2;display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:24px;color:#8A94A6">forum</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Liên lạc · sắp</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:50px;height:50px;border-radius:16px;background:#fff;border:1.5px solid #E4E9F0;display:flex;align-items:center;justify-content:center"><span class="msr" style="font-size:24px;color:#0A2A5E">apps</span></span><span style="font-size:10px;color:#2A3444;font-weight:700">Tất cả</span></div>
+      </div>
+      <div style="margin:11px 15px 0;background:linear-gradient(115deg,#FFC629,#FFDD66);border-radius:18px;padding:10px 14px;display:flex;align-items:center;gap:11px;position:relative;overflow:hidden;flex:none">
+        <div style="position:absolute;right:-26px;bottom:-42px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.35)"></div>
+        <span class="msr" style="font-size:24px;color:#0A2A5E;position:relative">rate_review</span>
+        <div style="flex:1;position:relative"><div style="font-size:12.5px;font-weight:900;color:#0A2A5E">30 báo cáo tuần 42 chờ duyệt</div><div style="font-size:10.5px;color:#6B4A00;margin-top:1px">Duyệt xong trước thứ Sáu để gửi Zalo OA →</div></div>
+      </div>
+      <div style="margin:10px 15px 0;background:#fff;border-radius:16px;padding:11px 14px;box-shadow:0 3px 12px rgba(10,42,94,.07);display:flex;gap:11px;align-items:center;flex:none">
+        <span style="width:38px;height:38px;border-radius:12px;background:#E2F0FC;display:flex;align-items:center;justify-content:center;flex:none"><span class="msr" style="font-size:19px;color:#2C7BF2">calendar_month</span></span>
+        <div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#0A2A5E">Tiết 1 · Toán · 6A1 — 7:30</div><div style="font-size:10.5px;color:#9AA5B5;margin-top:1px">5 tiết hôm nay · trống tiết 4</div></div>
+        <span class="msr" style="font-size:18px;color:#C9D2DE">chevron_right</span>
+      </div>
+      <div style="margin-top:auto;background:#fff;border-top:1px solid #E9ECF2;display:flex;justify-content:space-around;padding:9px 0 10px;flex:none">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#0A2A5E">home</span><span style="font-size:9.5px;font-weight:900;color:#0A2A5E">Trang chủ</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#AEB7C4">groups</span><span style="font-size:9.5px;color:#AEB7C4">Lớp học</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#AEB7C4">workspace_premium</span><span style="font-size:9.5px;color:#AEB7C4">Báo cáo</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="msr" style="font-size:22px;color:#AEB7C4">person</span><span style="font-size:9.5px;color:#AEB7C4">Hồ sơ</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="height:5px;width:130px;border-radius:3px;background:#0F172A;opacity:.26;margin:6px auto 8px;flex:none"></div>
+</div>
+<div style="font-size:11.5px;color:#4E5F78;line-height:1.6"><b>Hiệu ứng:</b> CÙNG giao diện trang chủ với học sinh — chỉ lưới mini app đổi theo quyền (SSO trả danh sách app) · badge số đỏ/vàng trên icon app · thẻ «cần chú ý» đếm số khi mở · không có nút check-in giữa tab bar (GV không check-in cảm xúc).</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+</body>
+</html>

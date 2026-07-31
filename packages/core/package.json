@@ -1,0 +1,23 @@
+{
+  "name": "@hub/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./contracts": "./contracts/index.ts",
+    "./auth-adapter": "./auth-adapter/index.ts",
+    "./db": "./db/client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "pg": "^8.12.0",
+    "jose": "^5.6.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.6",
+    "typescript": "^5.5.4"
+  }
+}

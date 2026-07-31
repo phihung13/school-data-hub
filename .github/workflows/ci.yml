@@ -1,0 +1,199 @@
+name: CI — cổng chặn hợp đồng kiến trúc
+
+# Mỗi job dưới đây là một điều khoản trong danh-cho-may/RULES.md được cưỡng chế bằng máy.
+# Câu "CI chặn merge" trong RULES chỉ có nghĩa khi file này tồn tại và bật branch protection.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Luật đồng bộ "một sự thật, hai ngôn ngữ" ────────────────────────────
+  dossier:
+    name: Hồ sơ · đồng bộ hai bản
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Đồng bộ bản người ↔ bản máy
+        run: node tools/check-sync.mjs
+
+      - name: Hồ sơ HTML hợp lệ
+        run: node tools/check-html.mjs
+
+      - name: JavaScript nhúng trong hồ sơ
+        run: node --check tools/.tmp-inline.js
+
+  # ── §1, §2, ADR-011/012 ─────────────────────────────────────────────────
+  schema:
+    name: Schema · §1 §2 ADR-011
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node tools/schema-lint.mjs
+
+  # ── §4 ──────────────────────────────────────────────────────────────────
+  secrets:
+    name: Bảo mật · §4 không secret trong client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node tools/secret-scan.mjs
+
+  # ── Kiểu dữ liệu: cả mã sản phẩm LẪN mã test ────────────────────────────
+  typecheck:
+    name: Kiểu · tsc toàn workspace + thư mục tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck từng package (apps/hub, packages/core)
+        run: pnpm -r typecheck
+
+      # tests/ nằm ngoài mọi package nên KHÔNG được `pnpm -r typecheck` chạm tới.
+      # Không có bước này thì test sai kiểu chỉ vỡ lúc chạy — xem tsconfig.tests.json.
+      - name: Typecheck thư mục tests
+        run: pnpm exec tsc --noEmit -p tsconfig.tests.json
+
+  # ── Lớp test thuần: không cần Postgres, chạy trước để fail nhanh ────────
+  unit:
+    name: Test · lớp thuần (contract, thuật toán)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run tests/unit
+
+  # ── Build thật: bắt lỗi chỉ lộ ra khi Next biên dịch ─────────────────────
+  build:
+    name: Build · next build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+
+      - name: next build
+        env:
+          # Giá trị GIẢ, cố ý vô dụng: build không được phép chạm CSDL thật.
+          # AUTH_SESSION_SECRET phải đủ 32 ký tự vì createSessionToken từ chối
+          # khoá ngắn hơn; DATABASE_URL trỏ host không tồn tại để nếu có trang
+          # nào lỡ prerender bằng dữ liệu thật thì build đỏ ngay tại đây, thay vì
+          # âm thầm nướng dữ liệu vào HTML tĩnh.
+          AUTH_SESSION_SECRET: "ci-build-only-fake-secret-32-chars-min"
+          DATABASE_URL: "postgres://ci:ci@no-such-host.invalid:5432/none"
+          HUB_URL: "http://localhost:3000"
+          NODE_ENV: "production"
+        run: pnpm --filter @hub/app build
+
+  # ── §3 §5 §6 §8 §9 + ma trận RLS: chạy trên PostgreSQL thật ─────────────
+  database:
+    name: Database · RLS + idempotency trên Postgres thật
+    runs-on: ubuntu-latest
+    # Lớp test thuần rẻ hơn nhiều; hỏng ở đó thì không cần dựng cả Postgres.
+    needs: [unit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+
+      - name: Dựng PostgreSQL 16 kèm pgTAP
+        run: |
+          docker run -d --name pg \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=hub_test \
+            -p 5432:5432 postgres:16
+          # pgTAP không có sẵn trong image chính thức — cài vào container đang chạy.
+          for i in $(seq 1 30); do
+            docker exec pg pg_isready -U postgres && break
+            sleep 2
+          done
+          docker exec pg bash -c "apt-get update -qq && apt-get install -y -qq postgresql-16-pgtap"
+
+      - name: Cài psql client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Chạy migrations + fixtures + pgTAP
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/hub_test
+        run: |
+          chmod +x tools/run-db-tests.sh
+          ./tools/run-db-tests.sh
+
+      - name: Diff schema thực tế với migration files (§2)
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/hub_test
+        run: |
+          # Dựng database thứ hai từ đúng bộ migration; hai bản phải giống nhau.
+          # Lệch nghĩa là có người sửa tay ở đâu đó hoặc migration không tái lập được.
+          psql "$DATABASE_URL" -c "create database hub_replay;"
+          REPLAY="postgres://postgres:postgres@localhost:5432/hub_replay"
+          for f in packages/core/db/migrations/*.sql; do
+            psql "$REPLAY" -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+          # Chỉ so schema nghiệp vụ: bản đã chạy test còn mang thêm pgTAP và
+          # test_support, so cả hai sẽ lệch vì lý do không liên quan tới §2.
+          SCHEMAS="--schema=core --schema=attendance --schema=care --schema=evidence \
+                   --schema=tutor --schema=health --schema=staging --schema=ops --schema=report"
+          # \restrict/\unrestrict mang token ngẫu nhiên do pg_dump sinh mỗi lần —
+          # khác nhau ở đó không phải là lệch schema.
+          clean() { grep -v '^--' | grep -v '^$' | grep -vF 'restrict '; }
+          pg_dump --schema-only --no-owner --no-privileges $SCHEMAS "$DATABASE_URL" | clean > /tmp/a.sql
+          pg_dump --schema-only --no-owner --no-privileges $SCHEMAS "$REPLAY"       | clean > /tmp/b.sql
+          if ! diff -u /tmp/b.sql /tmp/a.sql; then
+            echo "LECH: migration không tái lập được schema giống nhau (§2)"
+            exit 1
+          fi
+          echo "OK: chạy lại migration cho ra schema y hệt"
+
+      # THỨ TỰ BẮT BUỘC: migrations → pgTAP (tự rollback) → diff schema → seed → vitest.
+      # Seed phải nằm SAU bước diff: nó gieo dữ liệu chứ không đổi schema, nhưng
+      # chạy trước thì mọi lỗi seed lại hiện ra dưới dạng "lệch schema" khó đọc.
+      # Và phải nằm TRƯỚC vitest: tests/helpers/db.ts:seedPresent() tìm học sinh
+      # Minh (70000000-…-0001) — dòng đó CHỈ do seed.mjs tạo, fixture pgTAP chạy
+      # trong transaction rồi rollback nên không để lại gì.
+      - name: Gieo dữ liệu nền cho lớp test TypeScript
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/hub_test
+        run: pnpm db:seed
+
+      # CI=1 tắt chế độ "tự bỏ qua khi chưa có DB" trong tests/helpers/db.ts.
+      # Không có biến này, thiếu DB hay thiếu seed đều cho ra "skipped" + exit 0:
+      # cổng chặn trông xanh mà chưa hề chạy assertion RLS nào.
+      - name: Test TypeScript chạm CSDL thật (RLS, §9)
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/hub_test
+          CI: "1"
+        run: pnpm vitest run tests/db
+
+      - name: Nhật ký container khi lỗi
+        if: failure()
+        run: docker logs pg --tail 100
