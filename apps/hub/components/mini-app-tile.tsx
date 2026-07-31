@@ -3,6 +3,10 @@ import Link from "next/link";
 import type { MiniAppTile as MiniAppTileType } from "@hub/core/contracts";
 
 const TILE_GRADIENT: Record<string, string> = {
+  // "checkin" là tile /checkin của học sinh (đổi tên khoá từ "attendance" ngày 31/07/2026,
+  // gói "menu-noi-dung-dich" — nhãn và khoá cùng nói một việc: ghi tâm trạng, không phải
+  // sổ điểm danh). Giữ nguyên dải màu cũ để em không thấy trang chủ đổi màu qua đêm.
+  checkin: "from-domain-attendance to-domain-attendanceDark shadow-[0_5px_12px_rgba(10,79,191,.3)]",
   attendance: "from-domain-attendance to-domain-attendanceDark shadow-[0_5px_12px_rgba(10,79,191,.3)]",
   report: "from-domain-report to-domain-reportDark shadow-[0_5px_12px_rgba(116,52,232,.28)]",
   cockpit: "from-domain-cockpit to-domain-cockpitDark shadow-[0_5px_12px_rgba(10,42,94,.3)]",

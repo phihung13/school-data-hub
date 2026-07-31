@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 17
+sync-version: 18
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -58,6 +58,7 @@ Luật đọc bảng này (siết lại 31/07/2026): **ô nào không ghi `GĐ2`
 | care.flags + interventions | — | — | **GĐ2** | homeroom class | cluster | **GĐ2** | **GĐ2** |
 | health.logs (y tế) | — | children | **—** | homeroom | cluster | — | — |
 | care.counselor_notes | — | — | — | homeroom | cluster | — | — |
+| attendance.help_requests ("cần gặp thầy cô") | **own** | **—** | **—** | homeroom class | cluster | **—** | — |
 | report (ẩn danh) | — | — | — | **GĐ2** | **GĐ2** | **GĐ2** | **GĐ2** |
 | care.thresholds | read | read | read | read | read+propose | read | write (qua Hội đồng DL) |
 | attendance.checkin_rules (dải IP, khung giờ) | — | — | — | — | — | — | read (cùng `admin`) |
@@ -71,6 +72,8 @@ Luật đọc bảng này (siết lại 31/07/2026): **ô nào không ghi `GĐ2`
 - Hàng `report`: hai view `report.v_campus_trends` / `v_vaar_indicators` được tạo ở 0009 **sau** câu `grant … to authenticated` cùng file, nên **chưa ai có quyền SELECT** — cả hàng là code chết cho tới khi có grant + policy. 0024 đã bịt lỗ ngược lại (đặt `security_invoker` để view không vượt mặt §5); phần cấp quyền là việc của sprint BGH. Ngoại lệ duy nhất đang sống trong schema `report` là `growth_report_approvals` (0032) — có grant, có policy, có RLS, và **không** cấp cho role `reporting` (§5).
 
 **Hàng `health.logs` đọc kỹ hơn từ 0034:** RLS vẫn đúng như ô ghi (GVCN của em, tâm lý cụm, phụ huynh của em), nhưng quyền cột đã bị thu — `category` và `detail` (nội dung y tế thật) **không SELECT thẳng được nữa**, phải đi qua `health.read_logs(student_id, from, to)`, và mỗi lượt gọi ghi một dòng `ops.audit_log` kể cả lượt bị từ chối. Nói cho chính xác điều mà comment cũ trên bảng đã hứa suông từ 0007: **audit hiện phủ nội dung y tế đọc qua hàm, chưa phủ mọi màn hình có hiển thị dữ liệu y tế.** Câu "hiệu trưởng xem qua màn hình care team có audit log" là mô tả hình thức mong muốn, chưa phải mô tả thứ đang chạy.
+
+**Hàng `attendance.help_requests` tách khỏi hàng 1 từ `0037`.** Bảng này nằm trong schema `attendance` nên trước đó nó chạy chung điều kiện `core.can_see_student()` với danh sách lớp và bảng điểm — tức gồm cả `is_my_child` và `principal_of`. Đo trên hub_dev 31/07/2026: **phiên phụ huynh SELECT ra bản ghi của con, đọc được cả cột `note`** — nguyên văn lời em viết khi bấm "cần gặp thầy cô"; hiệu trưởng cơ sở cũng vậy. Trong khi màn hình `/can-gap-thay-co` in cho em đọc ngay tại chỗ nhập: *"Bạn cùng lớp · thầy cô khác · bố mẹ — không nhìn thấy"*. Không đường code nào đang phơi dữ liệu đó ra (`report.ts` cố ý không đọc bảng, `care.ts` chỉ đọc dưới phiên GVCN/tâm lý cụm), nên lời hứa được giữ **bằng kỷ luật tầng ứng dụng, không bằng tầng dữ liệu** — một câu `select` viết đúng cú pháp trong tính năng sau là lộ lại, và lộ trong im lặng. Phạm vi mới: `core.is_me() OR core.can_see_care()` — trùng đúng phạm vi policy UPDATE `help_requests_handle_care` (`0026`), nên người đọc được lời nhắn và người bấm "đã gặp em rồi" là cùng một tập.
 
 **Vai `admin` (0003) chưa được dùng ở đâu ngoài `checkin_rules_admin_read` (0024).** Nó tồn tại trong bảng vai trò nhưng gần như không mở thêm quyền nào — đừng thiết kế màn hình quản trị dựa trên giả định nó đã có nghĩa.
 
@@ -150,6 +153,14 @@ Ma trận ở trên không được cài đặt bằng cách chép điều kiệ
 | `health.read_logs(student_id, from, to)` + thu `GRANT` cột `category`/`detail` của `health.logs` | `0034_health_read_audit.sql` | Comment trên `health.logs` từ `0007` ghi "mọi lượt ĐỌC bảng này đều ghi audit" — thực tế **không có trigger nào**, và toàn repo chỉ có đúng một chỗ ghi `ops.audit_log`. Một kiểm soát được viết ra, được comment ngay trong schema, và không tồn tại; đúng câu này sẽ được đem ra trình khi bị hỏi về bảo vệ dữ liệu y tế của trẻ. PostgreSQL không có trigger cho SELECT, nên cách duy nhất là đóng đường đọc thẳng và mở một hàm. **Thu theo CỘT chứ không thu cả bảng**: thu cả bảng thì mất luôn khả năng chứng minh RLS còn sống (`select 1 from health.logs` cũng "permission denied") — đổi một kiểm soát lấy một kiểm soát khác, không phải thêm. Ghi audit cả lượt **bị từ chối**. Cùng loại lỗi phải bịt như `0031`/`0028`: `revoke execute … from public`, nếu không vai `anon` (chưa đăng nhập) cũng gọi được hàm `SECURITY DEFINER` đọc dữ liệu y tế trẻ em. |
 
 Các migration `0013`–`0022` đều phụ thuộc baseline `0001`–`0009`; `0023`–`0034` phụ thuộc thêm vào nhau theo cặp (`0023`↔`0030`, `0025`↔`0032`) — xem `packages/core/db/migrations/README.md`.
+
+## Siết phạm vi đọc dữ liệu cảm xúc (`0037`) — lời hứa in trên màn hình là ràng buộc kỹ thuật
+
+| Đối tượng | Migration | Ghi chú |
+|---|---|---|
+| Policy `help_requests_scope` viết lại: `core.can_see_student()` → `core.is_me() OR core.can_see_care()` | `0037_help_requests_scope.sql` | **Lỗ riêng tư ở tầng dữ liệu, đo được trên hub_dev trước khi vá.** Chi tiết đầy đủ ở đoạn "Hàng `attendance.help_requests` tách khỏi hàng 1" trong mục Ma trận RLS phía trên. Ba điểm cần nhớ khi đọc lại file này về sau: (1) `attendance.help_requests` **không còn** đi theo vòng lặp 16 bảng của `0009` — sửa vòng lặp đó không sửa được bảng này, và đó là chủ ý; (2) phạm vi mới trùng khít policy UPDATE `help_requests_handle_care` (`0026`) nên đọc và ghi cho **cùng một kết luận quyền** — không còn cảnh ghi được mà không đọc được; (3) `care.v_signal_emotion` (`0009`, viết lại `0026`) vẫn chỉ ĐẾM tín hiệu, không đọc `note`, nên mọi cờ và mọi số tổng hợp không đổi — buồng lái GVCN vẫn bật `E_URGENT`, chỉ là nội dung không đi theo cờ. Cùng họ với `0035` trên `care.counselor_notes`: hai lần cùng một lỗi gốc — **dùng chung một hàm phạm vi cho hai câu hỏi khác nhau** ("em này có thuộc tầm quản lý của tôi không" ≠ "ai được đọc lời em kể"). |
+
+Kiểm chứng đã chạy (31/07/2026): `0037_help_requests_scope_test.sql` 13 assertion và `tests/db/help-request-rieng-tu.test.ts` 8 ca. Cả hai đã được thử ngược — trả policy về `core.can_see_student()` thì pgTAP đỏ 7/13 và vitest đỏ 3/8, trong đó có đúng câu "phụ huynh đọc ra 0 dòng".
 
 ## Quy tắc migration (§2)
 

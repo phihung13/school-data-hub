@@ -31,12 +31,21 @@
 //     tín hiệu lớn nhất (nhìn lướt là thấy), THÊM chữ + icon phân mục khẩn, để
 //     người không phân biệt được màu (khoảng 8% nam giới) vẫn đọc được mức độ —
 //     xem `urgencyPresentation` bên dưới.
+//
+//  6. (31/07/2026, gói "trung-thuc-trang-thai") MÀN HÌNH NÓI CHẮC ĐIỀU NÓ KHÔNG
+//     ĐO ĐƯỢC. Ô "hết việc" khẳng định "lớp mình đang ổn — trạng thái tốt thật
+//     sự, không phải thiếu dữ liệu" kể cả khi `lastScanAt = null`, tức chưa có
+//     lần quét cảnh báo nào chạy xong. Nay câu kết luận đó chỉ in ra khi có mốc
+//     quét CỦA HÔM NAY đứng sau nó — xem `boardEmptyPresentation`.
 "use client";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
+import { toLocalIsoDate } from "@/lib/date";
 import type { FlagSummary, HubRole } from "@hub/core/contracts";
+import Link from "next/link";
 import { HubSidebar } from "./hub-sidebar";
+import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { ErrorState, LoadingState, MutationError, MutationSuccess } from "./ui/query-state";
 import { personName } from "./ui/labels";
@@ -47,6 +56,19 @@ const MOOD_META: Record<1 | 2 | 3 | 4, { label: string; dot: string; grad: strin
   2: { label: "Mệt", dot: "#F5A300", grad: "linear-gradient(160deg,#FFC833,#F5A300)" },
   1: { label: "Buồn", dot: "#F0474D", grad: "linear-gradient(160deg,#FF7A7F,#F0474D)" },
 };
+
+/**
+ * Bốn màn con của buồng lái. Trên máy tính chúng nằm trong sidebar (TEACHER_ITEMS);
+ * trên điện thoại sidebar bị ẩn, nên phải có lối đi khác — nếu không thì đúng bốn
+ * trang vừa dựng xong (gói "gvcn-man-hinh") không ai bấm tới được từ điện thoại.
+ * href phải khớp TEACHER_ITEMS; tests/unit/dieu-huong-mobile.test.ts đối chiếu hai bên.
+ */
+const GVCN_SCREENS: Array<{ key: string; label: string; icon: string; href: string }> = [
+  { key: "klass", label: "Lớp chủ nhiệm", icon: "groups", href: "/gvcn/lop" },
+  { key: "attendance", label: "Điểm danh", icon: "fact_check", href: "/gvcn/diem-danh" },
+  { key: "review", label: "Duyệt báo cáo", icon: "rate_review", href: "/gvcn/duyet-bao-cao" },
+  { key: "notes", label: "Ghi chú", icon: "edit_note", href: "/gvcn/ghi-chu" },
+];
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -113,6 +135,104 @@ export function describeFlag(detail: Record<string, unknown>): string {
   return moodPart ? `Mood ${moodPart.slice("mood ".length)}` : "Tín hiệu cảm xúc cần để ý";
 }
 
+// ---------------------------------------------------------------------------
+// "Hết việc" nghĩa là gì — và khi nào KHÔNG được nói câu đó.
+//
+// Sửa 31/07/2026 (gói "trung-thuc-trang-thai"). Bản cũ hiện nguyên văn:
+//
+//     "Hết việc rồi — lớp mình đang ổn! Đây là trạng thái tốt thật sự, không
+//      phải thiếu dữ liệu"
+//
+// …NGAY CẢ KHI `lastScanAt = null`, tức là bộ quét cảnh báo chưa từng chạy thành
+// công lần nào. Lúc đó danh sách trống KHÔNG phải kết quả của một phép đo: nó là
+// chỗ chưa ai đo. Màn hình đang khẳng định đúng cái điều nó không có cơ sở để
+// biết — và khẳng định theo hướng trấn an, đúng hướng nguy hiểm nhất với một hệ
+// thống chăm sóc trẻ ("im lặng không phải kết luận", RULES.md Rev F điều 8).
+//
+// Ba trạng thái, ba câu khác nhau:
+//   fresh   — quét XONG trong ngày hôm nay → được nói "tốt thật sự".
+//   stale   — có quét, nhưng lần gần nhất KHÔNG phải hôm nay → chỉ được nói
+//             "chưa có kết quả mới", kèm mốc thời gian thật.
+//   unknown — chưa có lần quét nào → nói thẳng là chưa kết luận được.
+//
+// Chỉ nhánh `fresh` được dùng mascot ăn mừng và khung xanh. Hai nhánh kia là
+// khung xám trung tính: không đoán tin tốt, cũng không doạ tin xấu.
+// ---------------------------------------------------------------------------
+export type ScanFreshness = "fresh" | "stale" | "unknown";
+
+/** `asOfDate` là ngày địa phương do máy chủ chốt (GetDashboardOutput.asOfDate). */
+export function scanFreshness(lastScanAt: string | null | undefined, asOfDate: string): ScanFreshness {
+  if (!lastScanAt) return "unknown";
+  const at = new Date(lastScanAt);
+  if (Number.isNaN(at.getTime())) return "unknown";
+  return toLocalIsoDate(at) === asOfDate ? "fresh" : "stale";
+}
+
+export interface BoardEmptyPresentation {
+  state: ScanFreshness;
+  /** Mascot ăn mừng CHỈ dành cho kết quả đo thật của hôm nay. */
+  showMascot: boolean;
+  /** Icon thay mascot ở hai trạng thái chưa chắc chắn (null khi có mascot). */
+  icon: string | null;
+  title: string;
+  body: string;
+  boxClass: string;
+  titleClass: string;
+  bodyClass: string;
+}
+
+/** Mốc quét, dạng người đọc được. Cùng ngày thì chỉ cần giờ; khác ngày phải có ngày. */
+export function formatScanMoment(lastScanAt: string, sameDay: boolean): string {
+  const at = new Date(lastScanAt);
+  return sameDay
+    ? at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+    : at.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+export function boardEmptyPresentation(
+  lastScanAt: string | null | undefined,
+  asOfDate: string,
+): BoardEmptyPresentation {
+  const state = scanFreshness(lastScanAt, asOfDate);
+
+  if (state === "fresh") {
+    return {
+      state,
+      showMascot: true,
+      icon: null,
+      title: "Hết việc rồi — lớp mình đang ổn!",
+      body: `Bộ quét đã chạy lúc ${formatScanMoment(lastScanAt as string, true)} hôm nay và không thấy tín hiệu nào cần xử lý — đây là trạng thái tốt thật sự, không phải thiếu dữ liệu.`,
+      boxClass: "border-2 border-dashed border-[#C9D8CB] bg-[#F2F8F3]",
+      titleClass: "text-[#00693F]",
+      bodyClass: "text-[#4A5B4D]",
+    };
+  }
+
+  if (state === "stale") {
+    return {
+      state,
+      showMascot: false,
+      icon: "history",
+      title: "Chưa có kết quả quét cho hôm nay",
+      body: `Lần quét gần nhất là ${formatScanMoment(lastScanAt as string, false)}. Danh sách trống lúc này chỉ nói rằng chưa có kết quả mới — chưa kết luận được lớp ổn hay chưa đủ dữ liệu.`,
+      boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#F5F7FA]",
+      titleClass: "text-[#33507C]",
+      bodyClass: "text-[#4A5460]",
+    };
+  }
+
+  return {
+    state,
+    showMascot: false,
+    icon: "question_mark",
+    title: "Chưa có kết quả quét nào",
+    body: "Hệ thống chưa ghi nhận lần quét cảnh báo nào, nên chỗ trống này chưa nói được điều gì: không có nghĩa lớp đang ổn, cũng không có nghĩa đang có chuyện.",
+    boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#F5F7FA]",
+    titleClass: "text-[#33507C]",
+    bodyClass: "text-[#4A5460]",
+  };
+}
+
 function newMutationId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -147,16 +267,27 @@ export function GvcnDashboard({
 
   const sidebar = (
     <div className="hidden md:flex md:w-[240px] md:flex-none">
-      <HubSidebar roles={roles} active="home" fullName={displayName} email={email} classCode={sidebarClass} />
+      <HubSidebar roles={roles} active="cockpit" fullName={displayName} email={email} classCode={sidebarClass} />
     </div>
   );
 
   // Khung ngoài: dưới md là một cột cuộn được bình thường; từ md mới là bố cục
   // hai cột cao đúng màn hình. `overflow-hidden` chỉ được phép ở nhánh md.
+  //
+  // Tab bar CHỈ ở nhánh mobile, và nằm TRONG frame nên có mặt ở cả ba trạng thái
+  // (đang tải · lỗi · có dữ liệu). Trước 31/07/2026 mọi liên kết nội bộ của màn
+  // này nằm trong khối `hidden md:flex` của sidebar, nên dưới md trang không còn
+  // một đường ra nào: không về /home, không sang bốn màn con, và KHÔNG ĐĂNG XUẤT
+  // ĐƯỢC — mà buồng lái tải chậm hoặc lỗi mạng là lúc người ta cần lối ra nhất.
   const frame = (children: React.ReactNode) => (
     <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
       {sidebar}
-      <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+        {children}
+        <div className="md:hidden">
+          <HubTabBar roles={roles} />
+        </div>
+      </div>
     </div>
   );
 
@@ -201,6 +332,22 @@ export function GvcnDashboard({
         <StatCard label="Vắng" icon="person_off" iconBg="bg-[#F1F4F8]" iconColor="text-[#5B6B80]" value={String(d.totals.absentCount)} sub={d.totals.absentCount === 0 ? "không có ai vắng" : "học sinh"} />
       </div>
 
+      {/* CHỈ mobile — trên md bốn đích này đã có trong sidebar, vẽ lại là thừa.
+          Lưới 4 cột, tile 52px, nhãn 10px: đúng mẫu "lưới mini app" của §6. */}
+      <nav aria-label="Màn hình lớp chủ nhiệm" className="mt-[18px] grid grid-cols-4 gap-3 md:hidden">
+        {GVCN_SCREENS.map((screen) => (
+          <Link key={screen.key} href={screen.href} className="flex flex-col items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="flex h-[52px] w-[52px] items-center justify-center rounded-[17px] bg-gradient-to-br from-[#2A5DA8] to-navy shadow-[0_5px_12px_rgba(10,42,94,.3)]"
+            >
+              <span className="msr text-[25px] text-white">{screen.icon}</span>
+            </span>
+            <span className="text-center text-[10px] font-bold leading-tight text-[#33507C]">{screen.label}</span>
+          </Link>
+        ))}
+      </nav>
+
       <div className="mt-[18px] flex flex-wrap items-start gap-[18px]">
         <div className="min-w-0 flex-[2_1_320px] flex flex-col gap-4 md:flex-[2_1_540px]">
           <div className="text-[16px] font-black text-navy">Việc cần làm sáng nay</div>
@@ -238,16 +385,7 @@ export function GvcnDashboard({
           )}
 
           {d.priorityFlags.length === 0 && d.pendingLateCheckins.length === 0 && (
-            <div className="flex items-center gap-3.5 rounded-[20px] border-2 border-dashed border-[#C9D8CB] bg-[#F2F8F3] px-5 py-[18px]">
-              <Mascot pose="thumbsup" width={44} />
-              <div>
-                <div className="text-[14px] font-black text-[#00693F]">Hết việc rồi — lớp mình đang ổn!</div>
-                <div className="mt-0.5 text-[12px] leading-relaxed text-[#5D6B60]">
-                  Đây là trạng thái tốt thật sự, không phải thiếu dữ liệu
-                  {d.lastScanAt ? ` (quét gần nhất ${new Date(d.lastScanAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })})` : ""}.
-                </div>
-              </div>
-            </div>
+            <BoardEmpty lastScanAt={d.lastScanAt} asOfDate={d.asOfDate} />
           )}
         </div>
 
@@ -311,6 +449,32 @@ export function GvcnDashboard({
         </div>
       </div>
     </div>,
+  );
+}
+
+/**
+ * Ô "không còn việc nào" của buồng lái. Ba hình thức cho ba mức chắc chắn — xem
+ * `boardEmptyPresentation`. Câu "tốt thật sự" là một KẾT LUẬN, chỉ được in ra khi
+ * có phép đo của hôm nay đứng sau nó.
+ */
+function BoardEmpty({ lastScanAt, asOfDate }: { lastScanAt: string | null; asOfDate: string }) {
+  const look = boardEmptyPresentation(lastScanAt, asOfDate);
+  return (
+    <div className={`flex items-center gap-3.5 rounded-[20px] px-5 py-[18px] ${look.boxClass}`}>
+      {look.showMascot ? (
+        <Mascot pose="thumbsup" width={44} />
+      ) : (
+        <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white">
+          <span className="msr text-[22px] text-[#5B6B80]" aria-hidden>
+            {look.icon}
+          </span>
+        </span>
+      )}
+      <div>
+        <div className={`text-[14px] font-black ${look.titleClass}`}>{look.title}</div>
+        <div className={`mt-0.5 text-[12px] leading-relaxed ${look.bodyClass}`}>{look.body}</div>
+      </div>
+    </div>
   );
 }
 

@@ -15,6 +15,32 @@
 //      tiền tố md: — trên 390px sidebar nuốt 240px, phần còn lại vỡ.
 //   4. HubSidebar nhận role="teacher"/"student" cứng: admin, phụ huynh, hiệu
 //      trưởng đều rơi vào menu GVCN. Nay truyền `roles` thật của phiên.
+//
+// Sửa 31/07/2026 (gói "a11y-nen"): mỗi nhánh (học sinh / nhân viên) gộp về MỘT cây
+// duy nhất có <MainContent> bọc nội dung — menu trái và tab bar nằm NGOÀI nó, nên
+// đường tắt "Bỏ qua menu" ở layout.tsx mới thật sự bỏ qua được menu. Trước đó nhánh
+// học sinh là hai cây rời (mobile + desktop) không cây nào có landmark; nếu đặt
+// <main id="noi-dung"> vào cả hai thì trang có hai id trùng nhau, trình duyệt chỉ
+// nhảy tới cái đầu — cái đang display:none ở khổ màn hiện tại.
+//
+// Sửa 31/07/2026 (gói "mobile-cho-man-con-thieu"): bản điện thoại vẫn còn là bản RÚT
+// GỌN — nó kết bằng câu "Bản đầy đủ (ai thấy gì của mình, liên hệ GVCN) mở trên máy
+// tính". Hai thứ bị cắt đúng là hai thứ không được phép cắt:
+//   1. Khối "Ai thấy gì của mình?" — DESIGN-GUIDELINES §9 và PRODUCT.md bắt người
+//      nhập dữ liệu cảm xúc phải biết ai đọc được. Bối cảnh dùng thật của học sinh
+//      THCS là điện thoại, nên để khối này chỉ ở desktop = giấu nó khỏi gần như toàn
+//      bộ người mà nó sinh ra để bảo vệ.
+//   2. Link «Trợ giúp & liên hệ GVCN» (/can-gap-thay-co) — đường duy nhất từ tab Hồ
+//      sơ để em nhờ cô giúp. Em cần nó lúc 9 giờ tối, cầm điện thoại.
+// Hai khối nay dựng một lần thành <WhoSeesWhatCard>/<HelpLink> rồi dùng chung cho cả
+// hai khổ màn: không chép markup nên không thể lệch nội dung giữa hai bản. Bố cục
+// điện thoại vẫn là MỘT CỘT sẵn có, không vẽ mới. Nút Đăng xuất xuống cuối cột —
+// hành động rời trang thì đứng sau nội dung, không chen giữa.
+//
+// Sửa 31/07/2026 (gói "giong-noi-va-don-dep"): ba chỗ trong màn này nói chữ "GVCN" với
+// một đứa trẻ 11 tuổi — hai chỗ còn lấy chính chữ viết tắt đó LÀM TÊN người khi chưa
+// biết tên cô (`teacherName ?? "GVCN"`). Nay đi qua teacherLabel() ở ngay dưới: cắt hậu
+// tố chức danh trong full_name, chưa biết tên thì nói "thầy cô chủ nhiệm".
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -22,9 +48,26 @@ import { trpc } from "@/lib/trpc-client";
 import type { HubRole } from "@hub/core/contracts";
 import { Mascot } from "./mascot";
 import { HubSidebar } from "./hub-sidebar";
+import { MainContent } from "./page-shell";
 import { StudentTabBar } from "./tab-bar";
 import { ErrorState, LoadingState } from "./ui/query-state";
-import { classLabel } from "./ui/labels";
+import { classLabel, personName } from "./ui/labels";
+
+/**
+ * Tên cô/thầy chủ nhiệm để GỌI trong câu văn với học sinh.
+ *
+ * Hai lỗi cùng lúc được vá ở đây (gói "giong-noi-va-don-dep", 31/07/2026):
+ *  1. `teacherName ?? "GVCN"` biến một chữ viết tắt hành chính thành TÊN NGƯỜI: em đọc
+ *     được "GVCN — cảm xúc, điểm danh, lời nhắn «cần gặp thầy cô»". DESIGN-GUIDELINES §8
+ *     cấm từ vựng vận hành ở bề mặt học sinh, và đây còn là chỗ nhạy nhất: khối nói cho
+ *     em biết AI đọc được cảm xúc của mình.
+ *  2. `core.users.full_name` mang hậu tố chức danh ("Cô Lan (GVCN 6A1)") nên kể cả khi
+ *     CÓ tên thật, chữ "GVCN" vẫn hiện — personName() cắt phần trong ngoặc.
+ * Chưa biết tên thì nói "thầy cô chủ nhiệm" (đúng người, không bịa tên).
+ */
+function teacherLabel(fullName: string | null | undefined): string {
+  return personName(fullName) || "thầy cô chủ nhiệm";
+}
 
 function useLogout() {
   const router = useRouter();
@@ -38,9 +81,68 @@ function useLogout() {
 function LogoutButton({ onClick, className }: { onClick: () => void; className: string }) {
   return (
     <button type="button" onClick={onClick} className={className}>
-      <span className="msr text-[19px] text-[#D2383E]">logout</span>
+      <span aria-hidden="true" className="msr text-[19px] text-[#D2383E]">logout</span>
       Đăng xuất
     </button>
+  );
+}
+
+/**
+ * «Ai thấy gì của mình?» — bắt buộc có ở MỌI khổ màn (DESIGN-GUIDELINES §9).
+ * Dùng chung cho điện thoại và desktop: chép làm hai bản là mở đường cho hai bản
+ * nói khác nhau về cùng một luật riêng tư.
+ */
+function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
+  const teacher = teacherLabel(teacherName);
+  return (
+    <div className="flex flex-col gap-3 rounded-[22px] border-[1.5px] border-[#CFE4FB] bg-[#F0F7FF] p-5 text-left md:p-[22px]">
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">shield_person</span>
+        <span className="text-[15px] font-black text-[#1D4E8F]">Ai thấy gì của mình?</span>
+      </div>
+      {/* Màu không bao giờ là tín hiệu duy nhất (§11): mỗi dòng có icon check/cancel
+          KÈM chữ nói rõ thấy gì — người mù màu vẫn đọc đủ nghĩa. */}
+      <div className="flex items-start gap-2.5">
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
+        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+          <b>{teacher}</b> — cảm xúc, điểm danh, lời nhắn «cần gặp thầy cô»
+        </span>
+      </div>
+      <div className="flex items-start gap-2.5">
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
+        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+          <b>Bố mẹ</b> — điểm danh và Báo cáo Trưởng thành (không xem chi tiết cảm xúc từng ngày)
+        </span>
+      </div>
+      <div className="flex items-start gap-2.5">
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#D2383E]">cancel</span>
+        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+          <b>Bạn cùng lớp</b> — không thấy gì cả
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Đường tới «Cần gặp thầy cô». Ở desktop nó là một hàng trong thẻ "Tài khoản";
+ * ở điện thoại nó đứng riêng thành một thẻ bấm được — cùng nội dung, khác vỏ, nên
+ * `className` là tham số chứ không phải hai bản chép tay.
+ */
+function HelpLink({ teacherName, className }: { teacherName: string | null; className: string }) {
+  return (
+    <a href="/can-gap-thay-co" className={className}>
+      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-[#E3F8ED]">
+        <span aria-hidden="true" className="msr text-[20px] text-[#00A05F]">support_agent</span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[14px] font-extrabold text-ink">Trợ giúp &amp; nhắn thầy cô chủ nhiệm</div>
+        <div className="mt-px text-[11.5px] text-caption">
+          {teacherLabel(teacherName)} · thường trả lời trong ngày
+        </div>
+      </div>
+      <span aria-hidden="true" className="msr text-[20px] text-[#C9D2DE]">chevron_right</span>
+    </a>
   );
 }
 
@@ -84,7 +186,8 @@ function SimpleProfile({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-pagebgDesktop px-6 py-10">
+      <MainContent className="flex flex-1 flex-col items-center justify-center gap-4 bg-pagebgDesktop px-6 py-10">
+        <h1 className="sr-only">Hồ sơ của mình</h1>
         <Mascot pose="think" width={64} />
         <div className="text-center text-[18px] font-black text-navy">{displayName}</div>
         <div className="break-all text-center text-[12.5px] text-caption">{email}</div>
@@ -102,7 +205,7 @@ function SimpleProfile({
         >
           Về trang chủ
         </a>
-      </div>
+      </MainContent>
     </div>
   );
 }
@@ -124,11 +227,22 @@ function StudentProfile({
   const initial = displayName.trim().slice(0, 1).toUpperCase() || "?";
 
   return (
-    <>
-      {/* Bản mobile THẬT (không còn là ngõ cụt): đủ thứ em cần tra ngay tại chỗ —
-          tên, lớp, mã học sinh để đọc cho cô, và nút Đăng xuất. */}
-      <div className="flex min-h-screen w-full flex-col bg-pagebg md:hidden">
-        <div className="flex flex-1 flex-col items-center gap-3 px-6 pb-6 pt-10 text-center">
+    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
+      {/* Menu trái và tab bar nằm NGOÀI <MainContent> — đó chính là thứ đường tắt
+          "Bỏ qua menu" phải bỏ qua được. */}
+      <div className="hidden md:flex md:w-[240px] md:flex-none">
+        <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
+      </div>
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg md:overflow-hidden md:bg-pagebgDesktop">
+        {/* Một <h1> duy nhất, luôn có mặt ở mọi khổ màn. Không đổi thẻ của dòng chữ
+            đang hiện vì mỗi khổ màn vẽ tiêu đề ở một chỗ khác nhau (tên em ở điện
+            thoại, thanh trên ở desktop) — đặt <h1> vào cả hai là để hai <h1> trong
+            cùng một DOM. */}
+        <h1 className="sr-only">Hồ sơ của mình</h1>
+        {/* Bản mobile THẬT: một cột, đủ mọi thứ bản desktop có — tên, lớp, mã học sinh
+            để đọc cho cô, đường nhờ cô giúp, luật riêng tư, rồi mới tới Đăng xuất.
+            Không còn khối nào "chỉ có ở máy tính". */}
+        <div className="flex flex-1 flex-col items-center gap-3 px-5 pb-6 pt-10 text-center md:hidden">
           <span className="flex h-[84px] w-[84px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[32px] font-black text-navy shadow-[0_8px_18px_rgba(232,148,13,.3)]">
             {initial}
           </span>
@@ -137,7 +251,7 @@ function StudentProfile({
           {!query.isPending && query.error && (
             <p className="text-[12.5px] font-bold text-[#D2383E]">
               Chưa tải được lớp và mã học sinh.{" "}
-              <button type="button" onClick={() => void query.refetch()} className="underline underline-offset-2">
+              <button type="button" onClick={() => void query.refetch()} className="min-h-[44px] underline underline-offset-2">
                 Thử lại
               </button>
             </p>
@@ -153,28 +267,36 @@ function StudentProfile({
             </>
           )}
           <div className="break-all text-[11.5px] text-caption">{email}</div>
+
+          {/* Hai khối này chỉ vẽ được khi đã biết tên GVCN — chưa có dữ liệu thì không
+              vẽ khung rỗng đoán bừa tên cô. */}
+          {profile && (
+            <div className="mt-3 flex w-full flex-col gap-3">
+              <HelpLink
+                teacherName={profile.homeroomTeacherName}
+                // min-h-[52px] > 44px của §11; cả thẻ là vùng chạm, không chỉ dòng chữ.
+                className="flex min-h-[52px] items-center gap-3.5 rounded-[20px] bg-white px-4 py-3 text-left shadow-[0_3px_14px_rgba(10,42,94,.06)]"
+              />
+              <WhoSeesWhatCard teacherName={profile.homeroomTeacherName} />
+            </div>
+          )}
+
           <LogoutButton
             onClick={logout}
-            className="mt-4 flex items-center gap-2 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] px-6 py-3 text-[13.5px] font-black text-[#D2383E]"
+            className="mt-4 flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] px-6 py-3 text-[13.5px] font-black text-[#D2383E]"
           />
-          <p className="mt-2 text-[11px] leading-relaxed text-caption2">
-            Bản đầy đủ (ai thấy gì của mình, liên hệ GVCN) mở trên máy tính.
-          </p>
         </div>
-        <StudentTabBar />
-      </div>
-      <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
-        <div className="flex w-[240px] flex-none">
-          <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
-          <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
+
+        {/* Từ md trở lên: thanh tiêu đề + bản đầy đủ. Ba nhánh tải/lỗi/có dữ liệu nằm
+            trong cùng một cột ẩn dưới md để bản điện thoại ở trên không bị lặp. */}
+        <div className="hidden flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5 md:flex">
             <div className="flex-1">
               <div className="text-[16px] font-black text-ink">Hồ sơ của mình</div>
               <div className="text-[11.5px] text-caption">Tài khoản trường</div>
             </div>
           </div>
 
+        <div className="hidden md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden">
           {query.isPending && <LoadingState label="Đang tải hồ sơ…" />}
           {!query.isPending && query.error && (
             <ErrorState error={query.error} label="Hồ sơ" onRetry={() => void query.refetch()} />
@@ -195,7 +317,7 @@ function StudentProfile({
                       </div>
                       <div className="mt-2.5 flex flex-wrap items-center gap-2">
                         <span className="flex items-center gap-1.5 rounded-full bg-[#F1F4F8] px-3 py-1.5">
-                          <span className="msr text-[15px] text-[#5B6B80]">mail</span>
+                          <span aria-hidden="true" className="msr text-[15px] text-[#5B6B80]">mail</span>
                           <span className="text-[11.5px] font-bold text-[#33507C]">{email}</span>
                         </span>
                       </div>
@@ -203,14 +325,14 @@ function StudentProfile({
                     <div className="flex flex-wrap gap-2.5">
                       <div className="min-w-[92px] rounded-2xl bg-[#FFF7E0] px-4 py-3.5 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <span className="msr text-[19px] text-[#F58F00]">local_fire_department</span>
+                          <span aria-hidden="true" className="msr text-[19px] text-[#F58F00]">local_fire_department</span>
                           <span className="text-[20px] font-black text-[#E8940D]">{profile.streakDays}</span>
                         </div>
                         <div className="mt-0.5 text-[10px] font-extrabold text-[#8A5A00]">chuỗi check-in</div>
                       </div>
                       <div className="min-w-[92px] rounded-2xl bg-[#E3F8ED] px-4 py-3.5 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <span className="msr text-[19px] text-[#00A05F]">event_available</span>
+                          <span aria-hidden="true" className="msr text-[19px] text-[#00A05F]">event_available</span>
                           <span className="text-[20px] font-black text-[#00693F]">{profile.presentDays}</span>
                         </div>
                         <div className="mt-0.5 text-[10px] font-extrabold text-[#00693F]">ngày có mặt</div>
@@ -223,7 +345,7 @@ function StudentProfile({
                     <div className="mt-3.5 flex flex-col">
                       <div className="flex items-center gap-3.5 border-b border-[#F1F4F8] py-[15px]">
                         <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-[#F0F7FF]">
-                          <span className="msr text-[20px] text-[#2C7BF2]">verified_user</span>
+                          <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">verified_user</span>
                         </span>
                         <div className="flex-1">
                           <div className="text-[14px] font-extrabold text-ink">Đăng nhập bằng tài khoản trường</div>
@@ -233,52 +355,21 @@ function StudentProfile({
                           ĐANG DÙNG
                         </span>
                       </div>
-                      <a href="/can-gap-thay-co" className="flex items-center gap-3.5 py-[15px] hover:bg-[#FAFBFD]">
-                        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-[#E3F8ED]">
-                          <span className="msr text-[20px] text-[#00A05F]">support_agent</span>
-                        </span>
-                        <div className="flex-1">
-                          <div className="text-[14px] font-extrabold text-ink">Trợ giúp &amp; liên hệ GVCN</div>
-                          <div className="mt-px text-[11.5px] text-caption">
-                            {profile.homeroomTeacherName ?? "GVCN"} · thường trả lời trong ngày
-                          </div>
-                        </div>
-                        <span className="msr text-[20px] text-[#C9D2DE]">chevron_right</span>
-                      </a>
+                      <HelpLink
+                        teacherName={profile.homeroomTeacherName}
+                        className="flex items-center gap-3.5 py-[15px] hover:bg-[#FAFBFD]"
+                      />
                     </div>
                   </div>
                 </div>
 
                 <div className="min-w-0 flex-[1_1_300px] flex flex-col gap-4">
-                  <div className="flex flex-col gap-3 rounded-[22px] border-[1.5px] border-[#CFE4FB] bg-[#F0F7FF] p-[22px]">
-                    <div className="flex items-center gap-2">
-                      <span className="msr text-[20px] text-[#2C7BF2]">shield_person</span>
-                      <span className="text-[15px] font-black text-[#1D4E8F]">Ai thấy gì của mình?</span>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-                        <b>{profile.homeroomTeacherName ?? "GVCN"}</b> — cảm xúc, điểm danh, lời nhắn «cần gặp thầy cô»
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-                        <b>Bố mẹ</b> — điểm danh và Báo cáo Trưởng thành (không xem chi tiết cảm xúc từng ngày)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="msr flex-none text-[18px] text-[#D2383E]">cancel</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-                        <b>Bạn cùng lớp</b> — không thấy gì cả
-                      </span>
-                    </div>
-                  </div>
+                  <WhoSeesWhatCard teacherName={profile.homeroomTeacherName} />
 
                   <div className="flex items-center gap-3 rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
                     <Mascot pose="think" width={46} />
                     <p className="text-[12.5px] font-semibold leading-relaxed text-[#33507C]">
-                      Hồ sơ là của con. Nếu thấy thông tin nào chưa đúng, nói với {profile.homeroomTeacherName ?? "GVCN"} nhé!
+                      Hồ sơ là của con. Nếu thấy thông tin nào chưa đúng, nói với {teacherLabel(profile.homeroomTeacherName)} nhé!
                     </p>
                   </div>
 
@@ -287,7 +378,7 @@ function StudentProfile({
                     onClick={logout}
                     className="flex items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] p-[15px] text-[14px] font-black text-[#D2383E] hover:bg-[#FFECEC]"
                   >
-                    <span className="msr text-[20px] text-[#D2383E]">logout</span>
+                    <span aria-hidden="true" className="msr text-[20px] text-[#D2383E]">logout</span>
                     Đăng xuất
                   </button>
                   <div className="text-center text-[10.5px] font-semibold text-[#B6BECB]">
@@ -298,7 +389,10 @@ function StudentProfile({
             </div>
           )}
         </div>
+      </MainContent>
+      <div className="md:hidden">
+        <StudentTabBar />
       </div>
-    </>
+    </div>
   );
 }

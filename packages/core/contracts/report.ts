@@ -1,8 +1,21 @@
 // packages/core/contracts/report.ts — router `report`, read-only (03-api.md).
-// GĐ1: nội dung chỉ lấy từ dữ liệu đã có (điểm danh + mood + help_requests) —
-// không hứa dữ liệu evidence/tutor chưa xây (Hub Giai Doan 1.dc.html, P3).
+// GĐ1: nội dung chỉ lấy từ dữ liệu đã có (điểm danh + mood) — không hứa dữ liệu
+// evidence/tutor chưa xây (Hub Giai Doan 1.dc.html, P3).
 import { z } from "zod";
 
+/**
+ * Một điều "tỏa sáng" trong báo cáo tuần.
+ *
+ * NGUỒN ĐƯỢC PHÉP: điểm danh (`attendance.checkins`). KHÔNG BAO GIỜ:
+ * `attendance.help_requests` — báo cáo này phụ huynh đọc, mà màn "Mình cần gặp thầy
+ * cô" đã hứa với đứa trẻ rằng bố mẹ không nhìn thấy (help-request-view.tsx). Việc em
+ * bấm nút cầu cứu không phải thành tích để khoe, nó là đường an toàn tâm lý; khoe nó
+ * lên là bịt đường đó lại. Khoá bằng `tests/db/bao-cao-rieng-tu.test.ts`.
+ *
+ * Câu chữ trong `detail` chỉ được khẳng định việc NGƯỜI LỚN ĐÃ LÀM (vd "thầy cô đã
+ * trò chuyện cùng em") khi có cột dấu thời gian chứng minh (`handled_at is not null`).
+ * Suy ra từ count(*) là nói với cha mẹ một việc chăm sóc chưa hề xảy ra.
+ */
 export const GlowItem = z.object({
   title: z.string(),
   detail: z.string(),

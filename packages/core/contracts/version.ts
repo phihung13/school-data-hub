@@ -257,6 +257,12 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "classId",
 //       "weekStart"
 //     ],
+//     "ReportPreview": [
+//       "headline",
+//       "glow",
+//       "grow",
+//       "streakDays"
+//     ],
 //     "ReportApprovalRow": [
 //       "studentId",
 //       "studentCode",
@@ -265,7 +271,8 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "reviewedAt",
 //       "note",
 //       "checkinDays",
-//       "happyDays"
+//       "happyDays",
+//       "preview"
 //     ],
 //     "ListReportApprovalsOutput": [
 //       "classId",
@@ -305,6 +312,56 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "classId",
 //       "className",
 //       "rows"
+//     ],
+//     "GetStudentDetailInput": [
+//       "studentId",
+//       "classId",
+//       "days"
+//     ],
+//     "StudentCheckinDay": [
+//       "occurredOn",
+//       "status",
+//       "mood",
+//       "checkedInAt",
+//       "source"
+//     ],
+//     "StudentHelpRequest": [
+//       "requestedOn",
+//       "requestedAt",
+//       "topic",
+//       "urgency",
+//       "note",
+//       "handledAt"
+//     ],
+//     "StudentCareCase": [
+//       "caseId",
+//       "status",
+//       "openedAt",
+//       "closedAt"
+//     ],
+//     "StudentReportApproval": [
+//       "weekStart",
+//       "status",
+//       "reviewedAt",
+//       "note"
+//     ],
+//     "GetStudentDetailOutput": [
+//       "classId",
+//       "className",
+//       "asOfDate",
+//       "window",
+//       "window.days",
+//       "window.fromDate",
+//       "window.toDate",
+//       "student",
+//       "student.studentId",
+//       "student.studentCode",
+//       "student.fullName",
+//       "checkins",
+//       "helpRequests",
+//       "careCases",
+//       "interventions",
+//       "reportApprovals"
 //     ],
 //     "MoodBucket": [
 //       "mood",

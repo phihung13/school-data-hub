@@ -79,8 +79,8 @@ html {
    điểm danh mất, nút ✕ đóng popup thành ô trống. Nay font nằm trên chính domain Hub —
    chặn được nó thì cũng đã chặn được cả trang.
 
-   File: public/fonts/material-symbols-rounded-subset.woff2 — bản CẮT GỌN 211 icon
-   (181.476 B) thay vì bản đủ ~4 MB. Danh sách tên icon nằm ở public/fonts/icon-names.txt
+   File: public/fonts/material-symbols-rounded-subset.woff2 — bản CẮT GỌN 213 icon
+   (183.140 B) thay vì bản đủ ~4 MB. Danh sách tên icon nằm ở public/fonts/icon-names.txt
    và được tests/unit/a11y.test.ts đối chiếu với mã nguồn: thêm icon mới mà quên tạo lại
    font thì test đỏ, không phải đợi người dùng nhìn thấy ô trống.
 
@@ -92,9 +92,21 @@ html {
    học sinh. Vẫn nhỏ hơn bản đủ hơn 20 lần.
 
    TẠO LẠI FONT (khi thêm icon vào icon-names.txt):
+     UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
      NAMES=$(paste -sd, - < apps/hub/public/fonts/icon-names.txt)
-     curl -sA "Mozilla/5.0" "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&icon_names=$NAMES"
+     curl -sA "$UA" "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&icon_names=$NAMES"
      # lấy URL trong @font-face rồi curl về đúng đường dẫn trên, và ĐỔI ?v=<sha256 8 ký tự>.
+   UA PHẢI là chuỗi Chrome đầy đủ như trên: với "Mozilla/5.0" trần, Google trả về TTF
+   (format('truetype')) chứ không phải woff2 — tải về vẫn ra một file, vẫn có kích thước,
+   và test chữ ký "wOF2" là thứ duy nhất bắt được.
+   API KHÔNG báo lỗi khi tên icon sai: gõ nhầm một tên thì vẫn 200, vẫn có font, chỉ thiếu
+   đúng glyph đó. Cách tự kiểm đã dùng (31/07/2026): tạo lại font từ danh sách CŨ trước,
+   đối chiếu sha256 với file đang có trong repo — trùng byte thì mới tin bản mới.
+
+   31/07/2026 — thêm "drafts" và "search_off" vào danh sách. Cả hai CHƯA có mã nào dùng:
+   đây là phần đệm cố ý (xem đoạn trên). "search_off" là icon gói "trung-thuc-trang-thai"
+   sẽ cần cho lỗi 404 ở ui/query-state.tsx; thiếu nó thì màn báo lỗi hiện một Ô TRỐNG —
+   im lặng, không log, đúng chỗ người dùng đang cần biết chuyện gì hỏng.
 
    font-display: block (không phải swap): nội dung DOM của icon là CHỮ THÔ ("notifications",
    "close"...) — font chỉ thay hình hiển thị. Với swap, trình duyệt sẽ nháy chữ thô trước
@@ -105,7 +117,7 @@ html {
   font-style: normal;
   font-weight: 400 700;
   font-display: block;
-  src: url("/fonts/material-symbols-rounded-subset.woff2?v=9b5876ec") format("woff2");
+  src: url("/fonts/material-symbols-rounded-subset.woff2?v=16559c9b") format("woff2");
 }
 
 .msr {

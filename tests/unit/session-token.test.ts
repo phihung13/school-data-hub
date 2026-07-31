@@ -54,11 +54,23 @@ describe("token phiên đăng nhập", () => {
 
   it("sửa một ký tự trong token là hỏng chữ ký → null", async () => {
     const token = await createSessionToken(IDENTITY);
-    // Đổi ký tự cuối (nằm trong phần chữ ký) sang một ký tự base64url khác.
-    const last = token.slice(-1);
-    const tampered = token.slice(0, -1) + (last === "A" ? "B" : "A");
 
-    expect(await verifySessionToken(tampered)).toBeNull();
+    // KHÔNG đổi ký tự CUỐI của chữ ký. Chữ ký HS256 dài 32 byte = 256 bit, mã hoá
+    // base64url thành 43 ký tự = 258 bit — nên ký tự cuối chỉ mang 4 bit có nghĩa,
+    // 2 bit còn lại là đệm. Đổi 'A'→'B' chỉ chạm bit đệm, giải ra ĐÚNG chuỗi byte
+    // cũ, chữ ký vẫn hợp lệ và bài test "pass oan". Bản trước làm đúng như vậy nên
+    // nó xanh hay đỏ tuỳ vào ký tự cuối ngẫu nhiên của từng lần ký (31/07/2026:
+    // pass khi chạy một mình, fail khi chạy cả bộ — chỉ vì dấu thời gian khác đi).
+    //
+    // Sửa: đổi một ký tự ở GIỮA phần chữ ký, nơi mọi bit đều có nghĩa.
+    const parts = token.split(".");
+    expect(parts).toHaveLength(3);
+    const sig = parts[2]!;
+    const at = Math.floor(sig.length / 2);
+    const tamperedSig = sig.slice(0, at) + (sig[at] === "A" ? "B" : "A") + sig.slice(at + 1);
+    expect(tamperedSig).not.toBe(sig);
+
+    expect(await verifySessionToken(`${parts[0]}.${parts[1]}.${tamperedSig}`)).toBeNull();
   });
 
   it("token ký bằng secret khác → null (không nhận token của hệ khác)", async () => {

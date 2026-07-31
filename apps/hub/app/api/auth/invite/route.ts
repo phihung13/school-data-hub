@@ -11,6 +11,18 @@
 //   3. Ghi `ops.audit_log` mọi lần sai — để lần sau có người đọc được "đêm qua có ai dò".
 //
 // Xem `apps/hub/server/oidc/invite-guard.ts` để biết vì sao cần cả lớp 1 lẫn lớp 2.
+//
+// LỖ HỔNG THỨ HAI, VÁ 31/07/2026 (ADR-024, migration 0036): ba lớp trên chỉ làm chậm
+// người DÒ mã. Chúng không nói gì về người ĐÃ CÓ mã trong tay. Trước 0036, hàm SQL trả
+// lại một phiên phụ huynh MỖI LẦN mã được nhập, cho tới ngày hết hạn — nên tấm vé 6 ký
+// tự gửi qua Zalo là chứng danh sống 7–30 ngày: cuộn lại tin nhắn cũ trong nhóm lớp,
+// hay được forward, là vào xem được báo cáo của một đứa trẻ. Nay mã đổi được đúng một
+// lần, cộng cửa sổ nhắc lại 15 phút cho retry mạng/bấm hai lần (§9).
+//
+// Việc của route trong phần vá đó: đọc LÝ DO từ chối bằng SQLSTATE (`redeemReason`) để
+// ghi audit đúng chuyện gì đã xảy ra — "một mã đã chết vừa được trình" là tín hiệu khác
+// hẳn "ai đó gõ bừa 6 ký tự", và là dấu vết duy nhất của một tin nhắn bị chuyển tiếp.
+// Người dùng cuối vẫn chỉ nhận MỘT thông điệp: xem `deny()`.
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -30,8 +42,21 @@ import { describeError, log } from "@/lib/logger";
 // `normalizeInviteCode`. Tách hai bước vì phải ĐẾM theo mã đã chuẩn hoá — xem invite-guard.
 const Body = z.object({ code: z.string().min(1).max(64) });
 
-/** Một thông điệp duy nhất cho mọi kiểu thất bại — xem ghi chú ở `deny()`. */
-const DENY_MESSAGE = "Mã mời không hợp lệ hoặc đã hết hạn";
+/**
+ * Một thông điệp duy nhất cho mọi kiểu thất bại — xem ghi chú ở `deny()`.
+ *
+ * Câu này hiện NGUYÊN VĂN trên màn đăng nhập của phụ huynh (`login-form.tsx` dán thẳng
+ * `body.error`), nên nó phải làm hai việc cùng lúc: không tiết lộ mã có tồn tại hay
+ * không, VÀ chỉ được đường đi tiếp. Từ ADR-024 mã chỉ dùng một lần, nên "mã cũ trong
+ * tin nhắn Zalo không vào được nữa" là ca thường gặp chứ không phải ca lạ — bỏ mặc phụ
+ * huynh với một câu từ chối cụt là đẩy họ sang gọi điện cho trường.
+ *
+ * Hai lối thoát trong một câu vì có hai nguyên nhân: đang bị treo tạm (chờ vài phút) và
+ * mã đã chết/không đúng (xin mã mới). Không tách ra theo từng nguyên nhân — tách là tự
+ * khai cho người dò biết họ đang chạm vào loại tường nào.
+ */
+const DENY_MESSAGE =
+  "Mã mời không dùng được. Thử lại sau ít phút, hoặc nhắn thầy cô chủ nhiệm để nhận mã mới.";
 
 /**
  * Lấy IP thật sau proxy (cloudflared/Nginx, ADR-018): chặng ĐẦU của `x-forwarded-for`.
@@ -66,6 +91,33 @@ function auditFailure(reason: string, fingerprint: string | null, ip: string): v
  * hợp bị treo/quá hạn mức thì trả 429 kèm `Retry-After` — mã trạng thái đó nói về NGƯỜI
  * GỌI, không tiết lộ gì về mã.
  */
+/**
+ * Lý do từ chối, đọc từ SQLSTATE + DETAIL của `core.redeem_parent_invite_code` (0036).
+ * KHÔNG so chuỗi thông điệp: thông điệp là tiếng Việt cho người đọc log, đổi một chữ
+ * là kiểm soát này chết im lặng.
+ *
+ *   P0002 mã không tồn tại · 22000 hết hạn · 28000 mã đã chết (DETAIL nói rõ vì sao:
+ *   `already_redeemed` = đã dùng và quá cửa sổ 15 phút, `revoked` = bị thu hồi).
+ *
+ * Giá trị trả về CHỈ đi vào `ops.audit_log` và log máy chủ — không bao giờ đi ra
+ * response, vì phân biệt được lý do là biết "mã này có tồn tại", đúng thứ người dò cần.
+ */
+function redeemReason(err: unknown): { reason: string; codeExisted: boolean } {
+  const e = err as { code?: unknown; detail?: unknown };
+  const sqlstate = typeof e?.code === "string" ? e.code : null;
+  const detail = typeof e?.detail === "string" && e.detail ? e.detail : null;
+  switch (sqlstate) {
+    case "28000":
+      return { reason: detail ?? "code_dead", codeExisted: true };
+    case "22000":
+      return { reason: "expired", codeExisted: true };
+    case "P0002":
+      return { reason: "unknown_code", codeExisted: false };
+    default:
+      return { reason: "invalid_or_expired", codeExisted: false };
+  }
+}
+
 function deny(status: 400 | 429, retryAfterSeconds?: number): NextResponse {
   const res = NextResponse.json({ error: DENY_MESSAGE }, { status });
   if (retryAfterSeconds) res.headers.set("retry-after", String(retryAfterSeconds));
@@ -108,10 +160,22 @@ export async function POST(req: Request) {
   let authUid: string;
   try {
     authUid = await redeemInviteCode(code);
-  } catch {
+  } catch (err) {
+    const { reason, codeExisted } = redeemReason(err);
+    // Vẫn tính vào bộ đếm treo, kể cả khi mã có thật: một mã đã chết bị trình đi trình
+    // lại là đúng hình dạng của một tin nhắn bị chuyển tiếp trong nhóm, không phải của
+    // một phụ huynh gõ nhầm. Treo 15 phút không làm hỏng gì cho người dùng thật — họ
+    // đang cầm một mã không dùng được nữa và phải xin mã mới bằng đường khác.
     const failures = recordInviteFailure(code);
-    log("warn", "invite.redeem_failed", { fingerprint, ip, failures });
-    auditFailure("invalid_or_expired", fingerprint, ip);
+    // Mã CÓ THẬT mà bị từ chối là tín hiệu đáng nhìn hơn hẳn mã gõ bừa: tách hẳn tên
+    // sự kiện để lọc được trong log, đừng bắt người trực đi đọc trường `reason`.
+    log("warn", codeExisted ? "invite.dead_code_presented" : "invite.redeem_failed", {
+      fingerprint,
+      ip,
+      reason,
+      failures,
+    });
+    auditFailure(reason, fingerprint, ip);
     return deny(400);
   }
 
@@ -123,7 +187,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Không dựng được phiên phụ huynh" }, { status: 500 });
   }
 
-  // §9: mã đúng thì xoá sạch bộ đếm — lần bấm thứ hai (retry mạng, bấm đúp) phải qua được.
+  // §9: mã đúng thì xoá sạch bộ đếm — lần bấm thứ hai (retry mạng, bấm đúp) phải qua
+  // được. Từ 0036, "qua được" chỉ còn đúng trong cửa sổ 15 phút của hàm SQL; bộ đếm
+  // này không được là thứ chặn trước cửa sổ đó.
   clearInviteFailures(code);
 
   const token = await createSessionToken({

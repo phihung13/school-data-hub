@@ -28,17 +28,47 @@
 //     lại ra trang Hồ sơ (bản mobile là <span> trần, bấm không ra gì). Cả hai đã gỡ:
 //     GĐ1 chưa có tìm kiếm và chưa có thông báo, vẽ ra chỗ bấm không dẫn tới đâu chỉ
 //     dạy người dùng rằng giao diện này không đáng tin.
+//
+// Sửa 31/07/2026 (gói "giong-noi-va-don-dep"), ba việc:
+//
+//  1. GIỌNG. Popup check-in nói với đứa trẻ "Chỉ GVCN của con nhìn thấy" — "GVCN" là
+//     từ vựng hành chính, DESIGN-GUIDELINES §8 chỉ cho nó sống ở buồng lái/tâm lý/điều
+//     hành. Nay dùng đúng câu nhãn của PRODUCT.md: "Chỉ thầy cô chủ nhiệm thấy".
+//     Kèm theo: lời chào gọi tên người bằng personName() — trước đây /home in nguyên
+//     "Chào Cô Lan (GVCN 6A1) 👋" (full_name kèm hậu tố chức danh) trong khi /gvcn đã
+//     gọi đúng "Chào Cô Lan"; và 👋 chỉ dành cho học sinh (§4: emoji chỉ trong lời chào
+//     học sinh, tiết chế).
+//
+//  2. DỰNG MỘT NHÁNH, KHÔNG DỰNG HAI RỒI ẨN. Trang này có hai bố cục THẬT SỰ khác nhau,
+//     trước đây cả hai cùng nằm trong DOM (`md:hidden` + `hidden md:flex`): HTML của
+//     /home chứa chữ "Mini App" hai lần, mỗi lần dữ liệu đổi React đối chiếu hai cây,
+//     và điện thoại rẻ tiền trả tiền cho cây desktop nó không bao giờ nhìn thấy. Nay
+//     hỏi khổ màn một lần bằng useIsDesktop() (lib/viewport.ts) rồi dựng đúng một nhánh.
+//
+//  Kèm theo (bắt buộc, không phải tiện tay): bản mobile nay dựng <HubTabBar> cho MỌI vai
+//  thay vì chỉ học sinh. Trước đây người lớn ở trang chủ trên điện thoại không có đường
+//  nào tới /ho-so — trang duy nhất có nút Đăng xuất. Từ khi trang chỉ dựng một nhánh,
+//  nhánh mobile còn là thứ chạy trước hydrate ở MỌI khổ màn, nên nó không được phép là
+//  một trang không lối ra.
+//
+//  3. HÂM SẴN BUỒNG LÁI. GVCN đăng nhập vào /home rồi bấm tile Buồng lái; trước đây
+//     care.getDashboard chỉ bắt đầu chạy SAU khi /gvcn đã hydrate xong, đúng vào 2 phút
+//     đầu giờ. Nay /home tự nạp trước dữ liệu đó (staleTime 60s của REACT_QUERY_DEFAULTS
+//     đủ để lần bấm sau dùng lại) — chỉ cho vai homeroom, không tốn request của ai khác.
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
+import { useIsDesktop } from "@/lib/viewport";
 import type { HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/core/contracts";
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { MiniAppTile } from "./mini-app-tile";
-import { StudentTabBar } from "./tab-bar";
+import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { HubSidebar } from "./hub-sidebar";
+import { personName } from "./ui/labels";
 import { MutationError, SkeletonBlock } from "./ui/query-state";
 
 /**
@@ -56,6 +86,8 @@ export function statState(query: { isPending: boolean; isError: boolean }): Stat
 interface HomeData {
   displayName: string;
   email: string;
+  /** Vai thật — bản mobile cần để dựng đúng bộ tab (tab-bar.tsx: resolveTabs). */
+  roles: HubRole[];
   isStudent: boolean;
   isHomeroom: boolean;
   today: string;
@@ -100,10 +132,25 @@ export function HomeView({
   const todayStatus = trpc.checkin.getTodayStatus.useQuery(undefined, { enabled: isStudent });
   const growthReport = trpc.report.getMyLatestReport.useQuery(undefined, { enabled: isStudent });
   const today = new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+  const isDesktop = useIsDesktop();
+
+  // Hâm sẵn buồng lái cho GVCN — xem ghi chú 3 đầu file. `prefetch` không ném lỗi ra
+  // màn hình: hỏng thì /gvcn tự tải lại như trước, người dùng không thấy gì khác.
+  const utils = trpc.useUtils();
+  const router = useRouter();
+  useEffect(() => {
+    if (!isHomeroom || isStudent) return;
+    router.prefetch("/gvcn");
+    void utils.care.getDashboard.prefetch(undefined).catch(() => {});
+  }, [isHomeroom, isStudent, router, utils]);
 
   const data: HomeData = {
-    displayName,
+    // Gọi TÊN, không gọi chức danh: core.users.full_name mang hậu tố "(GVCN 6A1)" nên
+    // in thẳng ra là vừa dài vừa lọt từ vựng vận hành vào lời chào. Không có tên sạch
+    // thì mới dùng lại chuỗi gốc — không bao giờ để trống lời chào.
+    displayName: personName(displayName) || displayName,
     email,
+    roles,
     isStudent,
     isHomeroom,
     today,
@@ -123,18 +170,17 @@ export function HomeView({
     },
   };
 
+  // MỘT nhánh, không hai. `md:hidden`/`hidden md:flex` vẫn dựng cả hai cây trong DOM —
+  // xem ghi chú 2 đầu file và lib/viewport.ts.
+  if (!isDesktop) return <MobileHome data={data} />;
+
   return (
-    <>
-      <div className="md:hidden">
-        <MobileHome data={data} />
+    <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex w-[240px] flex-none">
+        <HubSidebar roles={roles} active="home" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
-        <div className="flex w-[240px] flex-none">
-          <HubSidebar roles={roles} active="home" fullName={displayName} email={email} classCode={classCode} />
-        </div>
-        <DesktopHome data={data} />
-      </div>
-    </>
+      <DesktopHome data={data} />
+    </div>
   );
 }
 
@@ -165,7 +211,11 @@ function MobileHome({ data }: { data: HomeData }) {
             {data.displayName.slice(0, 1)}
           </div>
           <div className="flex-1">
-            <div className="text-[17px] font-black text-white">Chào {data.displayName} 👋</div>
+            {/* 👋 chỉ đi với lời chào HỌC SINH (§4: emoji tiết chế, chỉ ở đó). Cùng một
+                dòng chữ này còn chào hiệu trưởng và kế toán lúc 7 giờ sáng. */}
+            <div className="text-[17px] font-black text-white">
+              Chào {data.displayName}{data.isStudent ? " 👋" : ""}
+            </div>
             <div className="mt-0.5 text-[11.5px] text-[#D6E6FF]">{data.today}</div>
           </div>
           {/* Chuông thông báo đã gỡ 31/07/2026: GĐ1 chưa có thông báo trong sản phẩm,
@@ -201,7 +251,13 @@ function MobileHome({ data }: { data: HomeData }) {
         )}
       </div>
 
-      {data.isStudent && <StudentTabBar />}
+      {/* Thanh điều hướng của MỌI vai, không riêng học sinh (tab-bar.tsx chọn bộ tab
+          theo vai). Trước đây chỉ học sinh có thanh này, nên trên điện thoại phụ huynh,
+          GVCN, tâm lý cụm và quản trị đứng ở trang chủ mà không có đường nào tới /ho-so
+          — trang DUY NHẤT có nút Đăng xuất. Kể từ khi trang này dựng một nhánh theo khổ
+          màn, đây còn là lưới an toàn cho cả khung máy tính: nhánh desktop (có menu trái)
+          chỉ dựng sau hydrate, nên HTML đầu tiên phải tự mang được đường đi của nó. */}
+      <HubTabBar roles={data.roles} />
     </div>
   );
 }
@@ -285,7 +341,9 @@ function DesktopHome({ data }: { data: HomeData }) {
               đầu file. Khi GĐ2 có tìm kiếm thật thì dựng lại bằng <input>/<button>. */}
           <div className="relative mt-3 flex flex-wrap items-end gap-6">
             <div className="min-w-0 flex-1 basis-[300px]">
-              <div className="text-[40px] font-black leading-[1.1] text-white">Chào {data.displayName} 👋</div>
+              <div className="text-[40px] font-black leading-[1.1] text-white">
+                Chào {data.displayName}{data.isStudent ? " 👋" : ""}
+              </div>
               <div className="mt-2 text-[14px] font-semibold text-[#D6E6FF]">{data.today}</div>
             </div>
             {data.isStudent && (
@@ -327,7 +385,18 @@ function DesktopHome({ data }: { data: HomeData }) {
           </div>
         </div>
 
-        <div className="mt-[-34px] flex flex-wrap items-start gap-5 px-7">
+        {/*
+          `relative z-[2]` KHÔNG phải trang trí — thiếu nó thì hero navy vẽ ĐÈ LÊN thẻ đầu tiên.
+          Lý do: hero ở trên là `relative` (phần tử có định vị), còn khối này chỉ có margin âm.
+          CSS vẽ mọi phần tử có định vị lên trên phần tử không định vị, bất kể thứ tự trong DOM.
+
+          Chỉ vai NGƯỜI LỚN nhìn thấy lỗi (bắt gặp thật 31/07/2026, ảnh chụp của Cô Hạnh: chữ
+          "Mini App" bị cắt ngang bởi nền navy): với học sinh, thẻ đầu tiên là thẻ check-in vốn
+          đã mang sẵn `relative` nên tự thoát; người lớn không có thẻ đó nên thẻ Mini App lĩnh trọn.
+          Bản mobile (dòng ~211) từ đầu đã có `relative z-[2]` — chỉ bản desktop bị sót.
+          DESIGN-GUIDELINES §6 cũng đã dặn đúng điều này cho mẫu "hero cong".
+        */}
+        <div className="relative z-[2] mt-[-34px] flex flex-wrap items-start gap-5 px-7">
           <div className="flex min-w-0 flex-[3_1_520px] flex-col gap-[18px]">
             {data.isStudent && <CheckinCardDesktop data={data} onOpenModal={() => setModalOpen(true)} />}
 
@@ -473,8 +542,10 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
             <Mascot pose="wave" width={64} />
             <div className="mt-2 text-center text-[24px] font-black text-ink">Hôm nay con thấy thế nào?</div>
             <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#6B7789]">
-              <span className="msr text-[15px] text-caption">lock</span>
-              Chỉ GVCN của con nhìn thấy
+              <span aria-hidden="true" className="msr text-[15px] text-caption">lock</span>
+              {/* Đúng câu nhãn của PRODUCT.md §"Ràng buộc không thương lượng". "GVCN" là
+                  từ vựng vận hành, không được xuất hiện trước mặt học sinh (§8). */}
+              Chỉ thầy cô chủ nhiệm thấy
             </div>
             <div className="mt-5 grid w-full grid-cols-4 gap-3">
               {MOOD_ORDER.map((mood) => {

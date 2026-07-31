@@ -1872,7 +1872,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="17">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="18">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -2047,7 +2047,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <h3>Bản đồ dữ liệu ở mức dev cần nhớ</h3>
         <div class="grid-3">
           <div class="card blue"><h4><code>core</code> · nguồn sự thật</h4><p>Users, students, teachers, parents, schools, classes, roles, permissions, và <b>hai sổ đối chiếu</b>: <code>id_mappings</code> (mã học sinh ở hệ ngoài) + <code>identity_links</code> (tài khoản đăng nhập ở hệ ngoài). Thêm <code>parent_invite_codes</code> (28/07/2026) — mã mời 6 ký tự để phụ huynh tự tạo tài khoản lần đầu, giống hệt cách sổ đối chiếu khác: không ai đọc/ghi thẳng bảng này, chỉ một hàm riêng được chạm. <b>Sửa 29/07/2026:</b> khi dựng thử ứng dụng thật, phát hiện <code>parents</code>/<code>parent_students</code> trước đó không ai đọc được (thiếu quyền hoàn toàn, không phải chủ ý) — đã mở đúng phạm vi: phụ huynh tự tra được chính con mình, không hơn.</p></div>
-          <div class="card"><h4><code>attendance</code></h4><p>Check-in, điểm danh, khung giờ, yêu cầu gặp thầy cô. <b>Thêm 30/07/2026:</b> yêu cầu gặp thầy cô giờ ghi thêm chủ đề + mức khẩn + lời nhắn (trước chỉ ghi "đã bấm nút") — vẫn là dữ liệu cảm xúc thường, không kho riêng. Tên GVCN hiển thị cho học sinh cũng được dọn lại (bỏ hậu tố "(GVCN 6A1)" chỉ dùng để phân biệt tài khoản thử ở màn đăng nhập).</p></div>
+          <div class="card"><h4><code>attendance</code></h4><p>Check-in, điểm danh, khung giờ, yêu cầu gặp thầy cô. <b>Thêm 30/07/2026:</b> yêu cầu gặp thầy cô giờ ghi thêm chủ đề + mức khẩn + lời nhắn (trước chỉ ghi "đã bấm nút") — vẫn là dữ liệu cảm xúc thường, không kho riêng. Tên GVCN hiển thị cho học sinh cũng được dọn lại (bỏ hậu tố "(GVCN 6A1)" chỉ dùng để phân biệt tài khoản thử ở màn đăng nhập). <b>Sửa 31/07/2026:</b> khoá lại danh sách người đọc được <b>lời nhắn</b> của em &mdash; nay chỉ còn chính em và giáo viên chủ nhiệm (thêm phòng tâm lý khi được chuyển tiếp). Xem thẻ &laquo;Lời nhắn của con&raquo; trong bảng rà soát ngay dưới đây.</p></div>
           <div class="card"><h4><code>care</code></h4><p>Cờ, hồ sơ, can thiệp, ngưỡng, leo thang, ghi chú tư vấn. <b>Thêm 31/07/2026:</b> một cuốn <b>sổ luật cảnh báo</b> tách riêng khỏi bảng ngưỡng. Trước đó mỗi luật cảnh báo chỉ được đặt đúng một con số cho cả sáu cơ sở &mdash; thiết kế có hứa &laquo;mỗi cơ sở một ngưỡng riêng&raquo; nhưng cấu trúc bảng không cho phép, nên lời hứa đó không bao giờ dùng được. Nay mỗi cơ sở đặt được ngưỡng riêng, và cơ sở nào chưa đặt thì dùng con số chung của trường.</p></div>
           <div class="card"><h4><code>evidence</code></h4><p>5 Giá trị, sự kiện, PDR, DEAR, rubric, fitness, khảo sát.</p></div>
           <div class="card"><h4><code>tutor</code></h4><p>Mastery snapshot, CEFR, quỹ đạo, milestone, tiến độ Moodle.</p></div>
@@ -2078,6 +2078,11 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
                 <td><b>&laquo;Mỗi người chỉ thấy phần của mình&raquo;</b></td>
                 <td>Ba bảng bị hở: bất kỳ ai đăng nhập cũng <b>đếm được lớp mình có mấy bạn đang bị theo dõi</b>, và <b>đọc được chính dải mạng dùng để chống gian lận điểm danh</b>. Riêng một chỗ, học sinh còn <b>tự duyệt được bản điểm danh muộn của chính mình</b> &mdash; tái hiện được, không phải giả định.</td>
                 <td>Đã khóa cả ba, và đổi cách canh: thay vì một danh sách viết tay (bảng sinh sau sẽ lọt), nay hệ tự hỏi chính nó &laquo;còn bảng nào chưa khóa mà không có lý do ghi rõ không&raquo;.</td>
+              </tr>
+              <tr>
+                <td><b>&laquo;Bạn cùng lớp &middot; thầy cô khác &middot; bố mẹ &mdash; không nhìn thấy&raquo;</b> &mdash; câu này <b>đang in ngay trên màn hình</b>, ở đúng ô mà học sinh gõ lời nhắn cho cô chủ nhiệm</td>
+                <td>Câu đó chưa đúng ở tầng dữ liệu. Bảng lưu lời nhắn được xếp chung nhóm với danh sách lớp và bảng điểm, mà nhóm đó thì <b>phụ huynh và hiệu trưởng cơ sở đọc được</b>. Thử lại trên máy dev: đăng nhập bằng tài khoản phụ huynh, hỏi thẳng cơ sở dữ liệu &mdash; <b>đọc ra nguyên văn lời con viết</b>. Chưa màn hình nào hiển thị nó ra, nên chưa ai từng thấy; nhưng thứ đang giữ lời hứa lúc đó chỉ là &laquo;chưa ai viết đoạn mã hỏi câu đó&raquo;.</td>
+                <td>Đã khoá lại đúng danh sách mà màn hình hứa: <b>chính em</b>, <b>giáo viên chủ nhiệm của em</b>, và <b>phòng tâm lý</b> khi chuyện được chuyển tiếp. Bố mẹ, thầy cô bộ môn, hiệu trưởng, quản trị viên: không còn đọc được, kể cả hỏi thẳng cơ sở dữ liệu. Hai điều <b>không</b> thay đổi: cô chủ nhiệm vẫn nhận được tín hiệu khẩn ngay trên màn hình lớp, và tín hiệu đó vẫn chỉ nói &laquo;em này cần gặp cô&raquo; chứ không chép theo lời em kể. Có bài kiểm tự động cho cả hai chiều, và đã thử ngược: trả lại như cũ thì bài kiểm đỏ ngay ở đúng câu &laquo;bố mẹ đọc ra không dòng nào&raquo;.</td>
               </tr>
               <tr>
                 <td><b>&laquo;Mọi lượt xem dữ liệu y tế đều ghi nhật ký&raquo;</b></td>

@@ -1,6 +1,17 @@
 // apps/hub/server/routers/report.ts — router `report`, read-only (03-api.md).
-// GĐ1: nội dung lấy đúng từ dữ liệu đã có — điểm danh + mood + help_requests.
+// GĐ1: nội dung lấy đúng từ dữ liệu đã có — điểm danh + mood.
 // Không hứa dữ liệu evidence/tutor (GĐ2) — khớp Hub Giai Doan 1.dc.html P3.
+//
+// ĐƯỜNG AN TOÀN — vì sao báo cáo này KHÔNG đọc `attendance.help_requests`:
+// màn "Mình cần gặp thầy cô" (help-request-view.tsx) IN RA LỜI HỨA với đứa trẻ —
+// "Bạn cùng lớp · thầy cô khác · bố mẹ — KHÔNG nhìn thấy". Báo cáo Trưởng thành thì
+// gửi thẳng cho PHỤ HUYNH đọc (`getMyStudentIdForReport` suy ra học sinh cho cả tài
+// khoản học sinh lẫn tài khoản cha mẹ). Nên chỉ cần một mục Glow "em đã bấm cần gặp
+// thầy cô" lọt vào đây là lời hứa kia thành lời nói dối — và với em bấm nút vì
+// CHUYỆN Ở NHÀ (topic='nha') thì đó là rủi ro an toàn thật, không phải lỗi văn phong.
+// Đây là lý do khối truy vấn bên dưới KHÔNG select help_requests: không đọc thì không
+// có gì để lọt. "Đọc rồi lọc theo vai người gọi" từng là lựa chọn cân nhắc và đã bị
+// loại — một nhánh if quên sót là một đứa trẻ bị lộ.
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { PoolClient } from "@hub/core/db";
@@ -30,17 +41,15 @@ async function buildGrowthReport(client: PoolClient, studentId: string, weekStar
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 4); // thứ Hai -> thứ Sáu
 
+  // KHÔNG đọc attendance.help_requests ở đây — xem khối "ĐƯỜNG AN TOÀN" đầu file.
   const statsRes = await client.query<{
     checkin_days: number;
     happy_days: number;
-    help_requests: number;
     streak_days: number;
   }>(
     `select
        count(*) filter (where kind = 'in')::int as checkin_days,
        count(*) filter (where mood = 4)::int as happy_days,
-       (select count(*)::int from attendance.help_requests
-         where student_id = $1 and requested_on between $2 and $3) as help_requests,
        (select count(*)::int from (
           select occurred_on, occurred_on + row_number() over (order by occurred_on desc)::int as grp
             from attendance.checkins
@@ -51,7 +60,7 @@ async function buildGrowthReport(client: PoolClient, studentId: string, weekStar
     where student_id = $1 and occurred_on between $2 and $3`,
     [studentId, weekStart, toLocalIsoDate(weekEnd)],
   );
-  const stats = statsRes.rows[0] ?? { checkin_days: 0, happy_days: 0, help_requests: 0, streak_days: 0 };
+  const stats = statsRes.rows[0] ?? { checkin_days: 0, happy_days: 0, streak_days: 0 };
 
   const glow: Array<{ title: string; detail: string; accentColor: "green" | "blue" | "amber" }> = [];
   if (stats.checkin_days >= 5) {
@@ -68,13 +77,16 @@ async function buildGrowthReport(client: PoolClient, studentId: string, weekStar
       accentColor: "blue",
     });
   }
-  if (stats.help_requests > 0) {
-    glow.push({
-      title: 'Chủ động bấm «cần gặp thầy cô» khi có chuyện khó',
-      detail: "Một hành động dũng cảm — thầy cô đã trò chuyện cùng em",
-      accentColor: "amber",
-    });
-  }
+  // (Ở đây từng có mục Glow thứ ba sinh từ `help_requests` — đã gỡ 31/07/2026.
+  //  Hai lỗi trong một khối 6 dòng, nên ghi lại để không ai "khôi phục cho đẹp":
+  //   1. Nó tố với bố mẹ việc con đã bấm nút cầu cứu — phá lời hứa in trên màn hình
+  //      của chính đứa trẻ (xem khối ĐƯỜNG AN TOÀN đầu file).
+  //   2. Nó khẳng định "thầy cô đã trò chuyện cùng em" chỉ dựa trên count(*) của
+  //      bảng yêu cầu, KHÔNG hề đọc `handled_at`. Trên CSDL dev hôm nay có đúng một
+  //      bản ghi với handled_at = NULL — chưa ai chạm tới em — mà báo cáo vẫn báo là
+  //      đã trò chuyện. Đó là nói sai sự thật với phụ huynh về một việc chăm sóc.
+  //  Muốn đưa tín hiệu này cho GVCN thì đường đúng là Buồng lái (care.ts), nơi có
+  //  đọc `handled_at` thật — không phải báo cáo mà cha mẹ đọc.)
 
   const grow =
     stats.checkin_days < 5
@@ -98,13 +110,27 @@ async function buildGrowthReport(client: PoolClient, studentId: string, weekStar
   });
 }
 
+/**
+ * Suy ra học sinh của người đang gọi: chính mình (tài khoản học sinh) hoặc con mình
+ * (tài khoản phụ huynh). Không nhận `studentId` từ client — xem `GetReportForWeekInput`.
+ *
+ * `order by` bên trong `limit 1` là bắt buộc, không phải cho gọn: `limit 1` không kèm
+ * thứ tự thì Postgres trả hàng nào cũng đúng cú pháp, và với phụ huynh có HAI con thì
+ * cùng một lần bấm có thể ra báo cáo của đứa này, lần sau ra đứa kia — tuỳ kế hoạch
+ * truy vấn. Sắp theo (created_at, student_id) để một tài khoản luôn thấy cùng một em.
+ * Hạn chế còn lại đã biết: phụ huynh nhiều con chỉ xem được em được gắn sớm nhất —
+ * màn chọn con là việc của GĐ sau, và nó phải đi qua danh sách con thật chứ không
+ * phải mở lại tham số `studentId` cho client tự gõ.
+ */
 async function getMyStudentIdForReport(client: PoolClient): Promise<string> {
   const meRes = await client.query<{ student_id: string | null }>(
     `select coalesce(
        (select id from core.students where user_id = core.current_user_id()),
        (select ps.student_id from core.parent_students ps
           join core.parents p on p.id = ps.parent_id
-         where p.user_id = core.current_user_id() limit 1)
+         where p.user_id = core.current_user_id()
+         order by ps.created_at, ps.student_id
+         limit 1)
      ) as student_id`,
   );
   const studentId = meRes.rows[0]?.student_id;

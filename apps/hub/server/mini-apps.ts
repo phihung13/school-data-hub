@@ -16,7 +16,14 @@ import type { HubRole, MiniAppTile } from "@hub/core/contracts";
 const STAFF_ROLES: HubRole[] = ["teacher", "homeroom", "counselor", "principal", "board", "admin"];
 
 export function buildMiniApps(roles: HubRole[]): MiniAppTile[] {
-  const isStudentOrGuardian = roles.includes("student") || roles.includes("guardian");
+  // Sửa 31/07/2026 (gói "menu-noi-dung-dich"): học sinh và phụ huynh KHÔNG còn dùng chung
+  // một nhánh. Trước đó phụ huynh nhận nguyên lưới của học sinh, trong đó tile "Điểm danh"
+  // trỏ /checkin — mà app/checkin/page.tsx:10 chặn mọi vai không phải học sinh rồi đá về
+  // /home. Phụ huynh bấm tile đầu tiên trên trang chủ của mình là bị đẩy ngược, không một
+  // lời giải thích: đúng dạng "menu 404" mà chú thích ngay dưới đây đã cảnh báo cho
+  // counselor nhưng lại không áp cho guardian.
+  const isStudent = roles.includes("student");
+  const isGuardian = roles.includes("guardian");
   // Buồng lái /gvcn tự chặn `roles.includes("homeroom")` rồi đá về /home (app/gvcn/page.tsx:9).
   // Nếu ở đây cấp tile cho cả tư vấn cụm thì Cô Mai bấm vào chỉ thấy mình bị đẩy ngược
   // ra trang chủ, không lời giải thích — tile dẫn tới trang mình không vào được cũng là
@@ -25,11 +32,30 @@ export function buildMiniApps(roles: HubRole[]): MiniAppTile[] {
   const isStaff = roles.some((r) => STAFF_ROLES.includes(r));
 
   const tiles: MiniAppTile[] = [];
-  if (isStudentOrGuardian) {
+  if (isStudent) {
     tiles.push(
-      { key: "attendance", label: "Điểm danh", icon: "fact_check", href: "/checkin", available: true },
+      // Nhãn nói đúng VIỆC, không nói đúng MIỀN: /checkin là nơi em ghi tâm trạng sáng nay,
+      // còn /diem-danh (sidebar, nhãn "Lịch điểm danh") là nơi xem lại lịch sử. Trước đây cả
+      // hai đều mang nhãn "Điểm danh" nên trên máy tính em thấy hai mục cùng tên dẫn tới hai
+      // trang khác nhau — một nhãn hai đích thì nhãn không còn nghĩa gì.
+      { key: "checkin", label: "Check-in cảm xúc", icon: "sentiment_satisfied", href: "/checkin", available: true },
       { key: "report", label: "Báo cáo", icon: "workspace_premium", href: "/bao-cao", available: true },
       { key: "study", label: "Học tập · GĐ2", icon: "menu_book", href: "#", available: false },
+      { key: "health", label: "Y tế · GĐ2", icon: "favorite", href: "#", available: false },
+    );
+  } else if (isGuardian) {
+    // Phụ huynh: đúng MỘT màn có thật trong GĐ1 là Báo cáo Trưởng thành (khớp
+    // GUARDIAN_ITEMS ở hub-sidebar.tsx và GUARDIAN_TABBAR_ITEMS ở tab-bar.tsx).
+    //
+    // "Điểm danh của con" giữ lại ở thể MỜ chứ không xoá hẳn: 02-database.md:56 đã cấp
+    // quyền đọc attendance cho guardian nhưng chưa có màn hình nào, mà đây lại là câu hỏi
+    // số một của phụ huynh buổi sáng. Tile mờ nói thật "chưa có"; xoá hẳn thì phụ huynh
+    // tự đoán là hệ thống không theo dõi việc đó. Bấm được thì mới là hứa suông — ở đây
+    // href "#" và available:false nên không bấm được (mini-app-tile.tsx render <div>).
+    // Đổi thành <Link> thật khi gói "mobile-cho-man-con-thieu" dựng xong màn.
+    tiles.push(
+      { key: "report", label: "Báo cáo", icon: "workspace_premium", href: "/bao-cao", available: true },
+      { key: "attendance", label: "Điểm danh của con · sắp", icon: "fact_check", href: "#", available: false },
       { key: "health", label: "Y tế · GĐ2", icon: "favorite", href: "#", available: false },
     );
   }

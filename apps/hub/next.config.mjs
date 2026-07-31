@@ -23,6 +23,25 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
 
+  experimental: {
+    // Bộ nhớ đệm điều hướng phía trình duyệt (client router cache), tính bằng giây.
+    //
+    // Mặc định của Next 14 cho trang ĐỘNG là 0: nạp trước (`router.prefetch("/gvcn")`,
+    // `<Link>` lọt vào tầm nhìn) xong thì vứt ngay, nên lần bấm thật vẫn đi một vòng
+    // mạng đầy đủ. Mọi trang của Hub đều động (đọc phiên từ cookie), tức là tính năng
+    // nạp trước của Next hiện KHÔNG giúp được gì.
+    //
+    // 30 giây là cửa sổ vừa đủ cho hành vi thật: GVCN mở /home rồi bấm tile Buồng lái
+    // trong vài giây (home-view.tsx cũng hâm sẵn dữ liệu care.getDashboard đúng lúc đó),
+    // học sinh nhảy qua lại /home ↔ /checkin ↔ /ho-so.
+    //
+    // AN TOÀN VỀ DỮ LIỆU, và đây là phần phải kiểm chứ không phải tin: cái được đệm là
+    // payload RSC của trang, mà Server Component ở đây chỉ mang tên/email/vai/lưới mini
+    // app từ phiên — KHÔNG mang số liệu học sinh (mọi số đi qua tRPC, có staleTime riêng
+    // 60s ở REACT_QUERY_DEFAULTS). Đăng xuất gọi router.refresh() nên xoá sạch bộ đệm này.
+    staleTimes: { dynamic: 30 },
+  },
+
   compiler: {
     // Bỏ console.log/debug/info khỏi bundle production. GIỮ error và warn: đó là
     // đường duy nhất để lỗi phía client hiện ra khi hỗ trợ thầy cô qua điện thoại.

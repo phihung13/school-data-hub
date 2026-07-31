@@ -70,8 +70,12 @@ select test_support.logout();
 select test_support.login_as('90000000-0000-0000-0000-000000000001');  -- cô Lan
 select isnt_empty($$ select 1 from care.flags $$,
   'GVCN thấy cờ của lớp mình — chiều cho phép');
-select isnt_empty($$ select 1 from care.counselor_notes $$,
-  'GVCN đọc được ghi chú tư vấn của ca mình phụ trách');
+-- ĐẢO CHIỀU 31/07/2026 (migration 0035). Dòng này trước đây khẳng định GVCN đọc được
+-- nguyên văn ghi chú tư vấn — nó chép đúng hành vi của policy cũ, mà policy cũ thì trái
+-- DESIGN-GUIDELINES §9 ("GVCN & PH không xem được") và mệnh lệnh 4 của CLAUDE.md. Test
+-- chép theo code sai thì cổng chặn thành con dấu, nên chiều đúng nằm ở đây:
+select is_empty($$ select 1 from care.counselor_notes $$,
+  'GVCN KHÔNG đọc được ghi chú tư vấn — cô thấy cờ và nhật ký can thiệp, không thấy lời em kể (0035)');
 select test_support.logout();
 
 -- ═══ GVCN LỚP KHÁC: không tra cứu chéo ════════════════════════════════════

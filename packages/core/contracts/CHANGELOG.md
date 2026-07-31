@@ -39,6 +39,47 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
   Ghi chú cho vibe team: `ClassRosterEntry.status = null` nghĩa là **chưa ai điểm danh em đó**,
   KHÔNG phải "vắng" — đừng vẽ nó thành nhãn vắng (RULES Rev F điều 8).
 
+- Gói `cong-duyet-bao-cao` (31/07/2026) — `ReportPreview` và `ReportApprovalRow.preview`
+  trong `contracts/care.ts`. Chỉ THÊM, client cũ không gãy.
+
+  `care.listReportApprovals` trước đây chỉ trả hai con số vận hành (`checkinDays`,
+  `happyDays`), nên màn "Duyệt báo cáo" mời GVCN bấm **«Duyệt gửi phụ huynh»** trên một
+  văn bản cô chưa từng nhìn thấy. `preview` là **nguyên văn thứ phụ huynh sẽ đọc**:
+  `headline`, `glow` (dùng lại `GlowItem` của `contracts/report.ts`), `grow` (tối đa 1,
+  giống `GetGrowthReportOutput.grow`), `streakDays`.
+
+  Ghi chú cho vibe team: `preview` viết bằng **giọng "Glow & Grow"** của phụ huynh
+  (DESIGN-GUIDELINES §8) dù nó hiện trên màn hình giáo viên — đừng trộn từ vựng vận hành
+  (cờ / ngưỡng / leo thang) vào khối này, và **đừng gấp nó lại sau một nút "Xem trước"**:
+  gấp được nghĩa là duyệt được mà không đọc, tức là quay lại đúng lỗi vừa sửa.
+  `preview` KHÔNG chứa tín hiệu "cần gặp thầy cô" — đó là tín hiệu chăm sóc, không phải
+  thành tích kể với phụ huynh (mệnh lệnh 4, CLAUDE.md).
+
+- Gói `man-hinh-con-thieu-gvcn-hs` (31/07/2026) — hợp đồng cho **màn hồ sơ MỘT học sinh**
+  của GVCN, trong `contracts/care.ts`. Chỉ THÊM, không đổi và không xoá field nào đang có:
+  `GetStudentDetailInput`, `StudentCheckinDay`, `StudentHelpRequest`, `StudentCareCase`,
+  `StudentReportApproval`, `GetStudentDetailOutput`.
+
+  Ba ghi chú cho vibe team, cả ba đều là ràng buộc chứ không phải gợi ý:
+
+  1. `checkins` CHỈ chứa ngày **có** dòng check-in. Ngày không có thì **không có phần tử
+     nào** trong mảng — đừng "sửa cho tiện" thành 14 hàng với `status: null`. Một hàng có
+     mặt trong mảng trông như một sự thật đã ghi nhận, mà "chưa ai ghi gì" thì không phải
+     (RULES Rev F điều 8). Màn hình tự dựng lưới ngày từ `window` rồi vẽ ô trống là *chưa
+     có dữ liệu* — không phải "vắng", cũng không phải "ổn".
+  2. `StudentHelpRequest.note` là **lời riêng em viết cho thầy cô chủ nhiệm**. Nó chỉ ra
+     khỏi CSDL qua đúng một procedure (`care.getStudentDetail`, `homeroomProcedure` + đối
+     chiếu em thuộc lớp mình chủ nhiệm). Không sao chép sang `care.flags.detail` (luật "cờ
+     E gọn" — cờ chỉ ghi LOẠI tín hiệu), không đưa vào báo cáo phụ huynh (§5), không hiện
+     ở màn tâm lý cụm.
+  3. `StudentHelpRequest.handledAt = null` nghĩa là **chưa ai bấm nút "đã gặp em rồi"** —
+     KHÔNG có nghĩa "chưa ai đọc". Đừng vẽ nó thành câu kết luận về người lớn.
+
+  Kèm theo (không có contract vì trả plain object, giống `checkin.getTodayStatus`):
+  `checkin.getMyHelpRequests` — em tự xem trạng thái lời mình đã gửi. Cố ý trả **chỉ
+  trạng thái**: `requestedOn`, `requestedAtTime`, `acknowledged`, `acknowledgedOn`,
+  `acknowledgedAtTime`. Không `topic`, không `urgency`, không `note`.
+
 ## [0.1.0] — 31/07/2026
 
 Phiên bản đầu tiên được **đánh số thật**. Trước mốc này chuỗi `0.1.0` có tồn tại trong

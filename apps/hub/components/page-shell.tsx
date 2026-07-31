@@ -12,6 +12,37 @@
 // (tests/unit/a11y.test.ts đối chiếu hai bên).
 export const MAIN_CONTENT_ID = "noi-dung";
 
+/**
+ * Vùng nội dung chính của MỘT trang — dùng cho các màn KHÔNG dựng bằng <PageShell>
+ * (màn có menu trái riêng: điểm danh, tuần này, hồ sơ, cần gặp thầy cô).
+ *
+ * Vì sao phải là một component chung chứ không phải mỗi màn tự viết <main id="noi-dung">:
+ *  - id viết tay là chỗ sinh lỗi im lặng nhất. Gõ sai một ký tự thì đường tắt vẫn "bấm
+ *    được", vẫn không báo lỗi, chỉ là không đi tới đâu — đúng loại hỏng không ai phát hiện
+ *    ra bằng mắt.
+ *  - MỘT trang chỉ được có MỘT phần tử mang id này. Màn nào có hai nhánh mobile/desktop
+ *    tách rời thì đặt <MainContent> BỌC NGOÀI cả hai nhánh, không đặt mỗi nhánh một cái:
+ *    nhánh kia tuy display:none nhưng vẫn nằm trong DOM, và trình duyệt chỉ nhảy tới id
+ *    ĐẦU TIÊN — nếu cái đầu tiên đang ẩn thì đường tắt chết mà không ai biết.
+ *
+ * Menu trái / tab bar phải nằm NGOÀI phần tử này, nếu không thì "bỏ qua menu" không bỏ
+ * qua được gì cả.
+ */
+export function MainContent({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    // tabIndex={-1} + focus:outline-none: xem lý lẽ ở <main> trong PageShell bên dưới.
+    <main id={MAIN_CONTENT_ID} tabIndex={-1} className={`focus:outline-none ${className}`}>
+      {children}
+    </main>
+  );
+}
+
 export function PageShell({
   children,
   bg = "bg-pagebg",

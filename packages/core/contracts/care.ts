@@ -1,7 +1,8 @@
 // packages/core/contracts/care.ts — router `care`, phạm vi GĐ1: buồng lái GVCN rút gọn.
 // GĐ2 (chuyển tâm lý cụm, cờ B/C học thuật-hành vi) chưa có contract ở đây — chưa xây (DESIGN-GUIDELINES).
 import { z } from "zod";
-import { MoodValue } from "./checkin.ts";
+import { HelpRequestTopic, HelpRequestUrgency, MoodValue } from "./checkin.ts";
+import { GlowItem, GrowItem } from "./report.ts";
 
 export const FlagSummary = z.object({
   // KHÔNG ép .uuid(): flag engine (04-flag-engine.md) chưa chạy nên GĐ1 tính
@@ -217,6 +218,28 @@ export const ListReportApprovalsInput = z.object({
 });
 export type ListReportApprovalsInput = z.infer<typeof ListReportApprovalsInput>;
 
+/**
+ * ĐÚNG nội dung phụ huynh sẽ đọc, không phải bản tóm tắt cho người trong nghề.
+ *
+ * Vì sao có mặt trong contract của `care` chứ không phải `report`: sổ duyệt
+ * (`report.growth_report_approvals`) chỉ lưu QUYẾT ĐỊNH, không lưu nội dung — nội dung
+ * vẫn sinh lại từ dữ liệu thô. Nhưng một chữ ký duyệt đặt lên thứ người ký chưa từng
+ * nhìn thấy thì không phải chữ ký, chỉ là một cú bấm. Nên màn duyệt phải trả về kèm bản
+ * xem trước, dựng bằng CÙNG bộ luật với `buildGrowthReport` (apps/hub/server/routers/report.ts).
+ *
+ * Giọng ở đây là giọng "Glow & Grow" của phụ huynh (DESIGN-GUIDELINES §8) — cố ý, vì
+ * đây là bản sao nguyên văn thứ phụ huynh đọc. Từ vựng vận hành (cờ/ngưỡng/leo thang)
+ * KHÔNG được lẫn vào khối này, kể cả khi nó hiện trên màn hình GVCN.
+ */
+export const ReportPreview = z.object({
+  headline: z.string(),
+  glow: z.array(GlowItem),
+  /** GĐ1: tối đa 1 gợi ý — giống hệt `GetGrowthReportOutput.grow`, tránh liệt kê nặng nề. */
+  grow: z.array(GrowItem).max(1),
+  streakDays: z.number().int().nonnegative(),
+});
+export type ReportPreview = z.infer<typeof ReportPreview>;
+
 export const ReportApprovalRow = z.object({
   studentId: z.string().uuid(),
   studentCode: z.string(),
@@ -227,6 +250,8 @@ export const ReportApprovalRow = z.object({
   /** Hai con số để cô biết báo cáo tuần đó dựa trên bao nhiêu dữ liệu thật. */
   checkinDays: z.number().int().nonnegative(),
   happyDays: z.number().int().nonnegative(),
+  /** Bản xem trước bắt buộc — không optional: thiếu nó thì màn duyệt quay lại ký mù. */
+  preview: ReportPreview,
 });
 export type ReportApprovalRow = z.infer<typeof ReportApprovalRow>;
 
@@ -284,3 +309,120 @@ export const ListClassInterventionsOutput = z.object({
   rows: z.array(ClassInterventionRow),
 });
 export type ListClassInterventionsOutput = z.infer<typeof ListClassInterventionsOutput>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// MÀN CHI TIẾT MỘT HỌC SINH (gói "man-hinh-con-thieu-gvcn-hs", 31/07/2026)
+//
+// Bốn màn GVCN phía trên đều là màn CỦA CẢ LỚP. Bảng "Lớp chủ nhiệm" hiện được dấu
+// «Cần gặp thầy cô» và «Hồ sơ đang mở» trên từng dòng, buồng lái hiện thẻ cờ mang tên
+// từng em — nhưng không có một màn nào trả lời câu hỏi tiếp theo mà giáo viên luôn hỏi:
+// "em này mấy hôm nay thế nào?". Không có nó thì cô phải mở bốn màn lớp rồi tự lọc mắt
+// theo một cái tên, và phần lớn sẽ không làm — dấu hiệu hiện ra rồi trôi qua.
+//
+// Bốn nguồn gộp vào MỘT màn, đúng bốn thứ đã tồn tại thật trong CSDL (không bịa thêm
+// mục nào chưa có dữ liệu):
+//   1. check-in 7–30 ngày (attendance.checkins)
+//   2. tín hiệu «cần gặp thầy cô» + hồ sơ chăm sóc mở/đóng (attendance.help_requests,
+//      care.care_cases)
+//   3. nhật ký can thiệp CỦA RIÊNG EM (care.interventions)
+//   4. trạng thái duyệt Báo cáo Trưởng thành mấy tuần gần đây
+//      (report.growth_report_approvals)
+//
+// KHÔNG có `care.counselor_notes` ở đây: 0035 vừa đóng ghi chú tư vấn lại với GVCN, và
+// một màn "gộp mọi thứ về một em" là đúng chỗ dễ vô tình mở lại nhất.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** `classId` để trống = lớp chủ nhiệm đầu tiên, giống GetClassRosterInput. */
+export const GetStudentDetailInput = z.object({
+  studentId: z.string().uuid(),
+  classId: z.string().uuid().optional(),
+  /**
+   * Cửa sổ ngày của dải check-in. Trần 30 và sàn 7 là giới hạn CỦA MÀN HÌNH, không phải
+   * ngưỡng cảnh báo — §6 không đụng tới ở đây: mọi ngưỡng sinh cờ vẫn đọc từ
+   * `care.thresholds` trong getDashboard, màn này chỉ vẽ lại dữ liệu thô.
+   */
+  days: z.number().int().min(7).max(30).default(14),
+});
+export type GetStudentDetailInput = z.infer<typeof GetStudentDetailInput>;
+
+/**
+ * MỘT ngày CÓ dòng check-in. Ngày không có dòng KHÔNG xuất hiện trong mảng — màn hình tự
+ * dựng lưới ngày từ `window` rồi vẽ ô trống là "chưa có dữ liệu". Cố tình không trả sẵn
+ * ngày rỗng mang `status: null`: một hàng có mặt trong mảng trông như một sự thật đã ghi
+ * nhận, mà "chưa ai ghi gì" thì không phải sự thật đã ghi nhận.
+ */
+export const StudentCheckinDay = z.object({
+  occurredOn: IsoDate,
+  status: AttendanceStatus.nullable(),
+  mood: MoodValue.nullable(),
+  /** "HH:MM" giờ máy chủ, hoặc null khi dòng do cô ghi hộ (không có giờ em bấm). */
+  checkedInAt: z.string().nullable(),
+  /** 'app' | 'teacher' | … — để phân biệt "em tự bấm" với "cô ghi hộ" (ADR-007). */
+  source: z.string().nullable(),
+});
+export type StudentCheckinDay = z.infer<typeof StudentCheckinDay>;
+
+/**
+ * Một lần em bấm «cần gặp thầy cô».
+ *
+ * `note` CÓ mặt ở đây, và đó là quyết định có cân nhắc. Màn /can-gap-thay-co in thẳng
+ * lên mặt em một lời hứa: dưới câu "Ai đọc được lời con?" là tên GVCN với dấu tích xanh.
+ * Trước hôm nay lời hứa đó không đúng theo chiều ngược lại — `note` được ghi vào CSDL và
+ * KHÔNG có một màn hình nào đọc nó, kể cả của cô. Lời hứa in trên màn hình là ràng buộc
+ * kỹ thuật: hoặc cô đọc được, hoặc phải bỏ câu hứa đi. Chọn cách thứ nhất.
+ *
+ * Phạm vi vẫn đúng bằng lời hứa, không rộng hơn một milimet: procedure mang
+ * `homeroomProcedure` + đối chiếu em thuộc ĐÚNG lớp mình chủ nhiệm, nên nội dung này
+ * không đi tới tâm lý cụm, không đi tới phụ huynh, không vào báo cáo (§5), và không được
+ * sao chép sang `care.flags.detail` (luật "cờ E gọn" — cờ chỉ ghi LOẠI tín hiệu).
+ */
+export const StudentHelpRequest = z.object({
+  requestedOn: IsoDate,
+  requestedAt: z.string(),
+  topic: HelpRequestTopic.nullable(),
+  urgency: HelpRequestUrgency.nullable(),
+  note: z.string().nullable(),
+  /** null = chưa ai bấm "cô đã gặp em rồi". KHÔNG đồng nghĩa với "chưa ai đọc". */
+  handledAt: z.string().nullable(),
+});
+export type StudentHelpRequest = z.infer<typeof StudentHelpRequest>;
+
+export const StudentCareCase = z.object({
+  caseId: z.string().uuid(),
+  status: z.enum(["open", "closed"]),
+  openedAt: z.string(),
+  closedAt: z.string().nullable(),
+});
+export type StudentCareCase = z.infer<typeof StudentCareCase>;
+
+export const StudentReportApproval = z.object({
+  weekStart: IsoDate,
+  status: ReportApprovalStatus,
+  reviewedAt: z.string().nullable(),
+  note: z.string().nullable(),
+});
+export type StudentReportApproval = z.infer<typeof StudentReportApproval>;
+
+export const GetStudentDetailOutput = z.object({
+  classId: z.string().uuid(),
+  className: z.string(),
+  asOfDate: IsoDate,
+  /** Khoảng ngày đã HỎI. Màn hình dựng lưới ngày từ đây, không tự đoán cửa sổ. */
+  window: z.object({ days: z.number().int(), fromDate: IsoDate, toDate: IsoDate }),
+  student: z.object({
+    studentId: z.string().uuid(),
+    studentCode: z.string(),
+    fullName: z.string(),
+  }),
+  checkins: z.array(StudentCheckinDay),
+  helpRequests: z.array(StudentHelpRequest),
+  careCases: z.array(StudentCareCase),
+  /**
+   * Dùng lại `ClassInterventionRow` thay vì định nghĩa một dòng nhật ký thứ hai: hai
+   * định nghĩa của cùng một thứ là cách hợp đồng bắt đầu lệch (xem ghi chú đầu khối
+   * bốn màn GVCN). Ở đây mọi dòng đều của cùng một em, `studentId`/`studentName` lặp lại.
+   */
+  interventions: z.array(ClassInterventionRow),
+  reportApprovals: z.array(StudentReportApproval),
+});
+export type GetStudentDetailOutput = z.infer<typeof GetStudentDetailOutput>;

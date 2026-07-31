@@ -12,6 +12,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { HubSidebar } from "../hub-sidebar";
+import { HubTabBar } from "../tab-bar";
 
 export function GvcnShell({
   active,
@@ -38,8 +39,10 @@ export function GvcnShell({
   return (
     <div className="flex min-h-screen w-full md:h-screen md:overflow-hidden">
       {/* Sidebar chỉ ở khung máy tính. Trên điện thoại thay bằng thanh trên cùng có
-          nút quay lại — GVCN đứng trong lớp cầm điện thoại điểm danh là tình huống
-          thật, không được khoá họ trong một trang không lối ra (DesktopOnlyNotice). */}
+          nút quay lại + tab bar dưới đáy — GVCN đứng trong lớp cầm điện thoại điểm
+          danh là tình huống thật, không được khoá họ trong một trang không lối ra
+          (DesktopOnlyNotice). Nút quay lại đưa về buồng lái; tab bar là đường tới
+          /home và /ho-so (nơi có nút Đăng xuất), đúng vai trò sidebar làm ở md. */}
       <div className="hidden w-[240px] flex-none md:flex">
         <HubSidebar roles={["homeroom"]} active={active} fullName={displayName} email={email} classCode={classCode} />
       </div>
@@ -74,6 +77,12 @@ export function GvcnShell({
 
             {children}
           </div>
+        </div>
+
+        {/* Bốn màn con luôn thuộc vai GVCN (page.tsx của chúng chặn `homeroom` rồi
+            mới render), nên bộ tab ở đây là bộ GVCN — không suy từ prop nào cả. */}
+        <div className="md:hidden">
+          <HubTabBar roles={["homeroom"]} />
         </div>
       </div>
     </div>

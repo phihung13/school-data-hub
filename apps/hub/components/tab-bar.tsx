@@ -1,9 +1,30 @@
-// Tab bar mobile — CHỈ ở Hub, vai trò học sinh. 3 mục cho GĐ1 (rút gọn từ 5),
-// nút Check-in tròn vàng nổi giữa. Mini app KHÔNG có tab bar Hub (DESIGN-GUIDELINES §6).
+// Tab bar mobile — CHỈ ở Hub. Học sinh: 3 mục + nút Check-in tròn vàng nổi giữa.
+// Người lớn (GVCN, phụ huynh, nhân viên): tối đa 4 mục, KHÔNG nút giữa
+// (DESIGN-GUIDELINES §6). Mini app nhúng (capsule ⋯│✕) KHÔNG có tab bar Hub.
+//
+// Bổ sung 31/07/2026 (gói "dieu-huong-mobile-nguoi-lon"): trước đây file này chỉ
+// export StudentTabBar, nên MỌI vai người lớn dùng điện thoại không có đường nào
+// tới /ho-so — trang duy nhất có nút Đăng xuất. Phụ huynh mở link Zalo, GVCN đứng
+// điểm danh ở lớp, kế toán mở trên máy nhỏ: cả ba đều bị khoá trong phiên đăng
+// nhập của chính mình, không tự thoát ra được. Đó không phải lỗi thẩm mỹ.
+//
+// Bổ sung 31/07/2026 (gói "tuong-phan-vung-cham-icon") — hai thứ đo được, không phải
+// khẩu vị:
+//   · VÙNG CHẠM. Ba mục của thanh học sinh cao 38px (70×38). Ngón tay cái của một em
+//     lớp 6 đang đi giữa sân trường ồn không trúng ô 38px — DESIGN-GUIDELINES §11 và
+//     WCAG 2.5.8 đều lấy mốc 44px. Nay min-h-[44px] cho MỌI mục, cả hai thanh.
+//   · TƯƠNG PHẢN. Nhãn mục KHÔNG đứng ở trang hiện tại dùng token caption2 (#9AA5B5):
+//     2,49:1 trên nền trắng, ở cỡ chữ 9,5px. Đó là tên của những nơi người dùng có thể
+//     đi tới — không phải chữ trang trí. Nay dùng token muted (#66707D, 5,03:1). Ba mục
+//     kia của app vẫn dùng caption2 và vẫn sai; việc nâng chính TOKEN nằm ở gói khác
+//     (apps/hub/tailwind.config.ts) — đổi token thì file này không phải sửa lại lần nữa.
+// tests/unit/a11y.test.ts giữ cả hai luật, tính tỉ lệ tương phản từ tailwind.config.ts
+// thật chứ không chép số vào test.
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { HubRole } from "@hub/core/contracts";
 
 /**
  * Ba đích của tab bar, khai ở một chỗ để tests/unit/nav-links.test.ts kiểm được là
@@ -32,16 +53,16 @@ export function StudentTabBar() {
       <Link
         href={HOME_HREF}
         aria-current={isHome ? "page" : undefined}
-        className="flex w-[70px] flex-col items-center gap-0.5"
+        className="flex min-h-[44px] w-[70px] flex-col items-center justify-center gap-0.5"
       >
-        <span aria-hidden="true" className={`msr text-[22px] ${isHome ? "text-navy" : "text-caption2"}`}>home</span>
-        <span className={`text-[9.5px] font-black ${isHome ? "text-navy" : "text-caption2"}`}>Trang chủ</span>
+        <span aria-hidden="true" className={`msr text-[22px] ${isHome ? "text-navy" : "text-muted"}`}>home</span>
+        <span className={`text-[9.5px] font-black ${isHome ? "text-navy" : "text-muted"}`}>Trang chủ</span>
       </Link>
 
       <Link
         href={CHECKIN_HREF}
         aria-current={pathname === CHECKIN_HREF ? "page" : undefined}
-        className="-mt-7 flex w-[70px] flex-col items-center gap-0.5"
+        className="-mt-7 flex min-h-[44px] w-[70px] flex-col items-center justify-center gap-0.5"
       >
         <span
           aria-hidden="true"
@@ -49,17 +70,140 @@ export function StudentTabBar() {
         >
           <span className="msr text-[25px] text-navy">sentiment_satisfied</span>
         </span>
-        <span className="text-[9.5px] font-black text-[#E8940D]">Check-in</span>
+        {/* gold-textDark (#8A5A00) chứ không phải #E8940D: chữ cam trên nền trắng chỉ đạt
+            2,42:1 — dưới chuẩn 4,5:1 và đúng ở nhãn của HÀNH ĐỘNG CHÍNH mỗi sáng của em.
+            #8A5A00 là màu "chữ trên vàng" đã chốt ở DESIGN-GUIDELINES §3/§7, đạt 5,93:1.
+            Vòng tròn vàng bên trên vẫn giữ nguyên — nó là hình khối, không phải chữ. */}
+        <span className="text-[9.5px] font-black text-gold-textDark">Check-in</span>
       </Link>
 
       <Link
         href={PROFILE_HREF}
         aria-current={isProfile ? "page" : undefined}
-        className="flex w-[70px] flex-col items-center gap-0.5"
+        className="flex min-h-[44px] w-[70px] flex-col items-center justify-center gap-0.5"
       >
-        <span aria-hidden="true" className={`msr text-[22px] ${isProfile ? "text-navy" : "text-caption2"}`}>person</span>
-        <span className={`text-[9.5px] ${isProfile ? "font-black text-navy" : "text-caption2"}`}>Hồ sơ</span>
+        <span aria-hidden="true" className={`msr text-[22px] ${isProfile ? "text-navy" : "text-muted"}`}>person</span>
+        <span className={`text-[9.5px] ${isProfile ? "font-black text-navy" : "text-muted"}`}>Hồ sơ</span>
       </Link>
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Người lớn — GVCN, phụ huynh, nhân viên
+// ---------------------------------------------------------------------------
+
+export interface TabItem {
+  key: string;
+  label: string;
+  icon: string;
+  /** Luôn là trang có page.tsx thật — tests/unit/dieu-huong-mobile.test.ts đối chiếu. */
+  href: string;
+}
+
+export const STUDENT_TABBAR_ITEMS: TabItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
+  { key: "checkin", label: "Check-in", icon: "sentiment_satisfied", href: CHECKIN_HREF },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
+];
+
+/**
+ * GVCN — 4 mục, đúng trần của DESIGN-GUIDELINES §6.
+ *
+ * Vì sao "Trang chủ" chiếm một ô mà "Lớp chủ nhiệm" thì không: §1.1 là "một cửa
+ * vào chung", và trên điện thoại tab bar là thứ DUY NHẤT thay được sidebar. Bỏ
+ * /home ra khỏi đây thì GVCN vào vùng /gvcn là mất luôn lưới mini app (Factory,
+ * các app sau này) — đúng loại ngõ cụt gói này sinh ra để dẹp. Bốn màn con của
+ * buồng lái vẫn tới được đủ: lưới tắt trên chính trang /gvcn (gvcn-dashboard.tsx)
+ * dẫn tới cả bốn, và mỗi màn con có nút quay lại (gvcn-shell.tsx).
+ */
+export const TEACHER_TABBAR_ITEMS: TabItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
+  { key: "cockpit", label: "Buồng lái", icon: "space_dashboard", href: "/gvcn" },
+  { key: "attendance", label: "Điểm danh", icon: "fact_check", href: "/gvcn/diem-danh" },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
+];
+
+/**
+ * Phụ huynh — 3 mục. Chỉ từ vựng Glow & Grow (§8): không "buồng lái", không
+ * "cờ", không "ngưỡng". /bao-cao chặn đúng hai vai học sinh + phụ huynh
+ * (app/bao-cao/page.tsx), nên mục này không dẫn ai vào trang bị đá ngược.
+ */
+export const GUARDIAN_TABBAR_ITEMS: TabItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
+  { key: "report", label: "Báo cáo", icon: "workspace_premium", href: "/bao-cao" },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
+];
+
+/**
+ * Vai nhân viên chưa có màn riêng (tư vấn cụm, hiệu trưởng, BGH, giáo viên bộ
+ * môn, quản trị) và cả tài khoản CHƯA được gán vai nào. Tối thiểu 2 mục — cùng
+ * chủ ý với STAFF_ITEMS của sidebar: thà ít mục vào được còn hơn nhiều mục dẫn
+ * tới trang chặn quyền. Nhưng "ít" không bao giờ được ít tới mức mất /ho-so:
+ * không biết anh là ai thì ra ít quyền hơn, KHÔNG phải mất lối tự đăng xuất.
+ */
+export const STAFF_TABBAR_ITEMS: TabItem[] = [
+  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
+  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
+];
+
+/**
+ * Chọn bộ tab theo vai thật. Cùng THỨ TỰ ƯU TIÊN với resolveNav() của sidebar
+ * (hub-sidebar.tsx) — hai thanh điều hướng của cùng một người mà nói khác nhau
+ * thì bản thân điều đó đã là lỗi.
+ *
+ * Hàm thuần, không đụng DOM, để test được ở môi trường node (vitest chạy
+ * environment: "node").
+ */
+export function resolveTabs(roles: HubRole[]): TabItem[] {
+  if (roles.includes("student")) return STUDENT_TABBAR_ITEMS;
+  if (roles.includes("homeroom")) return TEACHER_TABBAR_ITEMS;
+  if (roles.includes("guardian")) return GUARDIAN_TABBAR_ITEMS;
+  return STAFF_TABBAR_ITEMS;
+}
+
+/**
+ * Thanh điều hướng mobile của MỌI vai. Học sinh giữ nguyên bản riêng (có nút
+ * Check-in tròn nổi giữa — hành động chính mỗi sáng của em); người lớn dùng bản
+ * phẳng, không nút giữa.
+ *
+ * Dùng ở mọi màn Hub bản mobile. KHÔNG dùng trong app nhúng (/embed/*): ở đó
+ * đường ra là capsule ⋯│✕ (§6).
+ */
+export function HubTabBar({ roles }: { roles: HubRole[] }) {
+  if (roles.includes("student")) return <StudentTabBar />;
+  return <AdultTabBar roles={roles} />;
+}
+
+function AdultTabBar({ roles }: { roles: HubRole[] }) {
+  const pathname = usePathname();
+  const items = resolveTabs(roles);
+
+  return (
+    <nav
+      aria-label="Thanh điều hướng chính"
+      className="mt-auto flex items-stretch justify-around border-t border-[#E9ECF2] bg-white px-2 pb-2.5 pt-2"
+    >
+      {items.map((item) => {
+        const isActive = pathname === item.href;
+        return (
+          // min-h-[44px]: vùng chạm tối thiểu của §11. Nhãn chữ luôn đi kèm icon
+          // nên icon là trang trí thuần — aria-hidden, xem ghi chú ở StudentTabBar.
+          <Link
+            key={item.key}
+            href={item.href}
+            aria-current={isActive ? "page" : undefined}
+            className="flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5"
+          >
+            <span aria-hidden="true" className={`msr text-[22px] ${isActive ? "text-navy" : "text-muted"}`}>
+              {item.icon}
+            </span>
+            <span className={`text-[9.5px] ${isActive ? "font-black text-navy" : "font-bold text-muted"}`}>
+              {item.label}
+            </span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

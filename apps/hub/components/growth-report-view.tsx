@@ -4,12 +4,25 @@
 // sidebar theo V2. KHÔNG có "cô X đã duyệt"/"đã đọc lúc.../chia sẻ cho ông bà"
 // như bản vẽ tay — chưa có bảng duyệt báo cáo hay theo dõi đã đọc, không bịa
 // (chỉ hiện tên + quan hệ người giám hộ thật qua report.getMyGuardians).
+//
+// Sửa 31/07/2026 (gói "giong-noi-va-don-dep"), ba việc:
+//   1. Cuối bản mobile — đúng bản phụ huynh mở từ link Zalo — có dòng "GĐ1: phụ huynh mở
+//      báo cáo từ link Zalo — chưa cần cài đặt gì". "GĐ1" là mã giai đoạn của dự án, nói
+//      với người trong nhóm làm sản phẩm; nó không nói gì với một người mẹ mở link lúc 9
+//      giờ tối, và nó nói về CÔNG VIỆC CỦA CHÚNG TA chứ không nói về con của bà. Gỡ hẳn
+//      chứ không viết lại: khối đó không mang thông tin nào phụ huynh cần.
+//   2. weekLabel từ server là hai ngày ISO — định dạng ở tầng hiển thị (lib/week-label.ts).
+//   3. Dựng MỘT nhánh theo khổ màn thay vì dựng cả hai rồi ẩn bằng CSS (lib/viewport.ts):
+//      với phụ huynh, bản mobile là bản duy nhất được xem, mà máy của họ là máy yếu nhất
+//      trong hệ.
 "use client";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import type { GetGrowthReportOutput } from "@hub/core/contracts";
 import { mondayOf, toLocalIsoDate } from "@/lib/date";
+import { useIsDesktop } from "@/lib/viewport";
+import { formatWeekLabel } from "@/lib/week-label";
 import { Mascot } from "./mascot";
 import { PageShell } from "./page-shell";
 import { HubSidebar } from "./hub-sidebar";
@@ -39,6 +52,19 @@ const GLOW_ICON_COLOR: Record<"green" | "blue" | "amber", string> = {
   amber: "text-[#E8940D]",
 };
 
+/**
+ * Câu nói khi mục "Tỏa sáng" rỗng. Hai lý do rỗng hoàn toàn khác nhau, không được
+ * nói chung một câu: em CÓ đi học mà chưa chạm mốc nào (thì động viên được), hay
+ * trường CHƯA GHI NHẬN ngày nào (thì chưa có gì để nói — im lặng không phải kết luận).
+ * Trước đây cả hai cùng nhận câu "tuần sau cùng cố gắng nhé", tức là đoán tin không
+ * vui từ chỗ trống — đúng thứ phụ huynh sẽ hiểu thành "con học kém tuần này".
+ */
+function glowEmptyMessage(report: Report): string {
+  return report.checkinDaysThisWeek === 0
+    ? "Tuần này chưa có dữ liệu điểm danh — chưa có gì để kể, không phải tuần không tốt."
+    : "Tuần này chưa có mục nào nổi bật — tuần sau cùng cố gắng nhé!";
+}
+
 function mondayOffsetIso(weeksFromNow: number): string {
   const base = new Date();
   base.setDate(base.getDate() + weeksFromNow * 7);
@@ -66,6 +92,7 @@ export function GrowthReportView({
   const [weekOffset, setWeekOffset] = useState(0);
   const query = trpc.report.getReportForWeek.useQuery({ weekStart: mondayOffsetIso(weekOffset) });
   const effectiveRoles: HubRole[] = roles ?? (isStudent ? ["student"] : ["guardian"]);
+  const isDesktop = useIsDesktop();
 
   if (query.isPending) {
     return <LoadingState label="Đang soạn báo cáo…" />;
@@ -77,25 +104,22 @@ export function GrowthReportView({
   }
   const { report } = query.data;
 
+  // Bản desktop CHỈ dành cho học sinh (sidebar là menu của em) — phụ huynh luôn xem bản
+  // mobile, ở mọi khổ màn. Dựng đúng một nhánh: xem ghi chú 3 đầu file.
+  if (!isStudent || !isDesktop) return <MobileReport report={report} />;
+
   return (
-    <>
-      <div className={isStudent ? "md:hidden" : ""}>
-        <MobileReport report={report} />
+    <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex w-[240px] flex-none">
+        <HubSidebar roles={effectiveRoles} active="report" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      {isStudent && (
-        <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
-          <div className="flex w-[240px] flex-none">
-            <HubSidebar roles={effectiveRoles} active="report" fullName={displayName} email={email} classCode={classCode} />
-          </div>
-          <DesktopReport
-            report={report}
-            weekOffset={weekOffset}
-            onPrevWeek={() => setWeekOffset((w) => w - 1)}
-            onNextWeek={() => setWeekOffset((w) => w + 1)}
-          />
-        </div>
-      )}
-    </>
+      <DesktopReport
+        report={report}
+        weekOffset={weekOffset}
+        onPrevWeek={() => setWeekOffset((w) => w - 1)}
+        onNextWeek={() => setWeekOffset((w) => w + 1)}
+      />
+    </div>
   );
 }
 
@@ -112,7 +136,7 @@ function MobileReport({ report }: { report: Report | undefined }) {
         <div className="relative">
           <div className="text-[17px] font-black text-white">Báo cáo Trưởng thành</div>
           <div className="mt-0.5 text-[11px] text-[#D6E6FF]">
-            {report.studentName} · {report.className} · {report.weekLabel}
+            {report.studentName} · {report.className} · {formatWeekLabel(report.weekLabel)}
           </div>
         </div>
       </div>
@@ -134,7 +158,7 @@ function MobileReport({ report }: { report: Report | undefined }) {
           <span className="text-[13.5px] font-black text-navy">Tỏa sáng (Glow)</span>
         </div>
         {report.glow.length === 0 && (
-          <p className="text-[12px] text-muted">Tuần này chưa có mục nào nổi bật — tuần sau cùng cố gắng nhé!</p>
+          <p className="text-[12px] text-muted">{glowEmptyMessage(report)}</p>
         )}
         {report.glow.map((item, i) => (
           <div key={i} className={`rounded-2xl border-l-4 bg-white p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)] ${ACCENT_BORDER[item.accentColor]}`}>
@@ -157,13 +181,9 @@ function MobileReport({ report }: { report: Report | undefined }) {
             ))}
           </>
         )}
-
-        <div className="mt-2 flex items-center justify-center gap-2 rounded-2xl bg-[#F0F7FF] px-3 py-2.5">
-          <span className="msr text-[16px] text-domain-attendance">chat</span>
-          <span className="text-[10.5px] font-semibold leading-relaxed text-[#1D4E8F]">
-            GĐ1: phụ huynh mở báo cáo từ link Zalo — chưa cần cài đặt gì.
-          </span>
-        </div>
+        {/* Đã gỡ 31/07/2026: khối "GĐ1: phụ huynh mở báo cáo từ link Zalo — chưa cần cài
+            đặt gì". Mã giai đoạn dự án là chuyện của người làm sản phẩm, không phải điều
+            một người mẹ mở link lúc 9 giờ tối cần đọc (§8 · PRODUCT.md "không thuật ngữ"). */}
       </div>
     </PageShell>
   );
@@ -191,7 +211,7 @@ function DesktopReport({
         </span>
         <div className="flex-1">
           <div className="text-[16px] font-black text-ink">Báo cáo Trưởng thành</div>
-          <div className="text-[11.5px] text-caption">{report.weekLabel}</div>
+          <div className="text-[11.5px] text-caption">{formatWeekLabel(report.weekLabel)}</div>
         </div>
         <button
           onClick={onPrevWeek}
@@ -246,7 +266,7 @@ function DesktopReport({
               </div>
               <div className="mt-4 flex flex-col gap-3">
                 {report.glow.length === 0 && (
-                  <p className="text-[13px] text-caption">Tuần này chưa có mục nào nổi bật — tuần sau cùng cố gắng nhé!</p>
+                  <p className="text-[13px] text-caption">{glowEmptyMessage(report)}</p>
                 )}
                 {report.glow.map((item, i) => (
                   <div key={i} className={`flex items-start gap-3.5 rounded-xl px-[18px] py-4 ${GLOW_BG[item.accentColor]}`}>

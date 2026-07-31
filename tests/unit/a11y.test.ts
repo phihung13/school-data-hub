@@ -1,6 +1,7 @@
-// tests/unit/a11y.test.ts — hai luật một dòng:
+// tests/unit/a11y.test.ts — ba luật một dòng:
 //   (1) KHÔNG icon nào phụ thuộc mạng ngoài, và không icon nào thiếu trong font đã cắt gọn.
 //   (2) KHÔNG phần tử trang trí nào đọc thành lời, KHÔNG chỗ đứng nào của bàn phím vô hình.
+//   (3) KHÔNG chữ nào mờ dưới 4,5:1, KHÔNG vùng chạm nào nhỏ hơn 44px trên đường điều hướng.
 //
 // Vì sao phải là test chứ không phải lời dặn trong PR: cả hai lớp lỗi này KHÔNG làm hỏng
 // typecheck, KHÔNG làm hỏng build, KHÔNG hỏng trên máy người viết code (mạng nhà không
@@ -308,15 +309,167 @@ describe("đường tắt tới nội dung chính", () => {
   });
 });
 
+/**
+ * Thẻ MỞ của mọi <Link …> trong một file, kể cả thẻ viết trên nhiều dòng.
+ *
+ * GIỚI HẠN ĐÃ BIẾT: dừng ở dấu ">" đầu tiên sau "<Link". Đúng với mọi cách file này
+ * đang viết (giá trị thuộc tính không chứa ">"); nếu sau này ai viết
+ * className={`${a > b ? …}`} thì thẻ sẽ bị cắt cụt — và bị cắt cụt thì test ĐỎ chứ
+ * không âm thầm bỏ qua, vì phần bị cắt là phần mang aria-current.
+ */
+function linkOpenTags(src: string): string[] {
+  return src.match(/<Link\b[\s\S]*?>/g) ?? [];
+}
+
 describe("tab bar: trạng thái không chỉ nói bằng màu", () => {
   const tabBar = readCode(join(componentsDir, "tab-bar.tsx"));
+  const tags = linkOpenTags(tabBar);
 
-  it("mỗi mục khai aria-current khi đang đứng ở trang đó", () => {
-    const occurrences = tabBar.match(/aria-current=/g) ?? [];
-    expect(occurrences.length).toBe(3);
+  // VÌ SAO KHÔNG ĐẾM SỐ (sửa 31/07/2026): bản trước viết `expect(số aria-current).toBe(3)`.
+  // Nó đỏ ngay lần đầu có người làm ĐÚNG — thêm thanh điều hướng cho người lớn là thêm
+  // mục thứ tư, test đỏ dù luật không hề bị vi phạm. Một bài test đếm số đo sai thứ nó
+  // định giữ: luật là "MỌI mục phải khai", không phải "có đúng ba mục".
+  it("có mục điều hướng để kiểm — bộ quét không rỗng", () => {
+    expect(tags.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("<nav> có nhãn riêng để phân biệt với menu trái", () => {
-    expect(tabBar).toMatch(/<nav[^>]*aria-label="/);
+  it("MỌI mục khai aria-current, dù thanh có bao nhiêu mục", () => {
+    const missing = tags.filter((t) => !/aria-current=/.test(t));
+    expect(missing).toEqual([]);
+  });
+
+  it('aria-current mang giá trị "page", và chỉ đặt khi đang đứng ở đó', () => {
+    // aria-current={true} đọc thành "current" chung chung; "page" mới nói được "trang
+    // này". Và phải là undefined khi KHÔNG đứng ở đó — aria-current="false" vẫn được
+    // một số trình đọc màn hình thông báo, tức là mọi mục đều tự nhận mình là trang
+    // hiện tại.
+    for (const tag of tags) {
+      const value = tag.match(/aria-current=\{([^}]*)\}/)?.[1] ?? "";
+      expect(value, `aria-current không phải biểu thức: ${tag.slice(0, 60)}…`).not.toBe("");
+      expect(value).toContain('"page"');
+      expect(value).toContain("undefined");
+    }
+  });
+
+  it("MỌI <nav> có nhãn riêng để phân biệt với menu trái", () => {
+    // Người lớn và học sinh dùng hai <nav> khác nhau trong cùng file này. Kiểm một cái
+    // rồi kết luận cả file là đúng kiểu lỗi bài test cũ mắc phải.
+    const navs = tabBar.match(/<nav\b[\s\S]*?>/g) ?? [];
+    expect(navs.length).toBeGreaterThanOrEqual(2);
+    expect(navs.filter((n) => !/aria-label="/.test(n))).toEqual([]);
+  });
+
+  it("MỌI mục có vùng chạm ≥44px (DESIGN-GUIDELINES §11, WCAG 2.5.8)", () => {
+    // Ba mục của thanh học sinh từng cao 38px. Chiều ngang đã đủ (w-[70px]); thiếu là
+    // chiều cao, nên min-h là thứ phải khai. Đo bằng lớp CSS chứ không dựng DOM: trần
+    // của cách này là nó tin lớp Tailwind nói thật, nhưng nó bắt được đúng lỗi đã có.
+    const small = tags.filter((t) => !/min-h-\[44px\]/.test(t)).map((t) => t.slice(0, 70));
+    expect(small).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Tương phản chữ: đọc màu THẬT từ tailwind.config.ts, không chép số vào test
+// ---------------------------------------------------------------------------
+
+/**
+ * Bảng token màu của app, phẳng hoá: `muted` → #66707D, `gold-textDark` → #8A5A00,
+ * `navy` → #0A2A5E (khoá DEFAULT lấy chính tên nhóm).
+ *
+ * Đọc từ tailwind.config.ts THẬT chứ không chép hằng số vào đây, để khi gói nâng token
+ * (caption #8A94A6 → #5F6B7D…) chạy xong thì test này tự đo lại bảng mới — không ai
+ * phải nhớ quay lại sửa test, và không có số nào ở hai nơi nói khác nhau.
+ */
+function tailwindColors(): Record<string, string> {
+  const src = readFileSync(join(hubDir, "tailwind.config.ts"), "utf8");
+  const block = src.slice(src.indexOf("colors: {"));
+  const out: Record<string, string> = {};
+  let group: string | null = null;
+  for (const line of block.split(/\r?\n/)) {
+    const hex = line.match(/^\s*([A-Za-z_]\w*):\s*"(#[0-9A-Fa-f]{6})"/);
+    if (hex) {
+      const [, key, value] = hex as unknown as [string, string, string];
+      out[group ? (key === "DEFAULT" ? group : `${group}-${key}`) : key] = value;
+      continue;
+    }
+    const open = line.match(/^\s*([A-Za-z_]\w*):\s*\{\s*$/);
+    if (open) group = open[1]!;
+    else if (/^\s*\},?\s*$/.test(line)) group = null;
+  }
+  return out;
+}
+
+/** Độ chói tương đối theo WCAG 2.x. */
+function luminance(hex: string): number {
+  const parts = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const [r, g, b] = parts.map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)) as [
+    number,
+    number,
+    number,
+  ];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+describe("tương phản chữ ≥ 4,5:1 trong các file thuộc gói này", () => {
+  const colors = tailwindColors();
+
+  /**
+   * Các mặt nền SÁNG của app. Chữ trong hai file dưới đây nằm trên một trong ba mặt này,
+   * và ta lấy mặt TỆ NHẤT (chip #F1F4F8) làm chuẩn: một token chữ phải đọc được trên mọi
+   * mặt nền mà app có, nếu không thì việc nó đạt chuẩn hay không phụ thuộc vào chỗ ai đó
+   * vô tình dán nó vào — đúng loại "đạt chuẩn do may mắn" không giữ được qua lần sửa sau.
+   */
+  const SURFACES = ["#FFFFFF", "#F7F9FC", "#F1F4F8"];
+
+  const CHECKED = [
+    "apps/hub/components/tab-bar.tsx",
+    "apps/hub/components/gvcn/report-approval-view.tsx",
+  ];
+
+  it("bảng token đọc được từ tailwind.config.ts", () => {
+    // Nếu parser hỏng (config đổi cách viết) thì mọi test dưới đây sẽ XANH GIẢ vì
+    // không tìm thấy token nào để đo. Chốt vài mốc để hỏng thì hỏng ra tiếng.
+    expect(colors.muted).toBeTruthy();
+    expect(colors.caption).toBeTruthy();
+    expect(colors["gold-textDark"]).toBeTruthy();
+    expect(colors.navy).toBeTruthy();
+  });
+
+  it.each(CHECKED)("%s: mọi màu chữ đọc được trên mọi nền sáng", (file) => {
+    const src = readCode(join(repoRoot, file));
+    const used = new Map<string, string>();
+    // (a) token: text-muted, text-gold-textDark…  (b) mã hex viết thẳng: text-[#33507C]
+    for (const m of src.matchAll(/\btext-([a-zA-Z][\w-]*)\b/g)) {
+      const hex = colors[m[1]!];
+      if (hex) used.set(`text-${m[1]}`, hex);
+    }
+    for (const m of src.matchAll(/\btext-\[(#[0-9A-Fa-f]{6})\]/g)) used.set(`text-[${m[1]}]`, m[1]!);
+
+    // Chữ TRẮNG trên nút navy gradient là ca ngược (nền tối), không thuộc phép đo này.
+    used.delete("text-[#FFFFFF]");
+
+    const failures: string[] = [];
+    for (const [cls, hex] of used) {
+      for (const bg of SURFACES) {
+        const ratio = contrast(hex, bg);
+        if (ratio < 4.5) failures.push(`${cls} (${hex}) trên ${bg}: ${ratio.toFixed(2)}:1`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("token caption/caption2 VẪN chưa đạt chuẩn — nợ đã biết, thuộc gói tailwind", () => {
+    // Test này cố ý khẳng định điều ngược: nó là cái chuông. Gói nâng token chạy xong,
+    // caption đạt 4,5:1, thì CHÍNH TEST NÀY đỏ — và người sửa chỉ cần xoá nó đi, đồng
+    // thời bỏ luôn ngoại lệ "caption ≤11px được dùng #9AA5B5" ở DESIGN-GUIDELINES §11.
+    // Không có nó, món nợ này im lặng nằm lại trong repo không ai nhớ.
+    const worst = (hex: string) => Math.min(...SURFACES.map((bg) => contrast(hex, bg)));
+    expect(worst(colors.caption!), "caption đã đạt chuẩn — hãy xoá test này").toBeLessThan(4.5);
+    expect(worst(colors.caption2!), "caption2 đã đạt chuẩn — hãy xoá test này").toBeLessThan(4.5);
   });
 });

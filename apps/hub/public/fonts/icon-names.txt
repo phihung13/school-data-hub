@@ -51,6 +51,7 @@ done
 done_all
 door_front
 download
+drafts
 edit
 edit_note
 emoji_events
@@ -159,6 +160,7 @@ schedule_send
 school
 science
 search
+search_off
 send
 sentiment_content
 sentiment_dissatisfied

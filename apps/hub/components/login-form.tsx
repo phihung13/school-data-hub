@@ -134,11 +134,16 @@ export function LoginForm({
 
           {guardianOpen && <GuardianPanel code={code} setCode={setCode} loading={loading} onSubmit={redeemCode} />}
 
-          <div className="flex justify-center gap-3 border-t border-[#F1EADD] pt-[14px] text-[11px] font-bold text-[#9AA0B2]">
-            <a href="#">Quyền riêng tư</a>
-            <span>·</span>
-            <a href="#">Hỗ trợ</a>
-          </div>
+          {/* Trước 31/07/2026 chỗ này là hai link `href="#"`: "Quyền riêng tư" và "Hỗ trợ".
+              Cả hai bấm được mà không dẫn đi đâu — với hệ dữ liệu trẻ em thuộc phạm vi Luật
+              91/2025, một link "Quyền riêng tư" rỗng còn tệ hơn không có link: nó nói rằng
+              chính sách đã tồn tại và đã được công bố. Repo chưa có trang chính sách nào
+              (không route, không nội dung đã duyệt), nên bỏ hẳn link và chỉ để lại đúng
+              đường hỗ trợ CÓ THẬT: nhắn GVCN — cùng lối mà GuardianPanel đang chỉ.
+              Trả link về khi trang chính sách thật ra đời và được BGH duyệt nội dung. */}
+          <p className="border-t border-[#F1EADD] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#9AA0B2]">
+            Tài khoản do Trường Việt Anh cấp · Cần hỗ trợ, nhắn giáo viên chủ nhiệm.
+          </p>
         </div>
       </div>
     </div>

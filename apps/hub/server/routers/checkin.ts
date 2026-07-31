@@ -221,6 +221,59 @@ export const checkinRouter = router({
     });
   }),
 
+  /**
+   * Những lần em đã bấm «cần gặp thầy cô», và MỖI lần đó đã được thầy cô xác nhận chưa.
+   *
+   * Vì sao phải có (gói "man-hinh-con-thieu-gvcn-hs"): màn thành công của
+   * /can-gap-thay-co chỉ sống trong state React. Tải lại trang, đóng máy, mở lại buổi
+   * tối — em không còn một dấu vết nào cho biết lời mình gửi đã đi đâu. Với một đứa trẻ
+   * vừa làm việc khó nhất là mở lời, "không thấy gì nữa" đọc ra thành "chắc không ai
+   * nhận". Trước hôm nay MỌI đường đọc `attendance.help_requests` đều nằm sau
+   * `homeroomProcedure` — tức là chính người gửi là người duy nhất không xem được.
+   *
+   * TRẢ VỀ ĐÚNG TRẠNG THÁI, KHÔNG TRẢ LẠI NỘI DUNG. Không `topic`, không `urgency`,
+   * không `note`. Hai lý do, cả hai đều đủ một mình: (1) em đã viết rồi, hiện lại không
+   * thêm thông tin nào cho em; (2) màn này mở trên điện thoại giữa sân trường, và câu em
+   * viết là thứ riêng tư nhất trong cả app — không có lý do gì để nó xuất hiện thêm một
+   * lần nữa trên một màn hình mà bạn cùng lớp có thể liếc qua.
+   *
+   * `acknowledged = false` KHÔNG có nghĩa là "chưa ai đọc": nó chỉ nói chưa ai bấm "cô
+   * đã gặp em rồi". Chỗ hiển thị phải nói đúng như vậy — im lặng không phải kết luận.
+   */
+  getMyHelpRequests: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.runWithDb(async (client) => {
+      const studentId = await getMyStudentId(client);
+      // RLS: `help_requests_scope` (0009) dùng core.can_see_student, trong đó có
+      // core.is_me — em đọc được đúng dòng của mình, không cần policy mới.
+      const { rows } = await client.query<{
+        requested_on: string;
+        requested_at_time: string;
+        acknowledged_on: string | null;
+        acknowledged_at_time: string | null;
+      }>(
+        `select requested_on::text,
+                to_char(requested_at, 'HH24:MI') as requested_at_time,
+                handled_at::date::text          as acknowledged_on,
+                to_char(handled_at, 'HH24:MI')  as acknowledged_at_time
+           from attendance.help_requests
+          where student_id = $1
+          order by requested_on desc
+          limit 5`,
+        [studentId],
+      );
+
+      return {
+        requests: rows.map((r) => ({
+          requestedOn: r.requested_on,
+          requestedAtTime: r.requested_at_time,
+          acknowledged: r.acknowledged_on !== null,
+          acknowledgedOn: r.acknowledged_on,
+          acknowledgedAtTime: r.acknowledged_at_time,
+        })),
+      };
+    });
+  }),
+
   /** V5 "gửi riêng cho cô X" — tên GVCN của lớp em đang học. */
   getMyHomeroomTeacher: protectedProcedure.query(async ({ ctx }) => {
     return ctx.runWithDb(async (client) => {

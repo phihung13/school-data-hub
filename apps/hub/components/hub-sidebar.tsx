@@ -39,7 +39,11 @@ export interface NavItem {
 export const STUDENT_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
   { key: "week", label: "Tuần này của mình", icon: "insights", href: "/tuan-nay" },
-  { key: "attendance", label: "Điểm danh", icon: "fact_check", href: "/diem-danh" },
+  // "Lịch điểm danh" chứ không phải "Điểm danh" (31/07/2026, gói "menu-noi-dung-dich"):
+  // tile trang chủ mang nhãn "Check-in cảm xúc" và dẫn tới /checkin (nơi GHI), mục này
+  // dẫn tới /diem-danh (nơi XEM LẠI). Trước đó cả hai cùng tên "Điểm danh" nên trên máy
+  // tính em nhìn thấy một nhãn ở hai chỗ dẫn đi hai nơi khác nhau.
+  { key: "attendance", label: "Lịch điểm danh", icon: "fact_check", href: "/diem-danh" },
   { key: "report", label: "Báo cáo Trưởng thành", icon: "workspace_premium", href: "/bao-cao" },
   { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
@@ -49,7 +53,14 @@ export const STUDENT_SOON: NavItem[] = [
 ];
 
 export const TEACHER_ITEMS: NavItem[] = [
-  { key: "home", label: "Trang chủ", icon: "space_dashboard", href: "/gvcn" },
+  // Sửa 31/07/2026 (gói "dieu-huong-mobile-nguoi-lon"): "Trang chủ" từng trỏ /gvcn.
+  // Hệ quả: GVCN đang đứng ở /home nhìn xuống menu thấy "Trang chủ" — bấm vào thì
+  // sang buồng lái, và từ đó KHÔNG mục nào đưa được về /home nữa. Trang chủ chung
+  // (lưới mini app đổi theo quyền) thành trang một chiều, trái DESIGN-GUIDELINES
+  // §1.1 "một cửa vào chung". Nay hai việc là hai mục: /home là trang chủ của mọi
+  // vai, /gvcn là buồng lái — và tên mục nói đúng nơi nó dẫn tới.
+  { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
+  { key: "cockpit", label: "Buồng lái", icon: "space_dashboard", href: "/gvcn" },
   // Bốn mục dưới đây quay lại thành <Link> ngày 31/07/2026 (gói "gvcn-man-hinh"): bốn
   // trang tương ứng đã tồn tại thật, có procedure thật ở router `care` và có cả ba
   // trạng thái tải/lỗi/rỗng. Chúng từng nằm ở TEACHER_SOON vì trỏ vào trang 404.
@@ -59,9 +70,20 @@ export const TEACHER_ITEMS: NavItem[] = [
   { key: "notes", label: "Ghi chú can thiệp", icon: "edit_note", href: "/gvcn/ghi-chu" },
   { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
-export const TEACHER_SOON: NavItem[] = [
-  { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "#" },
-];
+/**
+ * GVCN không còn mục mờ nào (31/07/2026, gói "menu-noi-dung-dich").
+ *
+ * Trước đó ở đây có "Tâm lý cụm" — hứa với GVCN một màn hình mà theo
+ * DESIGN-GUIDELINES §9 họ KHÔNG được vào: ghi chú tư vấn là thứ GVCN và phụ huynh
+ * không xem được. Mục mờ cũng là một lời hứa; hứa nhầm màn hình của vai khác thì
+ * đến ngày mở màn đó ra, người bị từ chối lại chính là người đã được mời.
+ * "Tâm lý cụm" nay nằm ở COUNSELOR_SOON, đúng vai sẽ dùng nó.
+ *
+ * Việc GVCN thật sự đang chờ là đường CHUYỂN một ca sang tâm lý cụm (gói
+ * "vai-chua-co-man-hinh") — khi có procedure referToCounselor thật thì thêm vào
+ * TEACHER_ITEMS như một mục bấm được, không phải thêm lại vào đây.
+ */
+export const TEACHER_SOON: NavItem[] = [];
 
 /** Phụ huynh: xem báo cáo của con + hồ sơ. Không có màn điểm danh/check-in của riêng mình. */
 export const GUARDIAN_ITEMS: NavItem[] = [
@@ -82,9 +104,32 @@ export const STAFF_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
   { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
-export const STAFF_SOON: NavItem[] = [
+
+/**
+ * Mục mờ của nhân viên tách theo VAI THẬT (31/07/2026, gói "menu-noi-dung-dich").
+ *
+ * Trước đó mọi vai nhân viên dùng chung đúng một mục "Quản trị hệ thống", nên cô Mai
+ * (tâm lý cụm) đăng nhập vào thấy hệ thống hứa với mình một màn quản trị mà cô sẽ
+ * không bao giờ được vào, còn màn ĐANG CHỜ cô — hộp việc tâm lý cụm — thì không được
+ * nhắc tới ở đâu cả. Menu mờ là bản đồ những gì sắp có CHO NGƯỜI ĐANG ĐỌC; chỉ đúng
+ * khi nó đọc theo vai của họ.
+ */
+export const COUNSELOR_SOON: NavItem[] = [
+  { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "#" },
+];
+export const ADMIN_SOON: NavItem[] = [
   { key: "admin", label: "Quản trị hệ thống", icon: "admin_panel_settings", href: "#" },
 ];
+/**
+ * Hiệu trưởng, ban giám hiệu, giáo viên bộ môn: KHÔNG mục mờ nào.
+ *
+ * Cố ý để rỗng chứ không mượn tạm mục của vai khác. Màn tổng hợp theo lô cho BGH
+ * (DESIGN-GUIDELINES §9) chưa được thiết kế xong, và "im lặng không phải kết luận":
+ * chưa biết màn đó tên gì, hình gì thì không được vẽ sẵn một dòng mờ như thể đã biết.
+ * Gói "vai-chua-co-man-hinh" sẽ nói thẳng bằng một dòng chữ rằng GĐ1 chưa có công cụ
+ * cho vai này — đó là việc của một khối chữ, không phải của một mục điều hướng giả.
+ */
+export const STAFF_SOON: NavItem[] = [];
 
 const ROLE_LABEL: Record<HubRole, string> = {
   student: "HỌC SINH",
@@ -115,7 +160,10 @@ export function resolveNav(roles: HubRole[]): NavSet {
   if (roles.includes("homeroom")) return { items: TEACHER_ITEMS, soon: TEACHER_SOON, roleLabel: ROLE_LABEL.homeroom };
   if (roles.includes("guardian")) return { items: GUARDIAN_ITEMS, soon: GUARDIAN_SOON, roleLabel: ROLE_LABEL.guardian };
   const known = ROLE_PRIORITY.find((r) => roles.includes(r));
-  return { items: STAFF_ITEMS, soon: STAFF_SOON, roleLabel: known ? ROLE_LABEL[known] : "TÀI KHOẢN TRƯỜNG" };
+  // Mục mờ theo vai thật, cùng THỨ TỰ ƯU TIÊN với `known` ở trên để nhãn vai và danh
+  // sách mục mờ không bao giờ nói về hai người khác nhau.
+  const soon = roles.includes("counselor") ? COUNSELOR_SOON : roles.includes("admin") ? ADMIN_SOON : STAFF_SOON;
+  return { items: STAFF_ITEMS, soon, roleLabel: known ? ROLE_LABEL[known] : "TÀI KHOẢN TRƯỜNG" };
 }
 
 type HubSidebarBaseProps = {

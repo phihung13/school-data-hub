@@ -41,6 +41,8 @@ import {
   GetClassRosterOutput,
   GetDashboardOutput,
   GetMyClassesOutput,
+  GetStudentDetailInput,
+  GetStudentDetailOutput,
   ListClassInterventionsInput,
   ListClassInterventionsOutput,
   ListReportApprovalsInput,
@@ -50,7 +52,12 @@ import {
   MarkAttendanceInput,
   MarkAttendanceOutput,
 } from "@hub/core/contracts";
-import type { AttendanceStatus } from "@hub/core/contracts";
+import type {
+  AttendanceStatus,
+  HelpRequestTopic,
+  HelpRequestUrgency,
+  ReportApprovalStatus,
+} from "@hub/core/contracts";
 import type { PoolClient } from "@hub/core/db";
 import { mondayOf, toLocalIsoDate } from "@/lib/date";
 import { readCareRules } from "../care-thresholds";
@@ -61,6 +68,15 @@ import { homeroomProcedure, roleProcedure, router } from "../trpc";
  * `core.can_see_care()` (0009) đã định nghĩa ở tầng DB. KHÔNG dùng homeroomProcedure
  * cho nhóm này: tâm lý cụm không chủ nhiệm lớp nào, siết theo GVCN là khoá luôn
  * người có nghề nhất trong hệ chăm sóc.
+ *
+ * LUẬT ĐI KÈM (31/07/2026 — gói "rls-ghi-chu-tu-van"): mọi procedure mang procedure
+ * này phải có ÍT NHẤT MỘT đường ĐỌC cũng mang nó. Trước hôm nay ba mutation
+ * (acknowledgeHelpRequest · logIntervention · closeCase) mở cho `counselor`, trong khi
+ * MỌI query của router đều là `homeroomProcedure` — nên cô Mai (tâm lý cụm) tắt được
+ * cờ khẩn và ĐÓNG được hồ sơ chăm sóc của một đứa trẻ mà không có một đường nào nhìn
+ * thấy hồ sơ đó trước khi tắt. Quyền ghi mà không có quyền đọc không phải "chặt hơn":
+ * đó là bắt người ta quyết định trong bóng tối, và với hồ sơ chăm sóc thì quyết định
+ * mù là quyết định sai. `listClassInterventions` nay cũng mang procedure này.
  */
 const careStaffProcedure = roleProcedure("homeroom", "counselor");
 
@@ -145,6 +161,66 @@ function requireMyClass(myClassIds: string[], requested?: string): string {
   return requested;
 }
 
+/**
+ * Nắn `classId` cho một người CHĂM SÓC — GVCN hoặc tâm lý cụm. Bản mở rộng của
+ * `requireMyClass` cho đúng một mục đích: mở đường ĐỌC cho tâm lý cụm, để vai đó thôi
+ * ở trạng thái "ghi được mà không đọc được" (xem chú thích `careStaffProcedure`).
+ *
+ * Hai nhánh, và thứ tự giữa chúng có chủ ý:
+ *
+ *  1. CÓ LỚP CHỦ NHIỆM → giữ nguyên hành vi cũ từng nét: không truyền gì thì lấy lớp
+ *     đầu tiên, truyền lớp của đồng nghiệp thì FORBIDDEN. Một người vừa chủ nhiệm vừa
+ *     kiêm tâm lý cụm hỏi lớp NGOÀI danh sách chủ nhiệm sẽ rơi xuống nhánh 2 — đúng,
+ *     vì lúc đó cô đang hỏi với tư cách tâm lý cụm.
+ *  2. TÂM LÝ CỤM → KHÔNG có lớp mặc định. Cụm là nhiều lớp; đoán hộ một lớp rồi hiển
+ *     thị như thể đó là "lớp của cô" là dạng sai trông như thật. Thiếu `classId` thì
+ *     nói thẳng là thiếu, và lớp phải nằm trong cơ sở thuộc phạm vi `counselor` của
+ *     chính người gọi — đối chiếu qua `core.v_my_scopes` (0015), không tin tham số.
+ *
+ * RLS ở tầng DB vẫn chặn độc lập (`core.can_see_care`): tầng này thêm vào một câu trả
+ * lời RÕ RÀNG ("lớp này không thuộc cụm của thầy cô") thay vì một danh sách rỗng —
+ * rỗng vì không có gì và rỗng vì không được phép là hai chuyện khác nhau.
+ */
+async function requireCareClass(
+  client: PoolClient,
+  scopes: { roleCode: string; classId: string | null }[],
+  requested?: string,
+): Promise<string> {
+  const homeroomClassIds = scopes
+    .filter((s) => s.roleCode === "homeroom")
+    .map((s) => s.classId)
+    .filter((id): id is string => id !== null);
+
+  if (homeroomClassIds.length > 0 && (!requested || homeroomClassIds.includes(requested))) {
+    return requireMyClass(homeroomClassIds, requested);
+  }
+
+  if (!scopes.some((s) => s.roleCode === "counselor")) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Thầy cô không chủ nhiệm lớp này." });
+  }
+
+  if (!requested) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Chọn lớp cần xem — tâm lý cụm phụ trách nhiều lớp, hệ thống không tự đoán.",
+    });
+  }
+
+  const { rows } = await client.query<{ ok: boolean }>(
+    `select exists (
+       select 1
+         from core.classes c
+         join core.v_my_scopes s on s.school_id = c.school_id
+        where c.id = $1 and s.role_code = 'counselor'
+     ) as ok`,
+    [requested],
+  );
+  if (!rows[0]?.ok) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Lớp này không thuộc cụm của thầy cô." });
+  }
+  return requested;
+}
+
 /** Mã lớp để hiện trên màn hình. Không có thì trả chuỗi rỗng — KHÔNG bịa mã lớp. */
 async function readClassCode(client: PoolClient, classId: string): Promise<string> {
   const { rows } = await client.query<{ code: string }>(
@@ -161,6 +237,63 @@ async function readClassCode(client: PoolClient, classId: string): Promise<strin
  */
 function mondayIso(date?: string): string {
   return toLocalIsoDate(mondayOf(date ? new Date(`${date}T00:00:00`) : new Date()));
+}
+
+/**
+ * Dựng lại ĐÚNG nội dung phụ huynh sẽ đọc, từ cùng ba con số mà `buildGrowthReport`
+ * (routers/report.ts) dùng: số ngày có check-in trong tuần, số ngày tâm trạng «Vui»,
+ * và chuỗi ngày đi học liên tiếp tính tới hôm nay.
+ *
+ * VÌ SAO KHÔNG GỌI THẲNG `buildGrowthReport`: hàm đó chưa export, và nó dựng báo cáo cho
+ * MỘT em tự suy ra từ người gọi (`getMyStudentIdForReport` — chính mình hoặc con mình),
+ * trong khi màn duyệt cần cả lớp trong MỘT truy vấn và người gọi là GVCN, không phải phụ
+ * huynh. Đây là chỗ dễ trôi lệch nhất của màn này: ngưỡng hay câu chữ bên report đổi mà
+ * quên bên đây thì cô ký duyệt một bản KHÁC bản phụ huynh đọc — hỏng đúng thứ màn này
+ * sinh ra để chữa. Việc gộp hai bên về một module dùng chung ghi ở `DEBT.md` (xem
+ * canPhoiHop của gói "cong-duyet-bao-cao").
+ *
+ * KHÔNG có nhánh nào cho `attendance.help_requests`: "cần gặp thầy cô" là tín hiệu chăm
+ * sóc, không phải thành tích để khoe với phụ huynh (mệnh lệnh 4 — không lọt ra ngoài
+ * phạm vi đã hứa với đứa trẻ). Bản xem trước phải giống bản thật, nên nó cũng không đọc.
+ */
+export function buildReportPreview(stats: {
+  checkinDays: number;
+  happyDays: number;
+  streakDays: number;
+}): { headline: string; glow: Array<{ title: string; detail: string; accentColor: "green" | "blue" | "amber" }>; grow: Array<{ title: string; detail: string }>; streakDays: number } {
+  const glow: Array<{ title: string; detail: string; accentColor: "green" | "blue" | "amber" }> = [];
+  if (stats.checkinDays >= 5) {
+    glow.push({
+      title: "Đi học đủ 5/5 ngày, check-in đúng giờ cả tuần",
+      detail: `Điểm danh · chuỗi ${stats.streakDays} ngày`,
+      accentColor: "green",
+    });
+  }
+  if (stats.happyDays >= 3) {
+    glow.push({
+      title: "Cả tuần đến lớp với tâm trạng vui vẻ",
+      detail: `Check-in cảm xúc · ${stats.happyDays}/5 ngày «Vui»`,
+      accentColor: "blue",
+    });
+  }
+
+  const grow =
+    stats.checkinDays < 5
+      ? [
+          {
+            title: "Đi học đều hơn",
+            detail:
+              "Tuần này có ngày vắng hoặc check-in muộn — cùng sắp xếp giờ giấc buổi sáng nhé.",
+          },
+        ]
+      : [];
+
+  return {
+    headline: glow.length >= 2 ? "Một tuần rực rỡ!" : "Một tuần ổn định",
+    glow,
+    grow,
+    streakDays: stats.streakDays,
+  };
 }
 
 export const careRouter = router({
@@ -658,9 +791,20 @@ export const careRouter = router({
   }),
 
   /**
-   * Danh sách Báo cáo Trưởng thành của lớp trong một tuần, kèm trạng thái duyệt.
-   * Em chưa có dòng nào trong sổ duyệt thì hiện `pending` — KHÔNG tạo sẵn dòng
-   * `pending` trong bảng: sổ chỉ ghi việc con người đã quyết, im lặng không phải quyết định.
+   * Danh sách Báo cáo Trưởng thành của lớp trong một tuần, kèm trạng thái duyệt VÀ bản
+   * xem trước đúng thứ phụ huynh sẽ đọc.
+   *
+   * Em chưa có dòng nào trong sổ duyệt thì hiện `pending` — KHÔNG tạo sẵn dòng `pending`
+   * trong bảng: sổ chỉ ghi việc con người đã quyết, im lặng không phải quyết định.
+   *
+   * Bản xem trước (`preview`) thêm 31/07/2026. Trước đó procedure này chỉ trả
+   * `checkinDays`/`happyDays` — hai con số vận hành — nên GVCN bấm "Duyệt gửi phụ huynh"
+   * mà chưa từng nhìn thấy câu chữ mình đang ký. Ký một thứ mình không đọc được là chữ
+   * ký trang trí, và nó nằm ngay trên đường dữ liệu trẻ em đi ra khỏi trường.
+   *
+   * MỘT truy vấn cho cả lớp, không vòng lặp N+1: `roster` là gốc (danh sách lớp), ba
+   * nguồn số liệu nối vào bằng LEFT JOIN nên em không có dữ liệu nào vẫn còn nguyên
+   * trong danh sách — cùng nguyên tắc đã ghi ở getDashboard/getClassRoster.
    */
   listReportApprovals: homeroomProcedure
     .input(ListReportApprovalsInput)
@@ -680,28 +824,60 @@ export const careRouter = router({
           note: string | null;
           checkin_days: number;
           happy_days: number;
+          streak_days: number;
         }>(
-          `select e.student_id,
-                  s.student_code,
-                  s.full_name,
+          `with roster as (
+             select e.student_id, s.student_code, s.full_name
+               from core.enrollments e
+               join core.students s on s.id = e.student_id
+              where e.class_id = $1 and e.valid_to is null
+           ),
+           week_stats as (
+             select r.student_id,
+                    count(*) filter (where c.kind = 'in')::int as checkin_days,
+                    count(*) filter (where c.mood = 4)::int as happy_days
+               from roster r
+               left join attendance.checkins c
+                 on c.student_id = r.student_id
+                and c.occurred_on between $2::date and $2::date + 4
+              group by r.student_id
+           ),
+           -- Chuỗi ngày đi học LIÊN TIẾP tính tới hôm nay — sao đúng cách đếm của
+           -- buildGrowthReport (report.ts): ngày trừ đi thứ tự đếm lùi cho ra một hằng
+           -- số chung cho mọi ngày liền mạch; chuỗi đang chạy là nhóm mang giá trị
+           -- current_date + 1. Đây là số phụ huynh đọc trong dòng «chuỗi N ngày», nên
+           -- nó KHÔNG bó trong tuần đang duyệt.
+           streaks as (
+             select t.student_id, count(*)::int as streak_days
+               from (
+                 select c.student_id,
+                        c.occurred_on + row_number() over (
+                          partition by c.student_id order by c.occurred_on desc
+                        )::int as grp
+                   from roster r
+                   join attendance.checkins c on c.student_id = r.student_id
+                  where c.kind = 'in'
+                    and c.status in ('present','late')
+                    and c.occurred_on <= current_date
+               ) t
+              where t.grp = current_date + 1
+              group by t.student_id
+           )
+           select r.student_id,
+                  r.student_code,
+                  r.full_name,
                   a.status,
                   a.reviewed_at::text as reviewed_at,
                   a.note,
                   coalesce(w.checkin_days, 0) as checkin_days,
-                  coalesce(w.happy_days, 0) as happy_days
-             from core.enrollments e
-             join core.students s on s.id = e.student_id
+                  coalesce(w.happy_days, 0) as happy_days,
+                  coalesce(st.streak_days, 0) as streak_days
+             from roster r
              left join report.growth_report_approvals a
-               on a.student_id = e.student_id and a.week_start = $2::date
-             left join lateral (
-               select count(*) filter (where c.kind = 'in')::int as checkin_days,
-                      count(*) filter (where c.mood = 4)::int as happy_days
-                 from attendance.checkins c
-                where c.student_id = e.student_id
-                  and c.occurred_on between $2::date and $2::date + 4
-             ) w on true
-            where e.class_id = $1 and e.valid_to is null
-            order by s.full_name`,
+               on a.student_id = r.student_id and a.week_start = $2::date
+             left join week_stats w on w.student_id = r.student_id
+             left join streaks st on st.student_id = r.student_id
+            order by r.full_name`,
           [classId, weekStart],
         );
 
@@ -718,6 +894,11 @@ export const careRouter = router({
             note: r.note,
             checkinDays: r.checkin_days,
             happyDays: r.happy_days,
+            preview: buildReportPreview({
+              checkinDays: r.checkin_days,
+              happyDays: r.happy_days,
+              streakDays: r.streak_days,
+            }),
           })),
         });
       });
@@ -796,13 +977,24 @@ export const careRouter = router({
     });
   }),
 
-  /** Nhật ký can thiệp của cả lớp — màn "Ghi chú can thiệp" đọc từ đây. */
-  listClassInterventions: homeroomProcedure
+  /**
+   * Nhật ký can thiệp của cả lớp — màn "Ghi chú can thiệp" đọc từ đây.
+   *
+   * Đây là ĐƯỜNG ĐỌC của tâm lý cụm (`careStaffProcedure`, không phải
+   * `homeroomProcedure` như năm procedure GVCN phía trên). Vai đó ghi được can thiệp,
+   * tắt được cờ khẩn và đóng được hồ sơ; không có đường này thì cô làm cả ba việc mà
+   * chưa từng nhìn thấy hồ sơ. GVCN không mất gì: nhánh 1 của `requireCareClass` giữ
+   * nguyên hành vi cũ (mặc định lớp chủ nhiệm, lớp đồng nghiệp → FORBIDDEN).
+   *
+   * Cột `note` ở đây là nhật ký HÀNH ĐỘNG ("đã gọi phụ huynh"), KHÔNG phải
+   * `care.counselor_notes` — nội dung buổi tư vấn nằm ở bảng khác, phạm vi khác, và
+   * migration 0035 vừa đóng nó lại với GVCN.
+   */
+  listClassInterventions: careStaffProcedure
     .input(ListClassInterventionsInput)
     .query(async ({ ctx, input }) => {
-      const classId = requireMyClass(ctx.homeroomClassIds, input.classId);
-
       return ctx.runWithDb(async (client) => {
+        const classId = await requireCareClass(client, ctx.myScopes, input.classId);
         const className = await readClassCode(client, classId);
 
         const { rows } = await client.query<{
@@ -848,4 +1040,196 @@ export const careRouter = router({
         });
       });
     }),
+
+  /**
+   * MỘT em, mọi tín hiệu về em, trên một màn (gói "man-hinh-con-thieu-gvcn-hs").
+   *
+   * Vì sao cần: bảng "Lớp chủ nhiệm" và buồng lái đều CHỈ RA một cái tên ("Cần gặp thầy
+   * cô", "Hồ sơ đang mở") rồi dừng ở đó — không có màn nào trả lời câu hỏi kế tiếp mà
+   * giáo viên luôn hỏi: "em này mấy hôm nay thế nào?". Dấu hiệu hiện ra rồi trôi qua là
+   * cách một hệ chăm sóc chết dần mà vẫn xanh trên mọi dashboard.
+   *
+   * BA HÀNG RÀO, không hàng nào tin hàng nào:
+   *   1. `homeroomProcedure` — người gọi phải đang chủ nhiệm một lớp nào đó.
+   *   2. `requireMyClass` — `classId` client gửi phải là lớp CỦA MÌNH.
+   *   3. Câu SELECT đầu tiên đối chiếu em có ghi danh ĐANG HIỆU LỰC ở đúng lớp đó. Thiếu
+   *      bước này thì đổi một tham số `studentId` trong request là đọc được hồ sơ chăm
+   *      sóc của em lớp khác — RLS (`core.can_see_care`) vẫn chặn phần lớn, nhưng dựa
+   *      vào một tầng duy nhất là cách lỗ hổng sinh ra (xem 0025).
+   *
+   * SÁU truy vấn nhỏ theo MỘT em thay vì một truy vấn ghép: đây là màn mở theo từng em
+   * (không phải danh sách 40 dòng), nên không có N+1 nào để tránh, và mỗi câu đọc đúng
+   * một bảng thì lần sau sửa một mục không kéo theo cả khối.
+   */
+  getStudentDetail: homeroomProcedure.input(GetStudentDetailInput).query(async ({ ctx, input }) => {
+    const classId = requireMyClass(ctx.homeroomClassIds, input.classId);
+
+    return ctx.runWithDb(async (client) => {
+      const studentRes = await client.query<{
+        student_code: string;
+        full_name: string;
+        class_code: string;
+      }>(
+        `select s.student_code, s.full_name, c.code as class_code
+           from core.enrollments e
+           join core.students s on s.id = e.student_id
+           join core.classes c on c.id = e.class_id
+          where e.class_id = $1 and e.valid_to is null and e.student_id = $2`,
+        [classId, input.studentId],
+      );
+      const student = studentRes.rows[0];
+      if (!student) {
+        // FORBIDDEN chứ không phải NOT_FOUND: hai câu trả lời khác nhau cho "em không
+        // tồn tại" và "em tồn tại nhưng ở lớp khác" là một kênh dò danh sách học sinh.
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Em này không có trong danh sách lớp chủ nhiệm của thầy cô.",
+        });
+      }
+
+      const boundsRes = await client.query<{ from_date: string; to_date: string }>(
+        "select (current_date - ($1::int - 1))::text as from_date, current_date::text as to_date",
+        [input.days],
+      );
+      const bounds = boundsRes.rows[0] ?? { from_date: "", to_date: "" };
+
+      const checkinRes = await client.query<{
+        occurred_on: string;
+        status: string | null;
+        mood: number | null;
+        checked_in_at: string | null;
+        source: string | null;
+      }>(
+        `select occurred_on::text,
+                status,
+                mood,
+                to_char(occurred_at, 'HH24:MI') as checked_in_at,
+                source
+           from attendance.checkins
+          where student_id = $1 and kind = 'in' and occurred_on >= $2::date
+          order by occurred_on desc`,
+        [input.studentId, bounds.from_date],
+      );
+
+      // Cùng cửa sổ với dải check-in để hai khối trên màn nói về cùng một quãng thời
+      // gian. `note` đi ra ở đây — xem lời giải thích dài trong contract StudentHelpRequest.
+      const helpRes = await client.query<{
+        requested_on: string;
+        requested_at: string;
+        topic: string | null;
+        urgency: string | null;
+        note: string | null;
+        handled_at: string | null;
+      }>(
+        `select requested_on::text, requested_at::text, topic, urgency, note, handled_at::text
+           from attendance.help_requests
+          where student_id = $1 and requested_on >= $2::date
+          order by requested_on desc`,
+        [input.studentId, bounds.from_date],
+      );
+
+      // KHÔNG bó trong cửa sổ ngày: một hồ sơ mở từ tháng trước mà chưa đóng là thứ cô
+      // phải thấy đầu tiên, không phải thứ biến mất vì lịch sử đã trôi quá 14 ngày.
+      const caseRes = await client.query<{
+        id: string;
+        status: string;
+        opened_at: string;
+        closed_at: string | null;
+      }>(
+        `select id, status, opened_at::text, closed_at::text
+           from care.care_cases
+          where student_id = $1
+          order by (status = 'open') desc, opened_at desc
+          limit 10`,
+        [input.studentId],
+      );
+
+      const interventionRes = await client.query<{
+        id: string;
+        action: string;
+        note: string | null;
+        occurred_at: string;
+        actor_name: string | null;
+        case_status: string;
+      }>(
+        // `core.users` chỉ mở SELECT cho CHÍNH MÌNH (policy users_self, 0009) → tên đồng
+        // nghiệp ra NULL. Không bịa tên: NULL → "Thầy cô khác" ở bước map.
+        `select i.id, i.action, i.note, i.occurred_at::text as occurred_at,
+                u.full_name as actor_name, cc.status as case_status
+           from care.interventions i
+           join care.care_cases cc on cc.id = i.case_id
+           left join core.users u on u.id = i.actor_id
+          where cc.student_id = $1
+          order by i.occurred_at desc
+          limit 20`,
+        [input.studentId],
+      );
+
+      // Chỉ những tuần CÓ quyết định. Không dựng sẵn 6 dòng 'pending' cho 6 tuần gần
+      // nhất: im lặng không phải một quyết định, và màn duyệt báo cáo (listReportApprovals)
+      // mới là nơi trả lời "tuần này đã ký chưa".
+      const approvalRes = await client.query<{
+        week_start: string;
+        status: string;
+        reviewed_at: string | null;
+        note: string | null;
+      }>(
+        `select week_start::text, status, reviewed_at::text, note
+           from report.growth_report_approvals
+          where student_id = $1
+          order by week_start desc
+          limit 6`,
+        [input.studentId],
+      );
+
+      return GetStudentDetailOutput.parse({
+        classId,
+        className: student.class_code,
+        asOfDate: toLocalIsoDate(new Date()),
+        window: { days: input.days, fromDate: bounds.from_date, toDate: bounds.to_date },
+        student: {
+          studentId: input.studentId,
+          studentCode: student.student_code,
+          fullName: student.full_name,
+        },
+        checkins: checkinRes.rows.map((r) => ({
+          occurredOn: r.occurred_on,
+          status: r.status as AttendanceStatus | null,
+          mood: r.mood as 1 | 2 | 3 | 4 | null,
+          checkedInAt: r.checked_in_at,
+          source: r.source,
+        })),
+        helpRequests: helpRes.rows.map((r) => ({
+          requestedOn: r.requested_on,
+          requestedAt: r.requested_at,
+          topic: r.topic as HelpRequestTopic | null,
+          urgency: r.urgency as HelpRequestUrgency | null,
+          note: r.note,
+          handledAt: r.handled_at,
+        })),
+        careCases: caseRes.rows.map((r) => ({
+          caseId: r.id,
+          status: r.status as "open" | "closed",
+          openedAt: r.opened_at,
+          closedAt: r.closed_at,
+        })),
+        interventions: interventionRes.rows.map((r) => ({
+          interventionId: r.id,
+          studentId: input.studentId,
+          studentName: student.full_name,
+          action: r.action,
+          note: r.note,
+          occurredAt: r.occurred_at,
+          actorName: r.actor_name ?? "Thầy cô khác",
+          caseStatus: r.case_status as "open" | "closed",
+        })),
+        reportApprovals: approvalRes.rows.map((r) => ({
+          weekStart: r.week_start,
+          status: r.status as ReportApprovalStatus,
+          reviewedAt: r.reviewed_at,
+          note: r.note,
+        })),
+      });
+    });
+  }),
 });

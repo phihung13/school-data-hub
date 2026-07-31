@@ -41,9 +41,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Phần tử BẮT BUỘC đứng đầu <body>: đích Tab đầu tiên của mọi trang. Ẩn khỏi mắt
             cho tới khi nhận focus (kiểu .skip-link trong globals.css). Đích #noi-dung do
-            <main> trong components/page-shell.tsx cung cấp — trang nào chưa bọc nội dung
-            bằng PageShell/<main id="noi-dung"> thì link này chưa nhảy được, xem ghi chú
-            phối hợp trong tests/unit/a11y.test.ts. */}
+            <main> trong components/page-shell.tsx cung cấp — qua <PageShell> (check-in,
+            báo cáo) hoặc qua <MainContent> (điểm danh, tuần này, hồ sơ, cần gặp thầy cô).
+
+            Trang nào CHƯA bọc nội dung bằng một trong hai thứ đó thì link này vẫn bấm được
+            mà không đi tới đâu — không báo lỗi, không log, chỉ im lặng không nhảy. Tính tới
+            31/07/2026 còn: /home, buồng lái GVCN (và các màn con), /login, /embed,
+            not-found. Việc còn lại đúng một dòng mỗi màn: bọc CỘT NỘI DUNG (không bọc menu
+            trái, không bọc tab bar) bằng
+                <MainContent className="…">…</MainContent>
+            KHÔNG viết tay id="noi-dung", và MỘT trang chỉ được có MỘT — xem lý lẽ đầy đủ
+            trong components/page-shell.tsx và luật khoá trong tests/unit/a11y-nen.test.ts. */}
         <a href="#noi-dung" className="skip-link">
           Bỏ qua menu, tới nội dung chính
         </a>

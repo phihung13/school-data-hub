@@ -69,6 +69,80 @@ export function isSessionExpired(error: unknown): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Hình thức của một lỗi — icon + tiêu đề nói ĐÚNG loại lỗi.
+//
+// Sửa 31/07/2026 (gói "trung-thuc-trang-thai"): trước đây MỌI lỗi không phải 401
+// đều vẽ `cloud_off` và viết "Không tải được …" — tức là báo "mất mạng" cho một
+// lỗi PHÂN QUYỀN. Người dùng đi kiểm tra wifi, đổi mạng, bấm "Thử lại" mãi, trong
+// khi sự thật là tài khoản của họ không được mở phần đó. Icon là câu đầu tiên màn
+// hình nói ra; nói sai ở đó thì câu tiếng Việt bên dưới đã đến quá muộn.
+// ---------------------------------------------------------------------------
+export interface ErrorPresentation {
+  /** Mã loại lỗi — dùng cho test, không hiển thị. */
+  kind: "network" | "expired" | "forbidden" | "notfound" | "server" | "unknown";
+  icon: string;
+  /** Tiêu đề đã ghép sẵn tên màn hình (nếu nơi gọi có truyền). */
+  title: string;
+  iconClass: string;
+}
+
+export function errorPresentation(error: unknown, label?: string): ErrorPresentation {
+  const of = (name: string) => `${name} ${label ?? "dữ liệu"}`;
+
+  if (isSessionExpired(error)) {
+    return {
+      kind: "expired",
+      icon: "lock_clock",
+      title: "Phiên đăng nhập đã hết hạn",
+      iconClass: "text-[#E8940D]",
+    };
+  }
+  // Kiểm lỗi mạng TRƯỚC mọi mã số: không có phản hồi thì không có mã số nào để đọc.
+  if (isNetworkError(error)) {
+    return {
+      kind: "network",
+      icon: "wifi_off",
+      title: of("Chưa tải được"),
+      iconClass: "text-[#5B6B80]",
+    };
+  }
+
+  const status = httpStatusOf(error);
+  if (status === 403) {
+    return {
+      kind: "forbidden",
+      icon: "block",
+      // KHÔNG nói "không tải được": dữ liệu vẫn ở đó và vẫn khoẻ, chỉ là tài khoản
+      // này không được mở. Nói sai chỗ này đẩy người dùng đi sửa mạng.
+      title: label ? `Tài khoản này không mở được ${label}` : "Tài khoản này không có quyền xem phần đó",
+      iconClass: "text-[#5B6B80]",
+    };
+  }
+  if (status === 404) {
+    return {
+      kind: "notfound",
+      icon: "search",
+      title: of("Không tìm thấy"),
+      iconClass: "text-[#5B6B80]",
+    };
+  }
+  if (status !== null && status >= 500) {
+    return {
+      kind: "server",
+      icon: "cloud_off",
+      title: of("Máy chủ chưa trả được"),
+      iconClass: "text-[#D2383E]",
+    };
+  }
+  return {
+    kind: "unknown",
+    icon: "error",
+    title: of("Không tải được"),
+    iconClass: "text-[#D2383E]",
+  };
+}
+
+// ---------------------------------------------------------------------------
 
 export function LoadingState({ label = "Đang tải…" }: { label?: string }) {
   return (
@@ -101,18 +175,17 @@ export function ErrorState({
   /** Tên màn hình, để câu lỗi nói rõ hỏng ở đâu ("Không tải được Điểm danh"). */
   label?: string;
 }) {
-  const expired = isSessionExpired(error);
+  const look = errorPresentation(error, label);
+  const expired = look.kind === "expired";
   return (
     <div
       role="alert"
       className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
     >
-      <span className="msr text-[36px] text-[#D2383E]" aria-hidden>
-        {expired ? "lock_clock" : "cloud_off"}
+      <span className={`msr text-[36px] ${look.iconClass}`} aria-hidden>
+        {look.icon}
       </span>
-      <p className="text-[14px] font-black text-ink">
-        {label ? `Không tải được ${label}` : "Không tải được dữ liệu"}
-      </p>
+      <p className="text-[14px] font-black text-ink">{look.title}</p>
       <p className="max-w-[380px] text-[12.5px] leading-relaxed text-caption">{friendlyErrorMessage(error)}</p>
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
         {expired ? (
@@ -179,8 +252,9 @@ export function MutationError({ error, onRetry }: { error: unknown; onRetry?: ()
   if (!error) return null;
   return (
     <span role="alert" className="flex flex-wrap items-center gap-2 text-[12px] font-bold text-[#D2383E]">
+      {/* Cùng bảng icon với ErrorState: 403 không được vẽ thành sự cố máy chủ. */}
       <span className="msr text-[16px]" aria-hidden>
-        error
+        {errorPresentation(error).icon}
       </span>
       {friendlyErrorMessage(error)}
       {onRetry && isRetryableError(error) && (

@@ -7,14 +7,31 @@
 // còn kẹt ở "…" mãi mãi (dấu ba chấm nghĩa là "đang tải" — nói dối khi thật ra là
 // đã hỏng). Nay đủ ba trạng thái + nút Thử lại; sidebar nhận `roles`/`classCode`
 // thật thay vì role="student" viết cứng; khối mobile có đường ra.
+//
+// Sửa 31/07/2026 (gói "a11y-nen"): BỎ màn chặn DesktopOnlyNotice — trang này chỉ học
+// sinh mới vào được (page.tsx đá vai khác về /home) mà bối cảnh dùng thật của học sinh
+// THCS là điện thoại (PRODUCT.md), nên màn chặn "mở trên máy tính" chặn đúng toàn bộ
+// người dùng của nó. Nội dung xếp dọc sẵn: bỏ "hidden md:flex", để hai cột tự xuống
+// dòng. Kèm theo: vùng nội dung thành <MainContent> (landmark <main id="noi-dung">
+// cho đường tắt bàn phím) và tiêu đề màn thành <h1>.
+//
+// Sửa 31/07/2026 (gói "giong-noi-va-don-dep"), hai việc — đều là GIỌNG, không phải bố cục:
+//   1. Màn này nói với chính đứa trẻ nhưng dùng chữ "GVCN" hai lần ("chỉ GVCN xem",
+//      "Bản đầy đủ GVCN gửi bố mẹ"). DESIGN-GUIDELINES §8: từ vựng vận hành CHỈ sống ở
+//      buồng lái/tâm lý/điều hành. Đây là ràng buộc đạo đức, không phải sở thích văn phong.
+//   2. weekLabel từ server là hai ngày ISO ("2026-07-27 – 2026-07-31") in thẳng ra hai chỗ
+//      em đọc. Định dạng ở tầng hiển thị bằng formatWeekLabel() — contract giữ nguyên ISO
+//      cho buồng lái và job xuất dữ liệu.
 "use client";
 
 import Link from "next/link";
 import { trpc } from "@/lib/trpc-client";
+import { formatWeekLabel } from "@/lib/week-label";
 import type { HubRole, MoodValue } from "@hub/core/contracts";
 import { HubSidebar } from "./hub-sidebar";
 import { Mascot } from "./mascot";
-import { DesktopOnlyNotice } from "./ui/desktop-only-notice";
+import { MainContent } from "./page-shell";
+import { StudentTabBar } from "./tab-bar";
 import { ErrorState, LoadingState } from "./ui/query-state";
 
 const MOOD_ICON: Record<MoodValue, string> = {
@@ -69,23 +86,24 @@ export function ThisWeekView({
   };
 
   return (
-    <>
-      <DesktopOnlyNotice
-        title="Trang Tuần này đang tối ưu cho máy tính."
-        hint="Mở trên máy tính để xem đủ lịch tuần và phần Glow/Grow."
-        showTabBar={roles.includes("student")}
-      />
-      <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
-        <div className="flex w-[240px] flex-none">
-          <HubSidebar roles={roles} active="week" fullName={displayName} email={email} classCode={classCode} />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
-          <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
-            <div className="flex-1">
-              <div className="text-[16px] font-black text-ink">Tuần này của mình</div>
+    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
+      {/* Menu trái 240px chỉ có nghĩa từ md; dưới đó đường ra là tab bar cuối trang. */}
+      <div className="hidden md:flex md:w-[240px] md:flex-none">
+        <HubSidebar roles={roles} active="week" fullName={displayName} email={email} classCode={classCode} />
+      </div>
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+          <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-4 py-3 md:px-7 md:py-3.5">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[16px] font-black text-ink">Tuần này của mình</h1>
               {/* "…" chỉ được phép khi ĐANG tải thật; hỏng thì nói là hỏng. */}
               <div className="text-[11.5px] text-caption">
-                {report.data?.report.weekLabel ?? (isPending ? "…" : error ? "chưa tải được" : "")}
+                {report.data
+                  ? formatWeekLabel(report.data.report.weekLabel)
+                  : isPending
+                    ? "…"
+                    : error
+                      ? "chưa tải được"
+                      : ""}
               </div>
             </div>
           </div>
@@ -94,36 +112,50 @@ export function ThisWeekView({
           {!isPending && error && <ErrorState error={error} label="Tuần này của mình" onRetry={retry} />}
 
           {attendance.data && report.data && (
-            <div className="flex-1 overflow-y-auto p-7">
-              <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+            <div className="flex-1 p-4 md:overflow-y-auto md:p-7">
+              <div className="rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-[16px] font-black text-navy">Mỗi ngày của con</span>
+                  <h2 className="text-[16px] font-black text-navy">Mỗi ngày của con</h2>
                   <span className="text-[11.5px] font-bold text-caption">giờ check-in + cảm xúc</span>
                 </div>
-                <div className="mt-[18px] grid grid-cols-5 gap-3.5">
+                {/* Giữ 5 cột cả ở 390px: ô co còn ~60px, vừa đủ vòng tròn cảm xúc 52px.
+                    Cho xuống 2 hàng là mất hình dạng "một tuần" — thứ duy nhất khối này kể. */}
+                <div className="mt-[18px] grid grid-cols-5 gap-1.5 md:gap-3.5">
                   {attendance.data.week.map((day) => (
                     <div
                       key={day.dateIso}
                       className={
                         day.isToday
-                          ? "flex flex-col items-center gap-2 rounded-2xl border-[1.7px] border-navy bg-[#F7FAFF] px-2.5 py-4 shadow-[0_0_0_3px_rgba(30,95,184,.1)]"
-                          : "flex flex-col items-center gap-2 rounded-2xl border-[1.5px] border-[#EDF1F7] px-2.5 py-4"
+                          ? "flex flex-col items-center gap-2 rounded-2xl border-[1.7px] border-navy bg-[#F7FAFF] px-1 py-3 shadow-[0_0_0_3px_rgba(30,95,184,.1)] md:px-2.5 md:py-4"
+                          : "flex flex-col items-center gap-2 rounded-2xl border-[1.5px] border-[#EDF1F7] px-1 py-3 md:px-2.5 md:py-4"
                       }
                     >
-                      <span className={`text-[12px] font-black ${day.isToday ? "text-navy" : "text-[#5B6B80]"}`}>{day.dayLabel}</span>
+                      <span className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-navy" : "text-[#5B6B80]"}`}>
+                        {day.dayLabel}
+                      </span>
                       {day.mood ? (
                         <span
                           className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-white shadow-[0_5px_12px_rgba(0,0,0,.2)]"
                           style={{ background: MOOD_GRADIENT[day.mood as MoodValue] }}
                         >
-                          <span className="msr text-[28px]">{MOOD_ICON[day.mood as MoodValue]}</span>
+                          {/* Vòng tròn này nói MỘT điều — hôm đó con thấy thế nào — mà nói
+                              bằng đúng màu và hình. Người mù màu và người dùng trình đọc màn
+                              hình không nhận được gì (nội dung DOM của .msr là chữ thô
+                              "sentiment_sad", đọc lên vô nghĩa). Tên tâm trạng đi kèm ở dạng
+                              sr-only: không đổi một pixel nào trên màn, mà thành có nghĩa. */}
+                          <span aria-hidden="true" className="msr text-[28px]">{MOOD_ICON[day.mood as MoodValue]}</span>
+                          <span className="sr-only">{MOOD_NAME[day.mood as MoodValue]}</span>
                         </span>
                       ) : (
                         <span className={`h-[52px] w-[52px] rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#F0474D]"}`} />
                       )}
-                      <span className={`text-[11px] font-bold ${day.isToday ? "text-navy" : "text-caption"}`}>
+                      <span className={`text-center text-[11px] font-bold leading-tight ${day.isToday ? "text-navy" : "text-caption"}`}>
                         {day.checkedInAt ?? (day.isFuture ? "chưa tới" : "vắng")}
-                        {day.isToday && day.checkedInAt ? " · hôm nay" : ""}
+                        {day.isToday && day.checkedInAt ? (
+                          <span className="block md:inline">
+                            <span className="hidden md:inline"> · </span>hôm nay
+                          </span>
+                        ) : null}
                       </span>
                     </div>
                   ))}
@@ -133,11 +165,11 @@ export function ThisWeekView({
               <div className="mt-[18px] flex flex-wrap items-start gap-[18px]">
                 <div className="min-w-0 flex-[2_1_520px] flex flex-col gap-[18px]">
                   {report.data.report.glow.length > 0 && (
-                    <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                      <div className="flex items-center gap-2">
-                        <span className="msr text-[20px] text-[#F5A300]">sunny</span>
-                        <span className="text-[16px] font-black text-navy">Con đang tỏa sáng ở</span>
-                      </div>
+                    <div className="rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+                      <h2 className="flex items-center gap-2 text-[16px] font-black text-navy">
+                        <span aria-hidden="true" className="msr text-[20px] text-[#F5A300]">sunny</span>
+                        Con đang tỏa sáng ở
+                      </h2>
                       <div className="mt-4 flex flex-col gap-3">
                         {report.data.report.glow.map((item) => (
                           <div
@@ -145,7 +177,7 @@ export function ThisWeekView({
                             className={`flex items-center gap-3.5 rounded-2xl px-4 py-3.5 ${GLOW_BG[item.accentColor]}`}
                           >
                             <span className={`flex h-[42px] w-[42px] flex-none items-center justify-center rounded-xl ${GLOW_ICON_BG[item.accentColor]}`}>
-                              <span className={`msr text-[21px] ${GLOW_ICON_COLOR[item.accentColor]}`}>{GLOW_ICON[item.accentColor]}</span>
+                              <span aria-hidden="true" className={`msr text-[21px] ${GLOW_ICON_COLOR[item.accentColor]}`}>{GLOW_ICON[item.accentColor]}</span>
                             </span>
                             <div className="flex-1">
                               <div className="text-[14px] font-black text-ink">{item.title}</div>
@@ -158,11 +190,11 @@ export function ThisWeekView({
                   )}
 
                   {report.data.report.grow.length > 0 && (
-                    <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                      <div className="flex items-center gap-2">
-                        <span className="msr text-[20px] text-[#00A05F]">psychiatry</span>
-                        <span className="text-[16px] font-black text-navy">Con đang lớn lên ở</span>
-                      </div>
+                    <div className="rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+                      <h2 className="flex items-center gap-2 text-[16px] font-black text-navy">
+                        <span aria-hidden="true" className="msr text-[20px] text-[#00A05F]">psychiatry</span>
+                        Con đang lớn lên ở
+                      </h2>
                       <div className="mt-4 flex flex-wrap items-center gap-4">
                         <Mascot pose="think" width={56} />
                         <div className="min-w-0 flex-1 basis-[280px]">
@@ -176,7 +208,7 @@ export function ThisWeekView({
 
                 <div className="min-w-0 flex-[1_1_300px] flex flex-col gap-[18px]">
                   <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                    <div className="text-[15px] font-black text-navy">Cảm xúc cả tuần</div>
+                    <h2 className="text-[15px] font-black text-navy">Cảm xúc cả tuần</h2>
                     {recordedDays > 0 ? (
                       <>
                         <div className="mt-4 flex h-4 overflow-hidden rounded-lg">
@@ -204,7 +236,7 @@ export function ThisWeekView({
                       <p className="mt-3 text-[12px] text-caption">Chưa có check-in nào tuần này.</p>
                     )}
                     <p className="mt-3 text-[11.5px] leading-relaxed text-caption">
-                      Cảm xúc là chuyện riêng của con — chỉ GVCN xem để biết khi nào con cần giúp.
+                      Cảm xúc là chuyện riêng của con — chỉ thầy cô chủ nhiệm xem để biết khi nào con cần giúp.
                     </p>
                   </div>
 
@@ -213,21 +245,29 @@ export function ThisWeekView({
                     className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-gold to-[#FFDD66] p-5"
                   >
                     <div aria-hidden className="absolute -bottom-11 -right-[30px] h-[130px] w-[130px] rounded-full bg-white/35" />
-                    <div className="relative text-[15px] font-black text-navy">Báo cáo Trưởng thành {report.data.report.weekLabel}</div>
+                    <div className="relative text-[15px] font-black text-navy">
+                      Báo cáo Trưởng thành · {formatWeekLabel(report.data.report.weekLabel)}
+                    </div>
                     <p className="relative mt-1 text-[12px] leading-relaxed text-gold-text">
-                      Bản đầy đủ GVCN gửi bố mẹ — con xem trước được.
+                      Bản đầy đủ thầy cô gửi bố mẹ — con xem trước được.
                     </p>
                     <span className="relative mt-3 inline-flex items-center gap-1.5 rounded-full bg-navy px-4 py-2 text-[12px] font-black text-white">
                       Mở báo cáo
-                      <span className="msr text-[16px] text-gold">arrow_forward</span>
+                      <span aria-hidden="true" className="msr text-[16px] text-gold">arrow_forward</span>
                     </span>
                   </Link>
                 </div>
               </div>
             </div>
           )}
+      </MainContent>
+      {/* Đường ra ở điện thoại — /tuan-nay không nằm trong tab bar nhưng tab bar là
+          cách duy nhất quay về Hub khi app đã thêm vào màn hình chính (không có nút Back). */}
+      {roles.includes("student") && (
+        <div className="md:hidden">
+          <StudentTabBar />
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 }

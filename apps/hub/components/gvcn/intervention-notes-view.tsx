@@ -21,13 +21,32 @@ import { ClassPicker, useSelectedClass } from "./class-picker";
 import { Card, GvcnShell } from "./gvcn-shell";
 import { newMutationId } from "./mutation-id";
 
-/** Hành động hay dùng — bấm một cái là xong, khỏi gõ lại mỗi lần. */
+/**
+ * Hành động hay dùng — bấm một cái là xong, khỏi gõ lại mỗi lần.
+ *
+ * Sửa 31/07/2026 (gói "trung-thuc-trang-thai"): nhãn cũ là «Đã chuyển tâm lý cụm».
+ * Nút đó KHÔNG chuyển gì cả — nó chỉ ghi thêm một dòng chữ vào nhật ký lớp. Hệ
+ * thống chưa có contract chuyển tuyến (packages/core/contracts/care.ts nói rõ là
+ * GĐ2), chưa có mutation `referToCounselor`, và tâm lý cụm chưa có hộp việc nào để
+ * nhận. Một GVCN bấm nút mang chữ "đã chuyển" hoàn toàn có lý do tin rằng em đã
+ * sang tay người khác — trong khi ở đầu kia không ai biết gì. Với một em vừa bấm
+ * «cần gặp thầy cô», hiểu nhầm đó là im lặng đúng lúc không được phép im.
+ *
+ * Nhãn mới nói đúng việc nó làm: ghi lại một cuộc trao đổi ĐÃ diễn ra ngoài hệ
+ * thống. Đổi lại thành hành động chuyển tuyến thật khi (và chỉ khi) có đủ ba thứ:
+ * contract → mutation → màn hình bên nhận.
+ */
 const QUICK_ACTIONS = [
   "Đã trò chuyện với học sinh",
   "Đã gọi điện cho phụ huynh",
   "Đã trao đổi với giáo viên bộ môn",
-  "Đã chuyển tâm lý cụm",
+  "Đã trao đổi với tâm lý cụm (ngoài hệ thống)",
 ];
+
+/** Nhãn nào cần một câu nói rõ "hệ thống không làm gì thêm sau khi bấm". */
+export function needsOutOfBandWarning(action: string): boolean {
+  return action.includes("tâm lý cụm");
+}
 
 export function InterventionNotesView({ displayName, email }: { displayName: string; email: string }) {
   const utils = trpc.useUtils();
@@ -139,6 +158,17 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                 aria-label="Việc đã làm"
                 className="mt-2 w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none focus:border-navy"
               />
+              {/* Ghi rõ ranh giới của cái nút: nó ghi nhật ký, nó không chuyển việc.
+                  Không có câu này thì "đã trao đổi" dễ bị đọc thành "đã bàn giao". */}
+              {needsOutOfBandWarning(action) && (
+                <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-[#FFF7E0] px-3 py-2 text-[11.5px] font-semibold leading-relaxed text-[#8A5A00]">
+                  <span className="msr mt-[1px] flex-none text-[15px]" aria-hidden>
+                    info
+                  </span>
+                  Dòng này chỉ vào nhật ký của lớp. Hệ thống chưa có đường chuyển tuyến — tâm lý cụm không nhận
+                  được thông báo nào, thầy cô vẫn phải báo trực tiếp.
+                </p>
+              )}
             </div>
 
             <label className="mt-3 block">
