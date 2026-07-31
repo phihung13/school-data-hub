@@ -1,4 +1,14 @@
 // components/help-request-view.tsx — V5 Cần gặp thầy cô (Hub Desktop V2, 30/07/2026).
+//
+// Sửa 31/07/2026 (gói "frontend-trang-thai"). Đây là trang QUAN TRỌNG NHẤT trong
+// bốn trang bị chặn ở điện thoại: nó là đường an toàn tâm lý của học sinh, được
+// mời từ trang chủ và từ popup check-in — mà mở trên điện thoại thì trước đây chỉ
+// hiện một câu "tối ưu cho máy tính". Em cần nói với cô lúc 9 giờ tối, cầm điện
+// thoại, và hệ thống trả lời "quay lại bằng máy tính". Không chấp nhận được.
+//
+// Nội dung vốn đã là form 3 bước xếp dọc nên bản mobile không cần vẽ lại: bỏ khối
+// md:hidden, dùng MiniAppHeader thay sidebar dưới md, và để `flex-wrap` sẵn có đẩy
+// cột phải ("Ai đọc được lời con?") xuống dưới.
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -9,9 +19,13 @@ import {
   HELP_REQUEST_URGENCY_LABEL,
   type HelpRequestTopic,
   type HelpRequestUrgency,
+  type HubRole,
 } from "@hub/core/contracts";
 import { HubSidebar } from "./hub-sidebar";
+import { MiniAppHeader } from "./mini-app-header";
 import { Mascot } from "./mascot";
+import { MutationError } from "./ui/query-state";
+import { personName } from "./ui/labels";
 
 const TOPIC_ICON: Record<HelpRequestTopic, string> = {
   lop: "groups",
@@ -21,7 +35,17 @@ const TOPIC_ICON: Record<HelpRequestTopic, string> = {
   khac: "more_horiz",
 };
 
-export function HelpRequestView({ displayName, email }: { displayName: string; email: string }) {
+export function HelpRequestView({
+  displayName,
+  email,
+  roles,
+  classCode,
+}: {
+  displayName: string;
+  email: string;
+  roles: HubRole[];
+  classCode?: string | null;
+}) {
   const router = useRouter();
   const teacher = trpc.checkin.getMyHomeroomTeacher.useQuery();
   const submit = trpc.checkin.requestHelp.useMutation();
@@ -32,8 +56,8 @@ export function HelpRequestView({ displayName, email }: { displayName: string; e
 
   // full_name có thể mang theo hậu tố "(GVCN 6A1)" (dữ liệu fixture) — bỏ đi, chỉ
   // hiển thị tên thật để gọi ("Cô Lan"), không đoán thứ tự họ/tên tiếng Việt.
-  const teacherName = (teacher.data?.full_name ?? "GVCN").replace(/\s*\([^)]*\)\s*$/, "").trim();
-  const teacherFirstWord = teacherName || "GVCN";
+  const teacherName = personName(teacher.data?.full_name) || "GVCN";
+  const teacherFirstWord = teacherName;
   const teacherInitial = teacherFirstWord.slice(0, 1).toUpperCase();
 
   const canSubmit = topic !== null && urgency !== null && !submit.isPending;
@@ -43,18 +67,30 @@ export function HelpRequestView({ displayName, email }: { displayName: string; e
     submit.mutate({ topic, urgency, note: note.trim() || undefined });
   }
 
+  // Dòng phụ đề: "…" chỉ khi ĐANG tải. Hỏng thì nói rõ là chưa biết tên cô, nhưng
+  // KHÔNG chặn em gửi — máy chủ tự tìm GVCN từ phiên, không cần client biết tên.
+  const teacherSubtitle = teacher.data
+    ? `Gửi riêng cho ${teacherFirstWord} — GVCN lớp ${teacher.data.class_code}`
+    : teacher.isPending
+      ? "…"
+      : "Chưa tải được tên GVCN — em vẫn gửi được, cô vẫn nhận được.";
+
   return (
-    <>
-      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-2 px-6 text-center md:hidden">
-        <span className="msr text-[40px] text-caption">desktop_windows</span>
-        <p className="text-[14px] font-bold text-ink">Trang này đang tối ưu cho máy tính.</p>
+    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
+      {/* Sidebar chỉ từ md; dưới md dùng MiniAppHeader (có đường thoát về Hub). */}
+      <div className="hidden md:flex md:w-[240px] md:flex-none">
+        <HubSidebar roles={roles} active="home" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
-        <div className="flex w-[240px] flex-none">
-          <HubSidebar role="student" active="home" fullName={displayName} email={email} />
+      <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+        <div className="md:hidden">
+          <MiniAppHeader
+            title="Mình cần gặp thầy cô"
+            subtitle={teacher.data ? `GVCN ${teacher.data.class_code}` : undefined}
+            icon="waving_hand"
+            gradient="from-gold to-gold-dark"
+          />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
-          <div className="flex flex-none items-center gap-3 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
+        <div className="hidden flex-none items-center gap-3 border-b border-[#E9ECF2] bg-white px-7 py-3.5 md:flex">
             <button
               onClick={() => router.back()}
               aria-label="Quay lại"
@@ -64,15 +100,13 @@ export function HelpRequestView({ displayName, email }: { displayName: string; e
             </button>
             <div className="flex-1">
               <div className="text-[16px] font-black text-ink">Mình cần gặp thầy cô</div>
-              <div className="text-[11.5px] text-caption">
-                {teacher.data ? `Gửi riêng cho ${teacherFirstWord} — GVCN lớp ${teacher.data.class_code}` : "…"}
-              </div>
+              <div className="text-[11.5px] text-caption">{teacherSubtitle}</div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-7">
+          <div className="flex-1 p-4 md:overflow-y-auto md:p-7">
             {submit.isSuccess ? (
-              <div className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] bg-white p-10 text-center shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] bg-white p-6 text-center shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-10">
                 <Mascot pose="celebrate" width={72} />
                 <div className="text-[18px] font-black text-navy">Đã gửi cho {teacherFirstWord} rồi!</div>
                 <p className="text-[13.5px] leading-relaxed text-caption">
@@ -86,8 +120,8 @@ export function HelpRequestView({ displayName, email }: { displayName: string; e
                 </button>
               </div>
             ) : (
-              <div className="flex flex-wrap items-start gap-5">
-                <div className="min-w-0 flex-[2.1_1_520px] flex flex-col gap-[22px] rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="flex flex-wrap items-start gap-4 md:gap-5">
+                <div className="min-w-0 flex-[2.1_1_320px] flex flex-col gap-[22px] rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:flex-[2.1_1_520px] md:p-6">
                   <div>
                     <div className="text-[13px] font-black tracking-wide text-[#5B6B80]">
                       1 · CHUYỆN GÌ KHIẾN CON MUỐN GẶP CÔ?
@@ -171,9 +205,9 @@ export function HelpRequestView({ displayName, email }: { displayName: string; e
                     >
                       Để sau
                     </button>
-                    {submit.isError && (
-                      <span className="text-[12.5px] font-bold text-[#D2383E]">Gửi chưa được, thử lại nhé.</span>
-                    )}
+                    {/* Câu lỗi THẬT (hết phiên / mất mạng / vượt hạn mức) thay cho
+                        "Gửi chưa được, thử lại nhé." — em cần biết bấm lại có ích không. */}
+                    {submit.isError && <MutationError error={submit.error} onRetry={handleSubmit} />}
                   </div>
                 </div>
 
@@ -186,7 +220,11 @@ export function HelpRequestView({ displayName, email }: { displayName: string; e
                       <div>
                         <div className="text-[14px] font-black text-ink">{teacherName}</div>
                         <div className="text-[11.5px] text-caption">
-                          {teacher.data ? `GVCN ${teacher.data.class_code} · thường trả lời trong ngày` : "…"}
+                          {teacher.data
+                            ? `GVCN ${teacher.data.class_code} · thường trả lời trong ngày`
+                            : teacher.isPending
+                              ? "…"
+                              : "chưa tải được thông tin GVCN"}
                         </div>
                       </div>
                     </div>
@@ -226,7 +264,6 @@ export function HelpRequestView({ displayName, email }: { displayName: string; e
             )}
           </div>
         </div>
-      </div>
-    </>
+    </div>
   );
 }

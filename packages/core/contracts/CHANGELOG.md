@@ -24,6 +24,20 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
   `AcknowledgeHelpRequestOutput`, `CloseCaseInput`, `CloseCaseOutput`,
   `LogInterventionInput.clientMutationId` — mutation của buồng lái GVCN. Chủ sở hữu file đó
   bổ sung mô tả chi tiết khi chốt.
+- Gói `gvcn-man-hinh` (31/07/2026) — hợp đồng cho **bốn màn hình GVCN** trong `contracts/care.ts`.
+  Chỉ THÊM, không đổi và không xoá field nào đang có, nên client cũ không gãy:
+  - Danh sách lớp: `HomeroomClass`, `GetMyClassesOutput`, `GetClassRosterInput`,
+    `ClassRosterEntry`, `GetClassRosterOutput`.
+  - Điểm danh lớp: `AttendanceStatus`, `TeacherAttendanceStatus` (hẹp hơn một giá trị —
+    `queued_late` là trạng thái của máy, người không ghi tay), `ATTENDANCE_STATUS_LABEL`,
+    `MarkAttendanceInput`, `MarkAttendanceOutput`.
+  - Duyệt Báo cáo Trưởng thành: `ReportApprovalStatus`, `ListReportApprovalsInput`,
+    `ReportApprovalRow`, `ListReportApprovalsOutput`, `ApproveReportInput`, `ApproveReportOutput`.
+  - Ghi chú can thiệp: `ListClassInterventionsInput`, `ClassInterventionRow`,
+    `ListClassInterventionsOutput`.
+
+  Ghi chú cho vibe team: `ClassRosterEntry.status = null` nghĩa là **chưa ai điểm danh em đó**,
+  KHÔNG phải "vắng" — đừng vẽ nó thành nhãn vắng (RULES Rev F điều 8).
 
 ## [0.1.0] — 31/07/2026
 

@@ -2,24 +2,50 @@
 // KHÔNG có "chuyên cần %"/"ngày có mặt X/Y" như bản vẽ tay — GĐ1 chưa có lịch
 // học kỳ (không có mẫu số "tổng ngày học" thật). Bốn thẻ số liệu ở đây đều tính
 // được thật từ attendance.checkins: chuỗi hiện tại, kỷ lục, tổng có mặt, gửi muộn.
+//
+// Sửa 31/07/2026 (gói "frontend-trang-thai"), ba lỗi:
+//   1. Dòng dưới tiêu đề viết chết "Lớp 6A1" — mọi học sinh lớp khác đọc được mã
+//      lớp không phải của mình. Nay đến từ `classCode` (resolveIdentity.className).
+//   2. HubSidebar nhận role="student" cứng: tài khoản nhân viên mở /diem-danh sẽ
+//      thấy menu học sinh. Nay truyền `roles` thật của phiên.
+//   3. `{query.data && …}` không có nhánh isLoading/error → query hỏng là màn
+//      TRẮNG vĩnh viễn. Nay đủ ba trạng thái, nút "Thử lại" gọi refetch().
+// Và khối mobile trước đây là NGÕ CỤT: một câu "tối ưu cho máy tính", không một
+// <Link> nào, không tab bar — PWA thêm vào màn hình chính không có nút Back.
 "use client";
 
 import { trpc } from "@/lib/trpc-client";
+import type { HubRole } from "@hub/core/contracts";
 import { HubSidebar } from "./hub-sidebar";
+import { StudentTabBar } from "./tab-bar";
+import { DesktopOnlyNotice } from "./ui/desktop-only-notice";
+import { ErrorState, LoadingState } from "./ui/query-state";
+import { classLabel } from "./ui/labels";
 
-export function AttendanceView({ displayName, email }: { displayName: string; email: string }) {
+export function AttendanceView({
+  displayName,
+  email,
+  roles,
+  classCode,
+}: {
+  displayName: string;
+  email: string;
+  roles: HubRole[];
+  classCode?: string | null;
+}) {
   const query = trpc.checkin.getAttendanceOverview.useQuery();
+  const subtitle = classLabel(classCode);
 
   return (
     <>
-      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-2 px-6 text-center md:hidden">
-        <span className="msr text-[40px] text-caption">desktop_windows</span>
-        <p className="text-[14px] font-bold text-ink">Trang Điểm danh đầy đủ đang tối ưu cho máy tính.</p>
-        <p className="text-[12.5px] text-caption">Mở trên máy tính để xem lịch sử và thống kê chi tiết.</p>
-      </div>
+      <DesktopOnlyNotice
+        title="Trang Điểm danh đầy đủ đang tối ưu cho máy tính."
+        hint="Mở trên máy tính để xem lịch sử và thống kê chi tiết."
+        showTabBar={roles.includes("student")}
+      />
       <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
       <div className="flex w-[240px] flex-none">
-        <HubSidebar role="student" active="attendance" fullName={displayName} email={email} />
+        <HubSidebar roles={roles} active="attendance" fullName={displayName} email={email} classCode={classCode} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
         <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
@@ -28,7 +54,8 @@ export function AttendanceView({ displayName, email }: { displayName: string; em
           </span>
           <div className="flex-1">
             <div className="text-[16px] font-black text-ink">Điểm danh</div>
-            <div className="text-[11.5px] text-caption">Lớp 6A1</div>
+            {/* Không biết lớp thì bỏ hẳn dòng này — xem ui/labels.ts. */}
+            {subtitle && <div className="text-[11.5px] text-caption">{subtitle}</div>}
           </div>
           {query.data?.week.find((d) => d.isToday)?.status && (
             <span className="flex items-center gap-1.5 rounded-full bg-[#E3F8ED] px-[13px] py-[7px]">
@@ -37,6 +64,12 @@ export function AttendanceView({ displayName, email }: { displayName: string; em
             </span>
           )}
         </div>
+
+        {/* Ba nhánh, không nhánh nào được rơi vào khoảng trắng câm lặng. */}
+        {query.isPending && <LoadingState label="Đang tải lịch điểm danh…" />}
+        {!query.isPending && query.error && (
+          <ErrorState error={query.error} label="Điểm danh" onRetry={() => void query.refetch()} />
+        )}
 
         {query.data && (
           <div className="flex-1 overflow-y-auto p-7">

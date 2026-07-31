@@ -10,5 +10,12 @@ export default async function ThisWeekPage() {
 
   const identity = await resolveIdentity(session.authUid);
 
-  return <ThisWeekView displayName={session.displayName} email={identity?.email ?? ""} />;
+  return (
+    <ThisWeekView
+      displayName={session.displayName}
+      email={identity?.email ?? ""}
+      roles={session.roles}
+      classCode={identity?.className ?? null}
+    />
+  );
 }

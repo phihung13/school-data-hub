@@ -34,12 +34,15 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  SignJWT,
   calculateJwkThumbprint,
   exportJWK,
   generateKeyPair,
   importJWK,
   importPKCS8,
+  jwtVerify,
   type JWK,
+  type JWTPayload,
   type KeyLike,
 } from "jose";
 import { isProduction } from "./secrets.ts";
@@ -58,6 +61,60 @@ export interface SigningKeySet {
 /** `kid` theo RFC 7638: băm SHA-256 các trường bắt buộc của JWK, base64url. */
 export function kidFor(jwk: JWK): Promise<string> {
   return calculateJwkThumbprint(jwk, "sha256");
+}
+
+/**
+ * Bản CÔNG KHAI của một khoá — đúng thứ được phép rời khỏi máy chủ.
+ *
+ * Viết thành hàm riêng thay vì `delete jwk.d` tại chỗ vì `d` KHÔNG phải trường riêng duy
+ * nhất: RFC 7518 §6.3.2 còn `p`, `q`, `dp`, `dq`, `qi`, `oth` — và từ `p` với `q` dựng
+ * lại được `d` trong vài mili giây. Một chỗ quên là một lần công bố khoá ký của Hub ra
+ * internet. Liệt kê tường minh bằng destructuring để TypeScript giữ hộ danh sách này.
+ */
+export function toPublicJwk(jwk: JWK): JWK {
+  // `oth` (multi-prime) không có trong kiểu JWK của jose nên phải bỏ bằng tay — nó vẫn
+  // có thể tồn tại lúc chạy nếu khoá được cấp từ công cụ khác.
+  const { d: _d, p: _p, q: _q, dp: _dp, dq: _dq, qi: _qi, ...pub } = jwk;
+  delete (pub as { oth?: unknown }).oth;
+  return pub;
+}
+
+/** Sinh một khoá ký RS256 mới ở dạng JWK riêng. Dùng cho khoá dev và cho lệnh cấp khoá mới. */
+export async function generateSigningJwk(): Promise<JWK> {
+  const { privateKey } = await generateKeyPair("RS256", { extractable: true });
+  return exportJWK(privateKey);
+}
+
+/** Nạp một JWK thành khoá dùng được cho jose. */
+export function importSigningKey(jwk: JWK): Promise<KeyLike> {
+  return importJWK(jwk, "RS256") as Promise<KeyLike>;
+}
+
+/**
+ * Verify một token bằng bộ JWKS công bố — CHÍNH XÁC thuật toán mà RP chạy: đọc `kid`
+ * trong header, tìm khoá mang đúng `kid` đó, verify bằng phần công khai của nó.
+ *
+ * Có mặt trong mã sản phẩm (không phải chỉ để test) vì `loadSigningKeys()` dùng nó làm
+ * bước tự kiểm lúc khởi động — xem `selfCheck()`. Đây cũng là bản viết-bằng-code của
+ * hợp đồng với RP: đọc hàm này là biết Hub mong RP làm gì.
+ */
+export async function verifyWithJwks(
+  token: string,
+  jwks: JWK[],
+  options?: { issuer?: string; audience?: string },
+): Promise<JWTPayload> {
+  const header = JSON.parse(Buffer.from(token.split(".")[0]!, "base64url").toString("utf8")) as {
+    kid?: string;
+  };
+  const match = jwks.find((k) => k.kid === header.kid);
+  if (!match) {
+    throw new Error(
+      `Không có khoá nào mang kid "${header.kid}" trong JWKS đang công bố — đây đúng là tình huống ` +
+        `RP gặp phải khi kid bị dán tay: token mới, khoá cũ.`,
+    );
+  }
+  const { payload } = await jwtVerify(token, await importSigningKey(toPublicJwk(match)), options);
+  return payload;
 }
 
 function isPrivateRsaJwk(value: unknown): value is JWK {
@@ -124,8 +181,7 @@ async function loadOrCreateDevKey(): Promise<{ jwks: JWK[]; source: SigningKeySe
     // Chưa có file, file hỏng, hoặc không đọc được — sinh khoá mới ở dưới.
   }
 
-  const { privateKey } = await generateKeyPair("RS256", { extractable: true });
-  const jwks = await normalizeJwks(await exportJWK(privateKey));
+  const jwks = await normalizeJwks(await generateSigningJwk());
 
   try {
     writeFileSync(file, JSON.stringify(jwks, null, 2), { encoding: "utf8", mode: 0o600 });
@@ -169,8 +225,39 @@ async function build(): Promise<SigningKeySet> {
   }
 
   const active = jwks[0]!;
-  const activeKey = (await importJWK(active, "RS256")) as KeyLike;
+  const activeKey = await importSigningKey(active);
+  await selfCheck(activeKey, active.kid!, jwks);
   return { jwks, activeKid: active.kid!, activeKey, source };
+}
+
+/**
+ * Tự kiểm lúc khởi động: ký một token bỏ đi rồi verify lại bằng ĐÚNG bộ JWKS sắp công bố.
+ *
+ * Bắt được đúng loại lỗi mà không bước nào khác bắt được, và cả ba loại đều là "server
+ * lên bình thường, RP hỏng lặng lẽ":
+ *   · `OIDC_SIGNING_KEY_PEM` thật ra là khoá CÔNG KHAI, hoặc khoá của thuật toán khác.
+ *   · JWK bị sửa tay, các trường không còn khớp nhau.
+ *   · `kid` trong header không tra được trong JWKS (chính là lỗi "dev-1" ở dạng khác).
+ *
+ * Ném lỗi ở đây nghĩa là tiến trình từ chối khởi động — đúng thứ ta muốn: thà không lên
+ * còn hơn lên rồi cấp token không ai verify được.
+ */
+async function selfCheck(key: KeyLike, kid: string, jwks: JWK[]): Promise<void> {
+  const probe = await new SignJWT({ probe: true })
+    .setProtectedHeader({ alg: "RS256", kid })
+    .setIssuedAt()
+    .setExpirationTime("1m")
+    .sign(key);
+
+  try {
+    await verifyWithJwks(probe, jwks);
+  } catch (err) {
+    throw new Error(
+      `Khoá ký OIDC không tự verify được bằng chính JWKS sắp công bố (kid=${kid}). ` +
+        `Nguyên nhân thường gặp: đưa nhầm khoá công khai, sai thuật toán, hoặc JWK bị sửa tay. ` +
+        `Chi tiết: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 }
 
 export function loadSigningKeys(): Promise<SigningKeySet> {

@@ -4,12 +4,27 @@
 // đặt (ngôn ngữ, nhắc giờ, thêm màn hình chính) chưa có tính năng thật đứng sau.
 // GVCN cũng mở /ho-so (sidebar dùng chung) nhưng dùng bản rút gọn — mockup chỉ vẽ
 // hồ sơ học sinh.
+//
+// Sửa 31/07/2026 (gói "frontend-trang-thai"), bốn lỗi:
+//   1. `{profile && …}` không có nhánh isPending/error → hết phiên hay mất mạng là
+//      màn TRẮNG vĩnh viễn, ngay trên trang duy nhất có nút Đăng xuất.
+//   2. Bản mobile là NGÕ CỤT: một câu "tối ưu cho máy tính", không link nào — mà
+//      "Hồ sơ" là 1 trong 3 tab chính của học sinh (tab-bar.tsx). Nay có bản
+//      mobile thật (ảnh đại diện, tên, lớp, mã học sinh, Đăng xuất) + tab bar.
+//   3. SimpleProfile (nhân viên) là `flex h-screen` với sidebar `w-[240px]` KHÔNG
+//      tiền tố md: — trên 390px sidebar nuốt 240px, phần còn lại vỡ.
+//   4. HubSidebar nhận role="teacher"/"student" cứng: admin, phụ huynh, hiệu
+//      trưởng đều rơi vào menu GVCN. Nay truyền `roles` thật của phiên.
 "use client";
 
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc-client";
+import type { HubRole } from "@hub/core/contracts";
 import { Mascot } from "./mascot";
 import { HubSidebar } from "./hub-sidebar";
+import { StudentTabBar } from "./tab-bar";
+import { ErrorState, LoadingState } from "./ui/query-state";
+import { classLabel } from "./ui/labels";
 
 function useLogout() {
   const router = useRouter();
@@ -20,47 +35,89 @@ function useLogout() {
   };
 }
 
+function LogoutButton({ onClick, className }: { onClick: () => void; className: string }) {
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      <span className="msr text-[19px] text-[#D2383E]">logout</span>
+      Đăng xuất
+    </button>
+  );
+}
+
 export function ProfileView({
   isStudent,
   displayName,
   email,
+  roles,
+  classCode,
 }: {
   isStudent: boolean;
   displayName: string;
   email: string;
+  roles: HubRole[];
+  classCode?: string | null;
 }) {
   return isStudent ? (
-    <StudentProfile displayName={displayName} email={email} />
+    <StudentProfile displayName={displayName} email={email} roles={roles} classCode={classCode} />
   ) : (
-    <SimpleProfile displayName={displayName} email={email} />
+    <SimpleProfile displayName={displayName} email={email} roles={roles} classCode={classCode} />
   );
 }
 
-function SimpleProfile({ displayName, email }: { displayName: string; email: string }) {
+function SimpleProfile({
+  displayName,
+  email,
+  roles,
+  classCode,
+}: {
+  displayName: string;
+  email: string;
+  roles: HubRole[];
+  classCode?: string | null;
+}) {
   const logout = useLogout();
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <div className="flex w-[240px] flex-none">
-        <HubSidebar role="teacher" active="profile" fullName={displayName} email={email} />
+    // `md:h-screen` chứ không phải `h-screen`: trên điện thoại để trang cao tự
+    // nhiên và cuộn được, đúng cách bốn màn học sinh đang làm.
+    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
+      {/* Sidebar 240px chỉ có nghĩa từ md trở lên — dưới đó nó ăn 2/3 chiều ngang máy. */}
+      <div className="hidden md:flex md:w-[240px] md:flex-none">
+        <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-pagebgDesktop px-6">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-pagebgDesktop px-6 py-10">
         <Mascot pose="think" width={64} />
-        <div className="text-[18px] font-black text-navy">{displayName}</div>
-        <div className="text-[12.5px] text-caption">{email}</div>
-        <button
-          type="button"
+        <div className="text-center text-[18px] font-black text-navy">{displayName}</div>
+        <div className="break-all text-center text-[12.5px] text-caption">{email}</div>
+        {classLabel(classCode) && (
+          <div className="text-[12.5px] font-bold text-[#33507C]">{classLabel(classCode)}</div>
+        )}
+        <LogoutButton
           onClick={logout}
           className="mt-2 flex items-center gap-2 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] px-6 py-3 text-[13.5px] font-black text-[#D2383E]"
+        />
+        {/* Nhân viên không có tab bar; nút này là đường ra duy nhất trên điện thoại. */}
+        <a
+          href="/home"
+          className="text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2 md:hidden"
         >
-          <span className="msr text-[19px] text-[#D2383E]">logout</span>
-          Đăng xuất
-        </button>
+          Về trang chủ
+        </a>
       </div>
     </div>
   );
 }
 
-function StudentProfile({ displayName, email }: { displayName: string; email: string }) {
+function StudentProfile({
+  displayName,
+  email,
+  roles,
+  classCode,
+}: {
+  displayName: string;
+  email: string;
+  roles: HubRole[];
+  classCode?: string | null;
+}) {
   const logout = useLogout();
   const query = trpc.profile.getMyStudentProfile.useQuery();
   const profile = query.data;
@@ -68,13 +125,47 @@ function StudentProfile({ displayName, email }: { displayName: string; email: st
 
   return (
     <>
-      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-2 px-6 text-center md:hidden">
-        <span className="msr text-[40px] text-caption">desktop_windows</span>
-        <p className="text-[14px] font-bold text-ink">Trang này đang tối ưu cho máy tính.</p>
+      {/* Bản mobile THẬT (không còn là ngõ cụt): đủ thứ em cần tra ngay tại chỗ —
+          tên, lớp, mã học sinh để đọc cho cô, và nút Đăng xuất. */}
+      <div className="flex min-h-screen w-full flex-col bg-pagebg md:hidden">
+        <div className="flex flex-1 flex-col items-center gap-3 px-6 pb-6 pt-10 text-center">
+          <span className="flex h-[84px] w-[84px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[32px] font-black text-navy shadow-[0_8px_18px_rgba(232,148,13,.3)]">
+            {initial}
+          </span>
+          <div className="text-[19px] font-black text-ink">{profile?.fullName ?? displayName}</div>
+          {query.isPending && <p className="text-[12.5px] text-caption">Đang tải hồ sơ…</p>}
+          {!query.isPending && query.error && (
+            <p className="text-[12.5px] font-bold text-[#D2383E]">
+              Chưa tải được lớp và mã học sinh.{" "}
+              <button type="button" onClick={() => void query.refetch()} className="underline underline-offset-2">
+                Thử lại
+              </button>
+            </p>
+          )}
+          {profile && (
+            <>
+              <div className="text-[12.5px] font-semibold text-[#5B6B80]">
+                Lớp {profile.classCode} · {profile.schoolName}
+              </div>
+              <div className="rounded-full bg-[#F1F4F8] px-3.5 py-1.5 text-[11.5px] font-bold text-[#33507C]">
+                Mã học sinh {profile.studentCode}
+              </div>
+            </>
+          )}
+          <div className="break-all text-[11.5px] text-caption">{email}</div>
+          <LogoutButton
+            onClick={logout}
+            className="mt-4 flex items-center gap-2 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] px-6 py-3 text-[13.5px] font-black text-[#D2383E]"
+          />
+          <p className="mt-2 text-[11px] leading-relaxed text-caption2">
+            Bản đầy đủ (ai thấy gì của mình, liên hệ GVCN) mở trên máy tính.
+          </p>
+        </div>
+        <StudentTabBar />
       </div>
       <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
         <div className="flex w-[240px] flex-none">
-          <HubSidebar role="student" active="profile" fullName={displayName} email={email} />
+          <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
           <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
@@ -83,6 +174,11 @@ function StudentProfile({ displayName, email }: { displayName: string; email: st
               <div className="text-[11.5px] text-caption">Tài khoản trường</div>
             </div>
           </div>
+
+          {query.isPending && <LoadingState label="Đang tải hồ sơ…" />}
+          {!query.isPending && query.error && (
+            <ErrorState error={query.error} label="Hồ sơ" onRetry={() => void query.refetch()} />
+          )}
 
           {profile && (
             <div className="flex-1 overflow-y-auto p-7">

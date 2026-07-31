@@ -30,7 +30,7 @@ const TEST_STUDENT = "71000000-0000-0000-0000-0000000000aa";
 const LATE_DAY_OFFSET = 40;
 
 function ctxFor(authUid: string | null): TrpcContext {
-  return { authUid, roles: [], displayName: null };
+  return { authUid, roles: [], displayName: null, clientIp: null };
 }
 
 const gvcn = () => careRouter.createCaller(ctxFor(DEV.gvcn));

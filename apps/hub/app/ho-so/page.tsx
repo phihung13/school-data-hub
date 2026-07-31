@@ -10,5 +10,13 @@ export default async function ProfilePage() {
   const identity = await resolveIdentity(session.authUid);
   const isStudent = session.roles.includes("student");
 
-  return <ProfileView isStudent={isStudent} displayName={session.displayName} email={identity?.email ?? ""} />;
+  return (
+    <ProfileView
+      isStudent={isStudent}
+      displayName={session.displayName}
+      email={identity?.email ?? ""}
+      roles={session.roles}
+      classCode={identity?.className ?? null}
+    />
+  );
 }

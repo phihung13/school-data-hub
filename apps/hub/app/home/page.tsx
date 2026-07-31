@@ -18,6 +18,11 @@ export default async function HomePage() {
       email={identity?.email ?? ""}
       isStudent={session.roles.includes("student")}
       isHomeroom={session.roles.includes("homeroom")}
+      // Vai THẬT của phiên, không phải "student hay là teacher". Trước 31/07/2026
+      // sidebar chỉ nhận hai giá trị nên tài khoản quản trị (admin.hung), hiệu
+      // trưởng và phụ huynh đều rơi vào nhánh "teacher" và thấy nguyên menu GVCN.
+      roles={session.roles}
+      classCode={identity?.className ?? null}
       // Lưới mini app chỉ phụ thuộc vai trò, mà vai trò đã nằm sẵn trong phiên ở đây —
       // tính luôn phía server để HTML lần đầu đã có đủ tile. Query tRPC bên trong vẫn
       // chạy (nguồn sự thật duy nhất là router), nhưng nó chỉ xác nhận lại thứ đã hiện.

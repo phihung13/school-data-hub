@@ -2,7 +2,7 @@
 // Router setup + context. Đường ghi duy nhất #1 trong 03-api.md — mọi mutation
 // người dùng đi qua đây, không có route API tự chế nào khác chạm DB nghiệp vụ.
 import { initTRPC, TRPCError } from "@trpc/server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { verifySessionToken, SESSION_COOKIE } from "@hub/core/auth-adapter";
 import { withUserContext } from "@hub/core/db";
 import type { HubRole } from "@hub/core/contracts";
@@ -13,16 +13,47 @@ export interface TrpcContext {
   authUid: string | null;
   roles: HubRole[];
   displayName: string | null;
+  /**
+   * IP của người bấm, để `attendance.resolve_checkin` (0027) đối chiếu dải IP cơ sở
+   * — ADR-007 "check-in ngoài trường không tự tính chuyên cần".
+   *
+   * `null` khi không đọc được, và điều đó KHÔNG được hiểu là "ở ngoài trường": hàm
+   * SQL nhận null thì chuyển sang `queued_late` chờ GVCN xác nhận, chứ không kết luận
+   * vắng. Người lớn cấu hình thiếu thì không phạt đứa trẻ.
+   */
+  clientIp: string | null;
+}
+
+/**
+ * Lấy IP thật sau proxy. Hub chạy sau cloudflared/Nginx (ADR-018) nên `x-forwarded-for`
+ * là chuỗi nhiều chặng "client, proxy1, proxy2" — chặng ĐẦU mới là máy người dùng.
+ *
+ * Lưu ý về độ tin cậy: header này client tự đặt được. Nó đủ dùng cho việc phân loại
+ * "trong hay ngoài trường" ở mức hiện tại (DEBT #5 đã ghi: IP chỉ chứng minh
+ * thiết-bị-ở-trường, không chứng minh em-ngồi-trong-lớp), nhưng KHÔNG được dùng cho
+ * bất kỳ quyết định phân quyền nào.
+ */
+function readClientIp(): string | null {
+  const h = headers();
+  const forwarded = h.get("x-forwarded-for");
+  const first = forwarded?.split(",")[0]?.trim();
+  return first || h.get("x-real-ip") || null;
 }
 
 export async function createContext(): Promise<TrpcContext> {
+  const clientIp = readClientIp();
   const token = cookies().get(SESSION_COOKIE.name)?.value;
-  if (!token) return { authUid: null, roles: [], displayName: null };
+  if (!token) return { authUid: null, roles: [], displayName: null, clientIp };
 
   const claims = await verifySessionToken(token);
-  if (!claims) return { authUid: null, roles: [], displayName: null };
+  if (!claims) return { authUid: null, roles: [], displayName: null, clientIp };
 
-  return { authUid: claims.sub, roles: claims.roles, displayName: claims.displayName };
+  return {
+    authUid: claims.sub,
+    roles: claims.roles,
+    displayName: claims.displayName,
+    clientIp,
+  };
 }
 
 /** Thông điệp duy nhất người dùng thấy khi máy chủ hỏng — không lộ gì về bên trong. */

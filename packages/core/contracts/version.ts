@@ -196,9 +196,126 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "closed",
 //       "alreadyClosed"
 //     ],
+//     "AttendanceStatus": [
+//       "«enum»present",
+//       "«enum»late",
+//       "«enum»absent",
+//       "«enum»excused",
+//       "«enum»queued_late"
+//     ],
+//     "TeacherAttendanceStatus": [
+//       "«enum»present",
+//       "«enum»late",
+//       "«enum»absent",
+//       "«enum»excused"
+//     ],
+//     "HomeroomClass": [
+//       "classId",
+//       "classCode",
+//       "studentCount"
+//     ],
+//     "GetMyClassesOutput": [
+//       "classes"
+//     ],
+//     "GetClassRosterInput": [
+//       "classId",
+//       "onDate"
+//     ],
+//     "ClassRosterEntry": [
+//       "studentId",
+//       "studentCode",
+//       "fullName",
+//       "status",
+//       "mood",
+//       "checkedInAt",
+//       "hasOpenCase",
+//       "helpPending"
+//     ],
+//     "GetClassRosterOutput": [
+//       "classId",
+//       "className",
+//       "asOfDate",
+//       "students"
+//     ],
+//     "MarkAttendanceInput": [
+//       "classId",
+//       "occurredOn",
+//       "entries",
+//       "entries.studentId",
+//       "entries.status"
+//     ],
+//     "MarkAttendanceOutput": [
+//       "applied",
+//       "skipped"
+//     ],
+//     "ReportApprovalStatus": [
+//       "«enum»pending",
+//       "«enum»approved",
+//       "«enum»rejected"
+//     ],
+//     "ListReportApprovalsInput": [
+//       "classId",
+//       "weekStart"
+//     ],
+//     "ReportApprovalRow": [
+//       "studentId",
+//       "studentCode",
+//       "fullName",
+//       "status",
+//       "reviewedAt",
+//       "note",
+//       "checkinDays",
+//       "happyDays"
+//     ],
+//     "ListReportApprovalsOutput": [
+//       "classId",
+//       "className",
+//       "weekStart",
+//       "rows"
+//     ],
+//     "ApproveReportInput": [
+//       "studentId",
+//       "weekStart",
+//       "decision",
+//       "note"
+//     ],
+//     "ApproveReportOutput": [
+//       "studentId",
+//       "weekStart",
+//       "status",
+//       "note",
+//       "reviewedAt",
+//       "alreadyRecorded"
+//     ],
+//     "ListClassInterventionsInput": [
+//       "classId",
+//       "limit"
+//     ],
+//     "ClassInterventionRow": [
+//       "interventionId",
+//       "studentId",
+//       "studentName",
+//       "action",
+//       "note",
+//       "occurredAt",
+//       "actorName",
+//       "caseStatus"
+//     ],
+//     "ListClassInterventionsOutput": [
+//       "classId",
+//       "className",
+//       "rows"
+//     ],
 //     "MoodBucket": [
 //       "mood",
 //       "count"
+//     ],
+//     "ATTENDANCE_STATUS_LABEL": [
+//       "present",
+//       "late",
+//       "absent",
+//       "excused",
+//       "queued_late"
 //     ],
 //     "MoodValue": [
 //       "«expr»z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])"

@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: none
-sync-version: 2
+sync-version: 3
 ---
 
 # API — tRPC routers, 2 đường ghi duy nhất
@@ -9,14 +9,22 @@ Chỉ có **hai đường ghi** vào Hub. PR mở đường thứ ba bị từ c
 
 ## Đường 1 — tRPC (người dùng, realtime)
 
-| Router | Procedures chính | Ghi chú |
-|---|---|---|
-| `checkin` | `submitMood`, `submitCheckout`, `requestHelp` | 1 mutation = 1 transaction (mood + attendance); ghi evidence + core |
-| `evidence` | `submitBehaviors`, `submitPdr`, `logDear`, `scoreRubric`, `logEventRole` | |
-| `care` | `getDashboard`, `acknowledgeFlag`, `logIntervention`, `closeCase` | homeroom/counselor only (RLS) |
-| `fitness` | `submitTest`, `logClubAttendance` | vibe team gọi, không tự viết SQL |
-| `report` | `getGrowthReport`, `getCampusTrends` | read-only |
-| `admin` | `updateThreshold`, `manageMapping`, `reviewImportErrors` | role-gated |
+Bảng dưới là **bề mặt đang chạy thật** tính tới 31/07/2026 — cột "Trạng thái" phân biệt thứ đã cài với thứ mới đặt chỗ, vì một bảng API nói quá cũng nói dối y như một ma trận phân quyền nói quá.
+
+| Router | Procedures | Cổng vào | Trạng thái |
+|---|---|---|---|
+| `session` | `me`, `miniApps` | public / protected | ✅ chạy |
+| `checkin` | `getTodayStatus`, `getAttendanceOverview`, `submitMood`, `requestHelp`, `getMyHomeroomTeacher` | protected | ✅ chạy. `submitMood` gọi `attendance.resolve_checkin` (ADR-007) — router **không** tự quyết `status`/`source` |
+| `profile` | `getMyStudentProfile` | protected | ✅ chạy |
+| `report` | `getMyLatestReport`, `getReportForWeek`, `getMyGuardians` | protected | ✅ chạy, read-only |
+| `care` (buồng lái GVCN) | `getDashboard`, `acknowledgeLate`, `getMyClasses`, `getClassRoster`, `markAttendance`, `listReportApprovals`, `approveReport`, `listClassInterventions` | `homeroomProcedure` | ✅ chạy — bốn màn hình GVCN (31/07/2026) |
+| `care` (chăm sóc) | `acknowledgeHelpRequest`, `logIntervention`, `closeCase` | `careStaffProcedure` | ✅ chạy |
+| `checkin.submitCheckout` | điểm danh ra về | — | ⛔ chưa viết (wireframe GĐ1 không có) |
+| `evidence` | `submitBehaviors`, `submitPdr`, `logDear`, `scoreRubric`, `logEventRole` | — | ⛔ chưa có router (đường vào hiện tại chỉ qua Đường 2 / embed) |
+| `fitness` | `submitTest`, `logClubAttendance` | — | ⛔ vùng vibe team, chưa mở |
+| `admin` | `updateThreshold`, `manageMapping`, `reviewImportErrors` | — | ⛔ chưa có. Vai `admin` trong DB hiện gần như chưa mở quyền nào (`02-database.md`) |
+
+**Ba cổng vào, không phải hai** (`apps/hub/server/trpc.ts`): `publicProcedure` → `protectedProcedure` (đã đăng nhập) → `homeroomProcedure` (có lớp chủ nhiệm, gắn `ctx.homeroomClassId`) / `careStaffProcedure` (GVCN hoặc tâm lý cụm). Đường cũ chỉ có "đã đăng nhập chưa" là nguồn của lỗ leo quyền đã vá ở `0025` — `acknowledgeLate` từng là `protectedProcedure`.
 
 ## Đường 2 — Connector (máy, theo lịch)
 
@@ -24,15 +32,26 @@ Chỉ có **hai đường ghi** vào Hub. PR mở đường thứ ba bị từ c
 - Moodle → `staging`: webhook completion + cron đối soát đêm.
 - COR → `staging`: upload file theo kỳ, màn hình xử lỗi map.
 - `promote()`: validate + gắn `student_id` → ghi `core`/`academic`; lỗi → `import_errors`.
-- Role DB connector: INSERT-only trên `staging` (§8).
+- Role DB connector: INSERT-only trên `staging` (§8). **Cưỡng chế thật từ 31/07/2026:** cửa vào là `staging.ingest_embedded_event()` chạy dưới vai `connector`; trước đó route webhook gọi bằng ngữ cảnh hệ thống (không `SET ROLE`) nên hàng rào vai trò của §8 chưa từng được thi hành.
+- **`promote()` không bao giờ được ném lỗi ra ngoài vì payload xấu.** Bản cũ ném exception ⇒ transaction rollback sạch ⇒ bản ghi thô không nằm lại `staging`, không có dòng `import_errors`, app ngoài nhận 500 rồi retry vô hạn — ngược hẳn §8. Nhánh lỗi cũng phải idempotent (§9): trước bản vá, app retry mỗi 30 giây bơm 2.880 dòng/ngày vào đúng hàng đợi mà con người phải xử tay. Chi tiết: `02-database.md`, mục `0028`.
 
 ## Luật endpoint (mọi router)
 
 1. **Idempotent (§9):** unique constraint tự nhiên (vd `(student_id, date, type)`) + upsert. Contract test bắn 2 lần.
 2. **Check-in một round-trip:** đỉnh sáng ~5.000 user là ~100–150 req/s (xem `05-capacity-ops.md`) — mutation gọn, không N+1.
 3. **Zod tại biên:** mọi input/output khai báo trong `packages/core/contracts/` — là hợp đồng chung cho dev + vibe team. Không `any`.
-4. **Lỗi có mã:** `TRPCError` với code chuẩn; message tiếng Việt thân thiện ở client, chi tiết kỹ thuật chỉ trong log server.
-5. **Rate limit:** per-user token bucket ở middleware tRPC (60 req/phút mặc định, `checkin` 10 req/phút). Embed API của app ngoài: 30 req/phút/app (`08-embedded-apps.md` mục 4).
+4. **Lỗi có mã:** `TRPCError` với code chuẩn; message tiếng Việt thân thiện ở client, chi tiết kỹ thuật chỉ trong log server. **Đã cài** qua `errorFormatter` trong `apps/hub/server/trpc.ts` — một chỗ duy nhất, không phải mỗi router tự bọc `try/catch` rồi mỗi nơi lộ một kiểu.
+5. **Rate limit — ĐÃ CÀI THẬT (31/07/2026), không còn là spec.** `apps/hub/lib/rate-limit.ts`, token bucket, middleware tRPC + các route `/api/auth/*`. Hạn mức nằm trong một hằng số duy nhất `RATE_LIMITS`, không rải số trong code:
+
+   | Khóa | Hạn mức | Áp cho |
+   |---|---|---|
+   | `default` | 60 req/phút/người | mọi procedure tRPC |
+   | `checkinMutation` | 10 req/phút/người | **chỉ mutation** `checkin.*` — đọc trạng thái hôm nay là truy vấn màn hình bình thường, thứ cần chặn là dòng GHI lặp lại (ADR-007) |
+   | `embedApp` | 30 req/phút/app | Embed API (`08-embedded-apps.md` mục 4) |
+   | `inviteCode` | 10 req/phút/**IP** | cửa mã mời 6 ký tự — siết theo IP vì kẻ dò mã chưa có tài khoản |
+   | `sessionRefresh` | 20 req/phút/người | gia hạn phiên trượt (bình thường ~6 lượt/giờ) |
+
+   Chọn token bucket thay vì cửa sổ cố định để một cụm request ngắn (mở buồng lái = ~13 truy vấn cùng lúc) vẫn qua được, còn dòng đều đặn vượt hạn mức thì bị chặn. **Trước bản này Hub không có giới hạn tốc độ ở bất kỳ đâu:** một vòng lặp trong tab trình duyệt của một em đủ để kéo sập buồng lái cả trường, và cửa mã mời là bãi thử brute-force miễn phí. **Giới hạn phải biết:** bộ đếm nằm trong bộ nhớ tiến trình, đúng vì Hub chạy MỘT deployable (ADR-001/018) — ngày chạy >1 instance thì hạn mức thật nhân lên theo số instance (`DEBT.md` #22, ADR-022).
 6. **Hợp đồng nội bộ có version (bổ sung 27/07/2026):** `packages/core/contracts` mang số phiên bản + changelog; đổi phá tương thích đi theo expand–contract y như migration (thêm mới → chuyển dần → gỡ cũ). Lý do: hợp đồng giữa lõi và Mini App là ranh giới giữa **hai đội khác nhau** (2 dev core ↔ vibe team) — không có version thì vibe team phát hiện gãy lúc chạy thật, không phải lúc build.
 
 ## Sẵn sàng lên CH Play / App Store (lộ trình đã chốt: sau khi hệ chạy tốt)
@@ -66,6 +85,10 @@ Việc chỉ làm khi phát hành store (không làm trước): đăng ký Googl
 
 - **`end_session_endpoint`**: thoát ở Hub → gọi back-channel logout tới mọi RP đang có phiên (mỗi RP khai `backchannel_logout_uri` trong config RP). Ca vận hành thật: phòng máy dùng chung, em sau ngồi vào không được thừa hưởng phiên Moodle của em trước.
 - **Token sống ngắn:** `id_token`/`access_token` TTL ≤ 15 phút; refresh token có, nhưng **mỗi lần refresh kiểm `core.users.status`** — `disabled` thì từ chối. Tài khoản bị khóa mất đường vào mọi hệ trong tối đa một chu kỳ token, không cần đuổi theo thu hồi từng token đã phát.
+- **Refresh token nay CÓ THẬT (31/07/2026).** Trước đó tài liệu hứa có mà cấu hình `grant_types` chỉ có `authorization_code` — nghĩa là dòng TTL refresh trong cấu hình là chữ chết, và câu "mỗi lần refresh kiểm status" ở trên **không có lần refresh nào để chạy**. Nay: grant `refresh_token` bật, RP phải xin scope `offline_access` mới nhận được (RP không xin thì không có gì đổi — tương thích ngược), TTL 12 giờ, và mỗi lần đổi token thư viện gọi lại hàm tra tài khoản nên `status='disabled'` bị chặn ngay tại đó. Đây là điều kiện để ADR-016 "khóa là cắt" đứng vững chứ không chỉ là lời hứa.
+- **`/oidc/session/end` nay xóa cả cookie phiên của Hub (`hub_session`)**, không chỉ phiên phía thư viện OIDC. Thiếu bước này thì "đăng xuất chung" trả người dùng về Hub trong trạng thái vẫn đang đăng nhập — phòng máy dùng chung, em sau ngồi vào vẫn là em trước. Cưỡng chế bằng **middleware bám ĐƯỜNG DẪN**, không bằng hook của thư viện: đo thật trên `oidc-provider` 9.11.1 cho thấy khi chưa có phiên OIDC, hoặc khi RP có khai `post_logout_redirect_uri` (Factory có khai), thư viện **bỏ qua hook hoàn toàn**. Bản vá dựa vào hook sẽ TRÔNG như xanh mà cookie không bao giờ bị xóa cho đúng RP thật.
+- **Biến môi trường bắt buộc ở `NODE_ENV=production`** (thiếu là dừng ngay lúc khởi động, không chạy nửa vời): `AUTH_SESSION_SECRET`, `INTERNAL_RPC_SECRET`, `OIDC_COOKIE_KEYS` (nhiều khóa cách nhau dấu phẩy, khóa đầu là khóa đang ký), và một trong hai `OIDC_JWKS` / `OIDC_SIGNING_KEY_PEM`.
+- **Thông báo cho RP đang tích hợp (Factory):** `logout_token` từ nay có `exp` (2 phút), `typ: logout+jwt`, và `kid` là thumbprint thật của khóa. **RP phải tra JWKS theo `kid` trong header token, không được ghim cứng một tên khóa** — RP nào đang ghim thì đây là thay đổi phá vỡ, phải hẹn giờ đổi trước.
 - **Nguồn sự thật của trạng thái là `core.users`**, không phải phiên đã cấp. RP không được cache hồ sơ người dùng quá TTL token.
 
 ### Claims vai trò — để Moodle tự xếp lớp (ADR-016)

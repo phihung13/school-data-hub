@@ -12,15 +12,23 @@ export function MiniAppTile({ tile }: { tile: MiniAppTileType }) {
   if (!tile.available) {
     return (
       <div className="flex flex-col items-center gap-1.5 opacity-40">
-        <span className="flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl bg-[#E9ECF2]">
+        {/* aria-hidden cho icon: nội dung DOM của .msr là chữ thô ("insights"...), font chỉ
+            đổi hình chứ không đổi nội dung — không ẩn thì trình đọc màn hình đọc "insights
+            Báo cáo". Nhãn app nằm ngay dưới, không mất thông tin gì (WCAG 1.1.1). */}
+        <span aria-hidden="true" className="flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl bg-[#E9ECF2]">
           {tile.iconImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- logo app ngoài, kích thước cố định nhỏ
             <img src={tile.iconImageUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="msr text-[24px] text-caption">{tile.icon}</span>
+            <span aria-hidden="true" className="msr text-[24px] text-caption">{tile.icon}</span>
           )}
         </span>
-        <span className="text-[10px] font-bold text-[#2A3444]">{tile.label}</span>
+        {/* App chưa mở hiện MỜ — mờ là tín hiệu thị giác, người dùng trình đọc màn hình
+            không thấy. Nói thẳng bằng chữ trong nhãn ẩn thay vì để họ tưởng bấm được. */}
+        <span className="text-[10px] font-bold text-[#2A3444]">
+          {tile.label}
+          <span className="sr-only"> — sắp có, chưa mở</span>
+        </span>
       </div>
     );
   }
@@ -30,6 +38,7 @@ export function MiniAppTile({ tile }: { tile: MiniAppTileType }) {
   return (
     <Link href={tile.href} className="flex flex-col items-center gap-1.5">
       <span
+        aria-hidden="true"
         className={`flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl ${
           tile.iconImageUrl ? "bg-white shadow-[0_5px_12px_rgba(10,42,94,.15)]" : `bg-gradient-to-br ${gradient}`
         }`}
@@ -38,7 +47,7 @@ export function MiniAppTile({ tile }: { tile: MiniAppTileType }) {
           // eslint-disable-next-line @next/next/no-img-element -- logo app ngoài, kích thước cố định nhỏ
           <img src={tile.iconImageUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="msr text-[24px] text-white">{tile.icon}</span>
+          <span aria-hidden="true" className="msr text-[24px] text-white">{tile.icon}</span>
         )}
       </span>
       <span className="text-[10px] font-bold text-[#2A3444]">{tile.label}</span>

@@ -10,5 +10,12 @@ export default async function HelpRequestPage() {
 
   const identity = await resolveIdentity(session.authUid);
 
-  return <HelpRequestView displayName={session.displayName} email={identity?.email ?? ""} />;
+  return (
+    <HelpRequestView
+      displayName={session.displayName}
+      email={identity?.email ?? ""}
+      roles={session.roles}
+      classCode={identity?.className ?? null}
+    />
+  );
 }

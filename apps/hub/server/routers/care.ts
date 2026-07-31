@@ -33,14 +33,26 @@ import {
   AcknowledgeHelpRequestInput,
   AcknowledgeHelpRequestOutput,
   AcknowledgeLateInput,
+  ApproveReportInput,
+  ApproveReportOutput,
   CloseCaseInput,
   CloseCaseOutput,
+  GetClassRosterInput,
+  GetClassRosterOutput,
   GetDashboardOutput,
+  GetMyClassesOutput,
+  ListClassInterventionsInput,
+  ListClassInterventionsOutput,
+  ListReportApprovalsInput,
+  ListReportApprovalsOutput,
   LogInterventionInput,
   LogInterventionOutput,
+  MarkAttendanceInput,
+  MarkAttendanceOutput,
 } from "@hub/core/contracts";
+import type { AttendanceStatus } from "@hub/core/contracts";
 import type { PoolClient } from "@hub/core/db";
-import { toLocalIsoDate } from "@/lib/date";
+import { mondayOf, toLocalIsoDate } from "@/lib/date";
 import { readCareRules } from "../care-thresholds";
 import { homeroomProcedure, roleProcedure, router } from "../trpc";
 
@@ -110,6 +122,45 @@ async function resolveOpenCase(client: PoolClient, rawCaseId: string): Promise<s
     });
   }
   return caseId;
+}
+
+/**
+ * Nắn `classId` do client gửi về đúng một lớp mình CHỦ NHIỆM.
+ *
+ * Vì sao không tin thẳng `input.classId`: `homeroomProcedure` chỉ trả lời "người này có
+ * chủ nhiệm lớp nào đó không", không trả lời "có phải lớp NÀY không". Thiếu bước đối
+ * chiếu ở đây thì một GVCN đổi một tham số trong request là đọc/ghi được lớp của đồng
+ * nghiệp — RLS vẫn chặn phần lớn, nhưng dựa vào một tầng duy nhất là cách lỗ hổng sinh ra
+ * (xem 0025). Không truyền gì → lớp đầu tiên, đúng luồng người chỉ chủ nhiệm một lớp.
+ */
+function requireMyClass(myClassIds: string[], requested?: string): string {
+  if (!requested) {
+    const first = myClassIds[0];
+    if (!first) throw new TRPCError({ code: "FORBIDDEN", message: "Mục này dành cho giáo viên chủ nhiệm." });
+    return first;
+  }
+  if (!myClassIds.includes(requested)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Thầy cô không chủ nhiệm lớp này." });
+  }
+  return requested;
+}
+
+/** Mã lớp để hiện trên màn hình. Không có thì trả chuỗi rỗng — KHÔNG bịa mã lớp. */
+async function readClassCode(client: PoolClient, classId: string): Promise<string> {
+  const { rows } = await client.query<{ code: string }>(
+    "select code from core.classes where id = $1",
+    [classId],
+  );
+  return rows[0]?.code ?? "";
+}
+
+/**
+ * Thứ Hai của tuần chứa `date` (mặc định: hôm nay). Máy chủ luôn tự nắn, không tin ngày
+ * client gửi: `report.growth_report_approvals` khoá duy nhất theo (em, tuần), nên hai
+ * người gửi hai ngày khác nhau trong cùng một tuần mà lọt thì §9 mất nghĩa.
+ */
+function mondayIso(date?: string): string {
+  return toLocalIsoDate(mondayOf(date ? new Date(`${date}T00:00:00`) : new Date()));
 }
 
 export const careRouter = router({
@@ -463,4 +514,338 @@ export const careRouter = router({
       return CloseCaseOutput.parse({ caseId: input.caseId, closed, alreadyClosed: !closed });
     });
   }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // BỐN MÀN HÌNH GVCN (gói "gvcn-man-hinh", 31/07/2026)
+  //
+  // Bốn mục sidebar của GVCN (Lớp chủ nhiệm · Điểm danh lớp · Duyệt báo cáo · Ghi chú
+  // can thiệp) trước hôm nay trỏ vào trang không tồn tại, và phía máy chủ cũng không có
+  // một procedure nào phục vụ chúng. Sáu procedure dưới đây là phần máy chủ của bốn màn
+  // đó. Tất cả dùng `homeroomProcedure` — không dùng `careStaffProcedure`, vì bốn màn
+  // này thao tác trên MỘT LỚP CỤ THỂ, mà tâm lý cụm thì không chủ nhiệm lớp nào.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Các lớp mình chủ nhiệm. Có procedure này thì màn hình mới hết phải đoán: một người
+   * chủ nhiệm hai lớp mà giao diện chỉ hiện lớp đầu tiên là dạng "sai mà trông như thật".
+   */
+  getMyClasses: homeroomProcedure.query(async ({ ctx }) => {
+    return ctx.runWithDb(async (client) => {
+      const { rows } = await client.query<{ id: string; code: string; student_count: number }>(
+        `select c.id, c.code,
+                (select count(*)::int from core.enrollments e
+                  where e.class_id = c.id and e.valid_to is null) as student_count
+           from core.classes c
+          where c.id = any($1::uuid[])
+          order by c.code`,
+        [ctx.homeroomClassIds],
+      );
+      return GetMyClassesOutput.parse({
+        classes: rows.map((r) => ({
+          classId: r.id,
+          classCode: r.code,
+          studentCount: r.student_count,
+        })),
+      });
+    });
+  }),
+
+  /** Danh sách lớp kèm tình hình hôm đó — MỘT truy vấn, không vòng lặp N+1 theo em. */
+  getClassRoster: homeroomProcedure.input(GetClassRosterInput).query(async ({ ctx, input }) => {
+    const classId = requireMyClass(ctx.homeroomClassIds, input.classId);
+    const onDate = input.onDate ?? toLocalIsoDate(new Date());
+
+    return ctx.runWithDb(async (client) => {
+      const className = await readClassCode(client, classId);
+
+      const { rows } = await client.query<{
+        student_id: string;
+        student_code: string;
+        full_name: string;
+        status: string | null;
+        mood: number | null;
+        checked_in_at: string | null;
+        has_open_case: boolean;
+        help_pending: boolean;
+      }>(
+        // Gốc là DANH SÁCH LỚP (core.enrollments) rồi LEFT JOIN các nguồn tín hiệu —
+        // cùng lý do đã ghi ở getDashboard: lấy bảng check-in làm gốc thì em không
+        // check-in sẽ biến mất khỏi chính danh sách lớp của mình.
+        `select e.student_id,
+                s.student_code,
+                s.full_name,
+                c.status,
+                c.mood,
+                c.occurred_at::text as checked_in_at,
+                (cc.id is not null) as has_open_case,
+                (h.student_id is not null) as help_pending
+           from core.enrollments e
+           join core.students s on s.id = e.student_id
+           left join attendance.checkins c
+             on c.student_id = e.student_id and c.occurred_on = $2::date and c.kind = 'in'
+           left join care.care_cases cc
+             on cc.student_id = e.student_id and cc.status = 'open'
+           left join attendance.help_requests h
+             on h.student_id = e.student_id and h.requested_on = $2::date and h.handled_at is null
+          where e.class_id = $1 and e.valid_to is null
+          order by s.full_name`,
+        [classId, onDate],
+      );
+
+      return GetClassRosterOutput.parse({
+        classId,
+        className,
+        asOfDate: onDate,
+        students: rows.map((r) => ({
+          studentId: r.student_id,
+          studentCode: r.student_code,
+          fullName: r.full_name,
+          status: r.status as AttendanceStatus | null,
+          mood: r.mood as 1 | 2 | 3 | 4 | null,
+          checkedInAt: r.checked_in_at,
+          hasOpenCase: r.has_open_case,
+          helpPending: r.help_pending,
+        })),
+      });
+    });
+  }),
+
+  /**
+   * GVCN ghi/sửa điểm danh cho cả lớp trong một lần bấm.
+   *
+   * §9 — idempotent theo `checkins_uq (student_id, occurred_on, kind)`: gọi lại cùng
+   * payload cho ra ĐÚNG cùng một output, không sinh dòng thứ hai.
+   *
+   * Hai thứ cố tình KHÔNG có trong câu upsert:
+   *   · `source` ở nhánh DO UPDATE — 0025 không cấp quyền ghi cột này cho người dùng
+   *     cuối, và đó là chủ ý: sửa được source là giả được "cô ghi hộ" trên dòng do app
+   *     của em tạo. Dòng mới thì mang source='teacher' ngay từ INSERT.
+   *   · `mood` — điểm danh là việc của cô, cảm xúc là lời của em. Cô không đặt hộ tâm
+   *     trạng cho học sinh (§3).
+   */
+  markAttendance: homeroomProcedure.input(MarkAttendanceInput).mutation(async ({ ctx, input }) => {
+    const classId = requireMyClass(ctx.homeroomClassIds, input.classId);
+
+    return ctx.runWithDb(async (client) => {
+      // JOIN với core.enrollments là hàng rào thứ nhất (em phải thuộc ĐÚNG lớp này);
+      // RLS + policy checkins_*_by_homeroom (0030) là hàng rào thứ hai. Không tầng nào
+      // tin tầng kia tử tế — cùng nguyên tắc đã dùng ở acknowledgeLate.
+      const { rows } = await client
+        .query<{ student_id: string }>(
+          `insert into attendance.checkins (student_id, occurred_on, kind, status, source, confirmed_by)
+           select e.student_id, $2::date, 'in', w.status, 'teacher', core.current_user_id()
+             from unnest($3::uuid[], $4::text[]) as w(student_id, status)
+             join core.enrollments e
+               on e.student_id = w.student_id and e.valid_to is null and e.class_id = $1
+           on conflict (student_id, occurred_on, kind)
+           do update set status = excluded.status, confirmed_by = core.current_user_id()
+           returning student_id`,
+          [
+            classId,
+            input.occurredOn,
+            input.entries.map((e) => e.studentId),
+            input.entries.map((e) => e.status),
+          ],
+        )
+        .catch(asScopeError);
+
+      const applied = rows.length;
+      return MarkAttendanceOutput.parse({
+        applied,
+        skipped: input.entries.length - applied,
+      });
+    });
+  }),
+
+  /**
+   * Danh sách Báo cáo Trưởng thành của lớp trong một tuần, kèm trạng thái duyệt.
+   * Em chưa có dòng nào trong sổ duyệt thì hiện `pending` — KHÔNG tạo sẵn dòng
+   * `pending` trong bảng: sổ chỉ ghi việc con người đã quyết, im lặng không phải quyết định.
+   */
+  listReportApprovals: homeroomProcedure
+    .input(ListReportApprovalsInput)
+    .query(async ({ ctx, input }) => {
+      const classId = requireMyClass(ctx.homeroomClassIds, input.classId);
+      const weekStart = mondayIso(input.weekStart);
+
+      return ctx.runWithDb(async (client) => {
+        const className = await readClassCode(client, classId);
+
+        const { rows } = await client.query<{
+          student_id: string;
+          student_code: string;
+          full_name: string;
+          status: string | null;
+          reviewed_at: string | null;
+          note: string | null;
+          checkin_days: number;
+          happy_days: number;
+        }>(
+          `select e.student_id,
+                  s.student_code,
+                  s.full_name,
+                  a.status,
+                  a.reviewed_at::text as reviewed_at,
+                  a.note,
+                  coalesce(w.checkin_days, 0) as checkin_days,
+                  coalesce(w.happy_days, 0) as happy_days
+             from core.enrollments e
+             join core.students s on s.id = e.student_id
+             left join report.growth_report_approvals a
+               on a.student_id = e.student_id and a.week_start = $2::date
+             left join lateral (
+               select count(*) filter (where c.kind = 'in')::int as checkin_days,
+                      count(*) filter (where c.mood = 4)::int as happy_days
+                 from attendance.checkins c
+                where c.student_id = e.student_id
+                  and c.occurred_on between $2::date and $2::date + 4
+             ) w on true
+            where e.class_id = $1 and e.valid_to is null
+            order by s.full_name`,
+          [classId, weekStart],
+        );
+
+        return ListReportApprovalsOutput.parse({
+          classId,
+          className,
+          weekStart,
+          rows: rows.map((r) => ({
+            studentId: r.student_id,
+            studentCode: r.student_code,
+            fullName: r.full_name,
+            status: (r.status ?? "pending") as "pending" | "approved" | "rejected",
+            reviewedAt: r.reviewed_at,
+            note: r.note,
+            checkinDays: r.checkin_days,
+            happyDays: r.happy_days,
+          })),
+        });
+      });
+    }),
+
+  /**
+   * Duyệt (hoặc trả lại) báo cáo một tuần của một em.
+   *
+   * §9 — upsert theo `(student_id, week_start)`. Nhánh DO UPDATE có điều kiện
+   * `is distinct from`: bấm lại đúng quyết định cũ thì KHÔNG ghi đè `reviewed_at`, nên
+   * lần gọi thứ hai trả về đúng dấu thời gian của lần quyết định thật — chứ không phải
+   * giờ của cú double-tap. Đây là khác biệt giữa "idempotent" và "ghi đè cho giống".
+   */
+  approveReport: homeroomProcedure.input(ApproveReportInput).mutation(async ({ ctx, input }) => {
+    const weekStart = mondayIso(input.weekStart);
+    const note = input.note?.trim() || null;
+
+    if (input.decision === "rejected" && !note) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Trả lại báo cáo thì cần ghi lý do để tuần sau sửa được.",
+      });
+    }
+
+    return ctx.runWithDb(async (client) => {
+      // `returning` chỉ trả dòng khi thật sự có GHI (chèn mới, hoặc update thoả WHERE).
+      // Nhờ vậy "đã ghi lần này hay chưa" là một sự thật do Postgres trả lời, không phải
+      // suy đoán theo dấu thời gian — bản đầu tiên so `reviewed_at` với `now() - 2s` và
+      // sai ngay ở ca thường gặp nhất: double-tap trong vòng hai giây.
+      const written = await client
+        .query<{ id: string }>(
+          `insert into report.growth_report_approvals
+             (student_id, week_start, status, reviewer_id, reviewed_at, note)
+           values ($1, $2::date, $3, core.current_user_id(), now(), $4)
+           on conflict (student_id, week_start) do update
+              set status = excluded.status,
+                  reviewer_id = excluded.reviewer_id,
+                  reviewed_at = now(),
+                  note = excluded.note
+            where report.growth_report_approvals.status is distinct from excluded.status
+               or report.growth_report_approvals.note is distinct from excluded.note
+           returning id`,
+          [input.studentId, weekStart, input.decision, note],
+        )
+        .catch(asScopeError);
+
+      // Đọc lại để hai lần gọi trả về CÙNG một output (lần hai không có `returning`).
+      const { rows } = await client.query<{
+        status: string;
+        note: string | null;
+        reviewed_at: string | null;
+      }>(
+        `select status, note, reviewed_at::text as reviewed_at
+           from report.growth_report_approvals
+          where student_id = $1 and week_start = $2::date`,
+        [input.studentId, weekStart],
+      );
+
+      const row = rows[0];
+      if (!row) {
+        // Không chèn được mà cũng không đọc được: RLS chặn (em không thuộc lớp mình).
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Em này không thuộc lớp chủ nhiệm của thầy cô.",
+        });
+      }
+
+      return ApproveReportOutput.parse({
+        studentId: input.studentId,
+        weekStart,
+        status: row.status as "pending" | "approved" | "rejected",
+        note: row.note,
+        reviewedAt: row.reviewed_at,
+        alreadyRecorded: written.rows.length === 0,
+      });
+    });
+  }),
+
+  /** Nhật ký can thiệp của cả lớp — màn "Ghi chú can thiệp" đọc từ đây. */
+  listClassInterventions: homeroomProcedure
+    .input(ListClassInterventionsInput)
+    .query(async ({ ctx, input }) => {
+      const classId = requireMyClass(ctx.homeroomClassIds, input.classId);
+
+      return ctx.runWithDb(async (client) => {
+        const className = await readClassCode(client, classId);
+
+        const { rows } = await client.query<{
+          id: string;
+          student_id: string;
+          student_name: string;
+          action: string;
+          note: string | null;
+          occurred_at: string;
+          actor_name: string | null;
+          case_status: string;
+        }>(
+          // `core.users` chỉ mở SELECT cho CHÍNH MÌNH (policy users_self, 0009), nên
+          // join thẳng lấy tên người ghi sẽ ra NULL với đồng nghiệp. Không bịa tên:
+          // NULL → "Thầy cô khác" ở bước map bên dưới.
+          `select i.id, cc.student_id, s.full_name as student_name,
+                  i.action, i.note, i.occurred_at::text as occurred_at,
+                  u.full_name as actor_name, cc.status as case_status
+             from care.interventions i
+             join care.care_cases cc on cc.id = i.case_id
+             join core.students s on s.id = cc.student_id
+             join core.enrollments e on e.student_id = cc.student_id and e.valid_to is null
+             left join core.users u on u.id = i.actor_id
+            where e.class_id = $1
+            order by i.occurred_at desc
+            limit $2::int`,
+          [classId, input.limit],
+        );
+
+        return ListClassInterventionsOutput.parse({
+          classId,
+          className,
+          rows: rows.map((r) => ({
+            interventionId: r.id,
+            studentId: r.student_id,
+            studentName: r.student_name,
+            action: r.action,
+            note: r.note,
+            occurredAt: r.occurred_at,
+            actorName: r.actor_name ?? "Thầy cô khác",
+            caseStatus: r.case_status as "open" | "closed",
+          })),
+        });
+      });
+    }),
 });

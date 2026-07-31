@@ -25,12 +25,19 @@ export function MoodTile({
     <button
       type="button"
       aria-label={MOOD_LABEL[mood]}
+      // Ô cảm xúc là nút CHỌN-MỘT có trạng thái, không phải nút bấm-rồi-thôi: trước đây
+      // "đang chọn" chỉ hiện bằng viền trắng — người dùng trình đọc màn hình không có
+      // tín hiệu nào. aria-pressed nói đúng trạng thái đó bằng lời (WCAG 4.1.2).
+      aria-pressed={selected ?? false}
       onClick={() => onSelect(mood)}
       className={`h-[148px] rounded-[20px] bg-gradient-to-br ${style.gradient} ${style.shadow} flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 ${
         selected ? "ring-4 ring-white ring-offset-2 ring-offset-navy" : ""
       }`}
     >
-      <span className={`msr text-[44px] ${style.text}`}>{style.icon}</span>
+      {/* aria-hidden: nội dung DOM là chữ thô "sentiment_very_satisfied", font chỉ đổi hình.
+          Không ẩn thì em bấm nghe đọc "sentiment very satisfied Vui" — nhãn chữ ngay dưới
+          icon đã nói đủ, và button còn có aria-label riêng. */}
+      <span aria-hidden="true" className={`msr text-[44px] ${style.text}`}>{style.icon}</span>
       <span className={`text-[14px] font-black ${style.text}`}>{MOOD_LABEL[mood]}</span>
     </button>
   );

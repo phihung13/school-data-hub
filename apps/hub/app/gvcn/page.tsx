@@ -10,5 +10,14 @@ export default async function GvcnPage() {
 
   const identity = await resolveIdentity(session.authUid);
 
-  return <GvcnDashboard displayName={session.displayName} email={identity?.email ?? ""} />;
+  return (
+    <GvcnDashboard
+      displayName={session.displayName}
+      email={identity?.email ?? ""}
+      roles={session.roles}
+      // Lớp chủ nhiệm THẬT (resolveIdentity.className) — chỉ dùng làm bản dự phòng
+      // cho lúc care.getDashboard chưa trả về; không bịa mã lớp bao giờ.
+      classCode={identity?.className ?? null}
+    />
+  );
 }

@@ -5,6 +5,7 @@ Thư mục này chứa các job **không phải request của người dùng**: 
 | Job | File | Nhịp | Việc |
 |---|---|---|---|
 | `emotion_retention` | `run-retention.mjs` | 1 lần/tháng, 03:00 ngày mùng 1 | Tổng hợp `attendance.mood_trends` rồi xoá chi tiết cảm xúc quá 12 tháng (§3, mệnh lệnh 4 CLAUDE.md, Luật 91/2025) |
+| *(không theo lịch)* | `run-anonymize-user.mjs` | khi có yêu cầu, mỗi lần một người | Ẩn danh hoá một tài khoản theo yêu cầu xoá dữ liệu cá nhân (Luật 91/2025) — gọi `core.anonymize_user()` ở `0033` |
 
 ## `emotion_retention` — xoá chi tiết cảm xúc sau 12 tháng
 
@@ -77,6 +78,62 @@ select count(*) from attendance.mood_trends;
 ```
 
 Một lần chạy hỏng **vẫn để lại dòng `status = 'failed'`** trong `ops.job_runs` kèm thông điệp lỗi: hàm SQL ghi `running` → `success` trong cùng một câu lệnh nên lỗi cuốn theo cả dòng đó, vì vậy `run-retention.mjs` tự ghi lại dòng `failed` ngoài transaction đã hỏng. Không có nhánh này thì một job chết trông y hệt một job chưa tới lịch.
+
+## `run-anonymize-user.mjs` — thi hành một yêu cầu xoá dữ liệu cá nhân
+
+Không phải job theo lịch: chạy khi **có người yêu cầu**, mỗi lần đúng một tài khoản.
+
+Chính sách đã chốt ở `0033_anonymize_user.sql`: **không xoá cứng `core.users`.** Xoá phần **định danh** (tên, email, `auth_uid`, sổ đăng nhập `core.identity_links`), giữ nguyên mọi khoá ngoại **lịch sử**. Lý do không phải là tiếc dữ liệu: cái luật bảo vệ là thông tin cá nhân, còn *"ai đã ghi can thiệp cho con tôi, ngày nào"* là bằng chứng vận hành về một đứa trẻ — mất nó là mất khả năng trả lời chính câu hỏi mà luật đó cũng bảo hộ.
+
+```bash
+# 1. LUÔN chạy dry-run trước — nó in ra TÊN THẬT để xác nhận đúng người, rồi hoàn tác
+DATABASE_URL=postgres://... node tools/jobs/run-anonymize-user.mjs \
+  --user=40000000-0000-0000-0000-000000000001 \
+  --reason="PH Nguyễn Văn A yêu cầu xoá, phiếu 2026-014" --dry-run
+
+# 2. Chạy thật (lần chạy thật KHÔNG in tên — log không được thành nơi cái tên sống tiếp)
+DATABASE_URL=postgres://... node tools/jobs/run-anonymize-user.mjs \
+  --user=40000000-0000-0000-0000-000000000001 \
+  --reason="PH Nguyễn Văn A yêu cầu xoá, phiếu 2026-014"
+```
+
+`--reason` **bắt buộc**, tối thiểu 10 ký tự: dòng này đi thẳng vào `ops.audit_log.scope`, và một năm sau nó là thứ duy nhất trả lời được *"vì sao tài khoản này bị ẩn danh"*.
+
+Gọi lại là **no-op** (§9): `anonymized_at` không bị dời — mốc pháp lý phải là lần đầu. Test khoá: `packages/core/db/tests/0033_anonymize_user_test.sql`.
+
+### Nếu ai đó thật sự muốn `delete from core.users`
+
+Bị trigger `users_block_hard_delete` chặn, kèm câu tiếng Việt chỉ đúng đường thay thế. Hội đồng dữ liệu quyết định xoá cứng thì mở phanh tay **trong đúng phiên đó**:
+
+```sql
+begin;
+set local hub.allow_user_hard_delete = 'on';
+delete from core.users where id = '...';
+commit;
+```
+
+Mở phanh vẫn **không** xoá được người còn bằng chứng (`ops.audit_log`, `care.interventions`, `care.counselor_notes`, `health.logs`) — và báo rõ còn bao nhiêu dòng ở đâu, thay vì ném một mã `23503` trần rồi bỏ mặc người vận hành đoán.
+
+## Hậu kiểm sổ audit — hai câu hỏi hỏi hằng tháng
+
+```sql
+-- 1. Ai đã đọc nội dung y tế của trẻ, và có lượt nào bị từ chối không?
+--    (0034 — health.read_logs() là đường DUY NHẤT thấy được category/detail)
+select occurred_at, actor_id, object_id, result, scope ->> 'row_count' as so_dong
+  from ops.audit_log
+ where action = 'health.read'
+   and occurred_at >= now() - interval '30 days'
+ order by occurred_at desc;
+
+-- Dòng result='denied' là thứ đáng xem nhất: dấu vết của một người
+-- đang thử mở cánh cửa không phải của mình.
+
+-- 2. Tháng này đã thi hành bao nhiêu yêu cầu xoá dữ liệu cá nhân?
+select occurred_at, object_id, result, scope ->> 'reason' as ly_do
+  from ops.audit_log
+ where action = 'core.anonymize_user'
+ order by occurred_at desc;
+```
 
 ## Ai ghi `ops.source_freshness.last_success_at`
 

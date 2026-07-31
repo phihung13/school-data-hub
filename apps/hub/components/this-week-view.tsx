@@ -1,13 +1,21 @@
 // components/this-week-view.tsx — V6 Tuần này của mình (Hub Desktop V2, 29/07/2026).
 // Ghép từ 2 nguồn dữ liệu thật đã có: lịch tuần (checkin.getAttendanceOverview)
 // + Glow/Grow (report.getMyLatestReport) — không thêm bảng/truy vấn mới.
+//
+// Sửa 31/07/2026 (gói "frontend-trang-thai"): khuôn `{attendance.data && report.data && …}`
+// không có nhánh isPending/error nên query hỏng là màn TRẮNG vĩnh viễn, và phụ đề
+// còn kẹt ở "…" mãi mãi (dấu ba chấm nghĩa là "đang tải" — nói dối khi thật ra là
+// đã hỏng). Nay đủ ba trạng thái + nút Thử lại; sidebar nhận `roles`/`classCode`
+// thật thay vì role="student" viết cứng; khối mobile có đường ra.
 "use client";
 
 import Link from "next/link";
 import { trpc } from "@/lib/trpc-client";
-import type { MoodValue } from "@hub/core/contracts";
+import type { HubRole, MoodValue } from "@hub/core/contracts";
 import { HubSidebar } from "./hub-sidebar";
 import { Mascot } from "./mascot";
+import { DesktopOnlyNotice } from "./ui/desktop-only-notice";
+import { ErrorState, LoadingState } from "./ui/query-state";
 
 const MOOD_ICON: Record<MoodValue, string> = {
   4: "sentiment_very_satisfied",
@@ -28,7 +36,17 @@ const GLOW_ICON_BG: Record<string, string> = { green: "bg-[#E3F8ED]", blue: "bg-
 const GLOW_ICON_COLOR: Record<string, string> = { green: "text-[#00A05F]", blue: "text-[#2C7BF2]", amber: "text-[#E8940D]" };
 const GLOW_ICON: Record<string, string> = { green: "event_available", blue: "pool", amber: "menu_book" };
 
-export function ThisWeekView({ displayName, email }: { displayName: string; email: string }) {
+export function ThisWeekView({
+  displayName,
+  email,
+  roles,
+  classCode,
+}: {
+  displayName: string;
+  email: string;
+  roles: HubRole[];
+  classCode?: string | null;
+}) {
   const attendance = trpc.checkin.getAttendanceOverview.useQuery();
   const report = trpc.report.getMyLatestReport.useQuery();
 
@@ -41,23 +59,39 @@ export function ThisWeekView({ displayName, email }: { displayName: string; emai
     }
   });
 
+  // Trang cần CẢ HAI truy vấn: đang tải khi còn một cái chưa xong, hỏng khi có
+  // cái nào hỏng. Thử lại phải bắn lại cả hai, vì không biết cái nào vừa hỏng.
+  const isPending = attendance.isPending || report.isPending;
+  const error = attendance.error ?? report.error;
+  const retry = () => {
+    void attendance.refetch();
+    void report.refetch();
+  };
+
   return (
     <>
-      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-2 px-6 text-center md:hidden">
-        <span className="msr text-[40px] text-caption">desktop_windows</span>
-        <p className="text-[14px] font-bold text-ink">Trang Tuần này đang tối ưu cho máy tính.</p>
-      </div>
+      <DesktopOnlyNotice
+        title="Trang Tuần này đang tối ưu cho máy tính."
+        hint="Mở trên máy tính để xem đủ lịch tuần và phần Glow/Grow."
+        showTabBar={roles.includes("student")}
+      />
       <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
         <div className="flex w-[240px] flex-none">
-          <HubSidebar role="student" active="week" fullName={displayName} email={email} />
+          <HubSidebar roles={roles} active="week" fullName={displayName} email={email} classCode={classCode} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
           <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
             <div className="flex-1">
               <div className="text-[16px] font-black text-ink">Tuần này của mình</div>
-              <div className="text-[11.5px] text-caption">{report.data?.report.weekLabel ?? "…"}</div>
+              {/* "…" chỉ được phép khi ĐANG tải thật; hỏng thì nói là hỏng. */}
+              <div className="text-[11.5px] text-caption">
+                {report.data?.report.weekLabel ?? (isPending ? "…" : error ? "chưa tải được" : "")}
+              </div>
             </div>
           </div>
+
+          {isPending && <LoadingState label="Đang tải tuần này của con…" />}
+          {!isPending && error && <ErrorState error={error} label="Tuần này của mình" onRetry={retry} />}
 
           {attendance.data && report.data && (
             <div className="flex-1 overflow-y-auto p-7">

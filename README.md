@@ -8,20 +8,32 @@ Hệ thống theo dõi & chăm sóc học sinh, Hệ thống Trường Việt An
 - **Bạn là dev / vibe team / Claude:** `CLAUDE.md` tự nạp khi mở Claude Code tại đây. Đọc [`danh-cho-may/RULES.md`](danh-cho-may/RULES.md) trước khi làm bất cứ việc gì.
 - **Bạn muốn chạy thử ứng dụng:** xem mục "Chạy local" bên dưới.
 
-## Trạng thái: Giai đoạn 1 (vỏ) — 29/07/2026, đã chạy thử thật đầu-cuối
+## Trạng thái: 31/07/2026 — GĐ1 chạy thật + đợt củng cố trước go-live
 
-Đã xây: monorepo + `packages/core` (contracts, auth-adapter dev, db client RLS-aware) +
-`apps/hub` (Next.js App Router) với đủ 4 màn GĐ1 theo `Hub Giai Doan 1.dc.html`:
-đăng nhập (SSO dev + mã mời PH), trang chủ học sinh, check-in cảm xúc (+ offline
-queue), buồng lái GVCN rút gọn, báo cáo Trưởng thành.
+Đã xây: monorepo + `packages/core` (contracts có version + changelog, auth-adapter dev, db
+client RLS-aware) + `apps/hub` (Next.js App Router): đăng nhập (SSO dev + mã mời PH), trang chủ
+học sinh, check-in cảm xúc (+ offline queue), báo cáo Trưởng thành, **bốn màn hình GVCN** (danh
+sách lớp, điểm danh lớp, duyệt báo cáo, ghi chú can thiệp), và **cổng OIDC `/oidc/*`** đã chạy
+thật đầu-cuối với một RP ngoài (SSO im lặng, PKCE, refresh token, đăng xuất chung back-channel).
 
-**Chưa xây (đúng phạm vi GĐ1, để làm tiếp):**
-1. Cổng kết nối OIDC cho app ngoài (`/oidc/*`, ADR-014) — người dùng tự làm tiếp để cắm thử 1 app.
-2. Flag engine tự động (pg_cron, `04-flag-engine.md`) — buồng lái GĐ1 tính cờ trực tiếp
+**Đợt củng cố 31/07/2026 (migration `0023`–`0034`)** — phần lớn không phải thêm tính năng mà là
+**cài đặt thật những kiểm soát đã được tuyên bố mà chưa tồn tại**. Bảng đối chiếu đầy đủ
+"hứa gì / kiểm lại thấy gì / đã làm gì" nằm trong `danh-cho-may/02-database.md` và mục
+"Dữ liệu và nguồn sự thật" của hồ sơ HTML. Ba ví dụ:
+lời hứa xóa chi tiết cảm xúc sau 12 tháng chỉ tồn tại dưới dạng ghi chú (nay có hàm + test);
+khung giờ và dải IP chống gian lận điểm danh nằm trong bảng mà **không chỗ nào đọc tới**
+(nay `attendance.resolve_checkin` là nơi duy nhất quyết định); tuyên bố "mọi lượt đọc y tế đều
+ghi audit" được viết ngay cạnh bảng y tế mà chưa từng được xây (nay có `health.read_logs`).
+
+**Chưa xây (để làm tiếp):**
+1. Flag engine tự động (pg_cron, `04-flag-engine.md`) — buồng lái hiện tính cờ trực tiếp
    từ tín hiệu thô, xem ghi chú đầu file `apps/hub/server/routers/care.ts`.
-3. Google/Zalo OAuth thật — GĐ1 dùng dev provider giả lập vì hạ tầng OAuth chưa mua.
-4. `submitCheckout` (điểm danh ra về, có trong `03-api.md`) — wireframe GĐ1 không cần, chưa viết.
-5. **Layout desktop riêng cho check-in/báo cáo/hồ sơ** — chỉ responsive đơn giản (co giãn
+2. Google/Zalo OAuth thật — vẫn dùng dev provider giả lập vì hạ tầng OAuth chưa mua. **Cửa
+   dev-login đang mở ra Internet là nợ #19 trong `DEBT.md`, bắt buộc bịt trước dữ liệu thật.**
+3. `submitCheckout` (điểm danh ra về, có trong `03-api.md`) — wireframe GĐ1 không cần, chưa viết.
+4. Màn hình cho vai `principal`/`board` và cho tâm lý cụm — quyền DB có, đường API chưa (`DEBT.md` #25).
+5. Bộ lập lịch gọi job xóa cảm xúc + job dò lệch GVCN hằng đêm (`DEBT.md` #24).
+6. **Layout desktop riêng cho check-in/báo cáo/hồ sơ** — chỉ responsive đơn giản (co giãn
    max-width trong khung thẻ). **Đăng nhập và trang chủ đã có layout desktop riêng thật**
    (29/07/2026, xem mục ngay dưới) vì `Hub Desktop.dc.html` có bản thiết kế desktop cho 2 màn
    này (D1, D2); check-in/báo cáo/hồ sơ thì KHÔNG có bản D-series tương ứng trong nguồn thiết
@@ -52,7 +64,8 @@ queue), buồng lái GVCN rút gọn, báo cáo Trưởng thành.
 lưới mini app, `flex-direction:row` thẻ check-in — đúng cấu trúc D2, không phải đoán.
 
 **Đã tự kiểm tra thật, không chỉ đoán** (dựng Postgres 16 qua Docker, chạy hết 17
-migration + toàn bộ 16 file pgTAP ~150 assertion xanh, seed dữ liệu demo, chạy
+migration + toàn bộ 16 file pgTAP ~150 assertion xanh — con số ngày 29/07; số mới nhất
+31/07 là **34 migration · 32 file test · 358 assertion**, seed dữ liệu demo, chạy
 `next dev`, gọi thật từng tRPC procedure qua HTTP, và bấm thật trong Chrome ở cả
 2 vai trò):
 - Đăng nhập dev (Google giả + mã mời PH) → tạo/khớp đúng phiên
@@ -83,7 +96,7 @@ docker run -d --name pg_hub -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=hub_dev
 export DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_dev
 for f in packages/core/db/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"; done
 
-# 3. (khuyến nghị, đặc biệt cho migration 0013-0015 mới) Chạy pgTAP trước khi tin seed/app
+# 3. (khuyến nghị) Chạy pgTAP trước khi tin seed/app — script tự dựng lại từ đầu + nạp fixture
 docker exec pg_hub bash -c "apt-get update -qq && apt-get install -y -qq postgresql-16-pgtap"
 ./tools/run-db-tests.sh
 
@@ -144,9 +157,12 @@ school-data-hub/
 
 ## Kiểm tra trước khi merge
 
-- `node tools/check-sync.mjs` — hồ sơ người/máy đồng bộ
-- `node tools/schema-lint.mjs` — §1/§2/ADR-011
+- `node tools/check-sync.mjs` — hồ sơ người/máy đồng bộ. **Hai cổng, không phải một:** cổng 1 so `sync-version` hai phía; cổng 2 đối chiếu từng bảng/view/hàm mà migration tạo ra với `02-database.md`. Cổng 1 một mình là xanh giả — không ai sờ vào tài liệu thì hai con số vẫn bằng nhau kể cả khi database đã đi trước tài liệu 8 migration (đúng chuyện đã xảy ra).
+- `node tools/schema-lint.mjs` — §1/§2/ADR-011, chặn trùng số migration, và bắt mọi bảng/policy/GRANT từ `0023` trở đi phải có pgTAP gọi tên. Lý do có tầng cuối: **bảng sai thì app vỡ ngay, policy sai thì im lặng lộ dữ liệu.**
+- `node tools/check-html.mjs` — hồ sơ HTML: id trùng, link neo gãy, cân bằng thẻ, đủ mục
+- `node tools/contracts-lint.mjs` — hợp đồng Zod đổi mà chưa ghi CHANGELOG
 - `node tools/secret-scan.mjs` — §4
 - `pnpm typecheck` — cả hai package sạch kiểu (đã xác nhận pass)
-- `./tools/run-db-tests.sh` — pgTAP trên Postgres thật (**đã xác nhận pass: 17 migration, 16 file test, ~150 assertion xanh**)
+- `./tools/run-db-tests.sh` — pgTAP trên Postgres thật (**đã xác nhận pass 31/07/2026: 34 migration, 32/32 file test, 358 assertion xanh** trên database dựng lại từ đầu)
+- `npx vitest run` — bộ test TypeScript
 - `pnpm --filter @hub/app build` — đã xác nhận pass, 13 route

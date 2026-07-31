@@ -146,14 +146,40 @@ export const checkinRouter = router({
     return ctx.runWithDb(async (client) => {
       const studentId = await getMyStudentId(client);
 
+      // ADR-007 (migration 0027): ngày/trạng thái/nguồn KHÔNG còn viết cứng ở đây.
+      // Trước 31/07/2026 dòng này ghi thẳng `'present', 'app'` cho mọi lần bấm, nên
+      // em bấm lúc 11 giờ trưa từ nhà vẫn được ghi "có mặt đúng giờ", và hai thẻ
+      // "Chờ xác nhận"/"Vắng" trên buồng lái GVCN luôn bằng 0 vì không đường nào
+      // sinh ra `queued_late`. Nay hỏi `attendance.resolve_checkin` — nơi DUY NHẤT
+      // biết khung giờ và dải IP của cơ sở, và đọc chúng từ bảng chứ không từ code.
+      const resolved = await client.query<{
+        occurred_on: string;
+        status: string;
+        source: string;
+        rejected_reason: string | null;
+      }>(
+        "select * from attendance.resolve_checkin($1, now(), $2::inet, false)",
+        [studentId, ctx.clientIp],
+      );
+      const rule = resolved.rows[0];
+      if (!rule || rule.rejected_reason) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Chưa ghi được lượt check-in này, em báo thầy cô giúp nhé.",
+        });
+      }
+
       // §9 idempotent: 1 học sinh 1 check-in/ngày — bấm lại trong ngày chỉ cập nhật mood.
+      // KHÔNG cập nhật lại status: em bấm lần hai lúc 8 giờ không được phép biến bản
+      // 'queued_late' lúc 11 giờ hôm trước thành 'present', và 0025 cũng đã thu quyền
+      // UPDATE xuống đúng ba cột (mood, status, confirmed_by) ở tầng dữ liệu.
       const { rows } = await client.query<{ id: string; status: string }>(
         `insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
-         values ($1, current_date, 'in', $2, 'present', 'app')
+         values ($1, $2::date, 'in', $3, $4, $5)
          on conflict (student_id, occurred_on, kind)
          do update set mood = excluded.mood
          returning id, status`,
-        [studentId, input.mood],
+        [studentId, rule.occurred_on, input.mood, rule.status, rule.source],
       );
       const row = rows[0];
       if (!row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });

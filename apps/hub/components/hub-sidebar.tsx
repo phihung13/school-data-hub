@@ -50,16 +50,16 @@ export const STUDENT_SOON: NavItem[] = [
 
 export const TEACHER_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "space_dashboard", href: "/gvcn" },
+  // Bốn mục dưới đây quay lại thành <Link> ngày 31/07/2026 (gói "gvcn-man-hinh"): bốn
+  // trang tương ứng đã tồn tại thật, có procedure thật ở router `care` và có cả ba
+  // trạng thái tải/lỗi/rỗng. Chúng từng nằm ở TEACHER_SOON vì trỏ vào trang 404.
+  { key: "klass", label: "Lớp chủ nhiệm", icon: "groups", href: "/gvcn/lop" },
+  { key: "attendance", label: "Điểm danh lớp", icon: "fact_check", href: "/gvcn/diem-danh" },
+  { key: "review", label: "Duyệt báo cáo", icon: "rate_review", href: "/gvcn/duyet-bao-cao" },
+  { key: "notes", label: "Ghi chú can thiệp", icon: "edit_note", href: "/gvcn/ghi-chu" },
   { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 export const TEACHER_SOON: NavItem[] = [
-  // Bốn mục dưới đây ĐÃ có thiết kế và sẽ có trang thật trong giai đoạn này
-  // (gói "gvcn-man-hinh"); tới lúc đó chuyển ngược lên TEACHER_ITEMS kèm href thật:
-  // /gvcn/lop, /gvcn/diem-danh, /gvcn/duyet-bao-cao, /gvcn/ghi-chu.
-  { key: "klass", label: "Lớp chủ nhiệm", icon: "groups", href: "#", soonBadge: "Sắp có" },
-  { key: "attendance", label: "Điểm danh lớp", icon: "fact_check", href: "#", soonBadge: "Sắp có" },
-  { key: "review", label: "Duyệt báo cáo", icon: "rate_review", href: "#", soonBadge: "Sắp có" },
-  { key: "notes", label: "Ghi chú can thiệp", icon: "edit_note", href: "#", soonBadge: "Sắp có" },
   { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "#" },
 ];
 

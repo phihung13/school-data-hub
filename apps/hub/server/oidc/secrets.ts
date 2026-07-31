@@ -31,6 +31,15 @@ import { createHash, timingSafeEqual } from "node:crypto";
 /** Độ dài tối thiểu của mọi secret nhận từ môi trường. */
 export const MIN_SECRET_LENGTH = 32;
 
+/**
+ * Đường dẫn endpoint nội bộ. Hằng số này nằm ở đây — file lá, không import gì ngoài
+ * `node:crypto` — chứ KHÔNG nằm ở `internal-endpoint.ts`, vì phía gọi là route handler
+ * của Next (`/api/auth/logout`). Import từ `internal-endpoint.ts` sẽ kéo cả `provider.ts`
+ * và thư viện `oidc-provider` vào bundle webpack của Next, đúng cái mà ghi chú trong
+ * route đó dặn phải tránh: hai bản Provider trong hai module graph, hai bộ khoá khác nhau.
+ */
+export const INTERNAL_BACKCHANNEL_LOGOUT_PATH = "/internal/oidc/backchannel-logout";
+
 export function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
 }

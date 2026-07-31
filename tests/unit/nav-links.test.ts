@@ -76,7 +76,8 @@ describe("bộ phân giải đường dẫn (tự kiểm chính nó)", () => {
     expect(routeExists("/home")).toBe(true);
     expect(routeExists("/gvcn")).toBe(true);
     expect(routeExists("/embed/factory")).toBe(true); // qua thư mục động [appId]
-    expect(routeExists("/gvcn/lop")).toBe(false); // chưa xây — gói "gvcn-man-hinh"
+    expect(routeExists("/gvcn/lop")).toBe(true); // gói "gvcn-man-hinh" đã dựng trang thật
+    expect(routeExists("/gvcn/khong-co")).toBe(false); // thư mục con không tồn tại
     expect(routeExists("/khong-he-co-trang-nay")).toBe(false);
   });
 });

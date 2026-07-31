@@ -13,6 +13,8 @@ import { mondayOf, toLocalIsoDate } from "@/lib/date";
 import { Mascot } from "./mascot";
 import { PageShell } from "./page-shell";
 import { HubSidebar } from "./hub-sidebar";
+import { ErrorState, LoadingState } from "./ui/query-state";
+import type { HubRole } from "@hub/core/contracts";
 
 type Report = GetGrowthReportOutput;
 
@@ -47,23 +49,31 @@ export function GrowthReportView({
   isStudent,
   displayName,
   email,
+  roles,
+  classCode,
 }: {
   isStudent: boolean;
   displayName: string;
   email: string;
+  /**
+   * Vai thật của phiên. `optional` vì app/bao-cao/page.tsx thuộc gói khác và chưa
+   * truyền xuống; khi thiếu thì suy từ `isStudent` — an toàn ở đây vì màn desktop
+   * có sidebar CHỈ render cho học sinh, phụ huynh luôn xem bản mobile.
+   */
+  roles?: HubRole[];
+  classCode?: string | null;
 }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const query = trpc.report.getReportForWeek.useQuery({ weekStart: mondayOffsetIso(weekOffset) });
+  const effectiveRoles: HubRole[] = roles ?? (isStudent ? ["student"] : ["guardian"]);
 
-  if (query.isLoading) {
-    return <div className="p-8 text-center text-[13px] text-muted">Đang soạn báo cáo…</div>;
+  if (query.isPending) {
+    return <LoadingState label="Đang soạn báo cáo…" />;
   }
   if (query.error || !query.data) {
-    return (
-      <div className="p-8 text-center text-[13px] text-mood-sadDark">
-        {query.error?.message ?? "Không tải được báo cáo."}
-      </div>
-    );
+    // Trước đây chỉ in message trần, KHÔNG có nút nào — phụ huynh mở link Zalo gặp
+    // lỗi mạng là hết đường, không thử lại được mà cũng không về đâu được.
+    return <ErrorState error={query.error} label="Báo cáo Trưởng thành" onRetry={() => void query.refetch()} />;
   }
   const { report } = query.data;
 
@@ -75,7 +85,7 @@ export function GrowthReportView({
       {isStudent && (
         <div className="hidden md:flex md:h-screen md:w-full md:overflow-hidden">
           <div className="flex w-[240px] flex-none">
-            <HubSidebar role="student" active="report" fullName={displayName} email={email} />
+            <HubSidebar roles={effectiveRoles} active="report" fullName={displayName} email={email} classCode={classCode} />
           </div>
           <DesktopReport
             report={report}
@@ -275,7 +285,18 @@ function DesktopReport({
             <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
               <div className="text-[15px] font-black text-navy">Báo cáo này gửi cho ai?</div>
               <div className="mt-3.5 flex flex-col gap-3">
-                {guardians.data?.length ? (
+                {/* "Chưa có phụ huynh nào" là một KHẲNG ĐỊNH — không được nói nó khi
+                    mới chỉ là chưa tải xong hoặc đã hỏng. */}
+                {guardians.isPending ? (
+                  <p className="text-[12px] text-caption">Đang tải…</p>
+                ) : guardians.error ? (
+                  <p className="text-[12px] font-bold text-[#D2383E]">
+                    Chưa tải được danh sách người nhận.{" "}
+                    <button type="button" onClick={() => void guardians.refetch()} className="underline underline-offset-2">
+                      Thử lại
+                    </button>
+                  </p>
+                ) : guardians.data?.length ? (
                   guardians.data.map((g, i) => (
                     <div key={i} className="flex items-center gap-2.5">
                       <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-[#ECE7DD] text-[12.5px] font-black text-[#7D6A3A]">

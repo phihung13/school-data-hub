@@ -27,7 +27,7 @@ const probeRouter = router({
 
 /** Bối cảnh như tRPC context thật dựng ra sau khi verify cookie. */
 function ctxFor(authUid: string): TrpcContext {
-  return { authUid, roles: [], displayName: null };
+  return { authUid, roles: [], displayName: null, clientIp: null };
 }
 
 async function codeOfRejection(fn: () => Promise<unknown>): Promise<string> {
@@ -72,7 +72,7 @@ describe("homeroomProcedure", () => {
 
   it("chưa đăng nhập thì dừng ngay ở lớp UNAUTHORIZED, không chạm CSDL", async ({ skip }) => {
     if (!ready) return skip();
-    const caller = probeRouter.createCaller({ authUid: null, roles: [], displayName: null });
+    const caller = probeRouter.createCaller({ authUid: null, roles: [], displayName: null, clientIp: null });
     expect(await codeOfRejection(() => caller.homeroomOnly())).toBe("UNAUTHORIZED");
   });
 });
@@ -97,7 +97,7 @@ describe("roleProcedure", () => {
     const caller = probeRouter.createCaller({
       authUid: DEV.gvcn,
       roles: ["counselor", "principal"],
-      displayName: "token nói dối",
+      displayName: "token nói dối", clientIp: null
     });
     expect(await codeOfRejection(() => caller.counselorOrPrincipal())).toBe("FORBIDDEN");
   });
