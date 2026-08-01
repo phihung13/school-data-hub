@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 3
+sync-version: 4
 ---
 
 # Operations — SLO, Runbook, Incident, On-call, RACI, Go-live (Rev C)
@@ -43,9 +43,50 @@ Dev 1 / dev 2 luân phiên tuần (tên người: MD-04, khóa trong go-live che
 | RB-05 | Nghi lộ tài khoản CBGV → khóa, audit log phạm vi đọc, đổi mật khẩu, mẫu M3 nếu chạm dữ liệu HS | SEV1 |
 | RB-06 | Restore khẩn theo kịch bản drill | SEV1 |
 | RB-07 | Zalo OA lỗi/khóa → bản tin lùi (SLO ±24h), kênh dự phòng qua GVCN | SEV3 |
-| RB-08 | Migration hỏng prod → PITR về trước thời điểm chạy, truy vì sao lọt staging | SEV1 |
+| RB-08 | Migration hỏng prod → **đọc `node tools/migrate/migrate.mjs status` TRƯỚC khi động vào backup** (từ 02/08/2026 một migration hỏng không để lại đối tượng nào và không để lại dòng sổ nào — nó chạy trong một transaction thật, xem RB-11); chỉ khi schema đã lệch thật mới restore từ backup hằng ngày Supabase. Rồi truy vì sao lọt staging | SEV1 |
 | RB-09 | `import_errors` > 500/nguồn → dừng connector nguồn đó, sửa mapping, promote lại (idempotent, an toàn) | SEV3 |
 | RB-10 | Mất quyền tài khoản hạ tầng → khôi phục qua chủ sở hữu tổ chức (MD-06) | SEV1 |
+| RB-11 | **Áp migration lên máy chủ thật** — xem mục 4b | SEV3 (kế hoạch) / SEV1 (nếu hỏng giữa chừng, về RB-08) |
+| RB-12 | **Chạy bộ kiểm thử cơ sở dữ liệu** (pgTAP + vitest) — xem mục 4c | — |
+
+*Ghi chú sửa 02/08/2026:* RB-08 trước đây viết "PITR về trước thời điểm chạy". **PITR đã bị bỏ từ 28/07/2026** (ADR-019, `06-resilience-security.md` mục 2), nên câu đó chỉ một đường không tồn tại — đúng loại runbook làm người trực lúc 2 giờ sáng đi tìm một cái nút không có trên màn hình.
+
+## 4b. RB-11 — áp migration lên máy chủ thật (từ 02/08/2026)
+
+Bộ chạy: `tools/migrate/migrate.mjs`; sổ: `ops.schema_migrations` (`0050`). Tài liệu đầy đủ `tools/migrate/README.md`, thiết kế và bẫy đã gặp ở `02-database.md` mục đợt F.
+
+| Bước | Lệnh | Tiêu chí xong |
+|---|---|---|
+| 1. Hỏi trước, đừng áp trước | `node tools/migrate/migrate.mjs status --url=<prod>` | Mã thoát **0**. Mã thoát **1** = lệch băm hoặc mất file ⇒ **DỪNG**, không áp gì; đây là ca "file đã áp mà nội dung trên đĩa đã đổi", xử bằng cách truy commit chứ không bằng cách chạy tiếp |
+| 2. Database đã sống mà sổ trống | `node tools/migrate/migrate.mjs baseline --to=NNNN --ghi-chu="..."` | Đúng N dòng `nhan_no = true`. `up` sẽ **tự từ chối** và chỉ sang đây, nên đừng ép; `baseline` cũng tự từ chối trên database rỗng |
+| 3. Xem trước | `node tools/migrate/migrate.mjs up --dry-run` | Danh sách file sắp áp đọc bằng mắt, khớp với PR |
+| 4. Áp | `node tools/migrate/migrate.mjs up` | Mỗi file + dòng sổ của nó nằm trong **cùng một transaction**; hỏng giữa chừng thì không đối tượng nào ở lại, không dòng sổ nào ở lại, và `ops.job_runs` ghi `failed` |
+| 5. Hậu kiểm | `status` lần nữa | "N/N file đã ở trong sổ" |
+
+Ba điều phải nhớ, vì cả ba đã cắn thật một lần: (a) **sổ trống không có nghĩa là chưa áp gì** — trên `hub_dev` có 49 file đã áp bằng tay trước khi có sổ; (b) migration **không** được khai vào `ops.job_schedule` (nó không có nhịp; khai vào đó là bật một cảnh báo "quá hạn" sáng mỗi ngày, và cảnh báo lúc nào cũng sáng là cảnh báo đã chết); (c) mọi migration phải giữ hình dạng `begin;` … `commit;` — bộ chạy chèn câu ghi sổ vào ngay trước `commit;` của chính file và **từ chối file lạ**; file buộc phải chạy ngoài transaction thì khai tường minh bằng `-- migrate:khong-transaction`.
+
+## 4c. RB-12 — chạy bộ kiểm thử cơ sở dữ liệu (từ 02/08/2026)
+
+**Bộ kiểm thử có database riêng.** `hub_test`, dựng lại từ đúng bộ migration + đúng `seed.mjs`; `DATABASE_URL` của mọi lượt test tự đổi tên sang nó. `tools/run-db-tests.sh` **từ chối chạy** nếu tên database không dạng `_test`. Trước 02/08/2026 bộ test viết chung sổ `ops.job_runs` với vận hành, nên `ops.v_job_health` và dải "Quét đêm qua" trên buồng lái được nuôi bằng dấu chân của bài test — đo được: MỘT lượt `vitest run` đẩy `ops.job_runs` trên `hub_dev` từ 446 lên 451. Sau khi tách: 0 → 0 và sequence đứng yên, trong khi sequence của `hub_test` chạy 1 → 20.
+
+```bash
+# CI (đã cắm trong .github/workflows/ci.yml)
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_test ./tools/run-db-tests.sh
+
+# Máy dev Windows: không có psql trên PATH, Postgres nằm trong container
+HUB_PSQL="docker exec -i pg_hub psql" \
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_pgtap_test \
+bash tools/run-db-tests.sh
+#   ↑ host trong DATABASE_URL là góc nhìn của CONTAINER (5432), không phải cổng 5434 đã publish
+
+# Chốt mốc mới sau khi CỐ Ý bớt assertion (phải gõ tay, không tự động)
+HUB_TAP_KET_QUA=/tmp/tap.tsv ... bash tools/run-db-tests.sh
+node tools/pgtap-plan-check.mjs --ket-qua /tmp/tap.tsv --cap-nhat
+```
+
+`vitest` không cần lệnh chuẩn bị nào: `DATABASE_URL=…/hub_dev npx vitest run` vẫn gõ như cũ, database test tự dựng (nguội 3,5 s một lần; ấm 80–90 ms nhờ dấu vân băm nội dung migrations + seed).
+
+**Mốc `tools/pgtap-moc.tsv` là bánh cóc:** ghi `plan` của **từng file** (hiện: **832 assertion / 49 file**). Viết thêm assertion thì mốc tự nâng và thành một diff trong PR; viết bớt thì cổng đỏ và hạ mốc phải gõ `--cap-nhat` ra tay. Câu "mọi nghiệm thu lịch job phải chạy trên database sạch" từ nay **có cổng máy cưỡng chế**, không còn là một dòng dặn dò.
 
 ## 5. Drill
 
@@ -73,7 +114,7 @@ Dev 1 / dev 2 luân phiên tuần (tên người: MD-04, khóa trong go-live che
 5. Pháp lý: DPIA (gồm MD-02 residency) · đồng thuận kép đủ · mẫu M3 duyệt — *đầu mối pháp lý*
 6. Quản trị: MD-01 quy trình tài khoản + màn hình GVCN reset · MD-03 nội quy điện thoại · MD-04 tên người trực · MD-06 tài khoản hạ tầng tên tổ chức — *Chủ tịch*
 7. Con người: GVCN tập huấn + tự check-in 1 tuần · data champion nắm RB-03/04 · bảng 4 màu in sẵn — *hiệu trưởng*
-8. Vận hành: runbook đầy đủ · M1–M3 nạp sẵn · kênh báo động bắn thử — *SRE-role*
+8. Vận hành: runbook đầy đủ · M1–M3 nạp sẵn · kênh báo động bắn thử · **RB-11 đã chạy thật một lượt trên máy chủ đích** (`migrate.mjs status` mã thoát 0, sổ `ops.schema_migrations` khớp số file trong kho) — *SRE-role*
 
 ## 8. Kế hoạch rút lui
 

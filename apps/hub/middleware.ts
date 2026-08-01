@@ -10,6 +10,7 @@ import {
   SESSION_COOKIE,
   peekSessionDeadlines,
   shouldRenewSession,
+  sessionCookieOptionsFor,
 } from "../../packages/core/auth-adapter/session.ts";
 
 // apps/hub/middleware.ts — hai việc, chạy trước mọi request:
@@ -96,7 +97,7 @@ export async function middleware(req: NextRequest) {
         const headers = new Headers(req.headers);
         headers.set("cookie", cookieHeaderWithoutSession(req));
         res = NextResponse.next({ request: { headers } });
-        res.cookies.set(SESSION_COOKIE.name, "", { ...SESSION_COOKIE.options, maxAge: 0 });
+        res.cookies.set(SESSION_COOKIE.name, "", { ...sessionCookieOptionsFor(req.url), maxAge: 0 });
       }
       // 503/429/không gọi được: im lặng bỏ qua — token cũ vẫn còn hạn.
     }

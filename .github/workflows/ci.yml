@@ -141,12 +141,31 @@ jobs:
       - name: Cài psql client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
 
-      - name: Chạy migrations + fixtures + pgTAP
+      # Ba cổng trong một bước (xem chú thích đầu tools/run-db-tests.sh):
+      #   1. `not ok` · 2. chạy ít assertion hơn `plan(N)` · 3. tụt so với
+      #   tools/pgtap-moc.tsv (mốc từng file, chống chuyện xoá kiểm chứng rồi sửa
+      #   plan cho khớp, và chống chuyện một file test biến mất không ai hay).
+      # Tên database BẮT BUỘC kết thúc bằng _test — script tự từ chối nếu không,
+      # để không ai lỡ chĩa nó vào một database đang phục vụ (nợ #41).
+      - name: Chạy migrations + fixtures + pgTAP + cổng mốc
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/hub_test
         run: |
           chmod +x tools/run-db-tests.sh
           ./tools/run-db-tests.sh
+
+      # Mốc là bánh cóc: viết thêm assertion thì nó tự nâng. In diff ra đây để người
+      # đọc log biết mình cần commit file mốc mới — KHÔNG fail, vì chặn một PR chỉ vì
+      # nó viết THÊM test là cách nhanh nhất để cổng bị gỡ.
+      - name: Mốc pgTAP có tự nâng không
+        if: always()
+        run: |
+          if ! git diff --quiet -- tools/pgtap-moc.tsv; then
+            echo "::notice::tools/pgtap-moc.tsv vừa tự nâng — nhớ commit file này."
+            git --no-pager diff -- tools/pgtap-moc.tsv
+          else
+            echo "Mốc không đổi."
+          fi
 
       - name: Diff schema thực tế với migration files (§2)
         env:
@@ -174,16 +193,21 @@ jobs:
           fi
           echo "OK: chạy lại migration cho ra schema y hệt"
 
-      # THỨ TỰ BẮT BUỘC: migrations → pgTAP (tự rollback) → diff schema → seed → vitest.
-      # Seed phải nằm SAU bước diff: nó gieo dữ liệu chứ không đổi schema, nhưng
-      # chạy trước thì mọi lỗi seed lại hiện ra dưới dạng "lệch schema" khó đọc.
-      # Và phải nằm TRƯỚC vitest: tests/helpers/db.ts:seedPresent() tìm học sinh
-      # Minh (70000000-…-0001) — dòng đó CHỈ do seed.mjs tạo, fixture pgTAP chạy
-      # trong transaction rồi rollback nên không để lại gì.
-      - name: Gieo dữ liệu nền cho lớp test TypeScript
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/hub_test
-        run: pnpm db:seed
+      # THỨ TỰ BẮT BUỘC: migrations → pgTAP (tự rollback) → diff schema → vitest.
+      #
+      # KHÔNG còn bước `pnpm db:seed` riêng ở đây (bỏ 02/08/2026, nợ #41): từ nay
+      # `tests/global-setup-db.ts` tự dựng lại `hub_test` từ migrations + seed ngay
+      # trước khi worker đầu tiên mở pool. Hai lý do, cả hai đều là sửa lỗi chứ không
+      # phải dọn dẹp:
+      #   · Bản `hub_test` mà pgTAP để lại có `test_support.login_as()` — một hàm đóng
+      #     vai người khác, CẤP CHO PUBLIC (xem lời cảnh báo đầu seed.mjs). Chạy lớp
+      #     test phân quyền trên một database có sẵn cửa hậu đó là tự làm mờ chính thứ
+      #     mình đang đo. Fixture chỉ rollback phần DỮ LIỆU; định nghĩa hàm thì ở lại.
+      #   · Cùng một đường dựng database cho CI và cho máy dev, nên "xanh trên máy tôi"
+      #     và "xanh trên CI" nói về cùng một hình dạng database.
+      # Trên máy dev, bước này rẻ: có dấu vân trong `test_meta.dau_van`, khớp thì bỏ
+      # qua sau đúng một truy vấn (~80ms đo được). Trên runner sạch thì nó dựng thật,
+      # ~4 giây cho 50 migration + seed.
 
       # CI=1 tắt chế độ "tự bỏ qua khi chưa có DB" trong tests/helpers/db.ts.
       # Không có biến này, thiếu DB hay thiếu seed đều cho ra "skipped" + exit 0:

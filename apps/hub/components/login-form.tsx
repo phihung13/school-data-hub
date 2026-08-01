@@ -7,7 +7,8 @@
 //   đăng nhập, không chọn tab) + một nút Zalo riêng cho phụ huynh.
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Mascot } from "./mascot";
 import { LoginParallaxBg } from "./login-parallax-bg";
 import { resolveThenPath } from "@/lib/trpc-client";
@@ -27,10 +28,48 @@ export function LoginForm({
   /** Đích đã hẹn trong `?then=` (app/login/page.tsx đã lọc). Không có thì về /home. */
   then?: string | null;
 }) {
+  const router = useRouter();
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  /**
+   * Trạng thái CỬA của bản thử (nợ #19 — xem packages/core/auth-adapter/dev-gate.ts).
+   * `unknown` là lúc chưa hỏi xong máy chủ: vẽ khung xám thay vì vẽ danh sách tài khoản
+   * rồi giật đi, và cũng đừng vẽ ô nhập mã cho một người có thể không cần nhập gì cả.
+   */
+  const [gate, setGate] = useState<"unknown" | "absent" | "misconfigured" | "locked" | "open">("unknown");
+  const [secret, setSecret] = useState("");
+  /**
+   * Tài khoản người dùng đã bấm TRƯỚC khi cửa hiện ra. Giữ lại để mở khoá xong là vào
+   * thẳng, không bắt bấm lại — đây chính là chỗ biến "hai lần thao tác" thành ĐÚNG MỘT
+   * lần nhập mã, thứ mà người demo bằng điện thoại sẽ cảm nhận được.
+   */
+  const [pendingAccount, setPendingAccount] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Hỏi trạng thái cửa MỘT lần khi mở trang. 404 = cửa không tồn tại (production):
+    // không vẽ khối tài khoản thử nữa. 503 = máy chủ chưa đặt bí mật: nói thẳng cho
+    // người vận hành, đừng để họ bấm rồi đoán.
+    let alive = true;
+    fetch("/api/auth/dev-gate")
+      .then(async (res) => {
+        if (!alive) return;
+        if (res.status === 404) return setGate("absent");
+        const body = await res.json().catch(() => ({}));
+        setGate(body.state === "open" ? "open" : body.state === "misconfigured" ? "misconfigured" : "locked");
+        if (res.status === 503 && body.error) setError(body.error);
+      })
+      .catch(() => {
+        // Mạng hỏng: coi như còn khoá. Đoán "mở" ở đây là vẽ ra một danh sách tài khoản
+        // bấm vào đâu cũng 401 — thà hiện ô nhập mã, bấm vào là biết ngay đúng hay sai.
+        if (alive) setGate("locked");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   /**
    * Lọc LẦN HAI ngay tại client. Trang cha đã lọc rồi, nhưng đây là biến duy nhất trong màn
@@ -59,12 +98,62 @@ export function LoginForm({
     });
     if (!res.ok) {
       setLoading(false);
+      // Cửa vừa đóng lại giữa chừng (cookie hết hạn, hoặc bí mật vừa được đổi để thu
+      // hồi một máy). Không hiện câu "đã seed dữ liệu chưa" — đó là câu trả lời cho
+      // một câu hỏi khác, và nó sẽ khiến người dùng đi sửa nhầm chỗ.
+      const body = await res.json().catch(() => ({} as { state?: string; error?: string }));
+      if (res.status === 401 && body.state === "locked") {
+        setGate("locked");
+        setPendingAccount(authUid);
+        setError(null);
+        return;
+      }
+      if (res.status === 503 || res.status === 404) {
+        setGate(res.status === 404 ? "absent" : "misconfigured");
+        setError(body.error ?? "Cửa đăng nhập thử không dùng được.");
+        return;
+      }
       setError("Đăng nhập thất bại — đã seed dữ liệu dev chưa?");
       return;
     }
     // KHÔNG tắt `loading` ở nhánh thành công: trang đang được nạp lại, mở khoá các nút lúc này
     // chỉ mời người dùng bấm lần hai và tạo thêm một phiên nữa.
     goAfterLogin();
+  }
+
+  /** Nhập mã mở khoá bản thử. Đúng thì máy nhớ 30 ngày — không hỏi lại ở lần sau. */
+  async function unlockGate(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/auth/dev-gate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ secret }),
+    });
+    if (!res.ok) {
+      setLoading(false);
+      const body = await res.json().catch(() => ({} as { error?: string }));
+      setError(body.error ?? "Mã mở khoá không đúng.");
+      return;
+    }
+    setSecret(""); // không giữ bí mật trong state lâu hơn mức cần thiết
+    setGate("open");
+    // Đã bấm một tài khoản trước khi cửa hiện ra thì đi tiếp luôn. `loading` cố ý KHÔNG
+    // tắt ở nhánh này: trang sắp được nạp lại.
+    if (pendingAccount) {
+      const authUid = pendingAccount;
+      setPendingAccount(null);
+      await loginDev(authUid);
+      return;
+    }
+    // Từ 02/08/2026 danh sách tài khoản KHÔNG còn đi kèm trang lúc chưa mở khoá (xem
+    // app/login/page.tsx). Mở khoá xong thì prop `devAccounts` trong tay vẫn là mảng
+    // rỗng của lần dựng trước — phải xin máy chủ dựng lại trang, lúc này cookie cửa đã
+    // có nên nó gửi kèm danh sách. Không có dòng này thì cửa mở ra một khối trống,
+    // đúng kiểu hỏng im lặng: người dùng nhập đúng mã mà màn hình vẫn không có gì.
+    router.refresh();
+    setLoading(false);
   }
 
   async function redeemCode(e: React.FormEvent) {
@@ -115,7 +204,15 @@ export function LoginForm({
             </div>
           )}
 
-          <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />
+          {/* Bốn trạng thái cửa, bốn thứ khác nhau hiện ra — không có nhánh nào vẽ danh
+              sách tài khoản mà bấm vào lại báo lỗi. `absent` (production) bỏ hẳn khối
+              này: khi đó lối vào duy nhất là Zalo cho phụ huynh, đúng như thiết kế. */}
+          {gate === "unknown" && <StaffPanelSkeleton />}
+          {gate === "locked" && (
+            <UnlockPanel secret={secret} setSecret={setSecret} loading={loading} onSubmit={unlockGate} />
+          )}
+          {gate === "misconfigured" && <GateClosedNotice />}
+          {gate === "open" && <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />}
 
           <div className="flex items-center gap-2.5">
             <span className="h-px flex-1 bg-[#EFE9DC]" />
@@ -223,6 +320,86 @@ function StaffPanel({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cửa bản thử (nợ #19). Ba khối dưới đây thay chỗ của StaffPanel tuỳ trạng thái cửa.
+// ---------------------------------------------------------------------------
+
+/**
+ * Ô nhập mã mở khoá. Nhập MỘT lần trên mỗi máy, máy nhớ 30 ngày bằng một cookie riêng.
+ *
+ * Vì sao có màn này thay vì "chỉ cho localhost": người demo chính đứng ngoài trường,
+ * cầm điện thoại, đi qua tên miền công khai — chặn theo địa chỉ máy là cắt đúng người
+ * cần đi qua (và lại không chặn được ai, vì đường hầm làm mọi request trông như đến
+ * từ chính máy chủ). Xem packages/core/auth-adapter/dev-gate.ts.
+ */
+function UnlockPanel({
+  secret,
+  setSecret,
+  loading,
+  onSubmit,
+}: {
+  secret: string;
+  setSecret: (v: string) => void;
+  loading: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-2xl bg-chip/60 p-4">
+      <p className="flex items-center gap-2 text-[11px] font-bold text-caption">
+        <span className="rounded bg-chip px-2 py-0.5 text-[10px] font-black uppercase text-caption">DEV</span>
+        Bản đang thử — cần mã mở khoá
+      </p>
+      {/* <label htmlFor> THẬT, không dùng placeholder làm nhãn: placeholder biến mất
+          ngay khi gõ ký tự đầu (WCAG 3.3.2), và trình đọc màn hình chỉ nghe ô trống. */}
+      <label htmlFor="ma-mo-khoa-ban-thu" className="text-[11.5px] font-black text-muted">
+        Mã mở khoá
+      </label>
+      <input
+        id="ma-mo-khoa-ban-thu"
+        type="password"
+        value={secret}
+        onChange={(e) => setSecret(e.target.value)}
+        // `current-password` để trình duyệt/điện thoại lưu hộ: người demo nhập một lần
+        // trên máy này, lần sau cookie đã nhớ, còn máy mới thì trình duyệt gợi ý lại.
+        autoComplete="current-password"
+        className="rounded-xl border border-line px-4 py-3 text-[15px] font-bold text-navy focus:border-navy"
+      />
+      <button
+        type="submit"
+        disabled={loading || secret.length === 0}
+        className="rounded-[15px] bg-gradient-to-br from-navy to-navy-light py-3.5 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.3)] disabled:opacity-50"
+      >
+        Mở khoá
+      </button>
+      <p className="text-[11px] leading-[1.5] text-caption">
+        Nhập một lần, máy này nhớ 30 ngày. Chưa có mã thì hỏi nhóm kỹ thuật của trường.
+      </p>
+    </form>
+  );
+}
+
+/** Máy chủ chưa đặt bí mật ⇒ cửa đóng với tất cả. Nói thẳng, đừng để người dùng đoán. */
+function GateClosedNotice() {
+  return (
+    <div role="status" className="rounded-2xl border border-line bg-chip/60 p-4 text-[12px] leading-[1.55] text-muted">
+      <b className="text-ink">Cửa đăng nhập thử đang đóng.</b> Máy chủ chưa được cấu hình mã mở khoá,
+      nên không tài khoản thử nào dùng được — kể cả từ máy của người quản trị. Đây là trạng thái
+      mặc định có chủ ý.
+    </div>
+  );
+}
+
+/** Khoảng chờ trong lúc hỏi trạng thái cửa. Giữ đúng chiều cao để trang không nhảy. */
+function StaffPanelSkeleton() {
+  return (
+    <div aria-hidden className="flex flex-col gap-2.5">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-14 animate-pulse rounded-[15px] bg-chip/70" />
+      ))}
     </div>
   );
 }

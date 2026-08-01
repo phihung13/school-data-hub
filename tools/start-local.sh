@@ -162,6 +162,59 @@ if [ -n "$CHET" ]; then
 fi
 ok "$(printf '%s' "$CHUNKS" | grep -c .) tệp JS đều tải được — trang bấm được thật"
 
+# ── 2c. Cửa đăng nhập tạm có THẬT SỰ khoá không ─────────────────────────────
+#
+# Vì sao bước này tồn tại: tới 02/08/2026, /api/auth/dev-login nhận một mã tài
+# khoản mẫu rồi trả thẳng cookie phiên đúng vai đó — không mật khẩu, không kiểm
+# gì cả. Route đó nằm sau tên miền công khai, và dãy mã mẫu đoán được bằng mắt.
+# Đo thật hôm 30/07/2026: một lượt POST từ ngoài Internet lấy được phiên hiệu
+# trưởng, nhìn được toàn bộ học sinh cơ sở.
+#
+# Nay cửa đã khoá bằng một mã đặt trong apps/hub/.env.local. Bước này KHÔNG tin
+# vào việc đó — nó tự đi thử: gõ cửa mà không cầm mã, và đòi bị từ chối. Một cái
+# khoá chưa từng bị thử là một cái khoá chưa biết có khoá hay không.
+echo "── 2c. Cửa đăng nhập tạm có khoá không"
+DEV_ENV_FILE="$ROOT/apps/hub/.env.local"
+DEV_SECRET="$(sed -n 's/^DEV_LOGIN_SECRET=//p' "$DEV_ENV_FILE" 2>/dev/null | head -1 | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+TK_THU="90000000-0000-0000-0000-000000000007"   # Hùng (quản trị) — vai nặng nhất
+
+go_cua() { # $1 = địa chỉ gốc, $2 = mã (rỗng = không cầm mã)
+  if [ -n "$2" ]; then
+    curl -s -o /dev/null -w '%{http_code}' -m 10 -X POST "$1/api/auth/dev-login" \
+      -H 'content-type: application/json' -H "x-hub-dev-secret: $2" \
+      -d "{\"authUid\":\"$TK_THU\"}"
+  else
+    curl -s -o /dev/null -w '%{http_code}' -m 10 -X POST "$1/api/auth/dev-login" \
+      -H 'content-type: application/json' -d "{\"authUid\":\"$TK_THU\"}"
+  fi
+}
+
+MA_KHONG="$(go_cua "$HUB_URL" "")"
+if [ "$MA_KHONG" = "200" ]; then
+  fail "CỬA ĐANG MỞ TOANG: gõ cửa không cầm mã vẫn nhận được phiên (HTTP 200)."
+  fail "Ai biết địa chỉ đều tự cấp cho mình vai hiệu trưởng. KHÔNG được nạp dữ liệu thật."
+  fail "chữa: xem apps/hub/app/api/auth/dev-login/route.ts và nợ #19 trong danh-cho-may/DEBT.md"
+  exit 1
+fi
+if [ "$MA_KHONG" = "503" ]; then
+  warn "cửa đóng với TẤT CẢ: chưa đặt DEV_LOGIN_SECRET trong $DEV_ENV_FILE"
+  warn "thêm một dòng DEV_LOGIN_SECRET=<ít nhất 12 ký tự> rồi khởi động lại Hub"
+elif [ "$MA_KHONG" = "401" ]; then
+  ok "không cầm mã thì bị từ chối (401) — đúng"
+  if [ -z "$DEV_SECRET" ]; then
+    warn "không đọc được mã trong $DEV_ENV_FILE nên chưa thử được chiều ngược lại"
+  else
+    MA_DUNG="$(go_cua "$HUB_URL" "$DEV_SECRET")"
+    case "$MA_DUNG" in
+      200) ok "cầm đúng mã thì vào được (200) — cửa khoá đúng chiều, không phải khoá chết" ;;
+      500) warn "mã đúng nhưng chưa dựng được phiên (500) — nhiều khả năng chưa seed dữ liệu dev" ;;
+      *)   fail "cầm đúng mã mà vẫn không vào được (HTTP $MA_DUNG) — cửa đang khoá cả người nhà"; exit 1 ;;
+    esac
+  fi
+else
+  warn "gõ cửa trả HTTP $MA_KHONG — không phải 401 lẫn 200, xem $ROOT/.hub.log"
+fi
+
 echo "── 3. Đường hầm Cloudflare ($PUBLIC_URL)"
 if [ ! -f "$CF_CONFIG" ]; then
   warn "không có $CF_CONFIG — bỏ qua bước này (chỉ chạy được ở local)"
@@ -175,6 +228,20 @@ else
       warn "xem log: $ROOT/.cloudflared.log — Hub vẫn dùng được ở $HUB_URL";
     }
   fi
+
+  # Thử lại đúng phép thử của bước 2c, nhưng TỪ NGOÀI. Đây là con đường mà lỗ hổng
+  # nợ #19 được đo thật hôm 30/07/2026 — và cũng là con đường mà chỉ nó mới nói được
+  # sự thật: đường hầm trỏ về http://localhost:3000, nên mọi request từ Internet tới
+  # Node đều mang địa chỉ nguồn 127.0.0.1. Phép kiểm chạy ở bước 2c không thay thế
+  # được bước này, vì ở bước 2c hai thứ đó trông y hệt nhau.
+  if curl -sf -m 8 "$PUBLIC_URL/login" >/dev/null 2>&1; then
+    NGOAI="$(go_cua "$PUBLIC_URL" "")"
+    if [ "$NGOAI" = "200" ]; then
+      fail "CỬA MỞ TOANG TỪ INTERNET: POST $PUBLIC_URL/api/auth/dev-login không cần mã trả 200"
+      exit 1
+    fi
+    ok "từ Internet gõ cửa không cầm mã cũng bị từ chối (HTTP $NGOAI)"
+  fi
 fi
 
 echo
@@ -182,3 +249,29 @@ echo "Xong. Kiểm nhanh:"
 echo "  Hub local   : $HUB_URL"
 echo "  Hub công khai: $PUBLIC_URL"
 echo "  Test         : DATABASE_URL=$DB_URL npx vitest run"
+echo
+# Đăng nhập đổi cách từ 02/08/2026 (nợ #19) — in ra đây vì người chạy script này là
+# người demo, không phải người đọc mã nguồn.
+echo "Đăng nhập (đổi từ 02/08/2026):"
+echo "  Mở $PUBLIC_URL/login trên máy tính hoặc điện thoại. Màn hình sẽ hỏi MỘT mã mở khoá,"
+echo "  nhập một lần rồi thôi — máy đó nhớ 30 ngày, lần sau vào thẳng danh sách tài khoản thử."
+if [ -n "$DEV_SECRET" ]; then
+  # KHÔNG IN MÃ RA MÀN HÌNH (sửa 02/08/2026, sau khi chính nó rò).
+  #
+  # Bản trước in thẳng `Mã hiện tại: <mã>` cho tiện người demo. Cái giá đo được ngay
+  # trong ngày: mã rơi vào scrollback của mọi cửa sổ terminal, vào log của mọi lượt CI
+  # chạy script này, và vào bản ghi của mọi phiên trợ lý đọc output — một lượt chạy
+  # bình thường là một lượt phát tán. Đây là MẬT KHẨU DÙNG CHUNG, mất là mất cho tất cả,
+  # và thu hồi thì thu hồi hết mọi máy cùng lúc.
+  #
+  # Nay chỉ in CHỖ ĐỂ MÃ và cách tự đọc. Người demo mất thêm một thao tác; đổi lại mã
+  # không còn tự đi ra ngoài mỗi lần ai đó bật máy.
+  echo "  Mã nằm trong: $DEV_ENV_FILE  (dòng DEV_LOGIN_SECRET, file này KHÔNG lên GitHub)"
+  echo "  Xem mã       : grep DEV_LOGIN_SECRET \"$DEV_ENV_FILE\""
+  echo "  Đổi mã       : sửa dòng đó rồi khởi động lại Hub — mọi máy đã mở khoá bị thu hồi ngay."
+else
+  echo "  CHƯA CÓ MÃ. Thêm vào $DEV_ENV_FILE một dòng:"
+  echo "      DEV_LOGIN_SECRET=<chuỗi ít nhất 12 ký tự>"
+  echo "  rồi tắt Hub và chạy lại script này. Chưa có mã thì KHÔNG AI đăng nhập được — đó là"
+  echo "  trạng thái mặc định có chủ ý, không phải lỗi."
+fi

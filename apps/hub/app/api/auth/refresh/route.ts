@@ -19,23 +19,31 @@ import {
   resolveIdentity,
   shouldRenewSession,
   verifySessionToken,
+  sessionCookieOptionsFor,
 } from "@hub/core/auth-adapter";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { describeError, log, newRequestId } from "@/lib/logger";
 
-/** 401 + xoá cookie: phiên này KHÔNG được sống tiếp (hết trần, hoặc tài khoản đã khoá). */
-function denied(reason: string) {
+/**
+ * 401 + xoá cookie: phiên này KHÔNG được sống tiếp (hết trần, hoặc tài khoản đã khoá).
+ *
+ * Nhận `requestUrl` chứ không đọc biến ngoài: thuộc tính cookie lúc XOÁ phải trùng lúc
+ * ĐẶT, nếu không trình duyệt coi là hai cookie khác nhau và giữ nguyên cái cũ. Từ
+ * 02/08/2026 cờ `Secure` suy từ giao thức của chính request (xem sessionCookieOptionsFor),
+ * nên hàm này cũng phải biết request nào đang gọi nó.
+ */
+function denied(reason: string, requestUrl: string) {
   const res = NextResponse.json({ ok: false, reason }, { status: 401 });
-  res.cookies.set(SESSION_COOKIE.name, "", { ...SESSION_COOKIE.options, maxAge: 0 });
+  res.cookies.set(SESSION_COOKIE.name, "", { ...sessionCookieOptionsFor(requestUrl), maxAge: 0 });
   return res;
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const token = cookies().get(SESSION_COOKIE.name)?.value;
-  if (!token) return denied("no-session");
+  if (!token) return denied("no-session", req.url);
 
   const claims = await verifySessionToken(token);
-  if (!claims) return denied("invalid-or-expired");
+  if (!claims) return denied("invalid-or-expired", req.url);
 
   // Chạm trần tuyệt đối (12 giờ) thì không gia hạn nữa — phải đăng nhập lại thật.
   if (!shouldRenewSession(claims)) {
@@ -65,7 +73,7 @@ export async function POST() {
   // đây chính là điểm thi hành "khoá là cắt".
   if (!identity) {
     log("warn", "auth.refresh.denied", { authUid: claims.sub, reason: "inactive-or-missing" });
-    return denied("account-inactive");
+    return denied("account-inactive", req.url);
   }
 
   // Vai và tên lấy LẠI từ DB, không chép từ token cũ: đây cũng là lúc một thay đổi
@@ -78,6 +86,6 @@ export async function POST() {
   });
 
   const res = NextResponse.json({ ok: true, renewed: true });
-  res.cookies.set(SESSION_COOKIE.name, renewed, SESSION_COOKIE.options);
+  res.cookies.set(SESSION_COOKIE.name, renewed, sessionCookieOptionsFor(req.url));
   return res;
 }

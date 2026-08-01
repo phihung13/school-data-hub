@@ -13,3 +13,8 @@ coverage/
 !.env.example
 *.pem
 *.key
+
+# Log của tools/start-local.sh (tiến trình nền) — không thuộc mã nguồn.
+.hub.log
+.hub.err.log
+.cloudflared.log

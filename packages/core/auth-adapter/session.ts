@@ -194,3 +194,31 @@ export const SESSION_COOKIE = {
     path: "/",
   },
 };
+
+/**
+ * Options của cookie phiên cho MỘT request cụ thể.
+ *
+ * Vì sao không dùng thẳng `SESSION_COOKIE.options`: cờ `secure` ở đó suy từ `NODE_ENV`,
+ * mà máy dev hôm nay phục vụ CẢ HAI đường — `http://localhost:3000` và
+ * `https://hub.truongvietanh.com` qua đường hầm Cloudflare. Với `NODE_ENV=development`
+ * thì cookie phiên đi qua đường hầm KHÔNG mang cờ `Secure`; đo được 02/08/2026 bằng
+ * cách đọc cookie jar. Trình duyệt vì thế được phép gửi lại nó trên một request http
+ * tới cùng tên miền — một cookie phiên của hệ dữ liệu trẻ em không việc gì phải đi trên
+ * đường không mã hoá.
+ *
+ * Ngược lại, gắn cứng `secure: true` thì đăng nhập ở `http://localhost:3000` gãy IM
+ * LẶNG: máy chủ trả 200 kèm Set-Cookie, trình duyệt lặng lẽ vứt cookie đi, người dùng
+ * bấm xong vẫn đứng nguyên ở trang đăng nhập, không một dòng lỗi. Đúng cái bẫy mà cửa
+ * `dev-gate` đã gặp và đã lường (xem dev-gate.ts).
+ *
+ * Nên hỏi CHÍNH REQUEST: đi https thì bật `Secure`, còn lại theo `NODE_ENV` như cũ.
+ */
+export function sessionCookieOptionsFor(requestUrl: string | URL | null | undefined) {
+  let isHttps = false;
+  try {
+    if (requestUrl) isHttps = new URL(String(requestUrl)).protocol === "https:";
+  } catch {
+    isHttps = false;
+  }
+  return { ...SESSION_COOKIE.options, secure: SESSION_COOKIE.options.secure || isHttps };
+}

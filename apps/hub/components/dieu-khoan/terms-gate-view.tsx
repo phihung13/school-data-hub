@@ -222,13 +222,25 @@ export function TermsGateView({ displayName }: { displayName: string }) {
     <div className="flex min-h-screen w-full flex-col bg-[#EAEFF6]">
       <MiniAppHeader title="Điều khoản & đồng ý" subtitle={displayName} icon="shield" />
 
-      <MainContent className="mx-auto w-full max-w-2xl flex-1 px-4 py-5 focus:outline-none">
+      {/* `focus:outline-none` đã nằm sẵn trong chính <MainContent> (page-shell.tsx) —
+          khai lại ở đây là một bản sao im lặng: ngày nào page-shell đổi ý, chỗ này vẫn
+          giữ luật cũ mà không ai biết. */}
+      <MainContent className="mx-auto w-full max-w-2xl flex-1 px-4 py-5">
         <h1 className="text-[19px] font-black leading-tight text-navy">
           Trường xin phép bố mẹ trước khi ghi tâm trạng của con
         </h1>
 
-        {/* LUẬT 1 — nói rõ vì sao đang đứng ở đây. */}
-        <p className="mt-2 text-[13px] leading-relaxed text-muted">
+        {/* LUẬT 1 — nói rõ vì sao đang đứng ở đây.
+
+            `text-caption` chứ KHÔNG phải `text-muted` (sửa 02/08/2026). Nền trang này là
+            #EAEFF6 — đậm hơn cả ba mặt nền mà DESIGN-GUIDELINES §11 đem ra đo (#FFFFFF ·
+            #F7F9FC · #F1F4F8), nên hai token xám rơi về hai phía của ngưỡng:
+              muted   #66707D trên #EAEFF6 = 4,35:1  ✗ (chuẩn chữ thường là 4,5:1)
+              caption #5F6B7D trên #EAEFF6 = 4,68:1  ✓
+            Đây không phải chữ trang trí: nó là câu DUY NHẤT trả lời "vì sao tôi đang ở
+            trang này", tức LUẬT 1 của chính file này. Một câu pháp lý mà mờ dưới chuẩn
+            trên màn điện thoại rẻ ngoài nắng thì luật đó không được thi hành. */}
+        <p className="mt-2 text-[13px] leading-relaxed text-caption">
           Bố mẹ đang thấy trang này vì trường chưa nhận được phiếu đồng ý cho con. Xin bố mẹ đọc
           phần bên dưới rồi chọn một trong hai nút ở cuối trang.
         </p>
@@ -319,18 +331,33 @@ export function TermsGateView({ displayName }: { displayName: string }) {
 
         {terms && children.length > 0 && (
           <section className="mt-4 rounded-2xl border-[1.5px] border-navy/15 bg-white p-5">
-            <div className="flex items-start gap-2.5">
+            {/* VÙNG CHẠM CỦA Ô TICK — sửa 02/08/2026.
+
+                Ô tick đo được đúng 20 × 20px (`h-5 w-5`), và nó là CỔNG của nút "Tôi đồng
+                ý": chưa tick thì nút disabled. §11 và WCAG 2.5.5 đòi 44px. Hàng chữ đứng
+                cạnh nó cao ~21px, nên kể cả gộp hai thứ lại thì cả hàng vẫn chưa tới 44px.
+                Một phụ huynh trượt tay ở đây không nhận được phản hồi nào — ô không tick,
+                nút vẫn mờ, và không có gì trên màn hình nói vì sao.
+
+                Cách sửa: biến chính <label> thành hộp bấm cả hàng (`min-h-[44px]`,
+                `py-2.5`). <label htmlFor> đã sẵn có nghĩa "chạm vào chữ = tick ô", nên đây
+                chỉ là nới đúng cái vùng mà hành vi đó VỐN ĐÃ phủ — không thêm một cú bấm
+                mới nào, không đổi một pixel nào của ô tick nhìn thấy. Bọc ô tick trong
+                label thì bỏ được `htmlFor`/`id`, nhưng GIỮ cả hai: trình đọc màn hình cũ
+                đọc nhãn ẩn theo id đáng tin hơn theo cây lồng nhau. */}
+            <label
+              htmlFor="da-doc"
+              className="flex min-h-[44px] cursor-pointer items-center gap-2.5 py-2.5 text-[13px] font-bold leading-relaxed text-ink"
+            >
               <input
                 id="da-doc"
                 type="checkbox"
                 checked={daDoc}
                 onChange={(e) => setDaDoc(e.target.checked)}
-                className="mt-0.5 h-5 w-5 flex-none accent-navy"
+                className="h-5 w-5 flex-none accent-navy"
               />
-              <label htmlFor="da-doc" className="text-[13px] font-bold leading-relaxed text-ink">
-                Tôi đã đọc và hiểu những điều trên.
-              </label>
-            </div>
+              Tôi đã đọc và hiểu những điều trên.
+            </label>
 
             <div className="mt-4 flex flex-wrap gap-2.5">
               <button
@@ -377,12 +404,20 @@ export function TermsGateView({ displayName }: { displayName: string }) {
           </section>
         )}
 
-        {/* Không phải ngõ cụt: luôn có đường về Hub và đường tới hồ sơ (nơi đăng xuất). */}
-        <div className="mt-5 flex flex-wrap gap-4 pb-8 text-[12.5px] font-bold text-navy">
-          <a href="/home" className="underline underline-offset-2">
+        {/* Không phải ngõ cụt: luôn có đường về Hub và đường tới hồ sơ (nơi đăng xuất).
+
+            min-h-[44px] thêm 02/08/2026. Hai liên kết này từng chỉ cao bằng hộp dòng của
+            chữ 12,5px (~19px). Chúng KHÔNG phải hai liên kết trong một câu văn: đây là
+            hai lối ra DUY NHẤT của một trang mà /home tự đẩy tới — trang này không có
+            tab bar Hub (§6 khuôn mini app), và một phụ huynh mở bằng PWA thì cũng không
+            có nút Back của trình duyệt. Trượt tay ở lối ra duy nhất là bị nhốt.
+            `gap-x-4 gap-y-1` thay cho `gap-4`: hai hộp nay cao 44px, dính nhau theo chiều
+            dọc thì khoảng cách 16px cũ thành thừa và đẩy chân trang. */}
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 pb-8 text-[12.5px] font-bold text-navy">
+          <a href="/home" className="flex min-h-[44px] items-center underline underline-offset-2">
             Về trang chủ
           </a>
-          <a href="/ho-so" className="underline underline-offset-2">
+          <a href="/ho-so" className="flex min-h-[44px] items-center underline underline-offset-2">
             Hồ sơ &amp; đăng xuất
           </a>
         </div>

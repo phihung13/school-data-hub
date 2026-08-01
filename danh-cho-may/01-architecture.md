@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 11
+sync-version: 12
 ---
 
 # Architecture — Hub là NỀN TẢNG (Super App + Mini App), không phải một ứng dụng nghiệp vụ
@@ -43,6 +43,8 @@ Supabase Auth UID → core.users → roles → permissions → Mini App
 ```
 
 **CẤM Mini App đọc `auth.users` trực tiếp.** Mọi nghiệp vụ chỉ biết `core.users`; ánh xạ UID ↔ core.users nằm trong adapter auth của platform. Storage (avatar, ảnh check-in, tài liệu, file AI) dùng Supabase Storage, cũng qua adapter.
+
+**Cửa đăng nhập tạm cũng nằm trong adapter, không nằm trong route** (02/08/2026, ADR-028). `packages/core/auth-adapter/dev-gate.ts` giữ **toàn bộ phán quyết** của cửa `dev-login` và cố ý **thuần** — không `next/*`, không Postgres — nên nó test được thẳng và hai route (`/api/auth/dev-login`, `/api/auth/dev-gate`) cùng màn `/login` nói chung một thứ tiếng gồm bốn trạng thái (`absent` / `misconfigured` / `locked` / `open`). Để phán quyết trong route là để ba bản sao của cùng một câu hỏi, và ba bản sao thì sớm muộn trả lời khác nhau — chỗ lệch nằm đúng trên đường "ai vào được hệ". Chi tiết cửa, các phép đo trước/sau và bốn cái bẫy: `06-resilience-security.md` mục 6b.
 
 ## 5. Frontend — MD-07 (ĐÃ CHỐT, ADR-013)
 

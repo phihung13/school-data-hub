@@ -1,0 +1,66 @@
+# tools/pgtap-moc.tsv — MỐC của bộ pgTAP: mỗi dòng là <tên file>\t<số assertion khai trong plan(N)>.
+#
+# Ghi PLAN chứ không ghi số dòng `ok`: plan là con số bài test TỰ KHAI về kích cỡ
+# của mình, nên nó đọc được cả trong một lượt chạy đang đỏ. Còn số `ok` thì tụt theo
+# mọi lỗi tạm thời, và một mốc dao động theo lỗi tạm thời là mốc không ai tin.
+# Chuyện `ok` phải bằng `plan` đã có cổng riêng ngay trong lượt chạy.
+#
+# Đây là bản khai "bộ kiểm thử này lớn chừng nào". `tools/pgtap-plan-check.mjs` so
+# lượt chạy với file này và ĐỎ khi có bài tụt assertion hoặc biến mất — loại hỏng mà
+# pass/fail của chính lượt chạy không bao giờ nói ra (nợ #46).
+#
+# Mốc là BÁNH CÓC: viết thêm assertion thì nó TỰ NÂNG (và file này thành một diff
+# trong PR để có người đọc). Viết BỚT thì cổng đỏ, và muốn hạ mốc phải gõ ra tay:
+#     node tools/pgtap-plan-check.mjs --ket-qua <tsv> --cap-nhat
+# Hạ hàng rào phải là một hành động có tên, không phải một hệ quả phụ.
+#
+# Tổng: 832 assertion trên 49 file.
+0002_core_identity_test.sql	8
+0003_core_rbac_test.sql	8
+0004_attendance_test.sql	7
+0005_care_test.sql	7
+0006_evidence_test.sql	6
+0007_tutor_health_test.sql	6
+0008_staging_ops_test.sql	8
+0009_rls_matrix_test.sql	16
+0010_identity_links_test.sql	11
+0011_source_freshness_test.sql	10
+0012_flag_origin_test.sql	8
+0013_parent_invite_codes_test.sql	9
+0014_mutation_policies_test.sql	12
+0015_my_scopes_view_test.sql	4
+0016_parent_self_lookup_test.sql	5
+0017_checkins_self_update_test.sql	4
+0018_embed_promote_test.sql	11
+0019_embed_generic_capture_test.sql	12
+0020_help_request_details_test.sql	7
+0021_my_guardians_view_test.sql	4
+0022_homeroom_teacher_name_clean_test.sql	4
+0023_principal_scope_test.sql	8
+0023_role_scope_guard_test.sql	9
+0024_rls_gaps_test.sql	14
+0025_checkins_column_grants_test.sql	13
+0026_care_router_test.sql	19
+0028_embed_hardening_test.sql	35
+0029_perf_indexes_test.sql	18
+0030_homeroom_source_test.sql	12
+0031_emotion_retention_test.sql	25
+0033_anonymize_user_test.sql	23
+0034_health_read_audit_test.sql	17
+0035_counselor_notes_scope_test.sql	12
+0036_invite_single_use_test.sql	18
+0037_help_requests_scope_test.sql	13
+0038_checkins_mood_scope_test.sql	20
+0039_flag_engine_test.sql	35
+0040_report_aggregate_test.sql	27
+0041_job_schedule_test.sql	42
+0042_nguong_theo_co_so_test.sql	11
+0043_rule_health_test.sql	37
+0044_mood_chi_tam_ly_test.sql	26
+0045_nap_danh_sach_test.sql	55
+0046_cheo_khoi_test.sql	38
+0046_dieu_khoan_test.sql	45
+0047_duong_keu_cuu_test.sql	25
+0048_nap_mot_dong_la_mot_don_vi_test.sql	34
+0049_chi_tiet_co_test.sql	20
+0050_so_ghi_migration_test.sql	14

@@ -24,7 +24,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { absentSubtitle, cadenceNote, moodClosedText } from "@/components/gvcn-dashboard";
-import { STATUS_CELL } from "@/components/gvcn/student-detail-view";
+import { STATUS_CELL, dayCellLabel } from "@/components/gvcn/student-detail-view";
 import { CHOICE_STYLE } from "@/components/gvcn/class-attendance-view";
 import { checkinRate, rateReason } from "@/components/dieu-hanh/operations-view";
 
@@ -417,5 +417,198 @@ describe("điểm danh lớp: điện thoại không phải kéo ngang để b�
     const picker = src.slice(src.indexOf("function StatusPicker"));
     expect(picker).toContain("gap-1");
     expect(picker, "overflow-hidden dán bốn nút thành một dải liền").not.toContain("overflow-hidden");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. Gói "audit-giao-dien-chay-tron" (02/08/2026) — ba màn dựng SAU đợt rà trước:
+//    /dieu-khoan · năm trạng thái điểm danh · các thay đổi ADR-026 ở màn học sinh.
+//
+// Bốn luật dưới đây đều là lỗi ĐO ĐƯỢC trên bản đang chạy, không phải lo xa.
+// ---------------------------------------------------------------------------
+
+/**
+ * Khung màn có SIDEBAR của nhóm người lớn — nơi luật "một <h1> đổi cỡ theo khổ màn"
+ * được áp. Tách riêng khỏi `ADULT_SCREENS` vì đây là luật của KHUNG, không phải của
+ * từng màn con: sửa một khung là sửa cho năm màn GVCN cùng lúc.
+ *
+ * `tam-ly/tam-ly-shell.tsx` cố ý CHỈ nằm ở luật landmark bên dưới, không nằm ở luật
+ * heading. Không phải bỏ sót: khung đó theo khuôn mini app (§6), tiêu đề app nằm trong
+ * <MiniAppHeader> còn <h1> do chính MÀN CON đặt — đo bằng HTTP thật 02/08/2026, /tam-ly
+ * trả về đúng 1 <h1> ("Việc đang chờ trong cụm") từ cluster-case-list-view. Biến chữ
+ * trong <MiniAppHeader> thành <h1> sẽ tạo HAI <h1> trên chính /tam-ly, và cả trên
+ * /checkin lẫn /can-gap-thay-co vốn dùng chung header đó — đúng cái bẫy mà
+ * tests/unit/a11y-nen.test.ts gọi tên.
+ *
+ * `gvcn-dashboard.tsx` (buồng lái) cũng chỉ nằm ở luật landmark: nó tự dựng khung bằng
+ * hàm `frame()` và <h1> chỉ có ở nhánh CÓ DỮ LIỆU, còn hai nhánh đang-tải/lỗi thì chưa —
+ * một món nợ đã biết, ghi ra đây thay vì để bài test im lặng đi qua.
+ */
+const SIDEBAR_SHELLS = ["gvcn/gvcn-shell.tsx", "dieu-hanh/operations-shell.tsx"];
+
+/** Mọi khung màn người lớn — tất cả đều phải có đích cho đường tắt bàn phím. */
+const ADULT_FRAMES = [...SIDEBAR_SHELLS, "tam-ly/tam-ly-shell.tsx", "gvcn-dashboard.tsx"];
+
+describe("landmark: đường tắt 'Bỏ qua menu' phải có đích trên màn người lớn", () => {
+  // Đo 02/08/2026 bằng HTTP thật (phiên Cô Vân): trong HTML của /gvcn, /gvcn/diem-danh
+  // và /gvcn/hoc-sinh/<id>, chuỗi "skip-link" xuất hiện 2 lần còn `id="noi-dung"` xuất
+  // hiện 0 lần. Đường tắt là phần tử bấm được ĐẦU TIÊN của trang; nó in một lời hứa lên
+  // màn hình rồi không đi tới đâu. Không lỗi, không log — người dùng chuột không bao giờ
+  // chạm tới nên không ai báo.
+  it.each(ADULT_FRAMES)("%s bọc nội dung bằng <MainContent>", (file) => {
+    const src = read(file);
+    expect(src, `${file} không import MainContent`).toMatch(
+      /import \{ MainContent \} from "\.{1,2}\/page-shell"/,
+    );
+    expect(src).toMatch(/<MainContent\b/);
+  });
+
+  it.each(ADULT_FRAMES)("%s: sidebar và tab bar nằm NGOÀI <MainContent>", (file) => {
+    // Menu nằm trong vùng nội dung thì "bỏ qua menu" chẳng bỏ qua được gì.
+    const src = read(file);
+    const from = src.indexOf("<MainContent");
+    const to = src.indexOf("</MainContent>");
+    expect(to, `${file}: không thấy </MainContent>`).toBeGreaterThan(from);
+    const region = src.slice(from, to);
+    expect(region, `${file}: HubSidebar nằm trong <main>`).not.toMatch(/<HubSidebar\b/);
+    expect(region, `${file}: HubTabBar nằm trong <main>`).not.toMatch(/<HubTabBar\b/);
+  });
+});
+
+describe("tiêu đề trang người lớn không biến mất ở khổ điện thoại", () => {
+  it.each(SIDEBAR_SHELLS)("%s: đúng MỘT <h1>, và nằm trong <MainContent>", (file) => {
+    const src = read(file);
+    expect((src.match(/<h1[\s>]/g) ?? []).length, `${file}`).toBe(1);
+    const region = src.slice(src.indexOf("<MainContent"), src.indexOf("</MainContent>"));
+    expect(region, `${file}: <h1> nằm ngoài vùng nội dung`).toMatch(/<h1[\s>]/);
+  });
+
+  it.each(SIDEBAR_SHELLS)("%s: <h1> không nằm trong nhánh chỉ hiện từ md trở lên", (file) => {
+    // ĐÂY là lỗi thật đã sửa: <h1> nằm trong `<div className="hidden … md:flex">`, nên ở
+    // 375px — khổ màn của một cô đứng trong lớp cầm điện thoại, và của một hiệu trưởng
+    // đứng ngoài sân — nó là display:none, mất khỏi cả mắt LẪN cây trợ năng. Thứ nhìn
+    // thấy khi đó là một <div> trong thanh trên: trình đọc màn hình mở trang ra không có
+    // heading nào để biết đây là trang gì.
+    const src = read(file);
+    const h1 = src.indexOf("<h1");
+    // Cửa sổ 400 ký tự NGƯỢC lên trên: đủ trùm thẻ bọc gần nhất của <h1> trong cả hai
+    // khung. Đo thô, nhưng sai theo chiều AN TOÀN — thẻ bọc xa hơn cửa sổ thì luật này
+    // không bắt được, chứ không bao giờ báo xanh cho một <h1> đang bị ẩn.
+    const before = src.slice(Math.max(0, h1 - 400), h1);
+    expect(before, `${file}: <h1> nằm sau một nhánh "hidden … md:"`).not.toMatch(/\bhidden\b[^"]*\bmd:/);
+  });
+
+  it.each(SIDEBAR_SHELLS)("%s: tiêu đề chỉ in MỘT lần", (file) => {
+    // Bản cũ in `{title}` hai lần — một <div> cho điện thoại, một <h1> cho máy tính —
+    // và bản là heading chính là bản bị ẩn. Hai bản của cùng một chuỗi luôn kết thúc như
+    // vậy: cái đúng luật nằm ở nhánh không ai nhìn thấy.
+    const printed = (read(file).match(/>\s*\{title\}/g) ?? []).length;
+    expect(printed, `${file} in {title} ${printed} lần`).toBe(1);
+  });
+});
+
+describe("/dieu-khoan: nền trang đậm hơn ba mặt nền mà §11 đem ra đo", () => {
+  const src = read("dieu-khoan/terms-gate-view.tsx");
+  const tailwind = readFileSync(join(repoRoot, "apps", "hub", "tailwind.config.ts"), "utf8");
+  const token = (name: string) =>
+    new RegExp(`\\b${name}:\\s*"(#[0-9A-Fa-f]{6})"`).exec(tailwind)?.[1] ?? "";
+  const pageBg = /bg-\[(#[0-9A-Fa-f]{6})\]/.exec(src)?.[1] ?? "";
+
+  it("nền trang vẫn là mã màu đã được đem đi đo", () => {
+    // Đổi nền mà không đo lại là cách hai token xám âm thầm rơi xuống dưới ngưỡng.
+    expect(pageBg).toBe("#EAEFF6");
+  });
+
+  it("`muted` KHÔNG đạt trên nền này, `caption` thì đạt — đây là lý do có luật dưới", () => {
+    // §11 đo trên #FFFFFF · #F7F9FC · #F1F4F8. Nền của màn này đậm hơn cả ba, nên hai
+    // token rơi về hai phía của ngưỡng 4,5:1 — chuyện không thấy được nếu chỉ tin token.
+    expect(contrast(token("muted"), pageBg)).toBeLessThan(4.5);
+    expect(contrast(token("caption"), pageBg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("câu 'vì sao bố mẹ đang đứng ở đây' đọc được trên nền trang", () => {
+    // Câu ngay sau <h1> là LUẬT 1 của chính file terms-gate-view: nó là chỗ DUY NHẤT trả
+    // lời vì sao phụ huynh bị đưa tới một trang pháp lý. Một câu như thế mà mờ dưới chuẩn
+    // trên màn điện thoại rẻ ngoài nắng thì luật đó không được thi hành.
+    const after = src.slice(src.indexOf("</h1>"));
+    const cls = /<p className="([^"]+)"/.exec(after)?.[1] ?? "";
+    const name = /\btext-(caption2?|muted2?|ink|navy)\b/.exec(cls)?.[1] ?? "";
+    expect(name, `câu đầu sau </h1> dùng lớp: ${cls}`).not.toBe("");
+    const hex = name === "ink" ? token("ink") : name === "navy" ? "#0A2A5E" : token(name);
+    const ratio = contrast(hex, pageBg);
+    expect(ratio, `text-${name} = ${hex} trên ${pageBg} chỉ đạt ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
+      4.5,
+    );
+  });
+});
+
+describe("/dieu-khoan: mọi đích bấm đều ≥44px — kể cả những đích không phải <button>", () => {
+  const src = read("dieu-khoan/terms-gate-view.tsx");
+
+  it("ô tick 'Tôi đã đọc và hiểu' có vùng chạm 44px", () => {
+    // Ô tick đo được 20 × 20px (`h-5 w-5`) và nó là CỔNG của nút "Tôi đồng ý". Hàng chữ
+    // cạnh nó cao ~21px, nên gộp lại vẫn chưa tới 44px (§11, WCAG 2.5.5). Vùng chạm nay
+    // nằm trên <label htmlFor> — thứ vốn đã có nghĩa "chạm vào chữ = tick ô".
+    const tag = /<label[^>]*htmlFor="da-doc"[^>]*>/.exec(src)?.[0] ?? "";
+    expect(tag, "không tìm thấy <label htmlFor=\"da-doc\">").not.toBe("");
+    expect(declares44(tag), `label ô tick: ${tag}`).toBe(true);
+  });
+
+  it("hai lối ra ở chân trang đều ≥44px", () => {
+    // Đây KHÔNG phải hai liên kết trong một câu văn: /home tự đẩy phụ huynh tới trang
+    // này, trang này không có tab bar Hub (§6), và bản PWA không có nút Back trình duyệt.
+    // Trượt tay ở lối ra duy nhất là bị nhốt.
+    const links = src.match(/<a\s[^>]*>/g) ?? [];
+    expect(links.length, "màn này phải còn ít nhất hai đường ra").toBeGreaterThanOrEqual(2);
+    const small = links.filter((t) => !declares44(t)).map((t) => t.replace(/\s+/g, " "));
+    expect(small, `còn ${small.length} liên kết chưa khai 44px`).toEqual([]);
+  });
+});
+
+describe("ô lịch: cuối tuần KHÔNG được đọc giống ngày học chưa ai ghi", () => {
+  // 2026-08-01 là thứ Bảy (weekdayIndex 5), 2026-07-31 là thứ Sáu (4). Bản trước trả về
+  // ĐÚNG MỘT câu — "chưa có dữ liệu" — cho cả hai, trong khi chú thích đầu file hứa
+  // ngược lại. Khác biệt duy nhất chỉ dành cho mắt và rất mờ: nền #F7F9FC so với #FFFFFF
+  // = 1,04:1, viền nét đứt #D8DFE9 = 1,34:1. Cho tai thì không có gì.
+  it("hai loại ô rỗng cho hai câu khác nhau", () => {
+    const sat = dayCellLabel("2026-08-01", null);
+    const fri = dayCellLabel("2026-07-31", null);
+    expect(sat).not.toBe(fri);
+    expect(fri).toContain("chưa có dữ liệu");
+    expect(sat, "thứ Bảy không phải một ngày chưa ai điểm danh").not.toContain("chưa có dữ liệu");
+    expect(sat).toContain("không phải ngày học");
+  });
+
+  it("ngày cuối tuần CÓ dòng điểm danh vẫn đọc ra trạng thái thật", () => {
+    // Trường có buổi học bù thứ Bảy là chuyện thật. Luật trên chỉ được áp cho ô RỖNG.
+    const sat = dayCellLabel("2026-08-01", {
+      occurredOn: "2026-08-01",
+      status: "present",
+      checkedInAt: null,
+      source: "teacher",
+      mood: null,
+    } as never);
+    expect(sat).toContain("có mặt");
+    expect(sat).not.toContain("không phải ngày học");
+  });
+
+  it("ô cuối tuần rỗng không vẽ icon 'Chưa điểm danh'", () => {
+    // Trước 02/08 nó in `remove` — đúng cái icon mà chú giải ngay dưới lưới gọi tên là
+    // "Chưa điểm danh". Vẽ một tín hiệu cho một ngày không có tín hiệu nào là nói SAI,
+    // không phải nói thiếu.
+    const cell = read("gvcn/student-detail-view.tsx");
+    const from = cell.indexOf("function DayCell");
+    const block = cell.slice(from, cell.indexOf("function statusWord"));
+    expect(block).toMatch(/\{\(tone \|\| !weekend\) &&/);
+  });
+});
+
+describe("dải màu dày một cạnh: mẫu bị cấm, và đã sửa ở hai màn này", () => {
+  // gvcn-dashboard.tsx CÒN ba chỗ (`urgencyPresentation`) và cố ý nằm ngoài luật này:
+  // ở đó `borderClass` là một giá trị XUẤT RA, đang được tests/unit/gvcn-trang-thai-quet
+  // đối chiếu, nên đổi nó là việc của một gói khác chứ không phải một dòng sửa kèm.
+  // Nói ra ở đây để lần sau không ai tưởng buồng lái đã sạch.
+  it.each(["gvcn/student-detail-view.tsx", "help-request-view.tsx"])("%s không còn border-l dày", (file) => {
+    expect(read(file), `${file} còn dải màu dày một cạnh`).not.toMatch(/border-l-\[\d/);
   });
 });

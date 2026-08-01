@@ -181,17 +181,33 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
         ],
       ),
     );
+    // LẬT CHIỀU 02/08/2026 (migration `0049`, nợ DEBT #39) — không xoá ca, chỉ đổi
+    // đúng thứ nó khẳng định. Bản cũ chọn `detail` dưới phiên cô Lan rồi khẳng định
+    // "cái cô đọc được chỉ là SỐ ĐẾM". Nó xanh vì cô ĐỌC ĐƯỢC cột đó — mà chính việc
+    // cô đọc được là khe hở #39: `detail` của cờ E_MOOD chở `negative_days` /
+    // `negative_streak` / `nguong` thẳng tới phiên của cô. `0049` thu quyền SELECT
+    // cột đó khỏi `authenticated`, nên câu cũ nay ném 42501.
+    //
+    // Vế PHẢI GIỮ (cô biết CÓ CHUYỆN) nay đo bằng các cột cô còn đọc được; vế PHẢI
+    // CẮT (không đọc CHUYỆN GÌ) nay mạnh hơn hẳn: Postgres từ chối thẳng.
+    // Phép kiểm hình dạng `detail` (bốn khoá số, hợp đồng với 0039) chuyển sang
+    // `tests/db/flags-detail.test.ts` + pgTAP `0049`, chỗ đọc được qua cửa hợp lệ
+    // của tâm lý cụm.
     const { rows } = await asUser(DEV.gvcn, (c) =>
-      c.query<{ detail: Record<string, unknown> }>(
-        "select detail from care.flags where student_id = $1 and rule_code = 'E_MOOD' and as_of_date = $2::date",
+      c.query<{ rule_code: string; origin: string }>(
+        `select rule_code, origin from care.flags
+          where student_id = $1 and rule_code = 'E_MOOD' and as_of_date = $2::date`,
         [FIXTURE.studentMinh, NGAY_DO],
       ),
     );
     expect(rows).toHaveLength(1);
-    // Và cái cô đọc được chỉ là SỐ ĐẾM: không khoá nào chở lời em.
-    expect(Object.keys(rows[0]?.detail ?? {}).sort()).toEqual(
-      ["mode", "negative_days", "negative_streak", "nguong"].sort(),
-    );
+    expect(rows[0]!.origin).toBe("live");
+
+    await expect(
+      asUser(DEV.gvcn, (c) =>
+        c.query("select detail from care.flags where student_id = $1", [FIXTURE.studentMinh]),
+      ),
+    ).rejects.toMatchObject({ code: "42501" });
   });
 
   it("GVCN VẪN đọc được cột điểm danh của em — 0044 cắt CỘT mood, không chặn DÒNG (nền của QĐ-3)", async () => {

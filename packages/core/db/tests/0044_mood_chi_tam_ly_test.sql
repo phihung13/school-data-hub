@@ -107,19 +107,27 @@ select isnt_empty(
       where student_id = '70000000-0000-0000-0000-000000000001' and handled_at is null $$,
   'GVCN VẪN nhận tín hiệu "cần gặp thầy cô" (QĐ-2: báo NGAY, không chờ quét đêm) — đường này đi qua can_see_care, không đụng');
 
--- "Không đọc được CHUYỆN GÌ" phải đúng ở tầng dữ liệu, không chỉ ở tầng giao diện.
--- Khoá theo DANH SÁCH KHOÁ CHO PHÉP chứ không theo kiểu dữ liệu: `mode` vốn là
--- chuỗi ("streak"/"window") nên "cấm mọi giá trị chuỗi" vừa sai vừa xanh giả sau
--- này. Danh sách này là hợp đồng thật với 0039 — thêm một khoá `note`, `trich_dan`
--- hay bất cứ thứ gì chở lời em thì câu này đỏ ngay.
-select is(
-  (select count(*)::int
-     from care.flags f, lateral jsonb_object_keys(f.detail) k
-    where f.student_id = '70000000-0000-0000-0000-000000000001'
-      and f.rule_code = 'E_MOOD'
-      and k not in ('negative_streak', 'negative_days', 'mode', 'nguong')),
-  0,
-  'detail của cờ E_MOOD chỉ mang bốn khoá số/chế-độ đã khai ở 0039 — cờ chở SỐ ĐẾM, không chở lời em (§9 DESIGN-GUIDELINES: cờ chỉ ghi LOẠI tín hiệu)');
+-- LẬT CHIỀU 02/08/2026 (migration `0049`, DEBT #39) — không xoá, vì một ca bị xoá
+-- là một lời hứa mất người canh.
+--
+-- Bản cũ của câu này đọc `care.flags.detail` DƯỚI PHIÊN CÔ LAN rồi khẳng định
+-- "detail chỉ mang bốn khoá số". Nó xanh vì cô ĐỌC ĐƯỢC cột đó — mà chính việc cô
+-- đọc được là khe hở `DEBT` #39: `0044` cắt ba cửa mood nhưng cột `detail` của cờ
+-- E_MOOD vẫn chở `negative_days`/`negative_streak`/`nguong` tới thẳng phiên của
+-- cô. Đo thật trên hub_dev 02/08/2026, phiên cô Vân (…0008):
+--   {"mode":"streak","nguong":5,"negative_days":6,"negative_streak":6}
+--
+-- `0049` thu quyền SELECT cột `detail` khỏi `authenticated`, nên câu cũ nay ném
+-- 42501 và làm cả file abort giữa chừng (chạy 7/26 assertion). Vế "không đọc được
+-- CHUYỆN GÌ" vì thế được ghim ở đây bằng thứ MẠNH HƠN hẳn: cô không đọc nổi cột
+-- đó nữa. Còn phép kiểm HÌNH DẠNG của `detail` (danh sách khoá cho phép — hợp
+-- đồng thật với `0039`) chuyển sang `0049_chi_tiet_co_test.sql`, chỗ nó đọc được
+-- qua cửa hợp lệ của tâm lý cụm.
+select throws_ok(
+  $$ select detail from care.flags where rule_code = 'E_MOOD' $$,
+  '42501',
+  null,
+  'GVCN hỏi THẲNG care.flags.detail → Postgres TỪ CHỐI (42501, migration 0049). Vế "cô biết CÓ CHUYỆN mà không đọc được CHUYỆN GÌ" nay đúng ở tầng quyền, không chỉ ở tầng hợp đồng của care.ts');
 
 -- QĐ-3 (bảng điểm danh năm trạng thái) đứng đúng trên assertion này. Nếu cột
 -- điểm danh cũng bị cắt theo mood thì bảng lớp của cô trắng toàn NULL và UI vẽ

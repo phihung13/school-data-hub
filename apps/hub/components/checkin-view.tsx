@@ -56,6 +56,22 @@
 // nói thẳng là chưa gửi được, và có đường đi thật cho em (thử lại, hoặc tìm thầy cô
 // nói trực tiếp). Xem `helpSignalState` ngay dưới.
 //
+// Sửa 02/08/2026 (gói "hang-doi-offline-khong-tac", nợ #31) — LẦN BẤM KHÔNG ĐI TRỌN
+// VẸN PHẢI CÓ CHỖ NÓI RA:
+//
+// Bản trước, cái gì xảy ra với hàng đợi thì chỉ hàng đợi biết. Em bấm lúc mất mạng, màn
+// hình nói "Đã lưu trên máy — tự gửi khi có mạng", rồi hôm sau `flushQueuedCheckins` gửi
+// lại và máy chủ từ chối bằng một lỗi không tự khỏi (401 vì phiên đã hết từ đời nào, hoặc
+// 400 vì ngày đã quá cũ để `resolve_checkin` nhận). Không có một pixel nào trên app nói
+// lại chuyện đó. Lời hứa in trên màn hình biến thành lời hứa suông, và cái mất là đúng
+// lượt check-in của một em đã chịu khó bấm lúc không có mạng.
+//
+// Nay hàng đợi để lại dấu vết (`listFailedCheckins`) và màn này ĐỌC nó ở cả hai thể — thể
+// "hôm nay ghi rồi" lẫn thể bốn ô. Khối `QueueFailureNotice` nói ba điều, không nhiều hơn:
+// chuyện gì đã xảy ra với lần bấm đó · nó KHÔNG nằm trong sổ (hoặc nằm thiếu phần tâm
+// trạng) · em làm gì tiếp được. Chỉ khi em bấm "Đã hiểu" thì dấu vết mới mất — không có
+// đường nào khác xoá nó, vì xoá im lặng chính là con lỗi đang sửa.
+//
 // Sửa 01/08/2026 (ADR-026) — NHÃN: câu "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"
 // đã hết đúng. Migration 0044 cắt nhánh chủ nhiệm khỏi `core.can_read_mood()`, nên
 // người đọc được ô cảm xúc nay chỉ còn chính em và thầy cô tâm lý. Nhãn chuẩn chốt ở
@@ -67,33 +83,28 @@ import Link from "next/link";
 import type { MoodValue } from "@hub/core/contracts";
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { trpc } from "@/lib/trpc-client";
-import { enqueueCheckin, flushQueuedCheckins } from "@/lib/offline-queue";
+import { toLocalIsoDate } from "@/lib/date";
+import {
+  clearFailedCheckin,
+  enqueueCheckin,
+  flushQueuedCheckins,
+  listFailedCheckins,
+  shouldQueueOffline,
+  type FailedCheckin,
+} from "@/lib/offline-queue";
 import { MiniAppHeader } from "./mini-app-header";
 import { MoodTile } from "./mood-tile";
 import { Mascot } from "./mascot";
 import { PageShell } from "./page-shell";
 import { NHAN_AI_DOC_CAM_XUC } from "./ui/labels";
-import { httpStatusOf, isNetworkError, LoadingState, MutationError } from "./ui/query-state";
+import { LoadingState, MutationError } from "./ui/query-state";
 
 type ViewState = "pick" | "success";
 
-/**
- * Lỗi này có xứng đáng được cất vào hàng đợi offline không?
- *
- * CHỈ khi nó có thể tự khỏi lúc có mạng lại: không có phản hồi nào từ máy chủ
- * (mạng/DNS/wifi cổng đăng nhập), hoặc máy chủ trả 5xx/408/429. Mọi lỗi 4xx khác
- * (401 hết phiên, 403 không đủ quyền, 400 sai dữ liệu) sẽ hỏng y hệt ở lần thử
- * sau, nên cất vào hàng đợi chỉ là cách giấu mất thao tác của em cho thật êm.
- *
- * Thuần hàm để test được (tests/unit/frontend-trang-thai.test.ts).
- */
-export function shouldQueueOffline(error: unknown): boolean {
-  if (isNetworkError(error)) return true;
-  const status = httpStatusOf(error);
-  if (status === null) return true;
-  if (status === 408 || status === 429) return true;
-  return status >= 500;
-}
+// `shouldQueueOffline` từng được định nghĩa ngay ở đây. Đã dời sang lib/offline-queue.ts
+// (02/08/2026) vì hàng đợi phải trả lời CÙNG câu hỏi lúc gửi lại — hai bản luật cho một
+// câu hỏi thì có ngày chúng lệch nhau, và chỗ lệch nằm đúng trên đường "em có được ghi
+// nhận hay không". Một bản, hai nơi import.
 
 /**
  * Lời "Mình cần gặp thầy cô" của lần bấm vừa rồi đang ở đâu?
@@ -177,6 +188,131 @@ export function changeNotice(previous: MoodValue | null, next: MoodValue): strin
   return `Đã đổi từ ${MOOD_LABEL[previous]} sang ${MOOD_LABEL[next]}.`;
 }
 
+/**
+ * "hôm nay lúc 07:32" · "ngày 31/7 lúc 07:32" — cách một đứa trẻ nói về thời điểm.
+ *
+ * Mốc hỏng thì trả chuỗi rỗng và nơi gọi bỏ hẳn vế thời gian: bịa ra "lúc 00:00" cho một
+ * dấu thời gian không đọc được là nói với em một chuyện không có thật, ngay trong câu đang
+ * xin lỗi em vì đã làm mất một lần bấm.
+ *
+ * `now` là tham số để test được — hàm chỉ đúng vào đúng hôm nay là hàm không ai kiểm được.
+ */
+export function failedWhenText(iso: string, now = new Date()): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  const time = at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  if (toLocalIsoDate(at) === toLocalIsoDate(now)) return `hôm nay lúc ${time}`;
+  return `ngày ${at.getDate()}/${at.getMonth() + 1} lúc ${time}`;
+}
+
+/**
+ * Dấu vết của một lần bấm KHÔNG đi trọn vẹn (nợ #31).
+ *
+ * Vì sao khối này tồn tại: hàng đợi offline có ba đường ra, và hai trong ba đường KHÔNG
+ * kết thúc bằng "đã ghi xong" — bản ghi hỏng vĩnh viễn, và bản ghi máy chủ nhận nhưng
+ * không nhận mức tâm trạng (0047). Trước 02/08/2026 cả hai đường đó đều im: hàng đợi tự
+ * dọn, màn hình không nói gì, và em vẫn tin lần bấm hôm qua đã tới cô.
+ *
+ * Ba việc, đúng ba, không thêm:
+ *   1. Nói lần bấm NÀO (thời điểm em nhớ được), và nó KHÔNG nằm ở đâu.
+ *   2. Nói vì sao bằng chuyện em hiểu được, và không đổ lỗi cho em.
+ *   3. Cho đường đi thật: gửi lại (khi gửi lại còn có ích), hoặc đọc rồi cho qua.
+ *
+ * `role="alert"`: khối này xuất hiện SAU khi màn đã vẽ xong (phải đợi flush chạy), nên
+ * người dùng trình đọc màn hình không có cách nào gặp nó nếu nó im lặng chèn vào DOM.
+ */
+function QueueFailureNotice({
+  items,
+  busy,
+  onRetry,
+  onDismiss,
+}: {
+  items: FailedCheckin[];
+  busy: boolean;
+  onRetry: (item: FailedCheckin) => void;
+  onDismiss: (clientId: string) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div role="alert" className="mt-3 flex flex-col gap-2.5">
+      {items.map((item) => {
+        const when = failedWhenText(item.clientOccurredAt);
+        const moodOnly = item.reason === "tam-trang-chua-duoc-ghi";
+        const expired = item.httpStatus === 401;
+        return (
+          <div
+            key={item.clientId}
+            className={`flex flex-col items-center gap-1.5 rounded-[14px] border-[1.6px] p-3.5 text-center ${
+              moodOnly ? "border-[#DDE6F2] bg-[#F4F8FD]" : "border-[#FFE29A] bg-[#FFF7E0]"
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <span aria-hidden className="msr text-[18px] text-[#8A5A00]">
+                {moodOnly ? "info" : "schedule_send"}
+              </span>
+              <p className="text-[12.5px] font-black leading-relaxed text-navy">
+                {moodOnly
+                  ? `Lượt điểm danh ${when} của con đã vào sổ, riêng phần tâm trạng thì chưa`
+                  : `Lần con ghi ${when} chưa gửi được lên trường`}
+              </p>
+            </div>
+            <p className="text-[11.5px] leading-relaxed text-[#8A5A00]">
+              {moodOnly ? (
+                <>
+                  Phần “Hôm nay con thấy thế nào” đang tạm tắt vì trường chưa nhận được phiếu đồng ý
+                  của bố mẹ. Đây không phải lỗi của con.
+                </>
+              ) : expired ? (
+                <>
+                  Máy đã đăng xuất con từ lúc nào đó, nên lần bấm ấy nằm lại trong máy chứ không đi
+                  được. Con đăng nhập lại rồi ghi lại giúp thầy cô nhé.
+                </>
+              ) : (
+                <>
+                  Máy đã giữ lần bấm ấy trong điện thoại và thử gửi lại, nhưng trường không nhận
+                  được. Con ghi lại hôm nay nhé — lần này con sẽ thấy ngay là đã ghi xong.
+                </>
+              )}
+            </p>
+            {/* Câu lỗi thật của máy chủ, nếu có — không nuốt nó, nhưng cũng không để nó
+                thay câu nói với em ở trên. */}
+            {item.message && !moodOnly && (
+              <p className="text-[11px] leading-relaxed text-muted2">{item.message}</p>
+            )}
+            <div className="mt-0.5 flex flex-wrap items-center justify-center gap-2">
+              {!moodOnly && !expired && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onRetry(item)}
+                  className="min-h-[44px] rounded-full bg-navy px-5 py-2 text-[12.5px] font-black text-white disabled:opacity-50"
+                >
+                  {busy ? "Đang gửi…" : `Gửi lại ${MOOD_LABEL[item.mood]}`}
+                </button>
+              )}
+              {expired && !moodOnly && (
+                <a
+                  href="/login"
+                  className="flex min-h-[44px] items-center rounded-full bg-navy px-5 py-2 text-[12.5px] font-black text-white"
+                >
+                  Đăng nhập lại
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => onDismiss(item.clientId)}
+                className="min-h-[44px] px-2 text-[12px] font-black text-[#1D4E8F] underline underline-offset-2"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CheckinView() {
   const utils = trpc.useUtils();
   const [state, setState] = useState<ViewState>("pick");
@@ -195,6 +331,12 @@ export function CheckinView() {
   const [helpAtSubmit, setHelpAtSubmit] = useState(false);
   /** 0047 — máy chủ nhận lượt check-in nhưng KHÔNG nhận mức tâm trạng (chưa có phiếu đồng ý). */
   const [moodBlocked, setMoodBlocked] = useState(false);
+  /**
+   * Những lần bấm CŨ đã rời hàng đợi mà không đi trọn vẹn (nợ #31). Đây là thứ duy nhất
+   * còn nói lại được cho em biết chuyện đã xảy ra — nếu màn hình không đọc, hàng đợi lại
+   * quay về xoá trong im lặng.
+   */
+  const [failedCheckins, setFailedCheckins] = useState<FailedCheckin[]>([]);
   const todayStatus = trpc.checkin.getTodayStatus.useQuery();
   const submitMood = trpc.checkin.submitMood.useMutation();
   const submitRef = useRef(submitMood.mutateAsync);
@@ -217,14 +359,50 @@ export function CheckinView() {
   }, [state]);
 
   // Gửi lại hàng đợi ngay khi có mạng — không cần em mở lại màn hình.
+  //
+  // Sau mỗi lượt flush PHẢI đọc lại dấu vết: một bản ghi vừa rời hàng đợi vì hỏng vĩnh
+  // viễn (hoặc vì máy chủ không nhận mức tâm trạng) chỉ còn tồn tại ở đó. Không đọc thì
+  // hàng đợi lại sạch trong im lặng — đúng thứ nợ #31 sinh ra để chấm dứt.
   useEffect(() => {
-    function tryFlush() {
-      void flushQueuedCheckins((input) => submitRef.current(input));
+    let alive = true;
+    async function readFailed() {
+      const failed = await listFailedCheckins();
+      if (alive) setFailedCheckins(failed);
     }
-    if (navigator.onLine) tryFlush();
-    window.addEventListener("online", tryFlush);
-    return () => window.removeEventListener("online", tryFlush);
+    async function tryFlush() {
+      // IndexedDB có thể không mở được (chế độ ẩn danh, hết quota, trình duyệt lạ). Khi
+      // đó KHÔNG được để lời hứa hỏng làm gãy cả màn check-in: em vẫn phải bấm được, vì
+      // đường ghi thẳng lên máy chủ không dính gì tới kho trên máy.
+      try {
+        await flushQueuedCheckins((input) => submitRef.current(input));
+        await readFailed();
+      } catch {
+        // Không có gì để nói với em ở đây: chưa đọc được kho trên máy thì cũng chưa biết
+        // có lần bấm nào hỏng hay không. Im ở chỗ CHƯA BIẾT, không im ở chỗ đã biết.
+      }
+    }
+    // Đọc dấu vết cả khi ĐANG offline: dấu vết của hôm qua vẫn phải hiện ra hôm nay.
+    if (navigator.onLine) void tryFlush();
+    else void readFailed().catch(() => {});
+    const onOnline = () => void tryFlush();
+    window.addEventListener("online", onOnline);
+    return () => {
+      alive = false;
+      window.removeEventListener("online", onOnline);
+    };
   }, []);
+
+  /** Em đã đọc xong dấu vết đó — chỉ lúc này nó mới được phép biến mất. */
+  async function dismissFailed(clientId: string) {
+    await clearFailedCheckin(clientId);
+    setFailedCheckins((list) => list.filter((i) => i.clientId !== clientId));
+  }
+
+  /** "Gửi lại" từ khối dấu vết: chỉ xoá dấu vết khi lần gửi lại THẬT SỰ tới máy chủ. */
+  async function retryFailed(item: FailedCheckin) {
+    const reachedServer = await pick(item.mood);
+    if (reachedServer) await dismissFailed(item.clientId);
+  }
 
   const today = todayStatus.data;
   // Chỉ coi là "đã có tâm trạng hôm nay" khi máy chủ nói chắc cả hai điều. Thiếu
@@ -244,7 +422,12 @@ export function CheckinView() {
     return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
   }
 
-  async function pick(mood: MoodValue) {
+  /**
+   * Trả về "lần bấm này CÓ tới máy chủ không" — không phải "đã ghi xong không".
+   * `retryFailed` cần đúng chừng đó để biết dấu vết cũ còn đáng giữ hay không; mọi câu
+   * nói với em vẫn do các state phía dưới quyết định, không suy ra từ giá trị này.
+   */
+  async function pick(mood: MoodValue): Promise<boolean> {
     // Chụp tâm trạng cũ TRƯỚC khi gửi: sau khi gửi xong query bị invalidate, giá
     // trị cũ biến mất, và câu "đổi từ … sang …" mất luôn vế đầu.
     const previous = moodToday;
@@ -260,7 +443,7 @@ export function CheckinView() {
       setQueuedOffline(true);
       setSavedAt(localTimeNow());
       setState("success");
-      return;
+      return false;
     }
     try {
       const result = await submitMood.mutateAsync({ mood, wantsHelp });
@@ -276,6 +459,7 @@ export function CheckinView() {
       setState("success");
       void utils.checkin.getTodayStatus.invalidate();
       void utils.report.getMyLatestReport.invalidate();
+      return true;
     } catch (error) {
       if (shouldQueueOffline(error)) {
         // Mạng chập chờn dù navigator báo online — vẫn không để em mất thao tác.
@@ -284,12 +468,13 @@ export function CheckinView() {
         setQueuedOffline(true);
         setSavedAt(localTimeNow());
         setState("success");
-        return;
+        return false;
       }
       // Lỗi không tự khỏi: KHÔNG được báo thành công, KHÔNG được cất vào hàng đợi
       // (nó sẽ kẹt vĩnh viễn và chặn mọi check-in sau). Nói thật, giữ nguyên màn
       // chọn để em bấm lại một cái là gửi lại.
       setFailure(error);
+      return false;
     }
   }
 
@@ -462,6 +647,17 @@ export function CheckinView() {
           {today?.checkedInAt && (
             <p className="mt-1 text-[12.5px] text-muted2">Lúc {today.checkedInAt}</p>
           )}
+
+          {/* Nợ #31 — màn "hôm nay ghi rồi" cũng phải nói ra lần bấm CŨ đã hỏng. Đây là
+              màn em thấy nhiều nhất; giấu dấu vết ở đây là giấu ở đúng chỗ đông người. */}
+          <div className="w-full max-w-[340px]">
+            <QueueFailureNotice
+              items={failedCheckins}
+              busy={submitMood.isPending}
+              onRetry={(item) => void retryFailed(item)}
+              onDismiss={(clientId) => void dismissFailed(clientId)}
+            />
+          </div>
           {/* Nhãn chuẩn DESIGN-GUIDELINES §9 (ADR-026). Không viết tay một câu khác ở đây:
               hai chỗ in nhãn trong cùng file mà lệch nhau một chữ là hai lời hứa khác nhau
               về cùng một ô nhập. */}
@@ -554,6 +750,16 @@ export function CheckinView() {
             </button>
           </div>
         )}
+
+        {/* Nợ #31 — đứng NGAY TRÊN bốn ô, không nằm cuối trang: em vào màn này để bấm một
+            cái rồi đi, nên thứ nói "lần bấm hôm qua của con không tới nơi" phải nằm trên
+            đường mắt em đi tới bốn ô, chứ không phải dưới chỗ em không bao giờ cuộn xuống. */}
+        <QueueFailureNotice
+          items={failedCheckins}
+          busy={submitMood.isPending}
+          onRetry={(item) => void retryFailed(item)}
+          onDismiss={(clientId) => void dismissFailed(clientId)}
+        />
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           {/* `selected`: khi đang đổi, ô đang được ghi phải tự nói ra mình đang được

@@ -21,7 +21,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MOOD_LABEL } from "@hub/core/contracts";
-import { asMoodValue, changeNotice, checkinStage, helpSignalState } from "@/components/checkin-view";
+import {
+  asMoodValue,
+  changeNotice,
+  checkinStage,
+  failedWhenText,
+  helpSignalState,
+} from "@/components/checkin-view";
 import { dayCaptionText } from "@/components/attendance-view";
 import { sameLocalDay } from "@/lib/offline-queue";
 
@@ -291,5 +297,64 @@ describe("quét mã nguồn màn check-in", () => {
     // `break` cũ khoá luôn mọi check-in xếp sau (DEBT #31): buồng lái GVCN đọc im
     // lặng đó thành "em ổn".
     expect(withoutComments(queueSource)).not.toMatch(/}\s*catch\s*{[^}]*\bbreak\b/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Nợ #31 (02/08/2026) — hàng đợi và màn hình phải nói CÙNG một sự thật.
+//
+// Luật của hàng đợi (bản ghi nào ở lại, bản ghi nào rời đi, kèm dấu vết gì) được kiểm
+// bằng hành vi ở tests/unit/offline-queue.test.ts. Ở đây chỉ khoá hai chỗ NỐI mà test
+// hành vi không với tới, và cả hai đều hỏng trong im lặng: dùng chung một luật phân
+// loại lỗi, và màn hình có THẬT SỰ đọc dấu vết ra hay không.
+// ---------------------------------------------------------------------------
+describe("quét mã nguồn: hàng đợi offline không tắc (nợ #31)", () => {
+  it("chỉ có MỘT luật phân loại lỗi, và nó nằm ở hàng đợi", () => {
+    // Hai bản luật cho cùng một câu hỏi ("lỗi này có tự khỏi không") thì có ngày chúng
+    // lệch nhau — ngay trên đường quyết định lượt check-in của em còn hay mất.
+    expect(withoutComments(queueSource)).toContain("export function shouldQueueOffline");
+    expect(withoutComments(viewSource)).not.toContain("export function shouldQueueOffline");
+    expect(withoutComments(viewSource)).toContain("shouldQueueOffline");
+  });
+
+  it("hàng đợi đọc moodSaved — 2xx không mặc nhiên là đã ghi (0047)", () => {
+    // `submit()` xong là `dequeueCheckin` ngay = đánh dấu "đã gửi" cho một mức tâm trạng
+    // mà máy chủ từ chối ghi. Cùng con lỗi thành-công-giả, chỉ đứng ở chỗ khác.
+    expect(withoutComments(queueSource)).toContain("moodSaved === false");
+  });
+
+  it("màn hình PHẢI đọc dấu vết ra, nếu không hàng đợi lại dọn trong im lặng", () => {
+    // Hàng đợi để lại dấu vết là nửa việc. Không màn nào đọc `listFailedCheckins` thì
+    // dấu vết nằm trong IndexedDB mãi mãi và em vẫn tin lần bấm hôm qua đã tới cô —
+    // tức là đúng lỗi cũ, chỉ tốn thêm một cái kho.
+    const source = withoutComments(viewSource);
+    // Khớp LỜI GỌI (`listFailedCheckins()`), không khớp tên trần: lần thử ngược đầu tiên
+    // của gói này đổi tên hàm thành `listFailedCheckinsXX` và cổng vẫn xanh — vì
+    // "listFailedCheckinsXX" vẫn chứa "listFailedCheckins". Một cổng bắt được chuỗi con
+    // là một cổng không bắt được gì.
+    expect(source).toMatch(/listFailedCheckins\(\)/);
+    // Và chỉ em mới được xoá nó (nút "Đã hiểu"), không có đường tự dọn nào khác.
+    expect(source).toMatch(/clearFailedCheckin\(/);
+    expect(source).toContain("Đã hiểu");
+  });
+});
+
+describe("failedWhenText — nói đúng lần bấm nào, không bịa thời điểm", () => {
+  it("cùng ngày thì nói 'hôm nay lúc …'", () => {
+    const at = new Date(2026, 7, 2, 7, 32);
+    expect(failedWhenText(at.toISOString(), new Date(2026, 7, 2, 19, 0))).toContain("hôm nay");
+  });
+
+  it("ngày khác thì gọi tên ngày, không nói 'hôm nay' cho chuyện hôm kia", () => {
+    const at = new Date(2026, 6, 31, 7, 32);
+    const text = failedWhenText(at.toISOString(), new Date(2026, 7, 2, 19, 0));
+    expect(text).toContain("31/7");
+    expect(text).not.toContain("hôm nay");
+  });
+
+  it("mốc hỏng thì trả rỗng, KHÔNG bịa ra 'lúc 00:00'", () => {
+    // Câu này đang xin lỗi em vì đã làm mất một lần bấm — bịa thêm một thời điểm
+    // không có thật vào đúng câu đó là làm hỏng nốt phần còn tin được.
+    expect(failedWhenText("không-phải-ngày")).toBe("");
   });
 });

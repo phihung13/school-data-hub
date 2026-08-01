@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 4
+sync-version: 5
 ---
 
 # Resilience & Security — chịu lỗi, backup đơn giản 2 lớp, chống gian lận, hardening
@@ -31,7 +31,7 @@ Nguyên tắc gốc: tách bạch hai loại rủi ro. **Downtime** (tạm ngưn
 
 | Sự cố | Hệ phản ứng | Mất gì |
 |---|---|---|
-| Mất wifi/mạng tại lớp | PWA xếp hàng check-in offline (IndexedDB), tự gửi lại khi có mạng — an toàn nhờ §9 idempotent | không mất gì |
+| Mất wifi/mạng tại lớp | PWA xếp hàng check-in offline (IndexedDB), tự gửi lại khi có mạng — an toàn nhờ §9 idempotent. **Từ 02/08/2026:** lượt không gửi được rời hàng đợi kèm dấu vết em đọc được, không nằm im (mục 6b–6c) | không mất gì, và ca không gửi được thì em được báo |
 | Supabase down vài giờ | check-in offline queue; lớp học tiếp tục; bộ quét đêm chạy bù khi DB trở lại; bản tin Zalo lùi giờ gửi | không mất gì, chỉ trễ |
 | Supabase down nhiều ngày | kích hoạt kịch bản restore: backup hằng ngày Supabase → Postgres dự phòng (VPS bất kỳ), đổi connection string qua env | RTO ≤ 4h, RPO ≤ 24h |
 | Nhà cung cấp mất sạch dữ liệu / khóa tài khoản | restore từ bản pg_dump tuần trên ổ cứng trường — bản độc lập duy nhất | RTO ≤ 4h, RPO ≤ 7 ngày |
@@ -70,6 +70,56 @@ Check-in cảm xúc là tự khai — gian lận không phá được gì. **Đi
 | Backup | dump mã hóa, khóa trường giữ (mục 2) |
 | Con người | rủi ro số 1 của trường học là phishing lấy mật khẩu giáo viên → MFA + 30 phút tập huấn nhận diện lừa đảo trong tuần tập huấn |
 | Quy trình | secret-scan + dependency-scan (npm audit/Dependabot) trong CI; cập nhật vá định kỳ; **pentest thuê ngoài trước vườn ươm và trước khi lên store** |
+
+## 6b. Cửa đăng nhập tạm (`dev-login`) đã khoá — 02/08/2026, ADR-028, nợ #19
+
+**Cái hỏng thật, đo hai lần.** `apps/hub/app/api/auth/dev-login/route.ts` dài 34 dòng và **không có một phép kiểm môi trường nào** — không `NODE_ENV`, không địa chỉ, không mật khẩu. Nó nhận một `authUid` bất kỳ trong danh sách tài khoản mẫu rồi cấp cookie phiên đúng vai đó. Route nằm sau tên miền công khai `hub.truongvietanh.com`, và dãy UUID mẫu (`90000000-0000-0000-0000-0000000000NN`) đoán được bằng mắt.
+
+| Phép thử | Trước 02/08/2026 | Từ 02/08/2026 |
+|---|---|---|
+| `POST https://hub.truongvietanh.com/api/auth/dev-login` không mã | **200** + cookie phiên vai `principal` | **401** |
+| cùng lời gọi, mã sai | **200** | **401** |
+| cùng lời gọi, mã đúng (header `x-hub-dev-secret`) | 200 | 200 |
+| chưa đặt `DEV_LOGIN_SECRET` | 200 (cửa mở) | **503, đóng với tất cả** |
+| `NODE_ENV=production` | 200 | **404 — route không tồn tại** |
+
+Ô "200" ở cột trái không phải suy luận: nó được **đo lại lần nữa hôm 02/08/2026** trong bước thử ngược (gỡ tạm bản vá ⇒ cả `http://localhost:3000` lẫn tên miền công khai đều trả 200 kèm `Set-Cookie: hub_session`, rồi hoàn nguyên).
+
+| Đối tượng (không phải đối tượng CSDL) | Nơi tạo | Nói gì |
+|---|---|---|
+| `DEV_LOGIN_SECRET` | biến môi trường; giá trị thật **chỉ** ở `apps/hub/.env.local` (đã gitignore), `.env.example` khai tên và **để trống** | Bí mật dùng chung. Trống hoặc ngắn hơn `DEV_SECRET_MIN_LENGTH` (12) ⇒ coi như **chưa đặt** ⇒ cửa đóng với tất cả. Đổi giá trị = thu hồi mọi máy đã mở khoá |
+| `packages/core/auth-adapter/dev-gate.ts` | mới | Toàn bộ phán quyết, **thuần** — không `next/*`, không Postgres, nên test chạy thẳng. `evaluateDevGate()` trả một trong bốn trạng thái `absent` / `misconfigured` / `locked` / `open`; hai route và màn đăng nhập nói cùng thứ tiếng này |
+| Cookie `hub_dev_gate` | `POST /api/auth/dev-gate` | Vé `<hạn epoch giây>.<HMAC-SHA256>`, khoá ký **là chính bí mật** (nên đổi bí mật là mọi vé chết ngay, không cần bảng thu hồi). 30 ngày · `HttpOnly` · `SameSite=Lax` · `Secure` **chỉ khi request đi https** |
+| `GET /api/auth/dev-gate` | mới | Màn đăng nhập hỏi trạng thái cửa để vẽ đúng thứ cần vẽ. `404` production · `503` chưa cấu hình · `200 {state}` còn lại |
+| `POST /api/auth/dev-gate` | mới | Nhập mã. 5 lần/phút/IP (`checkRateLimit`, cùng khuôn `/api/auth/invite`). Một thông điệp từ chối duy nhất, không phân biệt lý do |
+| `tools/start-local.sh` bước 2c | sửa | Tự gõ cửa **không cầm mã** rồi đòi bị từ chối; nhận 200 là **dừng script**. Bước 3 lặp lại đúng phép thử đó **từ Internet** qua tên miền công khai |
+| `tests/unit/dev-login-gate.test.ts` | mới, 19 ca | Bốn lời hứa, mỗi lời cả hai chiều; cộng hai cổng nguồn: cửa còn được mắc trong `dev-login` **trước** khi đọc thân request, và mã thật không rò sang file nào git theo dõi |
+
+Màn `/login` hỏi trạng thái cửa **một lần** lúc mở trang rồi vẽ đúng thứ cần vẽ: production bỏ hẳn khối tài khoản thử · chưa cấu hình hiện lời giải thích · chưa mở khoá hiện ô nhập mã (`label htmlFor` thật, `type=password`). Bấm tài khoản trước khi cửa hiện ra thì màn hình nhớ lại và tự đăng nhập sau khi mở khoá ⇒ **đúng một lần nhập mã**.
+
+**Vì sao KHÔNG chặn theo địa chỉ máy** — phần dễ làm sai nhất, và là lý do ADR-028 tồn tại:
+
+1. **Nó cắt đúng người cần đi qua.** Chủ đầu tư demo bằng điện thoại, qua chính tên miền công khai, và hôm 01/08/2026 đã phàn nàn "tôi không vào được bằng điện thoại". Một cửa "chỉ cho localhost" đóng lỗ hổng bằng cách đóng luôn người dùng chính.
+2. **Nó không chặn được ai.** `~/.cloudflared/config.yml` trỏ `hub.truongvietanh.com → http://localhost:3000`, nên **mọi request từ Internet đi qua đường hầm tới Node đều mang địa chỉ nguồn 127.0.0.1**. Phép kiểm loopback ở đây **xanh cho cả thế giới**, đồng thời làm cả nhóm tin rằng cửa đã khoá — **cổng tệ hơn không có cổng**. Có một bài test canh không file route nào nhắc tới `localhost`/`127.0.0.1`.
+
+Hệ quả: `x-forwarded-for` chỉ được dùng để **đếm số lần thử**, không bao giờ để **cấp quyền**; bộ đếm 5 lần/phút của người vào từ localhost gom chung một xô (`loopback`) — chấp nhận được, vì cái nó bảo vệ là bí mật chứ không phải địa chỉ.
+
+**Bốn cái bẫy đã gặp, ghi ra để không ai vấp lại:**
+
+- **Cookie `Secure` bật cứng là hỏng im lặng.** Chủ đầu tư vào bằng https (phải có `Secure`); dev và `tools/start-local.sh` vào bằng `http://localhost:3000`, ở đó một cookie `Secure` đặt xong rồi **không bao giờ được gửi lại** — nhập mã đúng mà vẫn đứng nguyên tại chỗ, không một dòng lỗi. Nên cờ `Secure` đọc từ `x-forwarded-proto` của chính request; đã đo: qua tên miền công khai cookie có `Secure`, qua localhost không.
+- **`timingSafeEqual` ném lỗi khi hai buffer lệch độ dài** — và chính việc ném lỗi đó là một kênh rò "mã bạn nhập dài bao nhiêu". Băm SHA-256 cả hai vế trước khi so.
+- **Cửa phải đặt TRƯỚC khi parse thân request.** Nếu đọc `authUid` trước, route trả `404 "Tài khoản dev không tồn tại"` cho người chưa qua cửa — tức tự biến mình thành một **cửa dò danh sách tài khoản có thật, miễn phí**. Có test canh đúng thứ tự này.
+- **Cổng chống rò bí mật suýt thành cổng rỗng.** Bản đầu của bài test quét kho theo phần mở rộng, mà `extname(".env.example")` trả `".example"` — nên nó **không** quét chính file dễ bị dán mã nhất. Phát hiện lúc thử ngược (cố ý dán mã thật vào `.env.example`, cổng vẫn xanh); đã sửa để quét mọi file `.env*` trừ chính `.env.local`, và sau khi sửa thì phép thử ngược đó đỏ và gọi tên đúng file.
+
+**Còn nợ, nói thẳng (`DEBT.md` #19 đã ghi).** Đây là **mật khẩu dùng chung**, không phải danh tính: `ops.audit_log` biết "một phiên vai hiệu trưởng đã mở", **không biết ai mở**; thu hồi chỉ ở mức tất-cả-hoặc-không. Nợ #19 **chưa xoá**, chỉ hạ từ "cửa mở" xuống "chưa có danh tính từng người". Đường trả: bọc Cloudflare Access lên tên miền, hoặc bỏ hẳn `dev-login` khi Google/Zalo OAuth thật lên.
+
+## 6c. Hàng đợi offline không được im lặng (nợ #31, 02/08/2026)
+
+Mục 3 ghi "mất wifi/mạng tại lớp ⇒ không mất gì". Câu đó đúng ở đường sung sướng và **sai ở ba ca đo được**, cho tới 02/08/2026. `flushQueuedCheckins` cũ `break` ngay ở lỗi đầu tiên, nên một bản ghi hỏng vĩnh viễn (401 hết phiên) **chặn luôn mọi check-in xếp sau, mãi mãi**; và nó gọi `dequeue` mà không đọc `moodSaved`, nên một lượt trả 2xx với `moodSaved=false` (`0047`, nhà em chưa có phiếu đồng ý) bị đánh dấu "đã gửi" cho một mức tâm trạng máy chủ từ chối ghi.
+
+Nay mỗi bản ghi có **đúng ba đường ra và không đường nào im**: gửi trọn vẹn → rời hàng đợi · lỗi tự khỏi khi có mạng (không có phản hồi / 5xx / 408 / 429) → **ở lại** chờ · hỏng y hệt lần sau (401/403/400) hoặc `moodSaved=false` → rời hàng đợi **kèm một dấu vết em đọc được** trên `/checkin`, chỉ nút "Đã hiểu" mới xoá. Luật phân loại lỗi có **một** bản duy nhất (`shouldQueueOffline` trong `apps/hub/lib/offline-queue.ts`), hàng đợi và màn hình cùng import. Khoá §9: hai lượt flush chồng nhau dùng chung một lượt chạy — trình duyệt bắn `online` nhiều lần khi wifi chập chờn, và tuy máy chủ idempotent theo `(student_id, occurred_on, kind)` (đo bằng HTTP thật: hai lượt `submitMood` trả cùng một `checkinId`, `select` ra đúng một dòng) thì gửi đôi vẫn tiêu hạn mức 429 của chính em. Hình dạng dữ liệu của hai kho khoá trên máy em: `02-database.md`, mục "Kho trên máy học sinh (IndexedDB)".
+
+Nguyên tắc rút ra, đáng đứng cạnh "luật vàng" của mục 2: **một phần mềm chăm trẻ không được phép im lặng đúng lúc nó làm hỏng việc** — im lặng ở đây không trung tính, nó luôn được đọc thành tin tốt.
 
 ## 7. Cổng phát hành — "đủ tin tưởng" là danh sách đo được, không phải cảm giác
 

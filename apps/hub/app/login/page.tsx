@@ -1,5 +1,6 @@
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { DEV_ACCOUNTS } from "@hub/core/auth-adapter";
+import { DEV_ACCOUNTS, DEV_GATE_COOKIE_NAME, DEV_GATE_HEADER, evaluateDevGate } from "@hub/core/auth-adapter";
 import { getCurrentSession } from "@/lib/session";
 import { safeThenPath, DEFAULT_LANDING_PATH } from "@/lib/trpc-client";
 import { LoginForm } from "@/components/login-form";
@@ -26,5 +27,24 @@ export default async function LoginPage({
   const session = await getCurrentSession();
   if (session) redirect(then ?? DEFAULT_LANDING_PATH);
 
-  return <LoginForm devAccounts={DEV_ACCOUNTS} then={then} />;
+  // GIẤU TRÊN MÀN KHÔNG PHẢI LÀ KHÔNG GỬI (vá 02/08/2026, sau khi đo).
+  //
+  // Bản trước truyền thẳng `DEV_ACCOUNTS` xuống LoginForm, và LoginForm chỉ VẼ khối tài
+  // khoản khi `gate === "open"`. Nhìn mã thì tưởng kín. Nhưng LoginForm là client
+  // component, nên Next tuần tự hoá MỌI prop của nó vào payload của trang — dữ liệu đã
+  // nằm trong HTML trước khi có ai hỏi cửa. Đo thật qua tên miền công khai, phiên vô
+  // danh chưa mở khoá: đếm được 9 authUid và 9 địa chỉ email nội bộ.
+  //
+  // Cửa khoá đúng chiều (không mã thì 401), nên đây không phải lỗ vào. Nhưng nó đưa
+  // trước cho người lạ đúng thứ cần có nếu mã rò: danh sách authUid để bắn thẳng, cộng
+  // 9 email thật của giáo viên. Hai thứ đó không việc gì phải phát công khai.
+  //
+  // Nên phán quyết chuyển về ĐÂY, phía máy chủ, dùng chung `evaluateDevGate` với hai
+  // route — không dựng phép kiểm thứ ba. Chưa mở khoá thì trang không mang theo gì cả.
+  const gate = evaluateDevGate({
+    cookie: cookies().get(DEV_GATE_COOKIE_NAME)?.value ?? null,
+    header: headers().get(DEV_GATE_HEADER),
+  });
+
+  return <LoginForm devAccounts={gate === "open" ? DEV_ACCOUNTS : []} then={then} />;
 }

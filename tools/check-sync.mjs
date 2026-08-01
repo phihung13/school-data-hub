@@ -66,7 +66,18 @@ const MACHINE_FILES = [
  * hằng số + chú thích thay vì xóa hẳn: lần sau có người muốn ghi nợ tài liệu thì
  * phải viết tên món nợ vào đây — không có đường ghi nợ ẩn danh.
  */
-const NO_TAI_LIEU = [];
+const NO_TAI_LIEU = [
+  // TRẢ NỢ 02/08/2026 (lượt gộp đợt F). Hai món ghi ở đây trong lúc đợt còn bay —
+  // `care.flags_tam_ly` (0049) và `ops.schema_migrations` (0050) — nay đã được
+  // `02-database.md` gọi tên trong mục "Đợt F", nên danh sách rỗng lại.
+  //
+  // Luật của đợt nhiều gói: `02-database.md` và `ho-so-he-thong.html` chỉ có MỘT
+  // bản, nên gói không chạm hai file đó mà viết bản nháp vào
+  // `danh-cho-may/.wip/<key-gói>.md`; một agent pha sau gộp và tăng `sync-version`
+  // ĐÚNG MỘT LẦN. Món nợ tài liệu sinh ra trong lúc chờ gộp phải ghi tên vào đây —
+  // không có đường ghi nợ ẩn danh, và bánh cóc tự bắt (`SO NO THUA`) khi tài liệu
+  // đã nhắc tới mà dòng nợ còn ở lại.
+];
 
 // ── Cổng 1 ───────────────────────────────────────────────────────────────────
 

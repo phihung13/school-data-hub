@@ -12,6 +12,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { HubSidebar } from "../hub-sidebar";
+import { MainContent } from "../page-shell";
 import { HubTabBar } from "../tab-bar";
 import { StaffVoice } from "../ui/query-state";
 
@@ -60,39 +61,63 @@ export function GvcnShell({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+          {/* Thanh trên của điện thoại nay CHỈ còn đường ra, không còn tiêu đề — xem lý
+              do ở khối <h1> bên dưới. Nút mọc thêm chữ "Buồng lái" đứng cạnh mũi tên:
+              nút chỉ có icon buộc người dùng phải đoán, và `aria-label` chỉ cứu được
+              người dùng trình đọc màn hình chứ không cứu người nhìn thấy nó.
+              min-h-[44px] (§11, WCAG 2.5.5) — trước 01/08/2026 là h-9 w-9 = đúng 36px,
+              mà đây là đường ra DUY NHẤT của năm màn con trên điện thoại. */}
           <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 py-3 md:hidden">
-            {/* h-11 w-11 = 44px (§11, WCAG 2.5.5). Trước 01/08/2026 là h-9 w-9 = đúng
-                36px — mà đây là đường ra DUY NHẤT của bốn màn con trên điện thoại, và
-                người bấm nó đang đứng trong lớp, một tay cầm máy. */}
             <Link
               href="/gvcn"
               aria-label="Về buồng lái"
-              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-chip"
+              className="flex min-h-[44px] flex-none items-center gap-1.5 rounded-xl bg-chip px-3"
             >
               <span className="msr text-[20px] text-navy" aria-hidden>
                 arrow_back
               </span>
+              <span className="text-[12.5px] font-extrabold text-navy">Buồng lái</span>
             </Link>
-            <div className="min-w-0">
-              <div className="truncate text-[15px] font-black text-navy">{title}</div>
-              {subtitle && <div className="truncate text-[11px] font-semibold text-muted">{subtitle}</div>}
-            </div>
           </div>
 
-          <div className="flex flex-1 flex-col md:overflow-y-auto">
+          {/* LANDMARK <main id="noi-dung"> — thêm 02/08/2026, gói "audit-giao-dien-chay-tron".
+              Đo trên bản đang chạy: `curl /gvcn/diem-danh` và `curl /gvcn/hoc-sinh/<id>` với
+              phiên Cô Vân trả về chuỗi "skip-link" ĐÚNG HAI LẦN (đường tắt "Bỏ qua menu, tới
+              nội dung chính" nằm ở app/layout.tsx, in trên mọi trang) nhưng `id="noi-dung"`
+              ĐÚNG KHÔNG LẦN NÀO. Tức là trên cả năm màn GVCN, phần tử bấm được ĐẦU TIÊN của
+              trang là một lời hứa không có đích: Tab một lần, Enter, và không đi tới đâu —
+              không lỗi, không log, người dùng chuột không bao giờ chạm tới nên không ai báo.
+              Trên desktop cái giá là 9 mục sidebar phải Tab qua trên MỖI màn con.
+              Dùng <MainContent> chứ không tự viết <main id="noi-dung">: id gõ tay sai một ký
+              tự thì đường tắt vẫn "bấm được" và vẫn chết (page-shell.tsx giải thích dài).
+              Sidebar, thanh trên và tab bar nằm NGOÀI nó — nếu không thì "bỏ qua menu"
+              không bỏ qua được gì. */}
+          <MainContent className="flex flex-1 flex-col md:overflow-y-auto">
             <div className="flex flex-col gap-4 p-4 md:p-7">
-              <div className="hidden flex-wrap items-end justify-between gap-3 md:flex">
-                <div>
-                  <h1 className="text-[24px] font-black text-navy">{title}</h1>
-                  {subtitle && <div className="mt-1 text-[13px] font-semibold text-[#5B6B80]">{subtitle}</div>}
+              {/* MỘT <h1> DUY NHẤT, đổi cỡ theo khổ màn — không phải hai bản ẩn nhau.
+                  Bản cũ đặt <h1> trong nhánh `hidden … md:flex`, nên ở 375px (khổ dùng
+                  thật: cô đứng trong lớp cầm điện thoại) nó là display:none — mất khỏi cả
+                  mắt lẫn cây trợ năng — còn thứ nhìn thấy là một <div> trong thanh trên.
+                  Trình đọc màn hình mở /gvcn/diem-danh trên điện thoại không có heading
+                  nào để biết đây là trang gì.
+                  Vì sao KHÔNG viết hai <h1> (một mobile, một desktop): cả hai đều nằm
+                  trong DOM, và tests/unit/a11y-nen.test.ts gọi đúng cái bẫy đó bằng tên. */}
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="text-[19px] font-black leading-tight text-navy md:text-[24px]">{title}</h1>
+                  {subtitle && (
+                    <div className="mt-0.5 text-[12px] font-semibold text-muted md:mt-1 md:text-[13px]">
+                      {subtitle}
+                    </div>
+                  )}
                 </div>
-                {toolbar}
+                <div className="hidden md:block">{toolbar}</div>
               </div>
               <div className="md:hidden">{toolbar}</div>
 
               {children}
             </div>
-          </div>
+          </MainContent>
 
           {/* Bốn màn con luôn thuộc vai GVCN (page.tsx của chúng chặn `homeroom` rồi
               mới render), nên bộ tab ở đây là bộ GVCN — không suy từ prop nào cả. */}

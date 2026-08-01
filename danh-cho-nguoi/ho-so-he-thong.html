@@ -769,7 +769,7 @@
         <div class="callout"><div class="callout-title"><span class="dot"></span>Đầu ra thật sự chỉ có năm loại</div><p>Hồ sơ của học sinh · buồng lái GVCN · bản tin phụ huynh · gói dữ liệu cải tiến chuyên môn · chỉ báo VAAR cấp cơ sở. Không xây dashboard nếu chưa biết ai sẽ dùng nó để làm gì.</p></div>
       </section>
 
-      <section class="part" id="kien-truc" data-pair="danh-cho-may/01-architecture.md" data-sync-version="11">
+      <section class="part" id="kien-truc" data-pair="danh-cho-may/01-architecture.md" data-sync-version="12">
         <div class="part-group-banner"><b>Phần A &middot; Thiết kế Backend</b></div>
         <div class="section-head">
           <div class="section-no">03</div>
@@ -928,6 +928,7 @@
         <h3>Đăng nhập một nơi, dùng khắp mọi hệ</h3>
         <div class="answer-box"><div class="label">ADR-014</div><p>Ai cũng đăng nhập <b>đúng một chỗ: Hub</b>. Hệ ngoài (Moodle, và các hệ khác sau này) không có mật khẩu riêng của Hub &mdash; chỉ tin định danh do Hub cấp, theo chuẩn mở OIDC. Một người &rarr; một tài khoản Hub &rarr; vào đâu cũng là chính họ, không cần nhớ nhiều mật khẩu, không có bản sao mật khẩu nằm rải rác nhiều hệ.</p></div>
         <p class="lede">Kỹ thuật: Hub không tự chế giao thức đăng nhập &mdash; dùng đúng chuẩn OIDC mà Moodle đã hỗ trợ sẵn. Hub chỉ trả lời "đây có đúng là người này không", không cấp cho hệ ngoài quyền đọc dữ liệu trong Hub. Chi tiết bước đi từng bước: xem View 08C ở mục API.</p>
+        <p><b>Một luật, một chỗ &mdash; kể cả với cánh cửa tạm.</b> Trong lúc chờ hạ tầng đăng nhập thật của Google và Zalo, hệ dùng tạm một cửa thử nghiệm (mô tả đầy đủ ở mục Tin cậy). Từ 02/08/2026, <b>toàn bộ quyết định &ldquo;ai được đi qua cửa đó&rdquo; nằm gọn trong một tệp duy nhất của vùng lõi</b>, không rải ra ba màn hình. Lý do rất thực dụng: mỗi bản sao của cùng một luật là một bản sẽ trôi lệch, và chỗ lệch nằm đúng trên đường &ldquo;ai vào được hệ thống&rdquo;. Đặt gọn một chỗ còn cho một cái lợi nữa &mdash; luật đó kiểm được bằng máy mà không cần dựng cả hệ thống lên.</p>
 
         <h3>Thoát một nơi là thoát mọi nơi &mdash; và khóa là cắt</h3>
         <div class="answer-box"><div class="label">Quyết định 27/07/2026 &middot; ADR-016</div><p>Đăng nhập chung mà không có đăng xuất chung thì chỉ làm xong một nửa. Bấm thoát ở Hub, <b>Moodle thoát theo</b>. Tài khoản bị khóa &mdash; em chuyển trường, thầy cô nghỉ việc &mdash; thì <b>mất quyền vào mọi hệ trong vòng vài phút</b>, không phải chờ tự hết hạn.</p></div>
@@ -1882,7 +1883,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="25">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="26">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -2022,7 +2023,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           <div class="arch-canvas compact">
           <svg class="arch-svg" viewBox="0 0 1000 390" role="img" aria-labelledby="pipeline-title pipeline-desc">
             <title id="pipeline-title">Pipeline dữ liệu từ hệ nguồn vào Hub</title>
-            <desc id="pipeline-desc">Connector lấy dữ liệu từ hệ nguồn, ghi raw staging, promote kiểm tra mapping và hợp đồng, rồi upsert snapshot hoặc đưa lỗi vào import errors.</desc>
+            <desc id="pipeline-desc">Connector lấy dữ liệu từ hệ nguồn, ghi raw staging, promote kiểm tra mapping và hợp đồng, rồi upsert snapshot hoặc đưa lỗi vào import errors. Đường đưa lỗi vẽ bằng hai nét vì nó làm hai việc: ghi một dòng chờ người, và hoàn tác mọi thứ dòng đó vừa viết vào kho chính.</desc>
             <rect class="box-external" x="28" y="66" width="180" height="246" rx="15" />
             <text class="label" x="50" y="96">SYSTEMS OF RECORD</text>
             <text class="body" x="50" y="128">AI Tutor · ≤ 1h</text><text class="body" x="50" y="153">Moodle · ≤ 24h</text>
@@ -2051,8 +2052,10 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
             <path class="edge-blue" d="M577 178 V200" marker-end="url(#arch-arrow-blue)" />
             <path class="edge-green" d="M674 244 H696 V136 H718" marker-end="url(#arch-arrow-green)" />
             <text class="tiny" x="679" y="224">VALID</text>
-            <path class="edge-red" d="M674 264 H718" marker-end="url(#arch-arrow-red)" />
-            <text class="tiny" x="680" y="283">INVALID</text>
+            <path class="edge-red" d="M674 258 H718" marker-end="url(#arch-arrow-red)" />
+            <path class="edge-red" d="M674 272 H718" marker-end="url(#arch-arrow-red)" />
+            <text class="tiny" x="678" y="292">INVALID</text>
+            <text class="tiny" x="28" y="334">Mũi tên INVALID vẽ 2 nét vì nó làm 2 việc: ghi một dòng chờ người, VÀ xoá lại mọi thứ dòng đó vừa viết vào kho — không phải chỉ là một nhánh rẽ.</text>
             <path class="edge-dashed" d="M843 200 V188 H577 V200" marker-end="url(#arch-arrow)" />
             <text class="tiny" x="696" y="184">replay after fix (import_errors → promote)</text>
             <text class="subtitle" x="28" y="354">Mọi màn hình dùng snapshot ngoài phải in freshness: “Dữ liệu tính đến HH:mm”. Hub không cung cấp màn hình sửa dữ liệu mà nó không sở hữu.</text>
@@ -2231,6 +2234,34 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           <div class="callout-title"><span class="dot green"></span>Số kiểm chứng của cả đợt, đo lại lúc viết mục này chứ không chép lại</div>
           <p>Dựng một cơ sở dữ liệu trống hoàn toàn, chạy lại toàn bộ 46 file lệnh đổi cấu trúc từ đầu, rồi chạy hết bộ kiểm tự động ở tầng dữ liệu: <b>731 phép kiểm đạt, 0 phép kiểm hỏng</b>, và số phép kiểm <b>thực sự chạy</b> khớp đúng số phép kiểm <b>đã khai trước</b>. Vế thứ hai mới là vế quan trọng: bộ kiểm này khi chết giữa chừng thì <b>không in ra chữ &ldquo;hỏng&rdquo;</b> nào cả &mdash; một bài chết ở phép kiểm thứ 3 trên 40 vẫn trông sạch nếu chỉ đếm số dòng báo hỏng. Nên chúng tôi luôn so hai con số, không so một.</p>
         </div>
+
+        <h3>Đợt 02/08/2026: một dòng nạp là một đơn vị, con số sau lá cờ, và cuốn sổ ghi những lần sửa kho</h3>
+        <p class="lede">Ba việc, chung một câu hỏi: <b>cái đang xanh, nó xanh vì đúng hay xanh vì chưa ai thử?</b></p>
+
+        <h4>1 &middot; Một dòng trong file là một đơn vị &mdash; hoặc nhận trọn, hoặc không đụng gì</h4>
+        <p>Khi nhà trường gửi danh sách cả khối, hệ đọc từng dòng một. Có dòng hệ <b>không dám nhận</b> &mdash; ví dụ dòng xếp một em sang lớp khác, vì chuyển lớp là việc phải có người duyệt chứ không phải hệ quả của một dòng trong bảng tính. Những dòng đó vào <b>sổ chờ người</b>, và cuối lượt máy in ra: <i>&ldquo;Đã vào kho: 0 &middot; Vào sổ lỗi: 1&rdquo;</i>.</p>
+        <p>Ngày 01/08/2026 chúng tôi phát hiện câu đó <b>nói không đúng</b>. Dòng bị từ chối đúng là không được chuyển lớp &mdash; nhưng nó đã kịp <b>sửa họ tên và ngày sinh</b> của em theo file. Người vận hành đọc con số 0 rồi yên tâm là chưa có gì đổi, trong khi hồ sơ của một đứa trẻ vừa bị thay mà không ai được báo.</p>
+        <p>Hình dung cho dễ: giống một nhân viên nhận hồ sơ, đọc tới dòng &ldquo;chuyển lớp&rdquo; thì dừng lại nói <i>&ldquo;cái này tôi không có thẩm quyền, để tôi ghi sổ&rdquo;</i> &mdash; nhưng trước đó đã trót lấy bút sửa tên và ngày sinh trong sổ gốc rồi, và không nói với ai.</p>
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Nay mỗi dòng được xử trọn gói</div>
+          <p>Nếu có bất kỳ chỗ nào trong dòng đó hệ không dám nhận, thì <b>mọi thứ nó vừa viết cho dòng đó đều được xoá lại như chưa từng viết</b>, và chỉ còn đúng một dòng trong sổ chờ người. Con số &ldquo;đã vào kho&rdquo; từ nay là con số thật. Sổ chờ người cũng nói thêm một câu mà trước đây nó im: <i>&ldquo;file này còn định đổi họ tên của em từ A thành B, và ngày sinh từ ngày X sang ngày Y &mdash; hệ đã không đổi&rdquo;</i>. Người xử đọc đủ hai vế rồi quyết, thay vì không biết là có gì để quyết.</p>
+          <p>Chuyện này lan xa hơn người ta tưởng, và bài kiểm tự động bắt được: danh sách &ldquo;những em không thấy trong file&rdquo; lấy họ tên từ chính sổ gốc &mdash; nên khi tên em bị một dòng-đã-bị-từ-chối ghi đè, <b>hàng đợi chờ người cũng gọi sai tên em</b>. Một lần ghi lén lan sang cả màn hình của người đi xử lỗi.</p>
+        </div>
+
+        <h4>2 &middot; Cô chủ nhiệm không còn đọc được con số đằng sau lá cờ</h4>
+        <p>Hồi đầu tháng chúng ta đã hứa với các em một điều rất cụ thể: chuyện em kể trong nhật ký cảm xúc mỗi ngày sẽ không quay về lớp. Chúng ta đã đóng ba cửa để giữ lời hứa đó &mdash; cô không mở được bảng tâm trạng của em, không xem được biểu đồ theo tháng, không hỏi được &ldquo;hôm qua em có vui không&rdquo;.</p>
+        <p>Nhưng còn một cửa sổ nhỏ chưa ai để ý. Khi hệ thống bật lá cờ &ldquo;em này cần để ý&rdquo;, nó ghi kèm một mẩu giấy nhỏ giải thích vì sao nó bật: <i>sáu ngày, sáu ngày liên tiếp, ngưỡng của trường là năm</i>. Mẩu giấy đó nằm ngay sau lá cờ. Trên màn hình thì cô không thấy &mdash; phần mềm đã được viết cẩn thận để không in nó ra. Nhưng nếu ai đó hỏi thẳng vào kho dữ liệu bằng một câu lệnh viết đúng, mẩu giấy vẫn hiện ra. Chúng tôi đã đo được điều đó ngày 02/08/2026: dưới tài khoản một cô chủ nhiệm, câu hỏi đó trả về đúng con số sáu ngày của một em học sinh có thật.</p>
+        <p>Từ hôm nay, mẩu giấy ấy được cất vào ngăn khoá. <b>Cô vẫn nhận lá cờ, đầy đủ như trước</b> &mdash; cô vẫn biết em nào cần để ý, từ ngày nào, vì loại chuyện gì. Cô chỉ không còn đọc được con số. Và điều quan trọng: nếu ai hỏi thẳng vào kho dữ liệu, kho <b>từ chối thẳng</b> chứ không trả lời nửa vời &mdash; nó báo &ldquo;không được phép&rdquo;, không trả về một ô trống khiến người hỏi tưởng là em không có chuyện gì.</p>
+        <p>Thầy cô tâm lý thì không mất gì cả. Ngăn khoá ấy có chìa của riêng thầy cô tâm lý: chúng tôi kiểm lại từng dòng một, <b>mười bảy lá cờ đang có thì thầy cô tâm lý đọc được đủ mười bảy</b>, không thiếu dòng nào. Vì con số đó chính là thứ thầy cô cần để bước vào cuộc trò chuyện đầu tiên với em &mdash; chuỗi sáu ngày và chuỗi mười lăm ngày là hai câu chuyện khác nhau.</p>
+
+        <h4>3 &middot; Cuốn sổ ghi những lần sửa kho dữ liệu</h4>
+        <p>Kho dữ liệu của trường được xây dần bằng năm mươi lần sửa, mỗi lần là một bước có ghi chép. Nhưng cho tới hôm nay, <b>không có cuốn sổ nào ghi lại bước nào đã làm ở đâu</b>. Trên máy của lập trình viên thì mọi bước đều đã làm; ngày dựng máy chủ thật, không ai trả lời được câu &ldquo;máy này đang ở bước bao nhiêu&rdquo;. Người thận trọng sẽ làm lại từ bước một cho chắc &mdash; và làm lại một bước đã làm rồi là cách hỏng dữ liệu êm ái nhất.</p>
+        <p>Từ hôm nay có cuốn sổ đó. Mỗi bước ghi một dòng: bước số mấy, tên tệp, ai làm, lúc nào, mất bao lâu. Cùng với đó là một công cụ đọc sổ trước khi làm bất cứ việc gì: nó <b>từ chối làm lại</b> bước đã làm, và làm cả một bước trong <b>một lần trọn vẹn</b> &mdash; hỏng giữa chừng thì mọi thứ quay về đúng như trước, không để lại nửa vời.</p>
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Điều đắt giá nhất của cuốn sổ nằm ở chỗ ít ai nghĩ tới</div>
+          <p>Mỗi dòng còn ghi một <b>dấu niêm phong</b> của tệp lúc nó được chạy. Nếu về sau ai đó sửa một dòng trong một tệp đã dùng rồi, công cụ so dấu niêm phong, thấy lệch, và <b>dừng lại báo cáo</b>. Không có dấu niêm phong này, đó là kiểu hỏng lặng nhất có thể tưởng tượng: tệp đã sửa sẽ không được chạy lại (sổ bảo là làm rồi), nên máy chủ cứ chạy theo bản cũ trong khi hồ sơ của chúng ta mô tả bản mới &mdash; và không một tiếng động nào báo cho ai biết. Chúng tôi đã thử ngược: thêm đúng một dòng ghi chú vào một tệp cũ, công cụ dừng ngay và in ra cả hai dấu niêm phong để đối chiếu.</p>
+        </div>
+        <p>Còn một chi tiết nhỏ mà chúng tôi muốn nói rõ, vì nó là chỗ dễ sai nhất: <b>sổ trống không có nghĩa là chưa làm gì</b>. Bốn mươi chín bước đã làm bằng tay từ trước khi có sổ. Nếu công cụ mở sổ ra thấy trống rồi kết luận &ldquo;chưa làm gì&rdquo;, nó sẽ làm lại cả bốn mươi chín bước lên một kho đã đầy đủ. Nên công cụ có một bước riêng gọi là <b>nhận nợ</b>: người vận hành khai &ldquo;bốn mươi chín bước này đã có sẵn rồi&rdquo;, sổ ghi nhận mà không chạy lại, và ghi rõ đó là dòng nhận nợ chứ không phải dòng đã chạy. Hai loại dòng đó không bao giờ được lẫn vào nhau, và kho dữ liệu <b>tự cưỡng chế</b> điều đó chứ không trông vào trí nhớ của ai. Đã chạy thật trên máy dev ngày 02/08: 49 dòng nhận nợ, 1 dòng chạy thật, và lần gọi tiếp theo trả lời gọn <i>&ldquo;50 trên 50 bước đã ở trong sổ&rdquo;</i>.</p>
 
         <details class="details deep">
           <summary>Chi tiết kỹ thuật · khóa, System of Record và vòng đời</summary>
@@ -2568,7 +2599,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
 
       </section>
 
-      <section class="part" id="tin-cay" data-pair="danh-cho-may/06-resilience-security.md" data-sync-version="4">
+      <section class="part" id="tin-cay" data-pair="danh-cho-may/06-resilience-security.md" data-sync-version="5">
         <div class="section-head">
           <div class="section-no">13</div>
           <div><p class="eyebrow">Resilience architecture</p><h2>Backup 2 lớp đơn giản và đường phục hồi đã định trước</h2></div>
@@ -2641,6 +2672,23 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           </table>
         </div>
 
+        <h3>Khi máy không gửi được, phần mềm phải nói ra &mdash; kể cả khi nói ra là nhận mình đã làm hỏng</h3>
+        <p>Dòng đầu bảng trên viết &ldquo;mất wifi lớp học &rarr; tiếp tục check-in&rdquo;. Câu đó đúng trong hầu hết các lần, và <b>sai trong ba trường hợp mà chúng tôi vừa đo được</b>. Em bấm check-in lúc lớp mất wifi, máy giữ lại trong điện thoại và hứa &ldquo;tự gửi khi có mạng&rdquo;. Nhưng có những lần lời hứa ấy không thể đúng: em bấm buổi tối, tới sáng hôm sau máy mới có mạng thì phiên đăng nhập đã hết hạn từ lâu, hoặc lượt bấm ấy đã quá cũ để nhà trường còn ghi được vào sổ hôm đó. Trước tháng 8/2026, những lần như vậy <b>nằm im trong điện thoại</b>: em tin mình đã check-in, thầy cô không thấy gì, và khoảng trống ấy bị đọc thành &ldquo;em vẫn ổn&rdquo;.</p>
+        <p>Nay hệ thống làm ba việc, không việc nào được bỏ. <b>Một</b>, một lượt hỏng không còn chặn những lượt xếp sau: trước đây cả hàng dừng lại ở lượt hỏng đầu tiên, nên một lần trục trặc hồi tháng trước có thể khoá mọi lần check-in về sau. <b>Hai</b>, lượt nào không gửi được thì rời hàng chờ nhưng <b>để lại một lời nhắn cho chính em</b> trên màn hình check-in: hôm nào, giờ nào, chưa tới trường, và bấm vào đâu để gửi lại. Lời nhắn ấy chỉ biến mất khi em bấm &ldquo;Đã hiểu&rdquo; &mdash; không có cách nào khác dọn nó đi, vì lặng lẽ xoá cũng chính là con lỗi vừa sửa. <b>Ba</b>, có một trường hợp đặc biệt phải nói riêng: khi nhà trường chưa nhận được phiếu đồng ý của bố mẹ, lượt điểm danh của em vẫn vào sổ nhưng phần &ldquo;hôm nay con thấy thế nào&rdquo; thì không. Màn hình nói đúng chừng đó, nói rõ đây không phải lỗi của em, và nói luôn cái không mất &mdash; em vẫn được ghi có mặt, và nút &ldquo;Mình cần gặp thầy cô&rdquo; vẫn dùng được như thường.</p>
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Nguyên tắc đằng sau cả ba</div>
+          <p><b>Một phần mềm chăm trẻ không được phép im lặng đúng lúc nó làm hỏng việc.</b> Im lặng ở đây không trung tính &mdash; nó luôn được đọc thành tin tốt.</p>
+        </div>
+
+        <h3>Cửa thử nghiệm đã có khoá</h3>
+        <p>Trong lúc chờ mua hạ tầng đăng nhập thật của Google và Zalo, hệ thống dùng tạm một màn hình cho phép chọn sẵn một tài khoản mẫu để thử. Cho tới đầu tháng 8/2026, cửa tạm đó <b>không có khoá</b>: bất kỳ ai biết địa chỉ trang web đều có thể tự nhận mình là hiệu trưởng và xem được mọi thứ. Lúc ấy sau cửa mới chỉ có dữ liệu giả, chưa một em học sinh thật nào &mdash; nên đây không phải một sự cố, nhưng là việc bắt buộc phải làm xong <b>trước ngày nạp danh sách học sinh thật</b>. Nay cửa đã khoá bằng một mã do nhà trường giữ.</p>
+        <p><b>Khoá này không làm phiền người đang dùng.</b> Mở trang trên máy tính hay trên điện thoại, ở trường hay ở quán cà phê, đều như nhau: màn hình hỏi mã <b>đúng một lần</b>, nhập xong thì chiếc máy đó nhớ trong 30 ngày và những lần sau vào thẳng. Chúng tôi cố ý <b>không</b> chọn cách &ldquo;chỉ cho phép máy trong trường&rdquo; &mdash; cách đó nghe thì chắc chắn, nhưng nó khoá luôn chiếc điện thoại mà ban giám hiệu đang dùng để xem, và trên thực tế nó <i>không chặn được người lạ</i>, vì đường truyền hiện nay khiến mọi lượt truy cập từ bên ngoài trông giống hệt một lượt truy cập từ chính máy chủ. Một cánh cửa trông như đã khoá mà thật ra mở là thứ nguy hiểm hơn một cánh cửa ai cũng biết là đang mở.</p>
+        <p><b>Mặc định là đóng, không phải mở.</b> Nếu người quản trị quên đặt mã, hệ thống <b>không</b> mở cửa cho tiện &mdash; nó đóng với tất cả, kể cả với chính người quản trị, và nói rõ lý do trên màn hình. Khi hệ thống chạy ở chế độ chính thức thì cửa tạm này <b>biến mất hoàn toàn</b>. Muốn thu hồi quyền của một chiếc máy đã thất lạc, chỉ cần đổi mã: mọi máy đã nhớ đều bị quên ngay lập tức.</p>
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Điều còn thiếu, xin nói trước</div>
+          <p>Mã này là mã <b>dùng chung</b>, nên nhật ký hệ thống ghi được &ldquo;đã có một người vào bằng quyền hiệu trưởng&rdquo; nhưng chưa ghi được <b>người nào</b>. Đủ để chặn người lạ trong giai đoạn thử; <b>chưa đủ</b> cho ngày có dữ liệu thật của trẻ. Việc còn lại &mdash; mỗi người một lối vào mang tên mình &mdash; nằm trong sổ nợ mục 19, và là điều kiện phải xong trước khi nạp danh sách học sinh thật.</p>
+        </div>
+
         <div class="callout good"><div class="callout-title"><span class="dot green"></span>Luật vàng</div><p>Backup chưa restore thử thì chưa phải backup. Drill 0 là cổng bắt buộc trước vườn ươm; sau đó diễn tập mỗi quý và ghi biên bản có số đo thật.</p></div>
 
       </section>
@@ -2672,7 +2720,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <div class="callout"><div class="callout-title"><span class="dot"></span>Nguyên tắc chi phí</div><p>Không mua sẵn năng lực chưa dùng. Mỗi nâng cấp phải có một chỉ số kích hoạt, một số đo trước/sau và một đường quay lại.</p></div>
       </section>
 
-      <section class="part" id="van-hanh" data-pair="danh-cho-may/07-operations.md" data-sync-version="3">
+      <section class="part" id="van-hanh" data-pair="danh-cho-may/07-operations.md" data-sync-version="4">
         <div class="section-head">
           <div class="section-no">15</div>
           <div><p class="eyebrow">Vận hành</p><h2>Neo vào thời khóa biểu, không tạo thêm một bộ máy họp</h2></div>
@@ -2700,6 +2748,14 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <div class="callout warn">
           <div class="callout-title"><span class="dot amber"></span>Thêm một chỉ tiêu vận hành từ 27/07: nguồn dữ liệu phải còn tươi</div>
           <p>Không chỉ hỏi "quét đêm chạy xong chưa" mà còn hỏi "quét bằng dữ liệu của ngày nào". Mỗi nguồn có hạn tươi riêng; quá hạn thì buồng lái hiện băng vàng ghi rõ thiếu nguồn nào, thay vì hiện bảng xanh với dữ liệu cũ. Sổ nhật ký chạy máy từ nay chỉ có một tên duy nhất trong mọi tài liệu và mọi đoạn code.</p>
+        </div>
+
+        <h3>Bộ kiểm thử từ nay có sổ riêng, và tự kiểm tra chính nó</h3>
+        <p><b>Bộ kiểm thử của trường không còn viết chung sổ với nhà trường.</b> Trước đây, mỗi lần máy tự chạy bài kiểm tra, nó ghi vào đúng quyển sổ mà màn hình của thầy cô đang đọc. Kết quả là quyển sổ ghi &ldquo;đêm qua máy đã quét xong lúc 13 giờ 05&rdquo; trong khi không có lần quét nào cả &mdash; đó chỉ là dấu chân của bài kiểm tra. Dải &ldquo;Quét đêm qua&rdquo; trên màn hình, tức <b>cái đèn báo an toàn số một</b>, đang được nuôi bằng số liệu tự bịa. Từ nay bài kiểm tra có một quyển sổ nháp riêng: nó viết bao nhiêu cũng được, sổ thật của trường không thêm một dòng nào. Đã đo: chạy trọn bộ bài kiểm tra, sổ vận hành đứng yên tuyệt đối.</p>
+        <p><b>Và bộ kiểm tra bây giờ tự kiểm tra chính nó.</b> Chuyện đáng lo nhất của một bộ kiểm tra không phải là nó báo sai, mà là nó <b>im lặng</b>. Bài kiểm tra khai trước &ldquo;tôi sẽ hỏi 40 câu&rdquo;; nếu nó gãy ở câu thứ ba thì phần mềm không kêu tiếng nào &mdash; nó chỉ ngừng hỏi, rồi mọi thứ trông y như bình thường. Nay có một cuốn sổ ghi sẵn mỗi bài phải hỏi bao nhiêu câu (hôm nay: <b>832 câu trong 49 bài</b>). Sau mỗi lần chạy, máy đối chiếu: hỏi thiếu câu, hoặc cả một bài biến mất khỏi danh sách, là báo đỏ và <b>gọi đúng tên bài</b>. Muốn bớt câu hỏi thì phải sửa cuốn sổ đó bằng tay &mdash; hạ hàng rào phải là một việc có tên, không được là một chuyện tình cờ. Chúng tôi đã thử phá hỏng ba kiểu khác nhau để xem cổng có bắt thật không, và cả ba lần nó đều bắt đúng bài.</p>
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Ngày dựng máy chủ thật, đã có quy trình từng bước để sửa kho dữ liệu</div>
+          <p>Việc &ldquo;áp một lần sửa kho lên máy chủ thật&rdquo; trước đây không có mục nào trong sổ tay vận hành &mdash; người làm phải tự nhớ đã làm tới đâu. Nay nó là một mục có số (RB-11) gồm năm bước, và bước đầu tiên là <b>hỏi trước khi làm</b>: công cụ đọc sổ rồi trả lời máy này đang ở bước bao nhiêu, có tệp nào bị sửa sau khi đã dùng không. Trả lời &ldquo;có&rdquo; thì <b>dừng</b>, chưa động vào gì cả. Kèm theo đó, một mục cũ trong sổ tay đã được sửa: nó chỉ người trực đi tìm một chức năng phục hồi mà nhà trường đã quyết định không mua từ cuối tháng 7 &mdash; một chỉ dẫn sai lúc 2 giờ sáng còn tệ hơn không có chỉ dẫn.</p>
         </div>
 
         <h3>Cổng go-live: tám chữ ký, không phải một nút deploy</h3>

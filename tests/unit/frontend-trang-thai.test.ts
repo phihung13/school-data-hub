@@ -23,7 +23,11 @@ import {
   isSessionExpired,
 } from "@/components/ui/query-state";
 import { classLabel, personName } from "@/components/ui/labels";
-import { shouldQueueOffline } from "@/components/checkin-view";
+// `shouldQueueOffline` đã dời từ components/checkin-view.tsx sang lib/offline-queue.ts
+// (02/08/2026, nợ #31): hàng đợi phải trả lời CÙNG câu hỏi lúc gửi lại, và hai bản luật
+// cho một câu hỏi thì có ngày chúng lệch nhau — ngay trên đường "em có được ghi nhận
+// hay không". Import ở đây đổi theo, luật thì không đổi một dòng nào.
+import { shouldQueueOffline } from "@/lib/offline-queue";
 import { describeFlag, urgencyPresentation } from "@/components/gvcn-dashboard";
 import { statState } from "@/components/home-view";
 

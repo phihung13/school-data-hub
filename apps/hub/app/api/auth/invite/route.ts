@@ -26,7 +26,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { redeemInviteCode, resolveIdentity, createSessionToken, SESSION_COOKIE } from "@hub/core/auth-adapter";
+import { redeemInviteCode, resolveIdentity, createSessionToken, SESSION_COOKIE, sessionCookieOptionsFor } from "@hub/core/auth-adapter";
 import { withSystemContext } from "@hub/core/db";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
@@ -201,6 +201,6 @@ export async function POST(req: Request) {
   log("info", "invite.redeemed", { fingerprint, userId: identity.userId });
 
   const res = NextResponse.json({ ok: true, displayName: identity.displayName, roles: identity.roles });
-  res.cookies.set(SESSION_COOKIE.name, token, SESSION_COOKIE.options);
+  res.cookies.set(SESSION_COOKIE.name, token, sessionCookieOptionsFor(req.url));
   return res;
 }

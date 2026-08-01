@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 25
+sync-version: 26
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -23,7 +23,7 @@ Dữ liệu lõi (người dùng, học sinh, giáo viên, phụ huynh, cơ sở
 | `social` | Mini App (đặt chỗ) | `posts`, `comments` — chưa xây |
 | `ai` | Mini App (đặt chỗ) | `conversations`, `prompts` — chưa xây; mọi lời gọi model vẫn qua pii-stripper (§7) |
 | `staging` | Nền tảng | `raw_tutor_events`, `raw_moodle`, `raw_cor_imports`, `raw_embedded_events` (webhook từ Mini App nhúng ngoài, ADR-015), `import_errors`, `import_limits` (ngưỡng dừng lô theo nguồn, mệnh lệnh 7 — `0045`) |
-| `ops` | Nền tảng | `job_runs`, `heartbeats`, `outbox_messages`, `source_freshness`, `audit_log`, `embedded_app_events` (cổng nhận sự kiện rổ Xanh từ app nhúng — **không FK `core.students`**, RLS deny-by-default), `rls_exemptions` (danh sách bảng cố ý không có RLS, có tên và có lý do) |
+| `ops` | Nền tảng | `job_runs`, `heartbeats`, `outbox_messages`, `source_freshness`, `audit_log`, `embedded_app_events` (cổng nhận sự kiện rổ Xanh từ app nhúng — **không FK `core.students`**, RLS deny-by-default), `rls_exemptions` (danh sách bảng cố ý không có RLS, có tên và có lý do), `schema_migrations` (sổ ghi migration đã áp trên chính database này — `0050`, xem đợt F) |
 | `report` | Nền tảng | `v_campus_trends`, `v_vaar_indicators` (đã có), `growth_report_approvals` (sổ duyệt Báo cáo Trưởng thành, 0032). **Chưa xây:** `v_cohort_mastery`, `mv_growth_reports` — hai tên này từng nằm ở đây như thể đã có; giữ lại chỉ để đặt chỗ tên miền dữ liệu, không có migration nào tạo chúng. |
 
 ## Auth indirection (ADR-012)
@@ -306,9 +306,9 @@ Trước file này hệ **không có cửa nào** nhận danh sách học sinh: 
 | `staging.ingest_cor_row(text, jsonb) → bigint` | `0045_nap_danh_sach.sql` | Cửa vào duy nhất cho danh sách học sinh, nguyên khuôn `staging.ingest_embedded_event` (`0028`). Upsert theo `(source, external_id)`, trả `raw_id` cũ khi đã nhận rồi và **không ghi đè payload** — bản đầu tiên là bản có thẩm quyền. `external_id = '<ma_lo>:<student_code>'`, xem "hai tầng chống trùng" bên dưới. |
 | `staging.ghi_loi_nap(text, text, jsonb) → bigint` | `0045_nap_danh_sach.sql` | Ghi một dòng lỗi **cấp FILE** — thứ chưa gắn được vào một bản ghi thô nào, ví dụ "trùng mã học sinh trong cùng một file". `promote()` nhìn từng dòng một nên không bao giờ thấy được thuộc tính của cả file. Idempotent qua `import_errors_dedup_uq` (`0028`). |
 | `core.record_cor_import_error(staging.raw_cor_imports, text, jsonb) → text` | `0045_nap_danh_sach.sql` | Một chỗ duy nhất ghi sổ lỗi của nguồn `cor`, khuôn `core.record_import_error` (`0028`). Khác đúng một điểm: tham số `jsonb` để nhét ngữ cảnh riêng từng ca (lớp cũ, lớp mới, cơ sở đang thuộc). Không có nó thì câu "em đang học lớp khác" không dùng được — người xử phải tự đi tra lớp cũ là lớp nào. |
-| `core.promote_cor_row(bigint, boolean default false) → text` | `0045_nap_danh_sach.sql` | Đưa MỘT dòng thô vào `core.students`/`core.classes`/`core.enrollments`, hoặc vào `staging.import_errors`. Hợp đồng chép từ `0028`: **không bao giờ ném lỗi vì dữ liệu xấu**; trả một trong `raw_not_found` \| `already_promoted` \| `already_failed` \| `import_error` \| `promoted`. Tham số thứ hai (`p_tao_lop_moi`) mặc định `false` có chủ ý — xem "bốn ca không tự động". |
+| `core.promote_cor_row(bigint, boolean default false) → text` | `0045_nap_danh_sach.sql` | Đưa MỘT dòng thô vào `core.students`/`core.classes`/`core.enrollments`, hoặc vào `staging.import_errors`. Hợp đồng chép từ `0028`: **không bao giờ ném lỗi vì dữ liệu xấu**; trả một trong `raw_not_found` \| `already_promoted` \| `already_failed` \| `import_error` \| `promoted`. Tham số thứ hai (`p_tao_lop_moi`) mặc định `false` có chủ ý — xem "bốn ca không tự động". **Viết lại ở `0048`** (hợp đồng trả về không đổi một chữ, thêm đúng một lời hứa): trả `import_error` thì ba bảng đích **không đổi một cột nào** — xem mục `0048` bên dưới. |
 | `core.doi_soat_vang_mat(text) → integer` | `0045_nap_danh_sach.sql` | Đối soát em có kỳ học mở trong các lớp mà lô vừa nạp có nhắc tới, nhưng không xuất hiện trong lô. **CHỈ GHI DANH SÁCH CHỜ NGƯỜI** — không `update students.status`, không đóng `enrollments`, không xoá gì. Chạy lại trả `0` (§9, nhờ `import_errors_dedup_uq`). Phạm vi cố tình HẸP (chỉ lớp trong lô): so cả trường sẽ báo "vắng mặt" cho học sinh của mọi khối không nằm trong file, và một hàng đợi vài nghìn dòng vô nghĩa là một hàng đợi không ai đọc. |
-| `staging.v_loi_nap_danh_sach` (view) | `0045_nap_danh_sach.sql` | Hàng đợi người-xử đọc được bằng mắt: `dong_trong_file` · `ma_hoc_sinh` · `ho_ten` · `ma_lop` · `ly_do` (tiếng Việt). **Không cấp cho `authenticated`** — nó trả họ tên học sinh chưa qua bất kỳ cổng RLS nào. |
+| `staging.v_loi_nap_danh_sach` (view) | `0045_nap_danh_sach.sql` | Hàng đợi người-xử đọc được bằng mắt: `dong_trong_file` · `ma_hoc_sinh` · `ho_ten` · `ma_lop` · `ly_do` (tiếng Việt). **Không cấp cho `authenticated`** — nó trả họ tên học sinh chưa qua bất kỳ cổng RLS nào. `0048` thêm cột `ho_so_chua_ap_dung` (jsonb): với dòng bị từ chối, nó nói *file định đổi họ tên / ngày sinh thành gì mà hệ đã KHÔNG đổi* — bốn khoá `ho_ten_trong_so`, `ho_ten_trong_file`, `ngay_sinh_trong_so`, `ngay_sinh_trong_file`. Từ chối cả dòng mà im luôn là giấu mất việc file có mang theo một thay đổi hồ sơ. |
 
 Cả 6 hàm đều `revoke execute from public` (PostgreSQL mặc định cấp `EXECUTE` cho `PUBLIC`; ba trong số đó là `SECURITY DEFINER` **ghi thẳng vào `core.students`/`classes`/`enrollments`**, tức chạy vượt mọi RLS). **Cố ý không cấp gì cho vai `connector`**, khác `0028`: nguồn embed là một app ngoài tự đẩy webhook nên nó cần một vai hẹp; nạp danh sách là người vận hành chạy một lệnh trên máy chủ với một file trong tay. Đã đối chiếu với file migration khi gộp: không một câu `grant` nào trong `0045`.
 
@@ -416,6 +416,40 @@ Câu mới **chặt hơn chứ không lỏng hơn**: câu cũ nghe như bảo v�
 
 **Hệ quả tới bộ test đang xanh, nói ra chứ không giấu:** năm bài pgTAP (`0014`, `0017`, `0025`, `0038`, `0044`) và hai bài vitest (`idempotency`, `mood-rieng-tu`) ghi `mood` dưới vai học sinh mà không có phiếu — chúng **phải** đỏ sau `0047`, vì chúng mã hoá luật cũ. Cách sửa là dựng sẵn một phiếu ở phần chuẩn bị (`tests/helpers/db.ts` có `capPhieuDongY`/`goPhieuDongY`), **không** phải nới policy. `seed.mjs` cố ý vẫn **không** tạo phiếu cho ai: hôm nay trường chưa gửi phiếu tới phụ huynh nào, và giấu sự thật đó trong seed là làm mọi phép đo về cổng đồng ý mất mẫu số.
 
+### `0048_nap_mot_dong_la_mot_don_vi.sql` — dòng bị từ chối phải sạch
+
+**Cái hỏng thật, đo trên `hub_dev` 01/08/2026.** Em `VA-2026-97001` trước lô: họ tên `Bùi Thị Lan, Jr`, ngày sinh `2015-02-02`, đang học `6A1`. Nạp một lô xếp em sang `6A2` kèm họ tên khác và ngày sinh khác:
+
+| | Trước `0048` | Từ `0048` |
+|---|---|---|
+| `core.promote_cor_row()` trả về | `import_error` — **đúng thiết kế**, chuyển lớp phải có người duyệt | `import_error` |
+| Màn hình job in ra | `Đã vào kho: 0 · Vào sổ lỗi: 1` | như cũ |
+| `core.students.full_name` sau lô | **`TÊN TRONG FILE`** — bị ghi đè | `Bùi Thị Lan, Jr` |
+| `core.students.date_of_birth` sau lô | **`2016-12-31`** — bị ghi đè | `2015-02-02` |
+| Lớp mới do một dòng bị từ chối tạo ra (`--tao-lop-moi`) | **ở lại** thành lớp ma | bị hoàn tác |
+
+Người vận hành đọc *"0 vào kho"* rồi tin là không có gì đổi. Kho đã đổi. Đây là **ghi một phần trong im lặng** — đúng loại hỏng cả hệ này dựng ra để chống, và lần này chính bộ nạp làm.
+
+**Vì sao xảy ra.** `0045` viết phần ánh xạ theo trình tự tự nhiên của câu chuyện (cơ sở → lớp → học sinh → ghi danh) và mỗi lần từ chối là một `return core.record_cor_import_error(…)`. Trong PL/pgSQL, **`return` không hoàn tác gì cả**: mọi `INSERT`/`UPDATE` chạy trước đó đã nằm trong transaction và ở lại đó. Nên "từ chối" của `0045` thật ra có nghĩa là *"làm tới đâu giữ tới đó rồi ghi một dòng sổ lỗi"*.
+
+Rà hết đường promote chứ không chỉ chỗ được báo — ba lệnh ghi, theo thứ tự chúng chạy trong `0045`:
+
+| Lệnh ghi | Còn cửa từ chối nào phía sau nó |
+|---|---|
+| `insert core.classes` (`0045:374`, chỉ khi `p_tao_lop_moi`) | 5 cửa: tra lại lớp không ra · em thuộc cơ sở khác · ghi sổ học sinh hỏng · em đang học lớp khác · ghi danh chồng lấn |
+| `upsert core.students` (`0045:401`) | 2 cửa: em đang học lớp khác *(ca đo được ở trên)* · ghi danh chồng lấn *(em có kỳ ĐÃ ĐÓNG mà `daterange '[]'` vẫn phủ ngày hiệu lực ⇒ `23P01`)* |
+| `insert core.enrollments` (`0045:425`) | không còn cửa nào — lệnh cuối, không hỏng |
+
+`core.doi_soat_vang_mat()` chỉ ghi `staging.import_errors`, không chạm dữ liệu nghiệp vụ — đã đúng từ đầu, không sửa.
+
+**Cách sửa.** PL/pgSQL chỉ có **đúng một** cách hoàn tác phần đã ghi mà không giết cả transaction: một khối `begin … exception when … end`, tức một subtransaction. `0048` bọc toàn bộ phần ánh xạ vào một khối con và đổi mọi cửa từ chối thành `raise exception using errcode = 'HB045', message = <lý do>, detail = <jsonb>`. Lý do và ngữ cảnh đi ra ngoài qua `get stacked diagnostics`; **dòng sổ lỗi được ghi ở NGOÀI khối nên nó sống**, còn mọi thứ ghi trong khối bị cuốn sạch. `'HB045'` là SQLSTATE tự đặt (HB = Hub, 045 = migration sinh ra hợp đồng), không đụng lớp mã chuẩn nào. `0048` cũng thêm nhánh **`when others`** mà `0045` không có: hợp đồng nói `promote()` không bao giờ ném lỗi vì dữ liệu, nhưng `0045` chỉ đỡ được bốn chỗ nó đoán trước; một lỗi ngoài dự kiến ở chỗ khác sẽ bay ra ngoài và giết cả lô đang chạy. Ngoài ra `0048` **đổi thứ tự**: tra học sinh và quyết chuyện ghi danh **trước** mọi lệnh ghi — khối con đã đủ để hoàn tác, nhưng hoàn tác một việc chưa làm là rẻ nhất, và người đọc mã thấy ngay thứ tự đúng thay vì phải tin vào lưới.
+
+**Vì sao gộp cứng chứ không tách thành hai kết quả** (*"đã cập nhật hồ sơ, chưa chuyển lớp"*). Đã cân, ba lý do theo thứ tự sức nặng: (1) ca *"sửa chính tả tên em, lớp chờ duyệt"* **đã có đường đi sẵn** — dòng không đổi lớp thì promote bình thường và tên vào kho (có assertion khoá); tách chỉ mua được "tên vào sớm hơn vài ngày", trả bằng một trạng thái thứ sáu trong hợp đồng trả về. (2) **Từ chối một dòng nghĩa là không tin dòng đó** — ca hỏng phổ biến nhất của file xuất từ Excel là **lệch cột**, và lệch cột làm sai mọi cột cùng lúc. (3) Trạng thái "vào một nửa" **không có đường lùi**: `promoted_at` và `failed_at` loại trừ nhau, và câu hỏi §9 *"gọi lại promote thì sao"* mất câu trả lời đơn nghĩa.
+
+**Nhưng không được im.** Mỗi dòng bị từ chối **sau khi đã tra ra em** đều kèm khối `ho_so_chua_ap_dung` trong payload sổ lỗi, và `staging.v_loi_nap_danh_sach` có một cột riêng cho nó. **Lời hứa in ra màn hình là ràng buộc kỹ thuật:** `tools/jobs/run-nap-danh-sach.mjs` in thêm hai dòng khi có dòng vào sổ lỗi — *"Dòng vào sổ lỗi KHÔNG đổi một cột nào trong kho"* và *"Đã vào kho: N ở trên là con số đầy đủ của lần chạy này"* — và hai câu đó có `core.promote_cor_row` cùng ba file test đứng sau.
+
+**Kiểm chứng:** `0045_nap_danh_sach_test.sql` lên `plan(55)` (từ 52), `0048_nap_mot_dong_la_mot_don_vi_test.sql` **`plan(34)`**, `tests/db/nap-danh-sach.test.ts` 9 ca. **Thử ngược:** lùi `core.promote_cor_row` về định nghĩa `0045` rồi chạy lại — `0045` đỏ **5** assertion, `0048` đỏ **13**, vitest đỏ đúng câu `expected 'TÊN TRONG FILE' to be 'Bùi Thị Lan, Jr'`. Một assertion đỏ theo cách đáng chú ý: *"Danh sách chờ người gọi đúng tên em"* — `doi_soat_vang_mat()` đọc `core.students.full_name`, nên khi họ tên bị dòng-đã-bị-từ-chối ghi đè thì **hàng đợi chờ người cũng gọi sai tên em**. Một lần ghi lén lan sang cả màn hình của người đi xử lỗi.
+
 ### Bộ dữ liệu mẫu nhiều khối — không đổi một dòng lược đồ, nhưng đóng lại một mẫu số rỗng
 
 Gói thứ ba **không có migration**. Thứ thiếu không phải là bảng mới mà là *dữ liệu đủ đa dạng để câu hỏi đặt ra được*. Đo trên `hub_dev` sáng 01/08/2026: `select grade, count(*) from core.classes` trả về đúng một dòng, `6 | 5`. Một khối. Nghĩa là mọi khẳng định dạng *"cô chủ nhiệm khối 7 không thấy học sinh khối 6"* đều trả 0 dòng — **0 vì không có khối khác để mà thấy, không vì hàng rào chặn**. Loại xanh này không hỏng khi policy hỏng, nên nó không bảo vệ gì cả.
@@ -441,7 +475,8 @@ Tổng sau khi gieo: **9 lớp / 3 khối / 2 cơ sở**, 109 học sinh, 108 k�
 
 | Bài | Chạy ở đâu | Số |
 |---|---|---|
-| `packages/core/db/tests/0045_nap_danh_sach_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(52)`, 52 `ok`, 0 `not ok` |
+| `packages/core/db/tests/0045_nap_danh_sach_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(52)`, 52 `ok`, 0 `not ok` — *`0048` nâng lên `plan(55)`, xem mục `0048`* |
+| `packages/core/db/tests/0048_nap_mot_dong_la_mot_don_vi_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(34)`, 34 `ok`, 0 `not ok` |
 | `packages/core/db/tests/0046_cheo_khoi_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(38)`, 38 `ok` — 11 phần, **phần 0 đo MẪU SỐ trước khi đăng nhập bất kỳ ai** |
 | `packages/core/db/tests/0046_dieu_khoan_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(45)`, 45 `ok` — **bốn assertion của bản đầu đã bị LẬT** ở `0047`, không xoá: chúng nay khẳng định điều ngược lại nên ai khôi phục lối cũ sẽ làm chúng đỏ |
 | `packages/core/db/tests/0047_duong_keu_cuu_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(25)`, 25 `ok` — bài KHOÁ CHẶT: chưa có phiếu và sau khi RÚT LẠI, chính em vẫn ghi được `help_requests` |
@@ -451,10 +486,173 @@ Tổng sau khi gieo: **9 lớp / 3 khối / 2 cơ sở**, 109 học sinh, 108 k�
 
 *Hai số cũ trong file này (`564` ở mục `0043`, `601` ở mục `0044`) là số của đúng thời điểm đó và cố ý giữ nguyên — chúng là hồ sơ của một lần đo, không phải một con số phải cập nhật.*
 
+## Đợt F (02/08/2026) — khe cuối của ADR-026, cuốn sổ ghi migration, và hai cổng canh chính bộ kiểm thử
+
+Năm gói hạ cánh cùng ngày. Hai migration (`0049`, `0050`) và ba gói không đổi một dòng lược đồ nào — nhưng cả năm chung một câu hỏi: **cái đang xanh, nó xanh vì đúng hay xanh vì chưa ai thử?** Cùng cách chia việc của đợt E (mỗi gói viết bản nháp vào `danh-cho-may/.wip/`, một lượt gộp duy nhất đưa vào hai file dùng chung rồi xoá thư mục nháp), nên `sync-version` tăng **một lần cho cả đợt** (25 → 26). Người gộp đọc thẳng `0049`/`0050` để tự kiểm thay vì chép niềm tin từ bản nháp — và đã bắt được một số sai trong chính bản nháp (`0048` khai `plan(32)`, số thật là **34**).
+
+### `0049_chi_tiet_co_roi_tam_doc_cua_gvcn.sql` (ADR-026, nợ #39) — chi tiết cờ rời khỏi tầm đọc của GVCN
+
+`0044`/ADR-026 cắt nhật ký cảm xúc khỏi tầm đọc của giáo viên chủ nhiệm, và `apps/hub/server/routers/care.ts` cắt nốt ở tầng hợp đồng. Nhưng cột `care.flags.detail` thì **chưa bao giờ bị che**: RLS `flags_scope` (`0009:207`) gác bằng `core.can_see_care()` — hàm cố ý giữ nhánh chủ nhiệm để cô còn **nhận được cờ**. Hệ quả kèm theo: cô nhận luôn cả cột `detail`, vì **RLS lọc theo DÒNG mà `detail` là một CỘT nằm chung dòng với cờ** — đúng một chữ với cái bẫy `0038` đã gỡ cho `attendance.checkins.mood`. Đây là lần thứ **tư** của cùng một lỗi gốc, sau `0035`, `0037`, `0038`.
+
+Đo thật trên `hub_dev` 02/08/2026, phiên cô Vân (`…0008`, GVCN 6A3+6A4), `select f.detail from care.flags f where f.rule_code = 'E_MOOD'` trả về `{"mode":"streak","nguong":5,"negative_days":6,"negative_streak":6}` cho em Lê Đăng Khôi. Mỗi phép đo phải nằm **trong một transaction**: `test_support.login_as` dùng `set_config(..., true)` nên nó là thiết lập cấp transaction — chạy ngoài transaction thì mọi phép đo ra 0 dòng và trông y hệt "cửa đã kín". Bẫy này đã cắn một lần trong chính buổi làm gói này; ghi ra đây vì nó là cách dễ nhất để nghiệm thu nhầm một hàng rào không tồn tại.
+
+| Đối tượng | Kiểu | Migration | Ghi chú |
+|---|---|---|---|
+| `care.flags` — quyền SELECT của `authenticated` | đổi từ mức BẢNG sang mức CỘT | `0049` | Danh sách được cấp: `id, student_id, rule_code, as_of_date, origin, created_at`. **`detail` không nằm trong đó.** Danh sách này là HỢP ĐỒNG: thêm cột mới vào `care.flags` mà quên thêm vào đây thì cột đó vô hình với cả buồng lái. |
+| `care.flags_tam_ly` | view chủ-quyền, `security_barrier = true` | `0049` | Đường đọc `detail` duy nhất của người dùng cuối. Phạm vi dòng tự khai: `core.in_my_cluster(student_id)` — hàm đó (`0009:57`) đã mang sẵn điều kiện `role_code = 'counselor'` nên **không** viết lại điều kiện vai ở đây. Cấp `select` cho `authenticated`, **không** cho `reporting` (§5) / `connector` / PUBLIC. |
+
+Phạm vi đọc `care.flags` sau `0049`, nói bằng công thức:
+
+```
+DÒNG  : core.can_see_care  = is_homeroom_of ∨ in_my_cluster     (KHÔNG đổi)
+CỘT   : mọi cột trừ detail                                       (mới)
+detail: in_my_cluster, qua care.flags_tam_ly                     (mới)
+```
+
+Bất đẳng thức giữ an toàn của view chủ-quyền: `in_my_cluster ⊂ can_see_care`, nên view **không mở thêm một dòng nào** mà RLS đã đóng — nó chỉ mở lại một CỘT cho một TẬP CON của những người vốn đã thấy dòng đó. pgTAP `0049` ghim lại điều này bằng cách soi `pg_get_viewdef` (phải nhắc `in_my_cluster`, **không** được nhắc `can_see_care` / `is_homeroom_of`), vì đây là chỗ duy nhất trong file có thể âm thầm sai.
+
+**Vì sao chọn che cột chứ không bỏ số khỏi `detail`.** `DEBT` #39 để ngỏ hai đường; đường "engine thôi ghi số" sạch hơn về nguyên tắc (bỏ dữ liệu đi thay vì giấu đi) nhưng bị loại vì hai lý do đo được: (a) **tâm lý cụm mất thật** — ADR-026 viết "tâm lý cụm giữ nguyên mọi quyền", mà chuỗi 6 ngày khác hẳn chuỗi 15 ngày và cuộc gặp đầu tiên khác nhau vì con số đó; (b) **mất bằng chứng hậu kiểm ngưỡng** — khoá `nguong` trong `detail` là bằng chứng "cờ này bật theo ngưỡng nào", mà ADR-023 hẹn rà lại ngưỡng sau ≥1 học kỳ dữ liệu thật.
+
+**Cái bẫy đã gặp, ghi lại để không ai đi lại.** Postgres **không** cho revoke một cột ra khỏi quyền đã cấp ở mức bảng: lệnh chạy, in một WARNING, quyền bảng vẫn còn nguyên. Phải `revoke select on care.flags from authenticated` rồi `grant select (…danh sách cột…)` — đúng cách `0025` và `0038` đã làm. pgTAP `0049` canh **cả hai chiều**: `detail` phải đóng, VÀ mọi cột khác phải còn mở (câu thứ hai bắt ca revoke tay nặng hơn dự định, hoặc cột mới thêm vào bảng mà quên đưa vào danh sách grant — cả hai đều làm buồng lái của cô trắng trơn, mà trắng trơn đọc y hệt "lớp mình đang ổn").
+
+Ba đường đang sống, đo trước và sau dưới **từng danh tính**:
+
+| Đường | Trước `0049` | Sau `0049` |
+|---|---|---|
+| Bộ quét `care.run_flag_engine` (vai `postgres`) | 17 cờ, 17 `detail` | y nguyên. `run-flag-engine.mjs --dry-run`: A_ATTENDANCE + E_MOOD + E_URGENT, 10 cờ mới, 10 hồ sơ, 0 leo thang |
+| Buồng lái GVCN — cô Vân `…0008` | 10 dòng cờ, đọc được `detail` | 10 dòng cờ, `select detail` → **42501** |
+| Buồng lái GVCN — cô Lan `…0001` | 1 dòng cờ, đọc được `detail` | 1 dòng cờ, `select detail` → **42501** |
+| Tâm lý cụm — cô Mai `…0003` | 17 dòng, đọc được `detail` | 17 dòng; `care.flags` → 42501, `care.flags_tam_ly` → **17/17 dòng có `detail`** |
+| Học sinh `…0005` / quản trị `…0007` | 0 dòng | 0 dòng (RLS, không đổi) |
+
+Cô Mai mất một **CÁCH GÕ**, không mất dữ liệu nào: cửa hợp lệ của cô là view chứ không phải bảng. `backup_reader` **không đụng** — ADR-006 đòi bản sao lưu phải ĐỦ, không thủng bảng; bài pgTAP ghim lại.
+
+**Đường thứ tư mà việc rà lôi ra** (giao việc dặn nói ra nếu có): `report.v_vaar_indicators` (`0009:347`, sửa ở `0012`) đọc `care.flags` để đếm chỉ số quản trị theo tháng. Nó `security_invoker = true` và **chỉ được cấp cho `postgres`** — đo bằng `information_schema.table_privileges`: đúng một grantee, không `authenticated`, không `reporting`. Nó chỉ chọn `student_id`/`rule_code`/`as_of_date`/`origin`, không chạm `detail`. **Không gãy** — ghi ra đây để lần sau khỏi rà lại từ đầu.
+
+Buồng lái đo qua HTTP thật (đăng nhập cô Vân rồi `GET /api/trpc/care.getDashboard`): HTTP 200, lớp 6A3, thẻ cờ E_URGENT hiện đủ, `moodVisibility = {readable:false, reason:"chi_tam_ly"}`. Không câu nào ném 42501, vì câu SELECT của buồng lái vốn đã không lấy `f.detail` từ trước — kỷ luật tầng ứng dụng đã đúng, `0049` chỉ dựng hàng rào phía sau nó.
+
+**Kiểm chứng:** `0049_chi_tiet_co_test.sql` **`plan(20)`, 20 assertion xanh** trên database dựng lại từ đầu; `tests/db/flags-detail.test.ts` **8 ca xanh**. **Thử ngược:** `grant select on care.flags to authenticated` (mở lại đúng cửa vừa đóng) → **7 assertion đỏ** trên hai file (`0049`: 6 câu — ba đường hỏi thẳng/`select *`/lọc theo cột, cộng ba câu hình dạng quyền; `0044`: 1 câu). Hoàn nguyên → xanh lại cả hai.
+
+**Một assertion đổi chiều, có chủ ý.** `0044_mood_chi_tam_ly_test.sql` có một câu đọc `care.flags.detail` **dưới phiên cô Lan** để khẳng định "detail chỉ mang bốn khoá số". Nó xanh vì cô **đọc được** cột đó — mà chính việc đó là khe hở #39. Sau `0049` câu ấy ném 42501 và làm cả file abort (chạy 7/26 assertion). Câu được **lật chứ không xoá**: nay là `throws_ok(…, '42501')`, tức ghim một điều **mạnh hơn**. Phép kiểm hình dạng `detail` (danh sách khoá cho phép — hợp đồng thật với `0039`) **chuyển sang** `0049_chi_tiet_co_test.sql`, chỗ nó đọc được qua cửa hợp lệ của tâm lý cụm. Tổng plan của `0044` không đổi (26).
+
+### `0050_so_ghi_migration.sql` (nợ #23) — sổ ghi migration đã chạy
+
+Trước gói này kho có 48 migration và **không sổ nào** ghi cái nào đã chạy ở đâu. Công cụ duy nhất là vòng lặp `for f in migrations/*.sql` trong `tools/run-db-tests.sh` — đúng cho database dựng lại từ đầu và chỉ cho ca đó. Ba câu hỏi không ai trả lời được: máy chủ thật đang ở migration số mấy · file `0031` trên đĩa hôm nay có còn đúng cái đã áp tháng trước · ai áp, lúc nào, mất bao lâu. **Câu thứ hai là câu im lặng nhất:** một dòng bị sửa trong migration ĐÃ ÁP không gây lỗi nào cả — file mới không được chạy lại (đã có trong sổ), nên máy chủ giữ hành vi cũ trong khi kho mô tả hành vi mới.
+
+| Đối tượng | Kiểu | Migration | Ghi chú |
+|---|---|---|---|
+| `ops.schema_migrations` | bảng | `0050` | `version` (PK, `^[0-9]{4}$`) · `filename` · `checksum` (sha256 hex) · `applied_at` · `applied_by` · `duration_ms` · `nhan_no` · `ghi_chu` |
+| `schema_migrations_applied_idx` | index | `0050` | `(applied_at desc)` — câu hỏi của người trực lúc 2 giờ sáng, không phải câu hỏi của báo cáo |
+| dòng `('ops','schema_migrations')` trong `ops.rls_exemptions` | dữ liệu | `0050` | Khai ngoại lệ RLS, xem dưới |
+
+Ba ràng buộc CHECK, mỗi cái chặn một kiểu **dòng sổ nói dối**:
+
+- `schema_migrations_version_chk` — `version` phải bốn chữ số. Chặn ca một công cụ khác nhét khoá kiểu `latest` / `2026-08-02` rồi thứ tự áp thành thứ tự chuỗi ngẫu nhiên.
+- `schema_migrations_checksum_chk` — `checksum` phải sha256 hex 64 ký tự. Bắt ca ghi nhầm **tên file** vào ô băm; lúc đó cột phát hiện lệch nội dung thành vô nghĩa mà vẫn trông đầy đủ.
+- `schema_migrations_nhan_no_chk` — dòng **nhận nợ** (`nhan_no = true`) **không** được mang `duration_ms`; dòng **chạy thật** bắt buộc phải có. Đây là ràng buộc quan trọng nhất của bảng: nó giữ cho *"tôi đã chạy file này"* phân biệt được với *"tôi tin file này đã có sẵn"*.
+
+**Quyền:** không cấp cho `authenticated` (schema `ops` vốn không nằm trong câu grant của `0009` — sổ vận hành không phải dữ liệu nghiệp vụ); `revoke all from public`; `grant select` cho `backup_reader` (ADR-006 — một bản khôi phục không mang theo sổ ghi là một database không ai biết đang ở migration số mấy).
+
+**Ngoại lệ RLS, và vì sao khai chứ không bật RLS.** Cổng `ops.v_rls_gaps` (`0024`) bắt được bảng này **ngay bản nháp đầu**: `0024_rls_gaps_test.sql` đỏ ở assertion 14 trên database dựng lại từ đầu. Chép lại ở đây vì đó đúng là bằng chứng cổng còn sống — một cổng chưa từng bắt được gì thì chưa phải cổng. Chọn **khai ngoại lệ** (đường của `ops.audit_log` / `heartbeats` / `outbox_messages`) chứ không `enable row level security`: bật RLS mà không policy sẽ chặn luôn `backup_reader` — vai đó không phải chủ bảng nên nó nhận **0 dòng, im lặng**, và bản sao lưu mất đúng cuốn sổ nói database đang ở đâu.
+
+**File duy nhất trong kho được chạy KHÔNG THEO THỨ TỰ.** `0050` mang dòng đánh dấu `-- migrate:so-ghi`. Khi sổ chưa tồn tại trên database rỗng, bộ chạy chạy nó **trước cả `0001`** để có chỗ ghi dòng đầu. Hai hệ quả bắt buộc, đều đã cài: `create schema if not exists ops` (vì `0001` chưa chạy), và GRANT cho `backup_reader` phải bọc trong kiểm tra vai tồn tại (vai đó do `0001` tạo). Vì lần đầu GRANT và câu khai ngoại lệ bị bỏ qua, bộ chạy **chạy lại file mồi** ở cuối lượt `up` — không có bước đó thì database dựng bằng `up` thiếu đúng một quyền so với database dựng bằng `run-db-tests.sh`, và **hai đường dựng ra hai kết quả khác nhau là loại lệch tệ nhất**: bài test chạy trên đường này còn máy chủ chạy trên đường kia.
+
+### Bộ chạy `tools/migrate/migrate.mjs` — không phải đối tượng CSDL, nhưng là thứ duy nhất được ghi vào sổ
+
+Ba lệnh: `status` (chỉ-xem, mã thoát 1 khi lệch băm / mất file ⇒ dùng được như cổng CI), `up [--dry-run]`, `baseline --to=NNNN [--ghi-chu=…]`. Thêm `--dir=` / `--url=`. Tài liệu đầy đủ: `tools/migrate/README.md`; mục runbook go-live: `07-operations.md` RB-11.
+
+**Bước "nhận nợ ban đầu" — chỗ dễ làm sai nhất.** Sổ trống **không** có nghĩa "chưa áp gì": 49 migration đã áp bằng tay lên `hub_dev` trước khi có sổ. Hai cổng chặn đối xứng: `up` **từ chối** khi sổ chưa tồn tại mà database đã có `core.users` (chỉ sang `baseline`); `baseline` **từ chối** trên database rỗng — nhận một món nợ mình không có nghĩa là lần `up` kế tiếp bỏ qua đúng những file **chưa bao giờ chạy**, và chỉ lộ ra khi ứng dụng gọi một bảng không tồn tại.
+
+**Một transaction thật, và cái bẫy đã đo được.** Cả 50 file của kho đều là `begin;` … `commit;` với `commit;` là câu SQL cuối. Bộ chạy **chèn câu ghi sổ vào ngay trước `commit;` của chính file** rồi gửi cả khối đi một lượt ⇒ migration và dòng sổ nằm trong cùng một transaction. Cách ngây thơ (mở transaction ở phía Node rồi gửi thân file vào) hỏng thầm lặng: `begin;` bên trong chỉ sinh WARNING, còn `commit;` bên trong **commit luôn transaction của bộ chạy**, nên dòng sổ rơi ra ngoài. Bộ chạy vì thế **cưỡng chế hình dạng file** và từ chối file lạ; file buộc phải chạy ngoài transaction khai tường minh bằng `-- migrate:khong-transaction`.
+
+**Sổ nhật ký chạy máy:** mỗi lượt `up`/`baseline` ghi `ops.job_runs` với `job_name = 'migrate'`. **Cố ý không** khai vào `ops.job_schedule` — migration không có nhịp, khai vào đó là để `ops.v_job_health` báo "quá hạn" mỗi ngày không ai áp gì, và một báo động giả mỗi ngày giết cả bảng cảnh báo (bài học `0011`/ADR-016). pgTAP `0050` ghim lại. Hai bẫy đã cắn và đã vá: trên database dựng từ số không, `ops.job_runs` (`0008`) **chưa tồn tại** lúc lượt chạy bắt đầu, nên lần dựng đầu tiên của một máy chủ mới là lần duy nhất không để lại dấu vết nào — bộ chạy nay ghi một dòng đã-kết-thúc ở cuối lượt cho ca đó; và migration hỏng giữa chừng để lại một transaction **đang mở và đã hỏng**, nên câu `update ops.job_runs` sau đó im lặng thất bại và dòng kẹt ở `'running'` vĩnh viễn — phải `rollback` trước rồi mới ghi.
+
+**Đã chạy thật trên `hub_dev` 02/08/2026:**
+
+```
+up                      → TỪ CHỐI (sổ trống + database đã sống), chỉ sang baseline
+baseline --to=0049      → 49 dòng nhan_no = true + 0050 chạy thật (45 ms)
+up                      → "Không có gì để áp — 50/50 file đã ở trong sổ."
+```
+
+Đo lại lúc gộp tài liệu: `select count(*) filter (where nhan_no)` trên `hub_dev` = **49**, `count(*) filter (where not nhan_no)` = **1**, `max(version)` = `0050`.
+
+**Kiểm chứng:** `0050_so_ghi_migration_test.sql` **`plan(14)`, 14 assertion xanh**; `tests/db/migrate.test.ts` **17 ca xanh** trên ba database tự dựng tự xoá (`hub_migrate_gia_test`, `hub_migrate_tay_test`, `hub_migrate_that_test`) — gồm cả corpus GIẢ (kiểm logic) lẫn corpus THẬT 50 file (kiểm rằng logic đó đúng trên thứ sẽ chạy thật). **Thử ngược:** sửa đúng một dòng chú thích vào `0031` đã áp → `up` và `status` đều trả mã thoát **1** kèm `LỆCH BĂM` + hai băm in ra; hoàn nguyên → xanh lại. Cùng cách với: xoá file đã áp, hai file cùng số, file không có `begin;/commit;`, migration hỏng giữa chừng (không đối tượng nào ở lại, không dòng sổ nào ở lại, `ops.job_runs` ghi `failed`).
+
+### Kho trên máy học sinh (IndexedDB) — nửa thứ hai của một lượt check-in
+
+Một tài liệu về CSDL phải kể một kho nằm ngoài CSDL, vì lượt check-in của học sinh có **hai chỗ trú**: `attendance.checkins` trong Postgres, và IndexedDB trên máy em khi lúc bấm không có mạng. Chỗ thứ hai không có RLS, không có migration, không ai soi — nhưng nó giữ đúng thứ dữ liệu mà cả hệ này dựng ra để chăm, và **mọi lần nó mất một bản ghi thì buồng lái của thầy cô đọc khoảng trống đó thành "em ổn"**. Nợ #31 sống được nửa năm vì kho đó chưa từng có một dòng nào trong tài liệu.
+
+| Tiền tố khoá (kho mặc định của `idb-keyval`) | Ai ghi | Nội dung | Khi nào rời đi |
+|---|---|---|---|
+| `hub:queued-checkin:<clientId>` | `enqueueCheckin()` khi em bấm lúc mất mạng (hoặc mạng chập chờn) | `QueuedCheckinInput` — `mood`, `wantsHelp`, `clientOccurredAt`, `clientId` (UUID v4, khoá idempotent) | `flushQueuedCheckins()` gửi được, HOẶC bản ghi bị kết luận là hỏng vĩnh viễn (chuyển sang khoá thứ hai) |
+| `hub:checkin-chua-gui:<clientId>` | `flushQueuedCheckins()` khi một bản ghi **rời hàng đợi mà không đi trọn vẹn** | `FailedCheckin` — thêm `reason`, `message` (câu tiếng Việt của máy chủ), `httpStatus` | **Chỉ** khi em bấm "Đã hiểu" trên `/checkin` (`clearFailedCheckin`). Không có đường tự dọn nào khác |
+
+**Một ngày một bản ghi.** `enqueueCheckin` tra bản cùng ngày *địa phương* (`sameLocalDay`, không đi vòng qua UTC) và **giữ nguyên `clientId` cũ** khi ghi đè. Hai bản ghi cùng ngày trong hàng đợi nghĩa là thứ tự `keys()` của IndexedDB quyết định tâm trạng nào của em sống sót — ghi đè im lặng do máy tự quyết.
+
+Hợp đồng của `flushQueuedCheckins` — **ba đường ra, không đường nào im**:
+
+| Kết quả lời gọi `checkin.submitMood` | Bản ghi đi đâu | Em thấy gì |
+|---|---|---|
+| 2xx, `moodSaved = true` | rời hàng đợi | không nói gì thêm (đúng lời hứa "tự gửi sau") |
+| Lỗi **tự khỏi khi có mạng**: không có phản hồi (mạng/DNS/wifi cổng đăng nhập), 5xx, 408, 429 | **ở lại** hàng đợi, thử lại lượt sau | không nói gì (chưa có gì hỏng, mạng sẽ có lại) |
+| Lỗi **hỏng y hệt lần sau**: 401, 403, 400… | rời hàng đợi, ghi `hub:checkin-chua-gui:` với `reason = loi-vinh-vien` | khối trên `/checkin`: lần bấm nào, chưa gửi được, và làm gì tiếp (gửi lại, hoặc đăng nhập lại khi 401) |
+| 2xx nhưng `moodSaved = false` (`0047` — nhà em chưa có phiếu đồng ý) | rời hàng đợi, `reason = tam-trang-chua-duoc-ghi` | khối trên `/checkin`: lượt điểm danh đã vào sổ, **riêng** mức tâm trạng thì chưa, và không phải lỗi của em |
+
+Luật phân loại nằm ở **một** hàm duy nhất — `shouldQueueOffline` trong `apps/hub/lib/offline-queue.ts`. Trước 02/08/2026 nó ở `components/checkin-view.tsx` và hàng đợi **không dùng luật nào cả** (cứ lỗi là giữ). Hai bản luật cho cùng một câu hỏi thì sớm muộn trả lời khác nhau, và chỗ lệch nằm đúng trên đường "lượt bấm của em còn hay mất".
+
+**§9 — flush hai lần không gửi đôi.** `flushQueuedCheckins` giữ **một lượt chạy tại một thời điểm**: lượt gọi thứ hai nhận lại đúng promise của lượt đầu. Vì sao cần: `tryFlush` chạy cả lúc mở màn lẫn mỗi sự kiện `online`, mà trình duyệt bắn `online` nhiều lần khi wifi chập chờn; hai lượt chồng nhau cùng đọc hàng đợi trước khi lượt nào kịp xoá. Máy chủ idempotent theo `(student_id, occurred_on, kind)` nên không sinh dòng đôi — **đã đo bằng HTTP thật** (hai lượt `submitMood` liên tiếp trả cùng một `checkinId`, `select` ra đúng một dòng) — nhưng gửi đôi vẫn tiêu hạn mức 429 của chính em, và nó để sẵn một cái bẫy cho đường ghi không-idempotent nào ra đời sau.
+
+Ba cái bẫy đã gặp: (1) **`vi.mock("idb-keyval", …)` KHÔNG chạy** — `idb-keyval` là phụ thuộc của `apps/hub`, pnpm không dựng liên kết ở gốc kho, nên tên trần phân giải từ `tests/unit/…` ra con số không và vitest bỏ qua **trong im lặng**; cách đúng là phân giải từ `apps/hub`, đọc `exports["."].import` (không phải `module` — `module` của gói này trỏ sang bản `compat.js` còn vite nạp `index.js`), rồi `vi.doMock` theo đường dẫn tuyệt đối. (2) **Cổng quét mã nguồn bằng `toContain` bắt cả chuỗi con** — lần thử ngược đầu tiên đổi `listFailedCheckins` thành `listFailedCheckinsXX` mà cổng vẫn xanh vì tên mới vẫn *chứa* tên cũ; phải khớp lời gọi (`/listFailedCheckins\(\)/`). (3) **Ghi dấu vết TRƯỚC, xoá khỏi hàng đợi SAU** — đảo thứ tự là mở một khe mất trắng: tab bị đóng đúng giữa hai lệnh thì bản ghi đã ra khỏi hàng đợi mà chưa có gì nói lại cho em.
+
+### Database test tách khỏi `hub_dev`, và schema `test_meta` (nợ #41)
+
+Gói này **không thêm migration nào**. Nó thêm đúng một đối tượng, và đối tượng đó **cố ý nằm ngoài bộ migration**:
+
+| Đối tượng | Ở đâu | Do ai tạo | Vì sao không phải migration |
+|---|---|---|---|
+| schema `test_meta` + bảng `test_meta.dau_van (id, van, dung_luc)` | chỉ trong database test (`hub_test`) | `tests/helpers/chuan-bi-db-test.ts` lúc dựng database | Nó là siêu dữ liệu của **bộ kiểm thử**, không phải của trường. Nằm trong migration thì nó có mặt trên cả database vận hành, và bước "diff schema" của CI (chỉ so 9 schema nghiệp vụ) sẽ phải học cách bỏ qua nó. Để ngoài thì không ai phải học gì cả. |
+
+`dau_van.van` là **dấu vân của hình dạng database đúng**: sha256 của (tên + nội dung mọi file trong `packages/core/db/migrations/`) cộng nội dung `packages/core/db/seed/seed.mjs`, kèm số file ở đầu chuỗi. Vân khớp ⇒ dùng lại database sẵn có (một truy vấn, 80–90 ms). Vân lệch hoặc chưa có database ⇒ **drop + create + chạy lại toàn bộ migration + gọi `seed.mjs`** (3,5 giây, một lần).
+
+Luật đổi tên nằm ở `tests/helpers/db-test-url.ts` (`hub_dev` → `hub_test`, `TEST_DATABASE_URL` được ưu tiên nhưng **vẫn bị soát tên**), cắm vào ba chỗ: `tests/global-setup-db.ts` (một lần cho cả lượt), `tests/setup-db-url.ts` trong **từng worker** (đứng **trước** `teardown.ts` trong `setupFiles`), và đầu `tools/run-db-tests.sh` (từ chối mọi tên database không dạng `_test`). Worker phải đổi lại dù `globalSetup` đã đổi vì **biến môi trường đặt ở tiến trình chính KHÔNG chảy sang worker của vitest** — bỏ `setup-db-url.ts` đi thì database được dựng đúng mà test vẫn chạy vào `hub_dev`.
+
+**Hàng rào gọi lại chính hàm nó đang canh thì không phải hàng rào.** Lúc 00:40 ngày 02/08, khi thử ngược cổng #41, `laTenDbTest()` được tạm cho trả `true` với mọi tên để xem cổng có đỏ không. Lớp kiểm trong `chuanBiDbTest()` gọi đúng hàm vừa bị phá nên nó gật đầu, và `drop database` chạy trên **`hub_dev`** — database mà Hub đang phục vụ. Server sống lại được (migrations + seed chạy lại ngay sau đó, `tools/start-local.sh` xác nhận 7 tệp JS tải được), nhưng **454 dòng `ops.job_runs` và mọi dữ liệu gõ tay trên máy dev thì mất hẳn**. Cách sửa đã áp: điều kiện `_test` được viết lại bằng **hằng số ngay cạnh câu lệnh nguy hiểm** — trong `dungLaiDatabase()` (trước `drop database`) và trong `setup-db-url.ts` (trước khi gán `DATABASE_URL`) — không gọi `laTenDbTest()`. Thử ngược lần ba: phá `laTenDbTest()` y như cũ, lần này chặn ở `Từ chối chạy test trên database "hub_dev"`, 0 test chạy, `hub_dev` không suy suyển.
+
+Hai hệ quả phải ghi vì chúng đổi mẫu số của các phép đo sau: `ops.job_runs` trên `hub_dev` nay là **0 dòng** (xem `DEBT.md` #33 — đừng lấy view sức khoẻ job trên `hub_dev` làm bằng chứng nghiệm thu), và `hub_test` mà pgTAP để lại **có sẵn một cửa hậu** — fixture `000_test_support.sql` chạy ngoài transaction nên định nghĩa hàm ở lại, trong đó có `test_support.login_as()` cấp cho `public`. Nay `globalSetup` dựng lại `hub_test` từ migrations + seed trước khi vitest chạy nên cửa hậu biến mất; bước `pnpm db:seed` riêng trong CI đã bỏ vì thừa.
+
+### Cổng tín hiệu thứ ba của bộ pgTAP (nợ #46)
+
+`tools/run-db-tests.sh` + `tools/pgtap-plan-check.mjs` + `tools/pgtap-moc.tsv`. Ba tín hiệu, và lý do phải có đủ cả ba:
+
+1. **`not ok`** — assertion sai. Cổng cũ đã bắt.
+2. **`ran ≠ plan`** — pgTAP dừng dở giữa chừng **không in một dòng `not ok` nào**, nó chỉ ngừng in. Một bài khai `plan(40)` chết ở assertion thứ 3 trông y hệt một bài sạch nếu người đọc chỉ đếm `not ok`.
+3. **Tụt so với mốc** — thứ hai tín hiệu trên *không thể* tự thấy: xoá 3 assertion rồi sửa `plan(40)`→`plan(37)` cho khớp là một lượt chạy hoàn toàn hợp lệ; và một file đổi tên khỏi khuôn `*_test.sql` thì vòng lặp còn không biết mình vừa mất một bài.
+
+`tools/pgtap-moc.tsv` ghi **plan của từng file**, không ghi tổng (tổng che được chuyện đắp chỗ này bù chỗ kia) và không ghi số dòng `ok` (số `ok` tụt theo mọi lỗi tạm thời, một mốc dao động theo lỗi tạm thời là mốc không ai tin). Mốc là **bánh cóc**: viết thêm assertion thì mốc tự nâng và thành một diff trong PR; viết bớt thì cổng đỏ, và hạ mốc phải gõ `--cap-nhat` ra tay. Chọn thế để cổng không làm phiền người làm đúng — một cổng làm phiền mỗi lần làm đúng là một cổng sẽ bị tắt.
+
+`tools/run-db-tests.sh` thêm `HUB_PSQL` (chạy psql qua `docker exec` — máy dev Windows không có psql trên PATH nên trước nay cổng này **chưa từng chạy được tại chỗ**), đổi `-f` thành stdin cho tương thích, thêm `HUB_TAP_KET_QUA` để giữ bảng kê từng file, và gọi cổng mốc **SAU** vòng lặp kể cả khi vòng lặp đã đỏ, để một lượt in trọn danh sách vấn đề. Cách chạy đầy đủ: `07-operations.md` RB-12.
+
+**Đã thử ngược, cả ba đều bắt đúng bài:** chèn `select khong_co_ham_nay_dau();` vào giữa `0002_core_identity_test.sql` → `✗ 0002_core_identity_test.sql — chạy 4/8 assertion`, **0 dòng `not ok` trong output**; đổi tên file đó khỏi khuôn `*_test.sql` → vòng lặp báo `0/48 file test có lỗi` nhưng cổng mốc vẫn ĐỎ với `CÓ TRONG MỐC nhưng lượt này KHÔNG CHẠY — bài test biến mất (8 assertion)`; hạ plan `0039` 35→32 trong bảng kê → `plan TỤT 35 → 32 (mất 3 assertion)`, exit 1. Cộng hai cổng của luật đổi tên database: chĩa `run-db-tests.sh` vào `hub_dev` → `TU CHOI`, exit 2; `TEST_DATABASE_URL` trỏ vào `hub_dev` → 0 test chạy.
+
+### Kiểm chứng của cả đợt F
+
+| Bài | Chạy ở đâu | Số |
+|---|---|---|
+| `packages/core/db/tests/0049_chi_tiet_co_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(20)`, 20 `ok` |
+| `packages/core/db/tests/0050_so_ghi_migration_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(14)`, 14 `ok` |
+| `tests/db/flags-detail.test.ts` · `migrate.test.ts` | vitest, Postgres thật | 8 · 17 ca |
+| `tests/unit/offline-queue.test.ts` | vitest, không cần Postgres | 10 bài, đã thử ngược từng bài |
+| `tests/unit/dev-login-gate.test.ts` | vitest, không cần Postgres | 19 ca (chi tiết: `06-resilience-security.md`) |
+
+**Toàn bộ bộ pgTAP sau đợt F, đo trên database dựng lại từ đầu: 832 assertion / 49 file, mọi file khớp `plan(N)`** (đầu đợt: 798 / 47). Từ nay con số này **kiểm được chứ không phải là một lần đo trong quá khứ** — nguồn là `tools/pgtap-moc.tsv`, và lệch với nguồn đó là CI đỏ kèm tên file.
+
+*Các số cũ trong file này (`564` ở mục `0043`, `601` ở mục `0044`, `731`/`796` ở mục đợt E) là số của đúng thời điểm đó và cố ý giữ nguyên — chúng là hồ sơ của một lần đo.*
+
 ## Quy tắc migration (§2)
 
 - Mọi thay đổi qua file trong `packages/core/db/migrations/`, đặt tên `NNNN_mo_ta.sql`. **Số phải duy nhất** — `tools/schema-lint.mjs` chặn trùng số từ 31/07/2026, sau khi trùng số xảy ra thật trong một phiên có nhiều agent làm song song (hai file cùng mang `0030`). Trước khi đặt tên file, `ls` thư mục migration một lần: "số trống" ghi trong một bản giao việc có thể đã bị lấp trong lúc bạn đọc nó.
-- **Chưa có bộ chạy migration và chưa có sổ ghi migration đã chạy** (`DEBT.md` #23): hôm nay không có đường nào áp một migration mới lên database đang sống ngoài việc chạy tay đúng file đó và tự nhớ đã chạy tới đâu. Mọi con số kiểm chứng trong tài liệu này đều đo trên database dựng lại từ đầu.
+- **Đã có bộ chạy migration và sổ ghi migration đã chạy từ 02/08/2026** (`0050` + `tools/migrate/migrate.mjs`, trả nợ `DEBT.md` #23): áp lên database đang sống bằng `node tools/migrate/migrate.mjs up`, hỏi trạng thái bằng `status` (mã thoát 1 khi lệch băm hoặc mất file). Database đã sống trước khi có sổ thì **phải `baseline --to=NNNN` trước** — `up` tự từ chối và chỉ đường. Chi tiết ở mục đợt F phía trên. Các con số kiểm chứng của những đợt trước 02/08 vẫn là số đo trên database dựng lại từ đầu, vì lúc đó không có đường nào khác.
 - Cùng PR phải cập nhật file này **và** mục "Dữ liệu &amp; ERD" trong `danh-cho-nguoi/ho-so-he-thong.html` nếu đổi cấu trúc có ý nghĩa nghiệp vụ (luật đồng bộ, tăng sync-version cả hai phía).
 - Bảng ghi nhiều (`attendance.checkins`, `staging.raw_tutor_events`): partition theo năm học khi >5 triệu dòng — có sẵn trong thiết kế, chưa cần bật ngày 1.
 - **Expand–contract (khi đã có app store):** thay đổi phá tương thích đi 2 bước (thêm mới → chuyển dần → gỡ cũ); chỉ drop cột khi không còn phiên bản app được hỗ trợ nào đọc nó (nối với `meta.minSupportedVersion` ở 03-api).

@@ -316,6 +316,15 @@ function CheckinStrip({
           </span>
           {ATTENDANCE_UNKNOWN_LABEL}
         </span>
+        {/* Ô thứ BẢY: cuối tuần. Phải có mặt trong chú giải vì nó là hình dạng DUY NHẤT
+            trong lưới không mang icon nào — và một ô trống không tự giải thích được là
+            "không phải ngày học" hay "màn hình lỗi". Ô mẫu để rỗng đúng như trong lưới,
+            không vẽ một icon riêng: vẽ icon cho cuối tuần là quay lại đúng chuyện vừa
+            sửa — bịa một tín hiệu cho một ngày không có tín hiệu nào. */}
+        <span className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
+          <span aria-hidden className="h-[18px] w-[18px] flex-none rounded-md bg-[#F7F9FC]" />
+          Cuối tuần
+        </span>
       </div>
 
       {/*
@@ -338,6 +347,19 @@ function CheckinStrip({
 }
 
 export function dayCellLabel(iso: string, entry: StudentCheckinDay | null): string {
+  // BA loại ô, không phải hai (sửa 02/08/2026, gói "audit-giao-dien-chay-tron").
+  //
+  // Bản trước trả về ĐÚNG MỘT câu — "18/07 · chưa có dữ liệu" — cho cả ngày học chưa ai
+  // ghi LẪN thứ Bảy/Chủ nhật. Chú thích đầu file lại hứa ngược: "Cuối tuần được đánh dấu
+  // riêng để không bị đọc nhầm thành 2 ngày mất tín hiệu mỗi tuần". Lời hứa đó chỉ tồn
+  // tại cho MẮT, và tồn tại rất mờ: đo theo công thức WCAG, khác biệt duy nhất giữa hai
+  // loại ô là nền #F7F9FC so với #FFFFFF = 1,04:1, cộng một viền nét đứt #D8DFE9 = 1,34:1.
+  // Cho tai thì không có gì cả — `title=` và `sr-only` đọc ra hai câu giống hệt nhau.
+  // Nên trong 14 ngày, một cô dùng trình đọc màn hình nghe 4 lần "chưa có dữ liệu" mà 4
+  // lần đó KHÔNG phải tín hiệu thiếu; còn màn hình thì in một icon "Chưa điểm danh" lên
+  // một ngày không hề có gì để điểm danh — nói sai, không phải nói thiếu.
+  const weekend = weekdayIndex(iso) >= 5;
+  if (!entry && weekend) return `${formatDate(iso)} · cuối tuần, không phải ngày học`;
   return [
     formatDate(iso),
     entry?.status ? statusWord(entry.status) : "chưa có dữ liệu",
@@ -380,13 +402,21 @@ function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null 
         {dayNumber(iso)}
       </span>
       {/* Hàng icon — thứ biến ô này từ "chỉ có màu" thành đọc được không cần màu.
-          Icon trạng thái (vắng · muộn) đi trước icon tâm trạng: một ngày có thể có cả
-          hai, và "em vắng" là điều cô cần thấy trước. Cả hai aria-hidden vì `sr-only`
-          bên dưới đã đọc nguyên câu đầy đủ, có cả ngày lẫn giờ. */}
-      <span className="flex items-center justify-center leading-none">
-        <span className={`msr text-[13px] ${tone ? "" : "text-muted"}`} aria-hidden>
-          {tone ? tone.icon : ATTENDANCE_UNKNOWN_ICON}
-        </span>
+          `aria-hidden` vì `sr-only` bên dưới đã đọc nguyên câu đầy đủ, có cả ngày lẫn giờ.
+
+          Ô CUỐI TUẦN KHÔNG CÓ ICON (sửa 02/08/2026). Trước đó nó in `remove` — đúng cái
+          icon mà chú giải ngay dưới lưới gọi tên là "Chưa điểm danh". Thứ Bảy không phải
+          một ngày chưa ai điểm danh; nó là một ngày không có gì để điểm danh, và hai
+          chuyện đó không được vẽ giống nhau (§11: hai trạng thái khác nghĩa phải khác
+          icon + chữ, chứ không chỉ khác nền — mà ở đây nền chỉ khác 1,04:1).
+          `h-[13px]` giữ nguyên chiều cao hàng: bỏ icon mà để hàng tự co thì ô cuối tuần
+          thấp hơn ô ngày học và cả lưới 7 cột bị giật so le. */}
+      <span className="flex h-[13px] items-center justify-center leading-none">
+        {(tone || !weekend) && (
+          <span className={`msr text-[13px] ${tone ? "" : "text-muted"}`} aria-hidden>
+            {tone ? tone.icon : ATTENDANCE_UNKNOWN_ICON}
+          </span>
+        )}
       </span>
       <span className="sr-only">{label}</span>
     </span>
@@ -434,8 +464,16 @@ function SignalCard({
     <Card>
       <h2 className="text-[15px] font-black text-navy">Tín hiệu cần để ý</h2>
 
+      {/* Hai khối dưới đây bỏ `border-l-[5px]` (02/08/2026) — dải màu dày một cạnh làm
+          điểm nhấn là mẫu bị cấm, và help-request-view.tsx đã sửa đúng kiểu này hôm
+          01/08 nhưng hai chỗ ở đây bị bỏ sót. Lý do bỏ cụ thể hơn "vì có luật": cả hai
+          khối ĐÃ có icon (folder_open · pan_tool) và ĐÃ có câu chữ nói thẳng trạng thái
+          ngay cạnh, nên dải màu là lớp thứ ba nói lại cùng một điều bằng thứ ngôn ngữ
+          mà người mù màu không đọc được. Viền 1px cùng tông giữ được cảm giác "khối này
+          khác khối kia" cho mắt mà không giả vờ là tín hiệu. Hai mã viền lấy từ bảng
+          đang dùng (#FFE29A 6 chỗ · #FFD5D6 5 chỗ), không chế màu mới. */}
       {openCase ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-xl border-l-[5px] border-gold bg-[#FFFBEE] px-3.5 py-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-xl border border-[#FFE29A] bg-[#FFFBEE] px-3.5 py-3">
           <span className="msr text-[19px] text-[#E8940D]" aria-hidden>
             folder_open
           </span>
@@ -461,7 +499,7 @@ function SignalCard({
       ) : (
         <ul className="mt-3 flex flex-col gap-2.5">
           {helpRequests.map((h) => (
-            <li key={h.requestedOn} className="rounded-xl border-l-[5px] border-[#F0474D] bg-[#FFF7F7] p-3.5">
+            <li key={h.requestedOn} className="rounded-xl border border-[#FFD5D6] bg-[#FFF7F7] p-3.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFE9E9] px-2.5 py-1 text-[10px] font-black tracking-wide text-[#B02A30]">
                   <span className="msr text-[14px]" aria-hidden>

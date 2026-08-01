@@ -1,0 +1,27 @@
+# .gitattributes — ghim kiểu xuống dòng cho những file mà BYTE của chúng là dữ liệu,
+# không chỉ là mã nguồn.
+#
+# CÁI HỎNG THẬT, đo được 02/08/2026 trong lượt nghiệm thu đợt F:
+#
+#   `tools/migrate/migrate.mjs` băm sha256 NGUYÊN VĂN BYTE của mỗi file migration và
+#   so với cột `checksum` trong `ops.schema_migrations` (0050). Đó là một quyết định
+#   đúng và cố ý — "đổi CRLF↔LF LÀ đổi file", chú thích ở hàm `bam()` nói thẳng.
+#
+#   Nhưng máy dev đang để `core.autocrlf=true` và kho KHÔNG có file này, nên chỉ cần
+#   một lệnh `git checkout -- packages/core/db/migrations/0031_emotion_retention.sql`
+#   trên file KHÔNG AI SỬA là git ghi lại nó bằng CRLF, và `migrate.mjs status` lập
+#   tức trả mã thoát 1 kèm câu "có migration ĐÃ ÁP mà nội dung trên đĩa đã đổi".
+#   Tái hiện được 100%: đỏ sau `git checkout`, xanh lại sau khi đổi file về LF.
+#
+#   Hậu quả nếu để nguyên: một `git clone` mới trên máy Windows bất kỳ sẽ thấy CẢ 50
+#   migration "lệch băm" dù không ai chạm vào chữ nào; và cổng CI mà nợ #23 định cắm
+#   (`migrate.mjs status` trên staging) sẽ đỏ vì lý do không liên quan gì tới schema.
+#   Một cổng kêu sai vì chuyện xuống dòng là cổng sẽ bị người ta tắt.
+#
+# Vì sao chỉ ghim .sql và .sh chứ không ghim cả kho: hai loại này là loại mà nội dung
+# byte thật sự MANG NGHĨA — .sql bị băm để đối chiếu, còn .sh chạy bằng bash và một
+# dòng `#!/usr/bin/env bash\r` là lỗi "bad interpreter" không đọc ra được. Các file
+# còn lại đang có kiểu xuống dòng lẫn lộn sẵn; chuẩn hoá cả kho là một lượt đổi lớn
+# nên để thành một việc riêng, có tên, chứ không đính kèm vào đây.
+*.sql text eol=lf
+*.sh text eol=lf

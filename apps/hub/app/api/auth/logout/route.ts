@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, verifySessionToken, resolveIdentity } from "@hub/core/auth-adapter";
+import { SESSION_COOKIE, verifySessionToken, resolveIdentity, sessionCookieOptionsFor } from "@hub/core/auth-adapter";
 // CHỈ import từ `secrets.ts` (file lá). Import `internal-endpoint.ts` sẽ kéo theo
 // `provider.ts` + thư viện `oidc-provider` vào bundle webpack của Next — đúng cái bẫy
 // "hai Provider, hai bộ khoá" mà ghi chú bên dưới dặn phải tránh.
@@ -14,7 +14,7 @@ import { describeError, log } from "@/lib/logger";
 /** RP chậm không được giữ chân nút đăng xuất của người dùng. */
 const INTERNAL_CALL_TIMEOUT_MS = 6_000;
 
-export async function POST() {
+export async function POST(req: Request) {
   // ADR-016 "thoát một nơi là thoát mọi nơi" — trước khi xoá phiên Hub, báo
   // mọi RP (app ngoài) đã đăng nhập qua OIDC bridge để họ tự đóng phiên phía họ.
   //
@@ -85,7 +85,7 @@ export async function POST() {
   // được đăng xuất khỏi máy trước mặt họ. `remoteLogout` chỉ để phía giao diện biết có
   // cần nhắc "hãy đóng cả các ứng dụng liên kết" hay không.
   const res = NextResponse.json({ ok: true, remoteLogout });
-  res.cookies.set(SESSION_COOKIE.name, "", { ...SESSION_COOKIE.options, maxAge: 0 });
+  res.cookies.set(SESSION_COOKIE.name, "", { ...sessionCookieOptionsFor(req.url), maxAge: 0 });
   log("info", "logout.done", { userId, remoteLogout });
   return res;
 }

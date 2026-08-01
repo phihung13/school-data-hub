@@ -3,3 +3,4 @@
 // từ nơi khác ngoài các route handler đăng nhập (01-architecture.md §4).
 export * from "./session.ts";
 export * from "./dev-provider.ts";
+export * from "./dev-gate.ts";

@@ -82,6 +82,7 @@ import { trpc } from "@/lib/trpc-client";
 import type { FlagSummary, HubRole } from "@hub/core/contracts";
 import Link from "next/link";
 import { HubSidebar } from "./hub-sidebar";
+import { MainContent } from "./page-shell";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { ClassPicker, useSelectedClass } from "./gvcn/class-picker";
@@ -352,7 +353,17 @@ export function GvcnDashboard({
       <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
         {sidebar}
         <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-          {children}
+          {/* LANDMARK <main id="noi-dung"> — thêm 02/08/2026 (gói "audit-giao-dien-chay-tron").
+              Đo bằng HTTP thật, phiên Cô Vân: HTML của /gvcn chứa chuỗi "skip-link" hai
+              lần (đường tắt "Bỏ qua menu, tới nội dung chính" in ở app/layout.tsx) và
+              `id="noi-dung"` không lần nào. Buồng lái là ĐÍCH của nút "Buồng lái" mà năm
+              màn con vừa được gắn, nên bỏ sót đúng chỗ này là để nguyên một lỗ ngay giữa
+              con đường vừa vá.
+              Đặt trong `frame` nên landmark có mặt ở CẢ BA trạng thái (đang tải · lỗi ·
+              có dữ liệu) — đường tắt không được sống hay chết theo việc mạng nhanh hay
+              chậm. Sidebar và tab bar nằm ngoài nó, nếu không thì "bỏ qua menu" không
+              bỏ qua được gì. */}
+          <MainContent className="flex min-w-0 flex-1 flex-col md:overflow-hidden">{children}</MainContent>
           <div className="md:hidden">
             <HubTabBar roles={roles} />
           </div>
@@ -437,7 +448,12 @@ export function GvcnDashboard({
     <div key={d.classId} className="flex-1 p-4 md:overflow-y-auto md:p-7">
       <div className="flex flex-wrap items-end justify-between gap-3.5">
         <div>
-          <div className="text-[20px] font-black text-navy md:text-[24px]">Chào {greetName} 👋</div>
+          {/* <h1> chứ không phải <div> (02/08/2026). Buồng lái là trang đầu tiên một GVCN
+              mở ra, và trước hôm nay nó không có heading nào: trình đọc màn hình mở
+              /gvcn không có cách nào biết đây là trang gì ngoài đọc tuần tự từ đầu — đúng
+              lỗi mà tests/unit/a11y-nen.test.ts đã gọi tên cho nhóm màn học sinh. Cỡ chữ,
+              màu, khoảng cách giữ nguyên từng pixel: đây là đổi THẺ, không đổi thiết kế. */}
+          <h1 className="text-[20px] font-black text-navy md:text-[24px]">Chào {greetName} 👋</h1>
           <div className="mt-1 text-[13px] font-semibold text-[#5B6B80]">
             GVCN {classLabel(d.className)} · {d.totals.totalStudents} học sinh
           </div>

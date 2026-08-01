@@ -2,16 +2,28 @@
 # Dựng database sạch từ migrations, nạp fixture, chạy toàn bộ pgTAP.
 #
 # Dùng psql thay vì pg_prove để không phải cài cả một chuỗi module Perl trong CI —
-# pgTAP đã tự in ra định dạng TAP, việc còn lại là đọc đúng ba loại tín hiệu:
+# pgTAP đã tự in ra định dạng TAP, việc còn lại là đọc đúng BA loại tín hiệu:
 #   1. `not ok`  — assertion sai.
-#   2. `# Looks like you planned N tests but ran M` / `# Looks like you failed …`
-#      — pgTAP báo LỆCH PLAN bằng dòng bắt đầu bằng '#', KHÔNG bằng 'not ok'.
-#      Bỏ sót loại này thì một file khai plan(12) mà chỉ chạy 3 assertion vẫn
-#      "xanh": xoá bớt kiểm chứng không ai biết.
-#   3. Số assertion `ok` — in ra để nhìn thấy coverage TỤT giữa hai lần chạy,
-#      thứ mà kết quả pass/fail không bao giờ nói cho biết.
+#   2. LỆCH PLAN — `select plan(N)` in header `1..N` ngay đầu file, nhưng khi một
+#      lệnh SQL sai làm abort transaction thì pgTAP KHÔNG bao giờ chạy tới finish()
+#      nên KHÔNG in dòng `# Looks like …` và cũng KHÔNG in `not ok` nào: nó chỉ
+#      ngừng in. Một bài khai plan(40) mà chết ở assertion thứ 3 trông y hệt một bài
+#      sạch nếu người đọc chỉ đếm `not ok`.
+#   3. SỐ ASSERTION TỤT GIỮA HAI LẦN CHẠY — thứ mà pass/fail không bao giờ nói.
+#      Một bài mất 3 assertion cuối vì một hàm vừa đổi chữ ký vẫn "xanh" (plan cũng
+#      giảm theo nếu ai đó sửa cả plan) và chìm mất trong tổng số hơn bảy trăm.
 #
-# Chạy: DATABASE_URL=postgres://... ./tools/run-db-tests.sh
+# Tín hiệu 1 và 2 kiểm ngay tại chỗ, từng file, ở vòng lặp dưới. Tín hiệu 3 cần một
+# MỐC nằm ngoài lượt chạy: `tools/pgtap-moc.tsv`, so bằng `tools/pgtap-plan-check.mjs`.
+#
+# Chạy trong CI:
+#   DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_test ./tools/run-db-tests.sh
+# Chạy trên máy dev Windows (không có psql trên PATH, Postgres nằm trong container):
+#   HUB_PSQL="docker exec -i pg_hub psql" \
+#   DATABASE_URL=postgres://postgres:postgres@localhost:5432/hub_test \
+#   bash tools/run-db-tests.sh
+#   (chú ý: khi psql chạy TRONG container thì host trong DATABASE_URL là góc nhìn của
+#   container — localhost:5432, không phải cổng 5434 đã publish ra máy thật.)
 set -euo pipefail
 
 DB_URL="${DATABASE_URL:?Thiếu DATABASE_URL}"
@@ -19,25 +31,59 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIG="$ROOT/packages/core/db/migrations"
 FIX="$ROOT/packages/core/db/fixtures"
 TST="$ROOT/packages/core/db/tests"
+MOC="$ROOT/tools/pgtap-moc.tsv"
 
-psql_q() { psql "$DB_URL" -v ON_ERROR_STOP=1 -q "$@"; }
+# ── Cổng #41: script này DROP/tạo lại đối tượng và chạy fixture. Chĩa nó vào
+# `hub_dev` là vừa đập database mà buồng lái đang đọc, vừa để lại rác trong
+# `ops.job_runs` — đúng cách bộ test bịa ra lịch sử chạy máy (nợ #41, đo 01/08/2026:
+# 313 dòng flag_engine trong 2 ngày, nhịp khai là 1 lần/ngày).
+DB_NAME="${DB_URL##*/}"
+DB_NAME="${DB_NAME%%\?*}"
+case "$DB_NAME" in
+  *_test | test_* | test) ;;
+  *)
+    echo "TU CHOI: DATABASE_URL trỏ vào database \"$DB_NAME\"." >&2
+    echo "  Bộ pgTAP chỉ được chạy trên database test (tên kết thúc bằng _test)." >&2
+    echo "  Chạy trên hub_dev là đập chính database mà Hub đang phục vụ (nợ #41)." >&2
+    exit 2
+    ;;
+esac
+
+# psql có thể không nằm trên PATH (máy dev Windows chỉ có container). Cho phép thay
+# bằng một lệnh khác — mảng để giữ nguyên khoảng trắng giữa các tham số.
+read -r -a PSQL <<<"${HUB_PSQL:-psql}"
+
+# Truyền file qua STDIN chứ không bằng -f: `docker exec -i` không nhìn thấy đường dẫn
+# trên máy thật. Không file .sql nào trong kho dùng lệnh \i nên đọc từ stdin là tương
+# đương (đã soát 02/08/2026: `grep -l '^\\' migrations fixtures tests` ra 0 file).
+psql_file() { "${PSQL[@]}" "$DB_URL" -v ON_ERROR_STOP=1 -q <"$1"; }
+psql_c() { "${PSQL[@]}" "$DB_URL" -v ON_ERROR_STOP=1 -q -c "$1"; }
 
 echo "── 1. Cài pgTAP"
-psql_q -c "create extension if not exists pgtap;"
+psql_c "create extension if not exists pgtap;"
 
 echo "── 2. Chạy migrations theo thứ tự"
 for f in "$MIG"/*.sql; do
   echo "   → $(basename "$f")"
-  psql_q -f "$f"
+  psql_file "$f"
 done
 
 echo "── 3. Nạp fixture"
 for f in "$FIX"/*.sql; do
   echo "   → $(basename "$f")"
-  psql_q -f "$f"
+  psql_file "$f"
 done
 
 echo "── 4. Chạy test"
+# Bảng kê từng file của lượt này. Đặt HUB_TAP_KET_QUA=<đường dẫn> để giữ lại — cần khi
+# muốn chốt mốc mới: `node tools/pgtap-plan-check.mjs --ket-qua <đường dẫn> --cap-nhat`.
+if [ -n "${HUB_TAP_KET_QUA:-}" ]; then
+  KET_QUA="$HUB_TAP_KET_QUA"
+  : >"$KET_QUA"
+else
+  KET_QUA="$(mktemp)"
+  trap 'rm -f "$KET_QUA"' EXIT
+fi
 failed=0
 total_files=0
 total_assert=0
@@ -49,22 +95,25 @@ for f in "$TST"/*_test.sql; do
   # Không dùng ON_ERROR_STOP: một bài hỏng vẫn phải chạy tiếp các bài còn lại,
   # để một lần chạy cho ra toàn bộ danh sách lỗi thay vì dừng ở lỗi đầu tiên.
   # -t -A: bỏ khung bảng và tiêu đề cột, để output là TAP thuần (ok / not ok).
-  if ! out="$(psql "$DB_URL" -q -t -A -f "$f" 2>&1)"; then
+  if ! out="$("${PSQL[@]}" "$DB_URL" -q -t -A <"$f" 2>&1)"; then
     echo "$out"
     echo "   ✗ $name — psql lỗi"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$name" "-1" "0" "0" "0" >>"$KET_QUA"
     failed=$((failed + 1))
     continue
   fi
   echo "$out"
   # `|| true`: grep -c trả exit 1 khi đếm được 0, mà `set -e` đang bật.
   n_ok="$(grep -cE '^ok ' <<<"$out" || true)"
+  n_notok="$(grep -cE '^not ok' <<<"$out" || true)"
   n_ran="$(grep -cE '^(ok|not ok) ' <<<"$out" || true)"
   # plan(N) in ra header "1..N" NGAY ĐẦU file, trước khi chạy assertion nào.
   # Đây là mấu chốt để bắt ca "file chết giữa chừng": header đã in rồi thì dù
   # file abort ở assertion thứ 5, ta vẫn biết đáng lẽ phải có N.
   n_plan="$(grep -oE '^1\.\.[0-9]+' <<<"$out" | head -1 | cut -d. -f3)"
+  printf '%s\t%s\t%s\t%s\t%s\n' "$name" "${n_plan:--1}" "$n_ran" "$n_ok" "$n_notok" >>"$KET_QUA"
 
-  if grep -qE '^not ok' <<<"$out"; then
+  if [ "$n_notok" -gt 0 ]; then
     echo "   ✗ $name — có assertion thất bại"
     failed=$((failed + 1))
   elif [ -z "$n_plan" ]; then
@@ -95,8 +144,20 @@ done
 
 echo
 echo "TONG: $total_assert assertion trên $total_files file"
-if [ "$failed" -gt 0 ]; then
-  echo "KET QUA: FAIL — $failed/$total_files file test có lỗi"
+
+# ── 5. Tín hiệu thứ ba: so với MỐC đã chốt. Đặt SAU vòng lặp và chạy kể cả khi
+# vòng lặp đã đỏ — để một lượt chạy in ra trọn danh sách vấn đề, gồm cả bài biến
+# mất khỏi thư mục (thứ vòng lặp trên không thể thấy: nó chỉ duyệt file còn tồn tại).
+echo
+echo "── 5. So với mốc đã chốt ($(basename "$MOC"))"
+if node "$ROOT/tools/pgtap-plan-check.mjs" --ket-qua "$KET_QUA" --moc "$MOC"; then
+  moc_ok=1
+else
+  moc_ok=0
+fi
+
+if [ "$failed" -gt 0 ] || [ "$moc_ok" -eq 0 ]; then
+  echo "KET QUA: FAIL — $failed/$total_files file test có lỗi, cổng mốc $([ "$moc_ok" -eq 1 ] && echo "xanh" || echo "ĐỎ")"
   exit 1
 fi
-echo "KET QUA: PASS — $total_files/$total_files file test xanh"
+echo "KET QUA: PASS — $total_files/$total_files file test xanh, khớp mốc"

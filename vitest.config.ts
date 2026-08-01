@@ -18,9 +18,18 @@ export default defineConfig({
     globals: false,
     environment: "node",
     include: ["tests/**/*.test.ts"],
-    // Đóng pool Postgres sau mỗi file — xem lời giải thích trong chính file đó
-    // (đặc biệt là lý do KHÔNG dùng globalTeardown).
-    setupFiles: ["tests/helpers/teardown.ts"],
+    // Dựng/dùng lại database RIÊNG cho test (`hub_test`), một lần cho cả lượt chạy.
+    // Trước 02/08/2026 bộ test dùng chung `hub_dev` với sổ vận hành và đã bịa ra lịch
+    // sử chạy máy: một lượt `vitest run` để lại 5 dòng `ops.job_runs`, cộng dồn thành
+    // 313 dòng khiến `ops.v_job_health` báo "quét ok lúc 13:05 hôm nay" mà không lịch
+    // nào chạy — nợ #41. Xem tests/helpers/db-test-url.ts.
+    globalSetup: ["tests/global-setup-db.ts"],
+    // THỨ TỰ CÓ NGHĨA: đổi DATABASE_URL trước, rồi mới tới hook đóng pool.
+    // · setup-db-url.ts — worker của vitest KHÔNG thừa hưởng env đặt ở globalSetup,
+    //   nên việc đổi tên database phải làm lại bên trong worker, trước mọi import.
+    // · teardown.ts — đóng pool Postgres sau mỗi file (xem lý do KHÔNG dùng
+    //   globalTeardown viết trong chính file đó).
+    setupFiles: ["tests/setup-db-url.ts", "tests/helpers/teardown.ts"],
     // Test chạm DB dùng chung một Postgres — chạy song song sẽ giẫm chân nhau ở
     // các bảng seed. File chạy tuần tự, trong file vẫn song song được.
     fileParallelism: false,

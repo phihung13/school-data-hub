@@ -40,7 +40,9 @@ buồng lái GVCN thôi cố định một lớp.
    nhưng `care.getDashboard` vẫn tự tính tín hiệu thô mỗi lần mở màn. Hai đường cố ý chạy
    song song một thời gian để đối chiếu (`DEBT.md` #32).
 2. Google/Zalo OAuth thật — vẫn dùng dev provider giả lập vì hạ tầng OAuth chưa mua. **Cửa
-   dev-login đang mở ra Internet là nợ #19 trong `DEBT.md`, bắt buộc bịt trước dữ liệu thật.**
+   dev-login đã KHOÁ từ 02/08/2026 (ADR-028): phải có mã trong `DEV_LOGIN_SECRET` mới vào
+   được, kể cả từ localhost. Nhưng đó là một mật khẩu DÙNG CHUNG, không phải danh tính —
+   nợ #19 trong `DEBT.md` chưa xoá, còn ba việc phải xong trước ngày nạp dữ liệu thật.**
 3. `submitCheckout` (điểm danh ra về, có trong `03-api.md`) — wireframe GĐ1 không cần, chưa viết.
 4. **Cắm lịch job lên máy thật.** `ops.job_schedule` + `tools/jobs/run-all.mjs` chạy được bằng
    tay, nhưng chưa Task Scheduler/cron nào gọi nó theo giờ — nên lời hứa "xóa chi tiết cảm xúc
