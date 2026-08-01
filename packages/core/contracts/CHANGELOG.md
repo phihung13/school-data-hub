@@ -17,7 +17,49 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ## [Unreleased]
 
+### Changed
+
+- **Dạng dấu mốc của BẢN CHỤP đổi, bề mặt hợp đồng KHÔNG đổi** (01/08/2026). Bản chụp
+  trong `version.ts` đánh dấu bốn loại mục bằng nháy nhọn — `"function"`, `"type"`,
+  `"enum"`, `"extends"`, `"expr"`. Chủ đầu tư bỏ hẳn kiểu nháy đó khỏi sản phẩm, nên dấu
+  mốc chuyển sang ASCII: `#function#`, `#type#`, `#enum#`, `#extends#`, `#expr#`.
+
+  Đọc kỹ chỗ này nếu bạn xem `git diff` của `version.ts` và thấy bản chụp bị viết lại
+  TOÀN BỘ: đó là do đổi dấu mốc, không phải do 83 tên xuất khẩu bị xoá rồi thêm lại. Con
+  số 83 trước và sau bằng nhau, đã đối chiếu. Dấu mốc mới giữ đúng tính chất khiến người
+  viết chọn nháy nhọn lúc đầu — `#` không bao giờ xuất hiện trong tên kiểu TypeScript nên
+  không thể lẫn với nội dung thật.
+
+  Bài học kèm theo, ghi để đừng lặp lại: một lượt thay thế ký tự hàng loạt chạy qua cả
+  kho mã đã sửa luôn hai thứ KHÔNG phải là văn bản — dấu mốc dữ liệu ở đây, và một biểu
+  thức chính quy trong `tools/check-html.mjs`. Cả hai đều gãy thành tiếng ngay (một lỗi
+  cú pháp, một cổng báo 8730 lỗi), nên không có gì lọt âm thầm; nhưng lần sau, chỗ nào
+  dùng ký tự lạ làm DẤU MỐC thì viết bằng mã thoát Unicode trong biểu thức, đừng viết ký tự thẳng.
+
 ### Added
+
+- Gói `debt-32-buong-lai-doc-care-flags` (01/08/2026) — `SkippedRule`, `ScanState`,
+  `ScanHealth`, và field `GetDashboardOutput.scanHealth`. Chỉ THÊM: `lastScanAt` giữ
+  nguyên kiểu, nguyên nghĩa và nguyên giá trị, nên client cũ không gãy một dòng nào.
+
+  Vì sao thêm chứ không sửa `lastScanAt` cho gọn: `string | null` gộp làm một BA câu trả
+  lời khác hẳn nhau — "chưa ai quét lần nào", "bộ quét vừa hỏng", "màn hình không đọc nổi
+  sổ nhật ký". Cả ba đều hiện ra dưới dạng một bảng cờ trống, mà bảng cờ trống thì đọc y
+  hệt "lớp mình đang ổn" (RULES Rev F điều 8). `ScanHealth.state` có chín giá trị: bảy giá
+  trị của `ops.v_job_health` (migration 0041) cộng hai giá trị chỉ tầng API biết —
+  `chua_khai` (sổ lịch chưa có dòng nào cho bộ quét) và `khong_doc_duoc` (câu đọc ném lỗi).
+
+  Ghi chú cho vibe team — ba chỗ dễ dùng sai:
+  1. **`state = 'ok'` KHÔNG có nghĩa "quét hôm nay".** Nhịp đã khai là 24 giờ + dung sai
+     6 giờ, nên một lần quét lúc 23:40 hôm qua vẫn là `ok`. Muốn biết số trên màn có phải
+     của hôm nay không thì so `lastSuccessAt` với `asOfDate` — `scanBannerPresentation`
+     trong `apps/hub/components/gvcn/scan-status.ts` đã làm sẵn, dùng lại đừng viết lại.
+  2. **Đừng viết ngưỡng "trễ quá 26 giờ" vào UI.** Ngưỡng nằm ở `ops.job_schedule`
+     (`expected_every` + `grace`) và đã thành `state`; `expectedEveryHours`/`graceHours`
+     đi ra chỉ để VIẾT CÂU ("phải chạy mỗi 24 giờ"), không phải để tính lại kết luận.
+  3. **`degradedSources` ≠ `staleSources`.** Cái trước là nguồn mà LẦN QUÉT ĐÓ đã bỏ qua
+     (thuộc về những cái cờ đang hiện); cái sau là nguồn đang quá hạn tươi NGAY LÚC NÀY.
+     Trộn hai cái là mất khả năng trả lời "mấy cái cờ tôi đang nhìn có thiếu nguồn không".
 
 - Gói `man-hinh-tam-ly-cum` (31/07/2026) — hợp đồng cho **hai màn hình của tâm lý cụm**
   trong `contracts/care.ts`. Chỉ THÊM, không đổi và không xoá field nào đang có:
@@ -58,7 +100,7 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
   trong `contracts/care.ts`. Chỉ THÊM, client cũ không gãy.
 
   `care.listReportApprovals` trước đây chỉ trả hai con số vận hành (`checkinDays`,
-  `happyDays`), nên màn "Duyệt báo cáo" mời GVCN bấm **«Duyệt gửi phụ huynh»** trên một
+  `happyDays`), nên màn "Duyệt báo cáo" mời GVCN bấm **"Duyệt gửi phụ huynh"** trên một
   văn bản cô chưa từng nhìn thấy. `preview` là **nguyên văn thứ phụ huynh sẽ đọc**:
   `headline`, `glow` (dùng lại `GlowItem` của `contracts/report.ts`), `grow` (tối đa 1,
   giống `GetGrowthReportOutput.grow`), `streakDays`.

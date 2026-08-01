@@ -142,6 +142,22 @@ export function CheckinView() {
   const submitRef = useRef(submitMood.mutateAsync);
   submitRef.current = submitMood.mutateAsync;
 
+  // BẤM XONG MÀN ĐỔI HẲN MÀ KHÔNG BÁO CHO TAI (sửa 01/08/2026).
+  //
+  // Em chạm ô "Vui" → toàn bộ cây DOM của màn chọn bị thay bằng màn "Đã ghi nhận, cảm ơn
+  // em!". Chính cái nút vừa bấm biến mất, nên focus rơi về <body>: người dùng bàn phím mất
+  // chỗ đứng và Tab tiếp là quay về đầu trang; người dùng trình đọc màn hình nghe IM LẶNG
+  // đúng lúc màn hình vừa xác nhận việc quan trọng nhất em làm trong app hôm nay. Grep
+  // `aria-live` trên trọn 10 file màn học sinh trước hôm nay trả về đúng MỘT dòng, và
+  // không phải dòng này.
+  //
+  // Hai việc, cùng cách LoadingState (ui/query-state.tsx:149) đã làm đúng: khối thành công
+  // bọc role="status" aria-live="polite", và focus dời lên <h2> của màn mới.
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (state === "success") successHeadingRef.current?.focus();
+  }, [state]);
+
   // Gửi lại hàng đợi ngay khi có mạng — không cần em mở lại màn hình.
   useEffect(() => {
     function tryFlush() {
@@ -220,9 +236,17 @@ export function CheckinView() {
     const notice = lastMood !== null ? changeNotice(changedFrom, lastMood) : null;
     return (
       <PageShell bg="bg-white">
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 py-16 text-center">
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-1 flex-col items-center justify-center gap-4 px-8 py-16 text-center"
+        >
           <Mascot pose="celebrate" width={72} />
-          <h2 className="text-[19px] font-black text-navy">Đã ghi nhận, cảm ơn em!</h2>
+          {/* tabIndex={-1}: <h2> không tự nhận được focus, thiếu nó thì .focus() ở trên
+              không làm gì cả và lỗi im lặng y như cũ. */}
+          <h2 ref={successHeadingRef} tabIndex={-1} className="text-[19px] font-black text-navy">
+            Đã ghi nhận, cảm ơn em!
+          </h2>
           {lastMood !== null && (
             <p className="text-[14px] text-ink">
               Con đã ghi: <b className="font-black text-navy">{MOOD_LABEL[lastMood]}</b>
@@ -251,7 +275,14 @@ export function CheckinView() {
               Đang offline — đã lưu máy, tự gửi khi có mạng.
             </p>
           )}
-          <a href="/home" className="mt-2 rounded-full bg-navy px-6 py-2.5 text-[13px] font-black text-white">
+          {/* min-h-[44px] + inline-flex (01/08/2026): `py-2.5` cho ra ô cao ~33px — dưới mốc
+              44px của §11/WCAG 2.5.5, và đây là đường ra DUY NHẤT của màn thành công trên
+              điện thoại (mini app không có tab bar Hub, PWA thêm vào màn hình chính không có
+              nút Back). min-h trên một <a> nội tuyến không có tác dụng nếu thiếu inline-flex. */}
+          <a
+            href="/home"
+            className="mt-2 inline-flex min-h-[44px] items-center rounded-full bg-navy px-6 py-2.5 text-[13px] font-black text-white"
+          >
             Về trang chủ
           </a>
         </div>
@@ -407,7 +438,7 @@ export function CheckinView() {
                 type="button"
                 disabled={submitMood.isPending}
                 onClick={() => void pick(lastMood)}
-                className="rounded-full bg-navy px-5 py-2 text-[12.5px] font-black text-white disabled:opacity-50"
+                className="min-h-[44px] rounded-full bg-navy px-5 py-2 text-[12.5px] font-black text-white disabled:opacity-50"
               >
                 {submitMood.isPending ? "Đang gửi…" : "Gửi lại"}
               </button>

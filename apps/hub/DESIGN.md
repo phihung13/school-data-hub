@@ -24,7 +24,8 @@ Màu dồn vào icon, nút, trạng thái và header — không phủ nền. Chi
 | Chữ chính | `#0F172A` | nội dung |
 | Tiêu đề thẻ | `#0A2A5E` | heading trong thẻ |
 | Chữ phụ | `#66707D`, `#6B7789` | mô tả |
-| Caption | `#8A94A6`–`#9AA5B5` | **chỉ ≤11px**, không dùng cho nội dung |
+| Caption | `#5F6B7D` (`caption`) / `#66707D` (`caption2`) | 4,90:1 và 4,56:1 ở nền tệ nhất `#F1F4F8` |
+| Chữ gợi ý ô nhập | `#5B6B80` | đặt một lần ở `globals.css`, KHÔNG để rơi về `#9CA3AF` |
 | Viền | `#E4E9F0` | border |
 | Chip xám | `#F1F4F8` | nền chip |
 
@@ -45,7 +46,8 @@ Thống nhất với bản giấy đang dùng trong lớp, nên đây là ràng 
 Y tế `#FF6B70→#E23A41` · Báo cáo `#9D6BFF→#7434E8` · Dấu chân `#00D3E8→#00A6BE` ·
 Buồng lái `#2A5DA8→#0A2A5E` · Tâm lý `#6A34E0→#8B5CF6` (tím = riêng tư) · Zalo `#0068FF`
 
-App chưa build: nền `#E9ECF2`, icon `#8A94A6`, `opacity:.45`, nhãn "· sắp".
+App chưa build: nền `#E9ECF2`, icon token `caption`, `opacity:.45`, nhãn "· sắp"
+(kèm `<span class="sr-only"> — sắp có, chưa mở</span>`: mờ là tín hiệu cho mắt, không cho tai).
 
 ## Typography
 
@@ -97,3 +99,14 @@ giao diện do AI sinh). Hai bên đang mâu thuẫn: một bên là guideline �
 luật chung của công cụ. **Chưa tự ý đổi** — cần chốt với người duyệt thiết kế, vì border-left ở đây
 còn mang chức năng phân mức độ khẩn, không chỉ trang trí. Nếu bỏ thì phải thay bằng cách phân mức
 khác vẫn đọc được khi không phân biệt màu (§11 tiếp cận).
+
+**Đã chốt được một nửa (01/08/2026)** — ranh giới là *ai đọc màn đó*:
+
+- **Buồng lái / tâm lý / điều hành**: giữ nguyên `border-left` 5px theo §7. Việc treo ở trên vẫn treo.
+- **Màn học sinh & phụ huynh**: đã BỎ. Không phải vì luật của công cụ, mà vì đo được hai chỗ nó
+  đang sai nghĩa: (1) `growth-report-view.tsx` bản mobile — bản duy nhất phụ huynh mở từ link Zalo —
+  dùng dải màu trái làm thứ **duy nhất** phân biệt ba loại Glow, không icon không chữ, nên người mù
+  màu và người đọc bằng tai không nhận được gì (§11 "màu không phải tín hiệu duy nhất"); bản desktop
+  cùng dữ liệu thì lại vẽ bằng nền nhạt + icon, tức hai bản đang nói khác nhau. (2)
+  `help-request-view.tsx` dải "chờ xác nhận"/"đã nhận" có sẵn icon + chữ nên dải màu chỉ là thừa.
+  Cả hai nay dùng **nền nhạt + icon + chữ** — thứ mang nghĩa thật.

@@ -17,9 +17,9 @@
 //     và các vai khác (GVCN thuần, học sinh, phụ huynh, quản trị) đều phải bị chặn.
 //
 //  3. LỜI HỨA IN TRÊN MÀN HÌNH LÀ RÀNG BUỘC KỸ THUẬT. Hai lời hứa đang in cho trẻ đọc:
-//       · /checkin      — «Chỉ thầy cô chủ nhiệm thấy» (mood)
-//       · /can-gap-thay-co — dấu tích xanh cho ĐÚNG GVCN của em, và «cô sẽ hỏi ý con
-//         trước khi chuyển tới phòng tâm lý» (nội dung lời em viết)
+//       · /checkin      — "Chỉ thầy cô chủ nhiệm thấy" (mood)
+//       · /can-gap-thay-co — dấu tích xanh cho ĐÚNG GVCN của em, và "cô sẽ hỏi ý con
+//         trước khi chuyển tới phòng tâm lý" (nội dung lời em viết)
 //     Tâm lý cụm KHÔNG phải "thầy cô chủ nhiệm", và đường chuyển tuyến có xin phép thì
 //     chưa tồn tại (GĐ2). Nên hai màn mới KHÔNG được trả ra `mood` lẫn `help_requests.note`
 //     — dù RLS ở tầng dữ liệu HIỆN VẪN CHO PHÉP đọc cả hai (0009 loop + 0037 dùng
@@ -127,7 +127,7 @@ beforeAll(async () => {
       [OUT_CLUSTER_STUDENT, OUT_CLASS],
     );
 
-    // ── Tín hiệu thật: hai em bấm «cần gặp thầy cô», chưa ai xử lý. `note` mang nguyên
+    // ── Tín hiệu thật: hai em bấm "cần gặp thầy cô", chưa ai xử lý. `note` mang nguyên
     // văn lời em kể — đây chính là thứ không được rời khỏi phạm vi GVCN.
     for (const sid of [IN_CLUSTER_STUDENT, HELP_ONLY_STUDENT]) {
       await c.query(
@@ -232,7 +232,7 @@ describe("hộp việc của tâm lý cụm · listClusterCases", () => {
     skip,
   }) => {
     if (!ready) return skip();
-    // Lỗi «tín hiệu khẩn bị nuốt» (ghi chú số 3 đầu routers/care.ts) tái sinh ở đây nếu
+    // Lỗi "tín hiệu khẩn bị nuốt" (ghi chú số 3 đầu routers/care.ts) tái sinh ở đây nếu
     // ai đó lấy care_cases làm gốc truy vấn: em chưa có hồ sơ thì không có hàng để nối.
     const res = await counselor().listClusterCases({ includeClosed: false, limit: 100 });
     const row = res.rows.find((r) => r.studentId === HELP_ONLY_STUDENT);
@@ -241,7 +241,7 @@ describe("hộp việc của tâm lý cụm · listClusterCases", () => {
     expect(row!.helpPending).toBe(true);
   });
 
-  it("«chưa ai làm gì» ≠ «vừa làm hôm nay»: daysSinceLastAction = null, không phải 0", async ({
+  it("“chưa ai làm gì” ≠ “vừa làm hôm nay”: daysSinceLastAction = null, không phải 0", async ({
     skip,
   }) => {
     if (!ready) return skip();
@@ -376,10 +376,10 @@ describe("hồ sơ một em · getClusterCaseDetail", () => {
 
 // ───────────────────────────────────────────────────────────────────────────
 describe("lời hứa in trên màn hình · hai thứ hai màn này KHÔNG được trả ra", () => {
-  it("KHÔNG có nguyên văn «cần gặp thầy cô» ở bất kỳ đâu trong output", async ({ skip }) => {
+  it("KHÔNG có nguyên văn “cần gặp thầy cô” ở bất kỳ đâu trong output", async ({ skip }) => {
     if (!ready) return skip();
     // Màn /can-gap-thay-co in cho em đọc: dấu tích xanh cho ĐÚNG GVCN của em, và
-    // «cô sẽ hỏi ý con trước khi chuyển tới phòng tâm lý». Đường chuyển tuyến có xin
+    // "cô sẽ hỏi ý con trước khi chuyển tới phòng tâm lý". Đường chuyển tuyến có xin
     // phép đó chưa tồn tại, nên tới hôm nay phòng tâm lý chỉ được nhận LOẠI tín hiệu.
     //
     // Soi chuỗi JSON chứ không soi từng field: thêm một cột vào câu SQL sau này là đỏ
@@ -395,7 +395,7 @@ describe("lời hứa in trên màn hình · hai thứ hai màn này KHÔNG đư
     expect(Object.keys(detail.helpSignals[0]!)).not.toContain("note");
   });
 
-  it("KHÔNG có mood — «Chỉ thầy cô chủ nhiệm thấy» in ngay tại chỗ em nhập", async ({ skip }) => {
+  it("KHÔNG có mood — “Chỉ thầy cô chủ nhiệm thấy” in ngay tại chỗ em nhập", async ({ skip }) => {
     if (!ready) return skip();
     const list = await counselor().listClusterCases({ includeClosed: false, limit: 100 });
     const detail = await counselor().getClusterCaseDetail({ studentId: IN_CLUSTER_STUDENT, days: 30 });

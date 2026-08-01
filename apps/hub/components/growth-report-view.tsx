@@ -31,10 +31,16 @@ import type { HubRole } from "@hub/core/contracts";
 
 type Report = GetGrowthReportOutput;
 
-const ACCENT_BORDER: Record<"green" | "blue" | "amber", string> = {
-  green: "border-mood-happy",
-  blue: "border-domain-attendance",
-  amber: "border-domain-activity",
+/**
+ * Icon của ba loại Glow. Trước 01/08/2026 chỉ bản DESKTOP có icon (viết thẳng trong JSX
+ * bằng một chuỗi ba ngôi lồng nhau); bản mobile — bản DUY NHẤT phụ huynh mở từ link Zalo —
+ * phân biệt ba loại bằng một dải màu `border-l-4` và không gì khác. Khai một chỗ để hai
+ * bản không thể nói khác nhau nữa.
+ */
+const GLOW_ICON: Record<"green" | "blue" | "amber", string> = {
+  green: "event_available",
+  blue: "pool",
+  amber: "menu_book",
 };
 const GLOW_BG: Record<"green" | "blue" | "amber", string> = {
   green: "bg-[#F6FEF9]",
@@ -160,10 +166,29 @@ function MobileReport({ report }: { report: Report | undefined }) {
         {report.glow.length === 0 && (
           <p className="text-[12px] text-muted">{glowEmptyMessage(report)}</p>
         )}
+        {/* Sửa 01/08/2026 — DẢI MÀU MỘT CẠNH LÀ TÍN HIỆU DUY NHẤT, và nó không mang nghĩa gì.
+            Bản mobile này là bản DUY NHẤT phụ huynh nhìn thấy (mở từ link Zalo), mà nó phân
+            biệt ba loại Glow bằng đúng một dải `border-l-4` xanh/lam/vàng: không icon, không
+            chữ nói loại. Người mù màu đỏ-lục và người đọc bằng tai không nhận được gì —
+            DESIGN-GUIDELINES §11 "màu không phải tín hiệu duy nhất". Tệ hơn: bản desktop
+            CÙNG DỮ LIỆU lại vẽ bằng nền nhạt + ô icon, tức hai bản đang nói khác nhau.
+            Nay bản mobile dùng đúng bộ GLOW_BG + GLOW_ICON_BG + GLOW_ICON của bản desktop.
+            Icon vẫn là trang trí (aria-hidden) vì tiêu đề ngay bên cạnh đã nói đủ nghĩa —
+            thứ được sửa là "loại nào ra loại nấy cho MẮT", không phải thêm chữ cho tai. */}
         {report.glow.map((item, i) => (
-          <div key={i} className={`rounded-2xl border-l-4 bg-white p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)] ${ACCENT_BORDER[item.accentColor]}`}>
-            <div className="text-[12.5px] font-black text-navy">{item.title}</div>
-            <div className="mt-0.5 text-[11px] text-muted2">{item.detail}</div>
+          <div
+            key={i}
+            className={`flex items-start gap-3 rounded-2xl p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)] ${GLOW_BG[item.accentColor]}`}
+          >
+            <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${GLOW_ICON_BG[item.accentColor]}`}>
+              <span aria-hidden="true" className={`msr text-[19px] ${GLOW_ICON_COLOR[item.accentColor]}`}>
+                {GLOW_ICON[item.accentColor]}
+              </span>
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12.5px] font-black text-navy">{item.title}</div>
+              <div className="mt-0.5 text-[11px] text-muted2">{item.detail}</div>
+            </div>
           </div>
         ))}
 
@@ -271,8 +296,10 @@ function DesktopReport({
                 {report.glow.map((item, i) => (
                   <div key={i} className={`flex items-start gap-3.5 rounded-xl px-[18px] py-4 ${GLOW_BG[item.accentColor]}`}>
                     <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${GLOW_ICON_BG[item.accentColor]}`}>
-                      <span className={`msr text-[20px] ${GLOW_ICON_COLOR[item.accentColor]}`}>
-                        {item.accentColor === "green" ? "event_available" : item.accentColor === "blue" ? "pool" : "menu_book"}
+                      {/* Cùng bảng GLOW_ICON với bản mobile — chuỗi ba ngôi lồng nhau viết
+                          tay ở đây chính là thứ khiến hai bản lệch nhau suốt (01/08/2026). */}
+                      <span aria-hidden="true" className={`msr text-[20px] ${GLOW_ICON_COLOR[item.accentColor]}`}>
+                        {GLOW_ICON[item.accentColor]}
                       </span>
                     </span>
                     <div className="flex-1">

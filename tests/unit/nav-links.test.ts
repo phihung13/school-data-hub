@@ -409,14 +409,14 @@ describe("mục mờ nói về màn hình của CHÍNH vai đang đọc", () => 
   const soonLabels = (roles: HubRole[]) => resolveNav(roles).soon.map((i) => i.label);
 
   it("tâm lý cụm không còn mục mờ nào — màn hình của cô đã có thật", () => {
-    // Trước 31/07/2026 mục «Tâm lý cụm» nằm ở nhóm mờ "sắp có". Khi trang /tam-ly được
+    // Trước 31/07/2026 mục "Tâm lý cụm" nằm ở nhóm mờ "sắp có". Khi trang /tam-ly được
     // dựng thật mà mục mờ vẫn còn, cùng một nhãn dẫn đi hai nơi: sidebar bảo chưa có,
     // tile trên trang chủ lại mở được. Nhóm mờ của vai này nay rỗng.
     expect(soonLabels(["counselor"])).toEqual([]);
     expect(soonLabels(["counselor"])).not.toContain("Quản trị hệ thống");
   });
 
-  it("chỉ quản trị mới thấy «Quản trị hệ thống»", () => {
+  it("chỉ quản trị mới thấy “Quản trị hệ thống”", () => {
     expect(soonLabels(["admin"])).toEqual(["Quản trị hệ thống"]);
     for (const roles of [["principal"], ["board"], ["teacher"], ["homeroom"], ["guardian"], ["student"]] as HubRole[][]) {
       expect(soonLabels(roles), `vai ${roles.join("+")}`).not.toContain("Quản trị hệ thống");

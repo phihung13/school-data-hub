@@ -23,8 +23,32 @@ const config: Config = {
         cardtitle: "#0A2A5E",
         muted: "#66707D",
         muted2: "#6B7789",
-        caption: "#8A94A6",
-        caption2: "#9AA5B5",
+        // NÂNG TOKEN 01/08/2026 (gói "tuong-phan-man-hoc-sinh"), không vá từng chỗ.
+        //
+        // Đo thật trên DOM ở 360px, phiên học sinh Minh: caption cũ #8A94A6 = 3,06:1 và
+        // caption2 cũ #9AA5B5 = 2,49:1 trên nền trắng — chuẩn WCAG 1.4.3 là 4,5:1. Hai
+        // token này KHÔNG chỉ chở chữ trang trí: chúng đang chở địa chỉ email của em
+        // (profile-view), câu "Offline vẫn lưu — tự gửi sau." ở /home, và ĐÚNG những câu
+        // trạng thái rỗng — "Chưa có lịch sử điểm danh nào.", "Chưa có check-in nào tuần
+        // này." Chữ nói ra sự thật về dữ liệu mà lại là chữ mờ nhất màn hình.
+        //
+        // Vì sao sửa ở ĐÂY chứ không ở ~50 chỗ dùng: chú thích tab-bar.tsx đã chỉ đúng
+        // đường ("Ba mục kia của app vẫn dùng caption2 và vẫn sai; việc nâng chính TOKEN
+        // nằm ở gói khác"). Một dòng ở đây là 50 chỗ khỏi phải sửa, và không có chỗ nào
+        // bị bỏ sót vì người sửa không mở file đó ra.
+        //
+        // Vì sao là hai mã này chứ không phải "đậm hơn cho chắc": tương phản phải đạt trên
+        // MẶT NỀN TỆ NHẤT mà app thật sự có, không phải chỉ trên nền trắng.
+        //   caption  #5F6B7D → 5,40:1 (#FFFFFF) · 5,12:1 (#F7F9FC) · 4,90:1 (#F1F4F8)
+        //   caption2 #66707D → 5,03:1 (#FFFFFF) · 4,76:1 (#F7F9FC) · 4,56:1 (#F1F4F8)
+        // Mã #6B7789 (đạt 4,54:1 trên trắng) đã bị loại: trên nền chip #F1F4F8 nó tụt còn
+        // 4,12:1 — "đạt chuẩn do may mắn ở chỗ ai đó vô tình dán nó vào".
+        // caption2 nay TRÙNG giá trị với `muted` là chủ ý, không phải lỡ tay: tab-bar.tsx
+        // đã đổi tay caption2 → muted từ 31/07 và đó là đích đúng; giữ hai tên để ~50 chỗ
+        // gọi caption2 không phải sửa, nhưng chúng đang trỏ về cùng một màu.
+        // tests/unit/a11y.test.ts đo lại hai token này từ chính file này, không chép số.
+        caption: "#5F6B7D",
+        caption2: "#66707D",
         line: "#E4E9F0",
         chip: "#F1F4F8",
         pagebg: "#F7F9FC",

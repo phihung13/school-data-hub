@@ -9,7 +9,7 @@
 // không nói vì sao thì tuần sau lặp lại đúng lỗi đó.
 //
 // 31/07/2026 — KHỐI XEM TRƯỚC. Trước bản này màn duyệt chỉ hiện hai con số vận hành
-// (số ngày check-in, số ngày «Vui») rồi mời cô bấm "Duyệt gửi phụ huynh". Cô ký một thứ
+// (số ngày check-in, số ngày "Vui") rồi mời cô bấm "Duyệt gửi phụ huynh". Cô ký một thứ
 // mình chưa từng đọc. Nay mỗi em kèm nguyên văn bản phụ huynh sẽ nhận — LUÔN MỞ, không
 // gấp vào sau một nút "Xem trước": khối gấp cho phép duyệt mà không mở, tức là quay lại
 // đúng chỗ cũ. Khối này viết bằng giọng "Glow & Grow" của phụ huynh (DESIGN-GUIDELINES
@@ -26,6 +26,7 @@ import { useState } from "react";
 import type { ReportApprovalRow, ReportPreview } from "@hub/core/contracts";
 import { trpc } from "@/lib/trpc-client";
 import { mondayOf, toLocalIsoDate } from "@/lib/date";
+import { formatWeekLabel } from "@/lib/week-label";
 import { EmptyState, ErrorState, LoadingState, MutationError } from "../ui/query-state";
 import { classLabel } from "../ui/labels";
 import { ClassPicker, useSelectedClass } from "./class-picker";
@@ -48,10 +49,22 @@ const GLOW_ACCENT = {
   amber: { dot: "bg-[#F5A300]", icon: "volunteer_activism" },
 } as const;
 
+/**
+ * Nhãn tuần cho MẮT NGƯỜI: "Tuần 27/7 – 31/7".
+ *
+ * Sửa 01/08/2026. Bản cũ ghép thẳng hai chuỗi ISO — lấy HTML thật bằng curl với phiên Cô
+ * Vân thì màn hình in nguyên văn "2026-07-27 → 2026-07-31". ISO là định dạng cho máy đọc;
+ * giáo viên Việt Nam đọc dd/mm. Và repo đã có sẵn đúng một chỗ đổi nhãn tuần
+ * (`lib/week-label.ts`, có test riêng) mà màn này không dùng, nên buồng lái và màn của
+ * học sinh đang in hai chuẩn ngày khác nhau cho cùng một thứ.
+ *
+ * Dùng lại hàm đó thay vì tự viết lần thứ hai: hai bộ định dạng ngày trong một hệ dữ liệu
+ * học sinh là hai chỗ để lệch nhau.
+ */
 function weekLabel(weekStart: string): string {
   const end = new Date(`${weekStart}T00:00:00`);
   end.setDate(end.getDate() + 4);
-  return `${weekStart} → ${toLocalIsoDate(end)}`;
+  return formatWeekLabel(`${weekStart} – ${toLocalIsoDate(end)}`);
 }
 
 export function ReportApprovalView({ displayName, email }: { displayName: string; email: string }) {
@@ -81,7 +94,7 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
       title="Duyệt báo cáo"
       subtitle={
         listQuery.data
-          ? `${classLabel(listQuery.data.className)} · tuần ${weekLabel(listQuery.data.weekStart)} · ${pending} em chờ duyệt`
+          ? `${classLabel(listQuery.data.className)} · ${weekLabel(listQuery.data.weekStart)} · ${pending} em chờ duyệt`
           : undefined
       }
       displayName={displayName}
@@ -104,7 +117,18 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
                 chevron_left
               </span>
             </button>
-            <span className="px-1 text-[12px] font-extrabold tabular-nums text-[#33507C]">{weekLabel(weekStart)}</span>
+            {/* aria-live + aria-atomic: hai nút cạnh nó có aria-label đúng ("Tuần trước" /
+                "Tuần sau"), nhưng bấm xong thì THỨ DUY NHẤT đổi là chuỗi này và cả danh
+                sách bên dưới — không có gì phát ra tiếng. Người dùng bàn phím / trình đọc
+                màn hình bấm "Tuần sau" rồi nghe im lặng, và việc họ sắp làm là DUYỆT GỬI
+                PHỤ HUYNH. Duyệt nhầm tuần không hoàn tác được từ giao diện. */}
+            <span
+              aria-live="polite"
+              aria-atomic="true"
+              className="px-1 text-[12px] font-extrabold tabular-nums text-[#33507C]"
+            >
+              {weekLabel(weekStart)}
+            </span>
             <button
               type="button"
               onClick={() => shiftWeek(7)}
@@ -140,7 +164,10 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
           hint="Chưa có em nào trong sổ ghi danh — chưa có báo cáo nào để duyệt."
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        // aria-busy trong lúc nạp lại: đổi tuần giữ nguyên danh sách cũ trên màn hình
+        // (react-query trả dữ liệu cũ trước), nên nếu không khai thì trong nửa giây đó
+        // màn hình đang trình bày báo cáo TUẦN KHÁC dưới nhãn tuần vừa đổi.
+        <div className="flex flex-col gap-3" aria-busy={listQuery.isFetching}>
           {rows.map((row) => (
             <ApprovalRow key={row.studentId} row={row} weekStart={weekStart} onDone={() => utils.care.listReportApprovals.invalidate()} />
           ))}
@@ -183,13 +210,13 @@ function ApprovalRow({
           </span>
         </div>
         <div className="mt-1 text-[12px] leading-relaxed text-muted">
-          Tuần này: {row.checkinDays} ngày có check-in · {row.happyDays} ngày tâm trạng «Vui»
+          Tuần này: {row.checkinDays} ngày có check-in · {row.happyDays} ngày tâm trạng "Vui"
           {row.checkinDays === 0 && " — báo cáo tuần này gần như không có dữ liệu thật để kể"}
         </div>
         {row.reviewedAt && (
           <div className="mt-1 text-[11px] text-muted">
             Quyết định lúc {new Date(row.reviewedAt).toLocaleString("vi-VN")}
-            {row.note ? ` · «${row.note}»` : ""}
+            {row.note ? ` · "${row.note}"` : ""}
           </div>
         )}
       </div>
@@ -211,7 +238,7 @@ function ApprovalRow({
             setAskReason(false);
             approve.mutate({ studentId: row.studentId, weekStart, decision: "approved" });
           }}
-          className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white disabled:opacity-40"
+          className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
         >
           {approve.isPending ? "Đang ghi…" : "Duyệt gửi phụ huynh"}
         </button>
@@ -220,7 +247,7 @@ function ApprovalRow({
           disabled={approve.isPending}
           aria-expanded={askReason}
           onClick={() => setAskReason((v) => !v)}
-          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12.5px] font-black text-gold-textDark disabled:opacity-40"
+          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12.5px] font-black text-gold-textDark disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
         >
           Trả lại
         </button>
@@ -235,7 +262,7 @@ function ApprovalRow({
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               placeholder="Ví dụ: tuần này em nghỉ ốm 3 ngày, báo cáo chưa phản ánh đúng…"
-              className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none focus:border-navy"
+              className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
             />
           </label>
           <button
@@ -249,7 +276,7 @@ function ApprovalRow({
                 note: note.trim(),
               })
             }
-            className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white disabled:opacity-40"
+            className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
           >
             Xác nhận trả lại
           </button>
@@ -295,7 +322,7 @@ function ReportPreviewBlock({ preview, studentName }: { preview: ReportPreview; 
         </h4>
       </div>
 
-      <p className="mt-2 text-[14px] font-black text-navy">«{preview.headline}»</p>
+      <p className="mt-2 text-[14px] font-black text-navy">"{preview.headline}"</p>
 
       {empty ? (
         <p className="mt-2 text-[12.5px] leading-relaxed text-muted">

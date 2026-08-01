@@ -43,7 +43,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import {
   HELP_REQUEST_TOPIC_LABEL,
@@ -164,19 +164,7 @@ export function HelpRequestView({
             />
 
             {submit.isSuccess ? (
-              <div className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] bg-white p-6 text-center shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-10">
-                <Mascot pose="celebrate" width={72} />
-                <div className="text-[18px] font-black text-navy">Đã gửi cho {teacherFirstWord} rồi!</div>
-                <p className="text-[13.5px] leading-relaxed text-caption">
-                  {teacherFirstWord} sẽ đọc và tìm con sớm. Đây là một bước dũng cảm.
-                </p>
-                <button
-                  onClick={() => router.push("/home")}
-                  className="rounded-[15px] bg-gradient-to-r from-navy to-[#1E5FB8] px-7 py-3.5 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.28)]"
-                >
-                  Về trang chủ
-                </button>
-              </div>
+              <SentSuccessPanel teacherName={teacherFirstWord} onGoHome={() => router.push("/home")} />
             ) : (
               <div className="flex flex-wrap items-start gap-4 md:gap-5">
                 <div className="min-w-0 flex-[2.1_1_320px] flex flex-col gap-[22px] rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:flex-[2.1_1_520px] md:p-6">
@@ -253,7 +241,11 @@ export function HelpRequestView({
                       <label htmlFor="loi-nhan-cho-co" className="text-[13px] font-black tracking-wide text-[#5B6B80]">
                         3 · CON MUỐN NÓI GÌ TRƯỚC KHÔNG?
                       </label>
-                      <span className="text-[11px] font-bold text-[#9AA5B5]">không bắt buộc</span>
+                      {/* #9AA5B5 → token muted. Đo sống ở 360px: "không bắt buộc" là 2,49:1
+                          trên nền trắng — mà đây là chữ nói cho em biết có được BỎ QUA ô
+                          này không, tức là nó quyết định em có bấm gửi hay bỏ dở. #66707D
+                          = 5,03:1. (01/08/2026) */}
+                      <span className="text-[11px] font-bold text-muted">không bắt buộc</span>
                     </div>
                     <textarea
                       id="loi-nhan-cho-co"
@@ -264,7 +256,15 @@ export function HelpRequestView({
                       // KHÔNG focus:outline-none ở đây. Nó đè lưới an toàn :focus-visible
                       // của globals.css và để lại đúng một tín hiệu: màu viền — thứ người
                       // mù màu không thấy. Đây lại là ô riêng tư nhất trong cả app.
-                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-[#E4E9F0] bg-[#FCFDFE] p-4 text-[13.5px] leading-relaxed text-ink placeholder:text-[#9AA5B5] focus:border-navy"
+                      //
+                      // Đã bỏ `placeholder:text-[#9AA5B5]` (01/08/2026). Đo qua
+                      // getComputedStyle(el,'::placeholder') ở 360px: 2,45:1 trên nền ô
+                      // #FCFDFE. Câu gợi ý ở đây không phải trang trí — nó là câu MẪU dạy em
+                      // biết ô này viết được gì; ở sân trường lúc 7 giờ sáng, nắng gắt, màn
+                      // điện thoại rẻ, 2,45:1 là biến mất. Màu nay đến từ MỘT chỗ duy nhất
+                      // trong globals.css (#5B6B80 = 5,34:1 trên #FCFDFE) nên mọi ô nhập của
+                      // app cùng đọc được, không phải ô nào có người nhớ thì ô đó mới đạt.
+                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-[#E4E9F0] bg-[#FCFDFE] p-4 text-[13.5px] leading-relaxed text-ink focus:border-navy"
                     />
                   </div>
 
@@ -342,6 +342,55 @@ export function HelpRequestView({
             )}
           </div>
       </MainContent>
+    </div>
+  );
+}
+
+/**
+ * Màn "Đã gửi cho cô rồi!" — thay chỗ CẢ form sau một cú bấm.
+ *
+ * Thêm 01/08/2026 (gói "tuong-phan-man-hoc-sinh"). Trước đó khối này là một `<div>` trần:
+ * grep `aria-live` trên trọn 10 file màn học sinh trả về ĐÚNG MỘT dòng, và nó không phải
+ * dòng này. Hậu quả đo được từ mã, không phải suy đoán:
+ *  · Nút "Gửi cho cô" vừa bấm bị gỡ khỏi DOM cùng cả form, nên focus rơi về `<body>` —
+ *    người dùng bàn phím mất chỗ đứng, bấm Tab tiếp là quay lại từ đầu trang.
+ *  · Không vùng aria-live nào bao khối mới, nên trình đọc màn hình IM LẶNG đúng lúc màn
+ *    hình đang báo việc quan trọng nhất em làm trong app hôm nay.
+ *
+ * Hai việc, đúng cách LoadingState ở ui/query-state.tsx:149 đã làm: bọc `role="status"
+ * aria-live="polite"`, và dời focus lên tiêu đề (ref + tabIndex={-1}). Tiêu đề nay là
+ * `<h2>` thật chứ không phải `<div>` — dời focus vào một `<div>` thì trình đọc màn hình
+ * đọc lên một dòng chữ không có cấp bậc nào.
+ *
+ * Đặt focus trong effect LÚC GẮN (không phải theo dõi state đổi): khối này chỉ được dựng
+ * khi `submit.isSuccess`, nên "gắn xong" chính là "vừa gửi xong" — không cần cờ phụ, và
+ * không có ca focus bị cướp khi người dùng đã tự bấm đi chỗ khác.
+ */
+function SentSuccessPanel({ teacherName, onGoHome }: { teacherName: string; onGoHome: () => void }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] bg-white p-6 text-center shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-10"
+    >
+      <Mascot pose="celebrate" width={72} />
+      <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-navy">
+        Đã gửi cho {teacherName} rồi!
+      </h2>
+      <p className="text-[13.5px] leading-relaxed text-caption">
+        {teacherName} sẽ đọc và tìm con sớm. Đây là một bước dũng cảm.
+      </p>
+      <button
+        onClick={onGoHome}
+        className="min-h-[44px] rounded-[15px] bg-gradient-to-r from-navy to-[#1E5FB8] px-7 py-3.5 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.28)]"
+      >
+        Về trang chủ
+      </button>
     </div>
   );
 }
@@ -451,14 +500,23 @@ function SentStatusStrip({
   const waiting = !latest.acknowledged;
 
   return (
+    // Sửa 01/08/2026: `border-l-[5px]` → viền 1px + nền nhạt cùng tông.
+    //
+    // Dải màu dày một cạnh là mẫu bị cấm, nhưng lý do bỏ ở ĐÂY cụ thể hơn thế: khối này đã
+    // có icon (hourglass_top / check_circle) VÀ có câu chữ nói thẳng trạng thái ngay bên
+    // cạnh — tức thứ mang nghĩa đã đủ, dải màu chỉ là lớp thứ ba nói lại cùng một điều bằng
+    // thứ ngôn ngữ mà người mù màu không đọc được. Nền nhạt giữ được cảm giác "hai trạng
+    // thái khác nhau" cho mắt mà không giả vờ là tín hiệu.
+    // Chữ trên hai nền này vẫn đo đủ: #8A5A00 trên #FFF7E0 = 5,54:1, #00693F trên #E3F8ED
+    // = 6,12:1 — cả hai vượt 4,5:1.
     <div
-      className={`mb-4 flex flex-col gap-1.5 rounded-[18px] border-l-[5px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] ${
-        waiting ? "border-gold" : "border-[#00A85E]"
+      className={`mb-4 flex flex-col gap-1.5 rounded-[18px] border p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] ${
+        waiting ? "border-[#FFE29A] bg-[#FFF7E0]" : "border-[#B7E6CE] bg-[#E3F8ED]"
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className={`msr text-[20px] ${waiting ? "text-[#E8940D]" : "text-[#00A05F]"}`}
+          className={`msr text-[20px] ${waiting ? "text-[#8A5A00]" : "text-[#00693F]"}`}
           aria-hidden
         >
           {waiting ? "hourglass_top" : "check_circle"}

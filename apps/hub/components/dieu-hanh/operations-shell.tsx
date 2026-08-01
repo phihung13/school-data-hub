@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import type { HubRole } from "@hub/core/contracts";
 import { HubSidebar } from "../hub-sidebar";
 import { HubTabBar } from "../tab-bar";
+import { StaffVoice } from "../ui/query-state";
 
 export function OperationsShell({
   title,
@@ -35,51 +36,58 @@ export function OperationsShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full md:h-screen md:overflow-hidden">
-      <div className="hidden w-[240px] flex-none md:flex">
-        {/* `active="home"`: màn này chưa có mục riêng trong sidebar (thêm mục là việc
-            của file hub-sidebar.tsx, ngoài phạm vi gói này — xem ghi chú bàn giao).
-            Trỏ vào "home" để không có mục nào sáng lên sai chỗ. */}
-        <HubSidebar roles={roles} active="home" fullName={displayName} email={email} />
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-        <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 py-3 md:hidden">
-          <Link
-            href="/home"
-            aria-label="Về trang chủ"
-            className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-chip"
-          >
-            <span className="msr text-[20px] text-navy" aria-hidden>
-              arrow_back
-            </span>
-          </Link>
-          <div className="min-w-0">
-            <div className="truncate text-[15px] font-black text-navy">{title}</div>
-            {subtitle && <div className="truncate text-[11px] font-semibold text-muted">{subtitle}</div>}
-          </div>
+    // §8 hai giọng: người đọc màn này là hiệu trưởng / ban điều hành. Câu lỗi mặc định
+    // của query-state viết cho học sinh ("Thử lại giúp nhé") — StaffVoice đổi sang bản
+    // gọn cho cả ba trạng thái tải/lỗi/rỗng bên trong.
+    <StaffVoice>
+      <div className="flex min-h-screen w-full md:h-screen md:overflow-hidden">
+        <div className="hidden w-[240px] flex-none md:flex">
+          {/* `active="home"`: màn này chưa có mục riêng trong sidebar (thêm mục là việc
+              của file hub-sidebar.tsx, ngoài phạm vi gói này — xem ghi chú bàn giao).
+              Trỏ vào "home" để không có mục nào sáng lên sai chỗ. */}
+          <HubSidebar roles={roles} active="home" fullName={displayName} email={email} />
         </div>
 
-        <div className="flex flex-1 flex-col md:overflow-y-auto">
-          <div className="flex flex-col gap-4 p-4 md:p-7">
-            <div className="hidden flex-wrap items-end justify-between gap-3 md:flex">
-              <div>
-                <h1 className="text-[24px] font-black text-navy">{title}</h1>
-                {subtitle && <div className="mt-1 text-[13px] font-semibold text-[#5B6B80]">{subtitle}</div>}
-              </div>
-              {toolbar}
+        <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+          <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 py-3 md:hidden">
+            {/* 44px (§11) — trước 01/08/2026 là h-9 w-9 = đúng 36px. Đây là lối ra duy
+                nhất của màn Điều hành trên điện thoại. */}
+            <Link
+              href="/home"
+              aria-label="Về trang chủ"
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-chip"
+            >
+              <span className="msr text-[20px] text-navy" aria-hidden>
+                arrow_back
+              </span>
+            </Link>
+            <div className="min-w-0">
+              <div className="truncate text-[15px] font-black text-navy">{title}</div>
+              {subtitle && <div className="truncate text-[11px] font-semibold text-muted">{subtitle}</div>}
             </div>
-            <div className="md:hidden">{toolbar}</div>
+          </div>
 
-            {children}
+          <div className="flex flex-1 flex-col md:overflow-y-auto">
+            <div className="flex flex-col gap-4 p-4 md:p-7">
+              <div className="hidden flex-wrap items-end justify-between gap-3 md:flex">
+                <div>
+                  <h1 className="text-[24px] font-black text-navy">{title}</h1>
+                  {subtitle && <div className="mt-1 text-[13px] font-semibold text-[#5B6B80]">{subtitle}</div>}
+                </div>
+                {toolbar}
+              </div>
+              <div className="md:hidden">{toolbar}</div>
+
+              {children}
+            </div>
+          </div>
+
+          <div className="md:hidden">
+            <HubTabBar roles={roles} />
           </div>
         </div>
-
-        <div className="md:hidden">
-          <HubTabBar roles={roles} />
-        </div>
       </div>
-    </div>
+    </StaffVoice>
   );
 }
 

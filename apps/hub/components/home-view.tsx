@@ -59,7 +59,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useIsDesktop } from "@/lib/viewport";
 import type { HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/core/contracts";
@@ -502,6 +502,25 @@ function CheckinCardDesktop({ data, onOpenModal }: { data: HomeData; onOpenModal
 // ---------------------------------------------------------------------------
 // V3/V3b (Hub Desktop V2): MỘT popup nổi trên trang chủ, hai trạng thái — chọn
 // cảm xúc rồi đổi thẳng sang ăn mừng, không điều hướng/không tải trang mới.
+//
+// Sửa 01/08/2026 (gói "tuong-phan-man-hoc-sinh") — POPUP TỰ MỞ MÀ KHÔNG PHẢI HỘP THOẠI.
+//
+// Đọc mã hôm 01/08: `grep -n 'role="dialog"\|aria-modal\|Escape'` trên trọn 10 file màn học
+// sinh trả về RỖNG. Khối này là một `<div className="fixed inset-0 z-50 …">` trần, mà nó TỰ
+// MỞ khi trang chủ tải xong (useEffect ở DesktopHome, điều kiện checkedInToday === false).
+// Bốn hậu quả, tất cả đọc thẳng ra từ mã:
+//   1. Focus vẫn nằm ở <body> phía sau. Người dùng bàn phím bấm Tab lần đầu rơi vào
+//      skip-link rồi menu trái — những thứ nằm DƯỚI lớp phủ, tức bấm vào một thứ không
+//      nhìn thấy được.
+//   2. Trình đọc màn hình không được báo là vừa có gì mở ra; nó vẫn đang đọc trang chủ.
+//   3. Không có Escape. Cách duy nhất đóng là tìm cho ra nút ✕ và bấm chuột vào.
+//   4. Nút ✕ đo được 36×36px — dưới mốc 44px của §11.
+//
+// Cách sửa: giữ nguyên toàn bộ phần nhìn thấy, thêm đủ hợp đồng của một hộp thoại —
+// role/aria-modal/aria-labelledby, đặt focus vào trong khi mở, TRẢ focus về chỗ cũ khi
+// đóng, Escape đóng, và vòng Tab quẩn trong hộp. Không dùng <dialog>+showModal() (trình
+// duyệt sẽ tự lo cả bốn việc) vì nó kéo theo ::backdrop và một tầng z-index riêng, đủ để
+// đổi hình dạng lớp phủ hiện tại — mà việc hôm nay là vá hành vi, không phải vẽ lại.
 // ---------------------------------------------------------------------------
 function CheckinModal({ onClose }: { onClose: () => void }) {
   const utils = trpc.useUtils();
@@ -518,29 +537,87 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Đưa focus vào hộp khi mở, và TRẢ nó về đúng phần tử vừa mở hộp khi đóng. Vế trả về
+  // mới là vế hay bị quên: thiếu nó thì đóng xong focus rơi về <body> và người dùng bàn
+  // phím phải Tab lại từ đầu trang — popup này còn TỰ mở, nên "chỗ cũ" có thể là chỗ em
+  // đang đọc dở chứ không phải một cái nút nào.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => opener?.focus?.();
+  }, []);
+
+  // Escape đóng, và Tab quẩn trong hộp. Danh sách phần tử focus được tính LẠI mỗi lần bấm
+  // phím chứ không chụp một lần lúc mở: nội dung hộp đổi hẳn sau khi em chọn cảm xúc (bốn
+  // ô biến mất, hai nút ăn mừng hiện ra), nên một ảnh chụp lúc mở sẽ giam focus vào những
+  // nút không còn tồn tại.
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusables = panelRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusables || focusables.length === 0) return;
+    const first = focusables[0]!;
+    const last = focusables[focusables.length - 1]!;
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1A32]/50 p-6 backdrop-blur-[2px]">
-      <div className="relative w-full max-w-[560px] overflow-hidden rounded-[28px] bg-white shadow-[0_30px_70px_rgba(6,20,45,.4)]">
+    // onKeyDown đặt ở LỚP PHỦ chứ không phải trên từng nút: phím Tab/Escape đến từ bất kỳ
+    // phần tử nào bên trong và nổi bọt lên đây, nên một chỗ bắt là đủ cho cả hộp — kể cả
+    // sau khi nội dung hộp đổi hẳn sang màn ăn mừng.
+    <div
+      onKeyDown={onKeyDown}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1A32]/50 p-6 backdrop-blur-[2px]"
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        // Trỏ vào chính câu hỏi đang hiện, không vào một nhãn ẩn viết riêng: hai chuỗi thì
+        // sớm muộn có một chuỗi lạc hậu, mà chuỗi lạc hậu ở đây chỉ người mù mới nghe thấy.
+        aria-labelledby={done ? "checkin-modal-xong" : "checkin-modal-hoi"}
+        className="relative w-full max-w-[560px] overflow-hidden rounded-[28px] bg-white shadow-[0_30px_70px_rgba(6,20,45,.4)]"
+      >
         <span
           aria-hidden
           className="absolute inset-x-0 top-0 h-[5px]"
           style={{ background: "linear-gradient(90deg,#00D97A,#2C7BF2,#FFC833,#F0474D)" }}
         />
         <div className="flex items-center justify-end p-3">
+          {/* h-11 w-11 = 44×44 (§11). Màu icon #9AA5B5 cũ chỉ 2,49:1 trên trắng — dưới cả
+              mốc 3:1 dành cho thành phần phi văn bản (WCAG 1.4.11); token muted = 5,03:1. */}
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#9AA5B5] hover:bg-[#F1F4F8]"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-[#F1F4F8]"
           >
-            <span className="msr text-[22px]">close</span>
+            <span aria-hidden="true" className="msr text-[22px]">close</span>
           </button>
         </div>
 
         {!done ? (
           <div className="flex flex-col items-center px-8 pb-8 pt-1">
             <Mascot pose="wave" width={64} />
-            <div className="mt-2 text-center text-[24px] font-black text-ink">Hôm nay con thấy thế nào?</div>
+            <div id="checkin-modal-hoi" className="mt-2 text-center text-[24px] font-black text-ink">
+              Hôm nay con thấy thế nào?
+            </div>
             <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#6B7789]">
               <span aria-hidden="true" className="msr text-[15px] text-caption">lock</span>
               {/* Đúng câu nhãn của PRODUCT.md §"Ràng buộc không thương lượng". "GVCN" là
@@ -585,9 +662,9 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col items-center px-8 pb-8 pt-1 text-center">
+          <div role="status" aria-live="polite" className="flex flex-col items-center px-8 pb-8 pt-1 text-center">
             <Mascot pose="celebrate" width={76} />
-            <div className="mt-2 text-[26px] font-black text-ink">Tuyệt vời!</div>
+            <div id="checkin-modal-xong" className="mt-2 text-[26px] font-black text-ink">Tuyệt vời!</div>
             <p className="mt-2 max-w-[420px] text-[13.5px] leading-relaxed text-[#5B6B80]">
               Hôm nay con thấy <b className="text-[#00A05F]">{MOOD_LABEL[done.mood]}</b> — đã ghi lúc{" "}
               <b className="text-navy">{done.checkedInAt}</b>.
@@ -716,7 +793,9 @@ function TodayCard({ checkedInAt }: { checkedInAt: string }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[12.5px] font-extrabold text-navy">Đã đến trường {checkedInAt}</div>
-          <div className="mt-px text-[10.5px] text-[#9AA5B5]">điểm danh tự động</div>
+          {/* #9AA5B5 (2,49:1) → token caption2 (#66707D, 5,03:1). Dòng này giải thích VÌ SAO
+              có mốc giờ ở trên — nó là nội dung, không phải chữ trang trí. (01/08/2026) */}
+          <div className="mt-px text-[10.5px] text-caption2">điểm danh tự động</div>
         </div>
       </div>
     </div>

@@ -82,11 +82,11 @@ describe("hồ sơ trên điện thoại không phải bản rút gọn", () => 
     expect(mobileEnd).toBeGreaterThan(mobileStart);
   });
 
-  it("có khối «Ai thấy gì của mình?» — §9 bắt người nhập cảm xúc phải biết ai đọc", () => {
+  it("có khối “Ai thấy gì của mình?” — §9 bắt người nhập cảm xúc phải biết ai đọc", () => {
     expect(mobileColumn).toMatch(/<WhoSeesWhatCard\b/);
   });
 
-  it("có đường tới «Cần gặp thầy cô» ngay trên điện thoại", () => {
+  it("có đường tới “Cần gặp thầy cô” ngay trên điện thoại", () => {
     expect(mobileColumn).toMatch(/<HelpLink\b/);
   });
 

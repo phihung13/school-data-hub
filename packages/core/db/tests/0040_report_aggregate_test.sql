@@ -164,7 +164,7 @@ select is(
 );
 select is(
   (select mood_happy from report.class_pulse() where class_code = '6A3'), 5,
-  '6A3: phân bố tâm trạng hiện ra khi đủ 10 em đã ghi (5 «Vui»)'
+  '6A3: phân bố tâm trạng hiện ra khi đủ 10 em đã ghi (5 "Vui")'
 );
 select is(
   (select open_care_count from report.class_pulse() where class_code = '6A3'), 2,

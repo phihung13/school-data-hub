@@ -201,7 +201,7 @@ describe("tab bar và sidebar nói cùng một điều", () => {
     }
   });
 
-  it("sidebar GVCN: «Trang chủ» trỏ /home, buồng lái là mục riêng", () => {
+  it("sidebar GVCN: “Trang chủ” trỏ /home, buồng lái là mục riêng", () => {
     // Trước 31/07/2026 mục "Trang chủ" trỏ /gvcn — GVCN vào buồng lái là không còn
     // đường nào quay về trang chủ chung, kể cả trên máy tính.
     expect(TEACHER_ITEMS.find((i) => i.key === "home")?.href).toBe(HOME_HREF);
@@ -231,7 +231,7 @@ describe("màn hình người lớn bản mobile: có thanh điều hướng th�
     }
   });
 
-  it("/gvcn không còn giấu TOÀN BỘ điều hướng sau «hidden md:flex»", () => {
+  it("/gvcn không còn giấu TOÀN BỘ điều hướng sau “hidden md:flex”", () => {
     // Đây là hình dạng chính xác của ngõ cụt số 1: cả trang chỉ có một khối chứa
     // liên kết, và khối đó bị ẩn dưới md.
     const src = stripComments(readSrc("gvcn-dashboard.tsx"));

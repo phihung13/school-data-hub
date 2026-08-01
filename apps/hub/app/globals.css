@@ -46,6 +46,32 @@ html {
   border-radius: inherit;
 }
 
+/* MÀU CHỮ GỢI Ý TRONG Ô NHẬP (thêm 01/08/2026, gói "tuong-phan-man-hoc-sinh").
+
+   Trước hôm nay KHÔNG chỗ nào trong apps/hub đặt màu placeholder (grep "::placeholder"
+   ở globals.css và tailwind.config.ts đều rỗng), nên mọi ô nhập rơi vào mặc định của
+   Tailwind preflight: colors.gray.400 = #9CA3AF, đo được 2,54:1 trên nền trắng. Chuẩn
+   chữ thường là 4,5:1.
+
+   Vì sao đây không phải chuyện thẩm mỹ: placeholder trong app này đang gánh việc của
+   NHÃN, không phải trang trí. Ô tâm sự ở /can-gap-thay-co — chỗ riêng tư nhất cả app —
+   dùng câu mẫu "Con thấy hơi lo khi phải thuyết trình trước lớp vào thứ Sáu…" để DẠY em
+   biết ô đó viết được gì; đo sống trên DOM ở 360px, câu đó là 2,45:1 trên nền ô #FCFDFE.
+   Ở sân trường lúc 7 giờ sáng, nắng gắt, màn điện thoại rẻ, 2,45:1 là biến mất.
+
+   #5B6B80 = 5,44:1 trên trắng · 5,34:1 trên #FCFDFE · 4,84:1 trên #FFF1C9 — đạt trên mọi
+   mặt nền ô nhập app đang dùng. opacity:1 là bắt buộc: Firefox mặc định hạ placeholder
+   xuống opacity .54, tức là màu ta vừa tính đúng sẽ bị pha loãng lần nữa ngay sau đó.
+
+   Độ ưu tiên (0,0,2) — thấp hơn mọi lớp `placeholder:text-[...]` của Tailwind (0,1,1) —
+   nên đây là LƯỚI AN TOÀN: màn nào cần màu riêng vẫn đè được, màn nào quên thì không rơi
+   về #9CA3AF nữa. */
+input::placeholder,
+textarea::placeholder {
+  color: #5b6b80;
+  opacity: 1;
+}
+
 /* Đường tắt "tới nội dung chính" — phần tử đầu tiên trong <body> (app/layout.tsx).
    Ẩn khỏi mắt nhưng KHÔNG ẩn khỏi trình đọc màn hình và KHÔNG bỏ khỏi thứ tự Tab; hiện ra
    ngay khi nhận focus. Không có nó, người dùng bàn phím phải Tab qua trọn bộ menu trái

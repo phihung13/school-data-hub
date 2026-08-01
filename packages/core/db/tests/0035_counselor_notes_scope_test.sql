@@ -71,7 +71,7 @@ select isnt_empty(
 select isnt_empty(
   $$ select 1 from care.interventions
       where case_id = '80000000-0000-0000-0000-000000000001' $$,
-  'GVCN VẪN thấy nhật ký can thiệp — biết «tâm lý cụm đã gặp em», không biết em kể gì');
+  'GVCN VẪN thấy nhật ký can thiệp — biết "tâm lý cụm đã gặp em", không biết em kể gì');
 select test_support.logout();
 
 -- ═══ MỌI VAI CÒN LẠI: 0 dòng ══════════════════════════════════════════════

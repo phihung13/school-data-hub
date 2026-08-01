@@ -63,6 +63,79 @@ export const GetDashboardInput = z
   .optional();
 export type GetDashboardInput = z.infer<typeof GetDashboardInput>;
 
+/**
+ * Một luật mà bộ quét KHÔNG chấm trong lần chạy vừa rồi, kèm lý do.
+ *
+ * Vì sao đi ra tới màn hình chứ không nằm lại trong `ops.job_runs.metrics`: đo thật trên
+ * hub_dev ngày 01/08/2026, mỗi lần quét bỏ qua HAI luật (`C_CEFR` = chưa cài đặt,
+ * `C_MASTERY` = chưa khai nguồn tươi) và **không màn hình nào nói ra**. Một GVCN nhìn
+ * buồng lái sạch cờ hôm nay đang đọc kết quả của 4/6 luật mà tưởng là 6/6 — đó là
+ * "im lặng bị đọc thành kết luận" ở đúng mức nguy hiểm nhất: mức nội dung.
+ *
+ * `lyDo` giữ nguyên mã tiếng Việt do `care.run_flag_engine` sinh (`chua_cai_dat`,
+ * `chua_khai_nguon_tuoi`, `khong_co_nguong_dang_bat`, `nguon_het_tuoi`) — KHÔNG dịch ở
+ * tầng hợp đồng: engine là nơi duy nhất biết vì sao nó bỏ qua, dịch ở đây là tạo bản
+ * thứ hai của một sự thật.
+ */
+export const SkippedRule = z.object({
+  ruleCode: z.string(),
+  lyDo: z.string(),
+});
+export type SkippedRule = z.infer<typeof SkippedRule>;
+
+/**
+ * Trạng thái bộ quét cờ, đọc từ `ops.v_job_health` (0041) — KHÔNG phải một dấu thời gian trần.
+ *
+ * Vì sao chín giá trị chứ không phải một `lastScanAt: string | null`: `null` gộp làm một
+ * ba câu trả lời hoàn toàn khác nhau — "chưa ai quét lần nào", "bộ quét vừa hỏng", và
+ * "màn hình không đọc nổi sổ nhật ký". Cả ba đều hiện ra dưới dạng một bảng cờ trống, và
+ * bảng cờ trống thì đọc y hệt "lớp mình đang ổn". Đó là hình dạng hỏng mà RULES Rev F
+ * điều 8 cấm, và là lý do buồng lái phải phân biệt được chúng ngay trên màn.
+ *
+ * Bảy giá trị đầu là `state` của `ops.v_job_health`; hai giá trị cuối do tầng API thêm vì
+ * view không thể tự nói ra chúng:
+ *   · `chua_khai`      — `ops.job_schedule` KHÔNG có dòng nào cho `flag_engine`. Khác
+ *                        `chua_chay`: ở đây không phải "job chưa chạy" mà là "hệ chưa
+ *                        biết job này tồn tại", nên cũng không có gì quá hạn để báo.
+ *   · `khong_doc_duoc` — câu đọc `ops.v_job_health` ném lỗi (mất quyền, view bị xoá).
+ *                        Trả về đây thay vì nuốt lỗi rồi để `lastScanAt = null`: không
+ *                        đọc được KHÔNG phải là chưa quét.
+ */
+export const ScanState = z.enum([
+  "ok",
+  "dang_chay",
+  "chua_chay",
+  "that_bai",
+  "treo",
+  "qua_han",
+  "tat",
+  "chua_khai",
+  "khong_doc_duoc",
+]);
+export type ScanState = z.infer<typeof ScanState>;
+
+export const ScanHealth = z.object({
+  jobName: z.string(),
+  state: ScanState,
+  /** Cột duy nhất màn hình trực cần đọc để biết "có phải kêu lên không" (0041). */
+  needsAttention: z.boolean(),
+  /** Lần chạy XONG THÀNH CÔNG gần nhất — con số đứng sau câu "Quét lúc HH:mm". */
+  lastSuccessAt: z.string().nullable(),
+  /** Lần chạy gần nhất KẾT THÚC (kể cả hỏng). Khác `lastSuccessAt` là dấu hiệu vừa có lỗi. */
+  lastFinishedAt: z.string().nullable(),
+  /**
+   * Nhịp chạy đã khai trong `ops.job_schedule`, đổi ra giờ. Đi ra màn hình để câu cảnh báo
+   * nói được "đáng lẽ chạy mỗi 24 giờ" mà KHÔNG viết chết con số nào trong mã (mệnh lệnh 7):
+   * ngưỡng quá hạn là `expected_every + grace`, khai trong bảng, không khai trong TypeScript.
+   */
+  expectedEveryHours: z.number().nullable(),
+  graceHours: z.number().nullable(),
+  rulesSkipped: z.array(SkippedRule),
+  /** `ops.job_runs.degraded_sources` của LẦN CHẠY ĐÓ — nguồn mà engine đã thật sự bỏ qua. */
+  degradedSources: z.array(z.string()),
+});
+export type ScanHealth = z.infer<typeof ScanHealth>;
+
 export const GetDashboardOutput = z.object({
   /**
    * Lớp mà MỌI con số bên dưới thuộc về. Bắt buộc, không optional: thiếu nó thì màn hình
@@ -72,7 +145,15 @@ export const GetDashboardOutput = z.object({
   classId: z.string().uuid(),
   className: z.string(),
   asOfDate: z.string(),
-  lastScanAt: z.string().nullable(), // ops.job_runs.finished_at gần nhất — "Quét đêm qua HH:mm"
+  /**
+   * Giữ nguyên nghĩa cũ: `ops.job_runs.finished_at` của lần quét THÀNH CÔNG gần nhất.
+   * Bằng đúng `scanHealth.lastSuccessAt` — không phải hai sự thật, chỉ là một lối đọc cũ
+   * cho client chưa cập nhật. Client mới đọc `scanHealth`: `null` ở đây không phân biệt
+   * được "chưa quét" với "không đọc được sổ", mà hai chuyện đó khác nhau.
+   */
+  lastScanAt: z.string().nullable(),
+  /** Bộ quét cờ đêm có chạy không, chạy lúc nào, bỏ qua luật nào — xem `ScanHealth`. */
+  scanHealth: ScanHealth,
   staleSources: z.array(z.string()), // ops.v_stale_sources — băng vàng ADR-016
   totals: z.object({
     checkinCount: z.number().int(),
@@ -203,7 +284,7 @@ export const ClassRosterEntry = z.object({
   checkedInAt: z.string().nullable(),
   /** Có hồ sơ chăm sóc đang mở — dấu hiệu để cô mở trước, KHÔNG phải nhãn dán lên em. */
   hasOpenCase: z.boolean(),
-  /** Đã bấm «cần gặp thầy cô» và chưa ai xử lý. */
+  /** Đã bấm "cần gặp thầy cô" và chưa ai xử lý. */
   helpPending: z.boolean(),
 });
 export type ClassRosterEntry = z.infer<typeof ClassRosterEntry>;
@@ -342,7 +423,7 @@ export type ListClassInterventionsOutput = z.infer<typeof ListClassInterventions
 // MÀN CHI TIẾT MỘT HỌC SINH (gói "man-hinh-con-thieu-gvcn-hs", 31/07/2026)
 //
 // Bốn màn GVCN phía trên đều là màn CỦA CẢ LỚP. Bảng "Lớp chủ nhiệm" hiện được dấu
-// «Cần gặp thầy cô» và «Hồ sơ đang mở» trên từng dòng, buồng lái hiện thẻ cờ mang tên
+// "Cần gặp thầy cô" và "Hồ sơ đang mở" trên từng dòng, buồng lái hiện thẻ cờ mang tên
 // từng em — nhưng không có một màn nào trả lời câu hỏi tiếp theo mà giáo viên luôn hỏi:
 // "em này mấy hôm nay thế nào?". Không có nó thì cô phải mở bốn màn lớp rồi tự lọc mắt
 // theo một cái tên, và phần lớn sẽ không làm — dấu hiệu hiện ra rồi trôi qua.
@@ -350,7 +431,7 @@ export type ListClassInterventionsOutput = z.infer<typeof ListClassInterventions
 // Bốn nguồn gộp vào MỘT màn, đúng bốn thứ đã tồn tại thật trong CSDL (không bịa thêm
 // mục nào chưa có dữ liệu):
 //   1. check-in 7–30 ngày (attendance.checkins)
-//   2. tín hiệu «cần gặp thầy cô» + hồ sơ chăm sóc mở/đóng (attendance.help_requests,
+//   2. tín hiệu "cần gặp thầy cô" + hồ sơ chăm sóc mở/đóng (attendance.help_requests,
 //      care.care_cases)
 //   3. nhật ký can thiệp CỦA RIÊNG EM (care.interventions)
 //   4. trạng thái duyệt Báo cáo Trưởng thành mấy tuần gần đây
@@ -391,7 +472,7 @@ export const StudentCheckinDay = z.object({
 export type StudentCheckinDay = z.infer<typeof StudentCheckinDay>;
 
 /**
- * Một lần em bấm «cần gặp thầy cô».
+ * Một lần em bấm "cần gặp thầy cô".
  *
  * `note` CÓ mặt ở đây, và đó là quyết định có cân nhắc. Màn /can-gap-thay-co in thẳng
  * lên mặt em một lời hứa: dưới câu "Ai đọc được lời con?" là tên GVCN với dấu tích xanh.
@@ -467,19 +548,19 @@ export type GetStudentDetailOutput = z.infer<typeof GetStudentDetailOutput>;
 //
 // Hai màn ở đây trả lời đúng câu đó:
 //   1. `ListClusterCasesOutput` — danh sách việc đang chờ trong CỤM (hồ sơ chăm sóc
-//      đang mở + tín hiệu «cần gặp thầy cô» chưa ai xử lý), gộp theo TỪNG EM.
+//      đang mở + tín hiệu "cần gặp thầy cô" chưa ai xử lý), gộp theo TỪNG EM.
 //   2. `GetClusterCaseDetailOutput` — một em, đủ thứ cần đọc TRƯỚC KHI bấm ba nút kia.
 //
 // ── HAI THỨ CỐ TÌNH KHÔNG CÓ TRONG HAI HỢP ĐỒNG NÀY ───────────────────────
 //
 // (a) `mood` / dải check-in cảm xúc. Màn check-in in cho học sinh đọc, ngay tại chỗ
-//     nhập: «Chỉ thầy cô chủ nhiệm thấy» (checkin-view.tsx). DESIGN-GUIDELINES §9 nói
+//     nhập: "Chỉ thầy cô chủ nhiệm thấy" (checkin-view.tsx). DESIGN-GUIDELINES §9 nói
 //     lại đúng câu đó. Tâm lý cụm KHÔNG nằm trong "thầy cô chủ nhiệm".
 //
-// (b) `note` của «cần gặp thầy cô» — nguyên văn lời em viết. Màn /can-gap-thay-co in
+// (b) `note` của "cần gặp thầy cô" — nguyên văn lời em viết. Màn /can-gap-thay-co in
 //     cho em đọc TRƯỚC KHI gửi: dấu tích xanh cho ĐÚNG một người (GVCN của em), dấu đỏ
-//     cho "thầy cô khác", và một câu nữa ở dưới: «Nếu chuyện cần người chuyên môn hỗ
-//     trợ, cô sẽ hỏi ý con trước khi chuyển tới phòng tâm lý». Nghĩa là phòng tâm lý
+//     cho "thầy cô khác", và một câu nữa ở dưới: "Nếu chuyện cần người chuyên môn hỗ
+//     trợ, cô sẽ hỏi ý con trước khi chuyển tới phòng tâm lý". Nghĩa là phòng tâm lý
 //     đọc lời em SAU một lần chuyển tuyến mà em đã đồng ý — và đường chuyển tuyến đó
 //     chưa tồn tại (GĐ2, xem `intervention-notes-view.tsx`). Nên ở đây tâm lý cụm chỉ
 //     nhận LOẠI tín hiệu (chủ đề, mức khẩn, ngày, đã xử lý chưa) — đúng bằng luật "cờ E
@@ -502,8 +583,8 @@ export type ClusterSchool = z.infer<typeof ClusterSchool>;
 /**
  * Một EM đang có việc trong cụm — không phải "một hồ sơ".
  *
- * Vì sao khoá là học sinh chứ không phải `care_cases.id`: một em vừa bấm «cần gặp thầy
- * cô» thì CHƯA có hồ sơ nào (hồ sơ chỉ sinh ra khi có người ghi can thiệp đầu tiên —
+ * Vì sao khoá là học sinh chứ không phải `care_cases.id`: một em vừa bấm "cần gặp thầy
+ * cô" thì CHƯA có hồ sơ nào (hồ sơ chỉ sinh ra khi có người ghi can thiệp đầu tiên —
  * `resolveOpenCase` trong routers/care.ts). Lấy hồ sơ làm gốc thì đúng nhóm cần gấp
  * nhất lại là nhóm biến mất khỏi danh sách.
  */
@@ -518,7 +599,7 @@ export const ClusterCaseRow = z.object({
   caseId: z.string().uuid().nullable(),
   caseStatus: z.enum(["open", "closed"]).nullable(),
   openedAt: z.string().nullable(),
-  /** Có tín hiệu «cần gặp thầy cô» chưa ai bấm "đã gặp em rồi". */
+  /** Có tín hiệu "cần gặp thầy cô" chưa ai bấm "đã gặp em rồi". */
   helpPending: z.boolean(),
   helpRequestedOn: IsoDate.nullable(),
   helpTopic: HelpRequestTopic.nullable(),
@@ -565,7 +646,7 @@ export const ListClusterCasesOutput = z.object({
 export type ListClusterCasesOutput = z.infer<typeof ListClusterCasesOutput>;
 
 /**
- * Một lần em bấm «cần gặp thầy cô», NHÌN TỪ PHÍA TÂM LÝ CỤM.
+ * Một lần em bấm "cần gặp thầy cô", NHÌN TỪ PHÍA TÂM LÝ CỤM.
  *
  * Giống `StudentHelpRequest` (màn GVCN) đúng mọi field trừ MỘT: không có `note`. Xem
  * lời giải thích (b) ở đầu khối. Đây là chỗ duy nhất trong hợp đồng mà hai vai nhìn
@@ -587,8 +668,8 @@ export type ClusterHelpSignal = z.infer<typeof ClusterHelpSignal>;
  *
  * Chỉ TÁC GIẢ và TÂM LÝ CỤM đọc được, cưỡng chế ở tầng dữ liệu bởi policy
  * `counselor_notes_scope` (0035). Hợp đồng này nằm trong `contracts/care.ts` nhưng KHÔNG
- * được dùng trong bất kỳ output nào của màn GVCN — xem ghi chú cuối khối «màn chi tiết
- * một học sinh»: 0035 vừa đóng ghi chú tư vấn lại với GVCN.
+ * được dùng trong bất kỳ output nào của màn GVCN — xem ghi chú cuối khối "màn chi tiết
+ * một học sinh": 0035 vừa đóng ghi chú tư vấn lại với GVCN.
  */
 export const CounselorNote = z.object({
   noteId: z.string().uuid(),

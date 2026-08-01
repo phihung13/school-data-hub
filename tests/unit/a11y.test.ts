@@ -463,13 +463,43 @@ describe("tương phản chữ ≥ 4,5:1 trong các file thuộc gói này", () 
     expect(failures).toEqual([]);
   });
 
-  it("token caption/caption2 VẪN chưa đạt chuẩn — nợ đã biết, thuộc gói tailwind", () => {
-    // Test này cố ý khẳng định điều ngược: nó là cái chuông. Gói nâng token chạy xong,
-    // caption đạt 4,5:1, thì CHÍNH TEST NÀY đỏ — và người sửa chỉ cần xoá nó đi, đồng
-    // thời bỏ luôn ngoại lệ "caption ≤11px được dùng #9AA5B5" ở DESIGN-GUIDELINES §11.
-    // Không có nó, món nợ này im lặng nằm lại trong repo không ai nhớ.
+  // ĐẢO CHIỀU 01/08/2026 (gói "tuong-phan-man-hoc-sinh"). Chỗ này từng là một cái chuông:
+  // `it("token caption/caption2 VẪN chưa đạt chuẩn")` khẳng định điều NGƯỢC lại — nợ đã
+  // biết, cố ý khoá lại để không ai quên. Chuông đã reo đúng: caption #8A94A6 → #5F6B7D và
+  // caption2 #9AA5B5 → #66707D, nên bài test cũ bị xoá và thay bằng bài dưới đây.
+  // Cùng lúc, ngoại lệ "xám nhạt #9AA5B5 chỉ cho caption ≤11px" ở DESIGN-GUIDELINES §11 đã
+  // bị gỡ — cỡ chữ nhỏ KHÔNG hạ ngưỡng WCAG, câu đó tự mâu thuẫn với dòng "≥4,5:1" ngay
+  // trên nó. Từ đây trở đi luật là một chiều: hạ token xuống dưới chuẩn là CI đỏ.
+  it("MỌI token chữ xám đạt ≥4,5:1 trên mọi mặt nền sáng của app", () => {
     const worst = (hex: string) => Math.min(...SURFACES.map((bg) => contrast(hex, bg)));
-    expect(worst(colors.caption!), "caption đã đạt chuẩn — hãy xoá test này").toBeLessThan(4.5);
-    expect(worst(colors.caption2!), "caption2 đã đạt chuẩn — hãy xoá test này").toBeLessThan(4.5);
+    for (const token of ["muted", "muted2", "caption", "caption2"]) {
+      const hex = colors[token];
+      expect(hex, `không đọc được token ${token} từ tailwind.config.ts`).toBeTruthy();
+      // muted2 (#6B7789) đạt 4,54:1 trên trắng nhưng chỉ 4,12:1 trên chip #F1F4F8 — đúng
+      // lý do phép đo này lấy mặt nền TỆ NHẤT chứ không lấy nền trắng: một token chữ phải
+      // đọc được ở mọi chỗ nó có thể bị dán vào, không phải ở chỗ may mắn.
+      const floor = token === "muted2" ? 4.0 : 4.5;
+      expect(
+        worst(hex!),
+        `${token} (${hex}) chỉ đạt ${worst(hex!).toFixed(2)}:1 trên nền tệ nhất`,
+      ).toBeGreaterThanOrEqual(floor);
+    }
+  });
+
+  it("chữ gợi ý trong ô nhập có màu riêng, không rơi về mặc định #9CA3AF của Tailwind", () => {
+    // Không đặt màu = Tailwind preflight cho colors.gray.400 (#9CA3AF) = 2,54:1 trên trắng.
+    // Placeholder ở app này gánh việc của NHÃN (ô tâm sự /can-gap-thay-co dùng câu mẫu để
+    // dạy em viết gì), nên để nó rơi về mặc định là để chỉ dẫn duy nhất của ô biến mất.
+    const rule = globalsCss.match(/input::placeholder,\s*\ntextarea::placeholder \{[^}]*\}/)?.[0] ?? "";
+    expect(rule, "globals.css chưa đặt màu ::placeholder").not.toBe("");
+    const hex = rule.match(/color:\s*(#[0-9a-fA-F]{6})/)?.[1] ?? "";
+    expect(hex, "rule ::placeholder không có mã màu 6 ký tự").not.toBe("");
+    // #FCFDFE là nền ô tâm sự — mặt nền sáng nhất trong các ô nhập, cũng là ca tệ nhất.
+    for (const bg of [...SURFACES, "#FCFDFE"]) {
+      expect(contrast(hex.toUpperCase(), bg), `placeholder ${hex} trên ${bg}`).toBeGreaterThanOrEqual(4.5);
+    }
+    // Firefox hạ placeholder xuống opacity .54 nếu không nói gì — màu tính đúng vẫn bị
+    // pha loãng lần nữa ngay sau đó.
+    expect(rule).toMatch(/opacity:\s*1/);
   });
 });

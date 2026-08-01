@@ -396,7 +396,7 @@ async function run() {
           );
         }
         if (c >= 3 && n === 2) {
-          // «gửi muộn ≠ vắng» — buồng lái mỗi lớp mới phải có gì để chờ xác nhận.
+          // "gửi muộn ≠ vắng" — buồng lái mỗi lớp mới phải có gì để chờ xác nhận.
           await client.query(
             `insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
              values ($1, current_date, 'out', null, 'queued_late', 'offline_queue')

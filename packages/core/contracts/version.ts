@@ -94,14 +94,14 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //   "version": "0.1.0",
 //   "schemas": {
 //     "HubRole": [
-//       "«enum»student",
-//       "«enum»guardian",
-//       "«enum»teacher",
-//       "«enum»homeroom",
-//       "«enum»counselor",
-//       "«enum»principal",
-//       "«enum»board",
-//       "«enum»admin"
+//       "#enum#student",
+//       "#enum#guardian",
+//       "#enum#teacher",
+//       "#enum#homeroom",
+//       "#enum#counselor",
+//       "#enum#principal",
+//       "#enum#board",
+//       "#enum#admin"
 //     ],
 //     "MiniAppTile": [
 //       "key",
@@ -112,7 +112,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "available"
 //     ],
 //     "MiniAppsOutput": [
-//       "«expr»z.array(MiniAppTile)"
+//       "#expr#z.array(MiniAppTile)"
 //     ],
 //     "SessionMeOutput": [
 //       "displayName",
@@ -152,11 +152,38 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     "GetDashboardInput": [
 //       "classId"
 //     ],
+//     "SkippedRule": [
+//       "ruleCode",
+//       "lyDo"
+//     ],
+//     "ScanState": [
+//       "#enum#ok",
+//       "#enum#dang_chay",
+//       "#enum#chua_chay",
+//       "#enum#that_bai",
+//       "#enum#treo",
+//       "#enum#qua_han",
+//       "#enum#tat",
+//       "#enum#chua_khai",
+//       "#enum#khong_doc_duoc"
+//     ],
+//     "ScanHealth": [
+//       "jobName",
+//       "state",
+//       "needsAttention",
+//       "lastSuccessAt",
+//       "lastFinishedAt",
+//       "expectedEveryHours",
+//       "graceHours",
+//       "rulesSkipped",
+//       "degradedSources"
+//     ],
 //     "GetDashboardOutput": [
 //       "classId",
 //       "className",
 //       "asOfDate",
 //       "lastScanAt",
+//       "scanHealth",
 //       "staleSources",
 //       "totals",
 //       "totals.checkinCount",
@@ -201,17 +228,17 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "alreadyClosed"
 //     ],
 //     "AttendanceStatus": [
-//       "«enum»present",
-//       "«enum»late",
-//       "«enum»absent",
-//       "«enum»excused",
-//       "«enum»queued_late"
+//       "#enum#present",
+//       "#enum#late",
+//       "#enum#absent",
+//       "#enum#excused",
+//       "#enum#queued_late"
 //     ],
 //     "TeacherAttendanceStatus": [
-//       "«enum»present",
-//       "«enum»late",
-//       "«enum»absent",
-//       "«enum»excused"
+//       "#enum#present",
+//       "#enum#late",
+//       "#enum#absent",
+//       "#enum#excused"
 //     ],
 //     "HomeroomClass": [
 //       "classId",
@@ -253,9 +280,9 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "skipped"
 //     ],
 //     "ReportApprovalStatus": [
-//       "«enum»pending",
-//       "«enum»approved",
-//       "«enum»rejected"
+//       "#enum#pending",
+//       "#enum#approved",
+//       "#enum#rejected"
 //     ],
 //     "ListReportApprovalsInput": [
 //       "classId",
@@ -456,7 +483,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "queued_late"
 //     ],
 //     "MoodValue": [
-//       "«expr»z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])"
+//       "#expr#z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])"
 //     ],
 //     "SubmitMoodInput": [
 //       "mood",
@@ -468,21 +495,21 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "streakDays"
 //     ],
 //     "QueuedCheckinInput": [
-//       "«extends»SubmitMoodInput",
+//       "#extends#SubmitMoodInput",
 //       "clientOccurredAt",
 //       "clientId"
 //     ],
 //     "HelpRequestTopic": [
-//       "«enum»lop",
-//       "«enum»nha",
-//       "«enum»hoc",
-//       "«enum»suc_khoe",
-//       "«enum»khac"
+//       "#enum#lop",
+//       "#enum#nha",
+//       "#enum#hoc",
+//       "#enum#suc_khoe",
+//       "#enum#khac"
 //     ],
 //     "HelpRequestUrgency": [
-//       "«enum»urgent",
-//       "«enum»today",
-//       "«enum»this_week"
+//       "#enum#urgent",
+//       "#enum#today",
+//       "#enum#this_week"
 //     ],
 //     "RequestHelpInput": [
 //       "topic",
@@ -490,7 +517,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "note"
 //     ],
 //     "CONTRACTS_VERSION": [
-//       "«expr»\"0.1.0\""
+//       "#expr#\"0.1.0\""
 //     ],
 //     "MOOD_LABEL": [
 //       "1",
@@ -511,7 +538,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "this_week"
 //     ],
 //     "IsoDateString": [
-//       "«expr»z .string() .regex(/^\\d{4}-\\d{2}-\\d{2}$/, \"Ngày phải có dạng YYYY-MM-DD\") .refine(isRealCalendarDate, \"Ngày không có thật trên lịch\")"
+//       "#expr#z .string() .regex(/^\\d{4}-\\d{2}-\\d{2}$/, \"Ngày phải có dạng YYYY-MM-DD\") .refine(isRealCalendarDate, \"Ngày không có thật trên lịch\")"
 //     ],
 //     "GetGrowthReportInput": [
 //       "studentId",
@@ -542,7 +569,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "relation"
 //     ],
 //     "GuardianListOutput": [
-//       "«expr»z.array(GuardianContact)"
+//       "#expr#z.array(GuardianContact)"
 //     ],
 //     "GlowItem": [
 //       "title",
@@ -554,29 +581,29 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "detail"
 //     ],
 //     "ReportWeekStart": [
-//       "«expr»IsoDateString.refine(withinReportableRange, REPORT_WEEK_RANGE_MESSAGE)"
+//       "#expr#IsoDateString.refine(withinReportableRange, REPORT_WEEK_RANGE_MESSAGE)"
 //     ],
 //     "parseSemver": [
-//       "«function»"
+//       "#function#"
 //     ],
 //     "compareContractsVersions": [
-//       "«function»"
+//       "#function#"
 //     ],
 //     "isContractsVersionSupported": [
-//       "«function»"
+//       "#function#"
 //     ],
 //     "ContractsMetaOutput": [
 //       "version",
 //       "minSupported"
 //     ],
 //     "Semver": [
-//       "«type»"
+//       "#type#"
 //     ],
 //     "MIN_SUPPORTED_CONTRACTS_VERSION": [
-//       "«expr»\"0.1.0\""
+//       "#expr#\"0.1.0\""
 //     ],
 //     "CONTRACTS_VERSION_HEADER": [
-//       "«expr»\"x-contracts-version\""
+//       "#expr#\"x-contracts-version\""
 //     ]
 //   }
 // }

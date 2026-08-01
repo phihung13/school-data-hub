@@ -280,7 +280,7 @@ begin
         on conflict do nothing;
       end if;
 
-      -- Một em mỗi lớp mới gửi muộn — «gửi muộn ≠ vắng», buồng lái phải có gì để chờ
+      -- Một em mỗi lớp mới gửi muộn — "gửi muộn ≠ vắng", buồng lái phải có gì để chờ
       -- xác nhận (DESIGN-GUIDELINES §8).
       if c >= 3 and n = 2 then
         insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)

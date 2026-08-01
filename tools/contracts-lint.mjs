@@ -209,12 +209,12 @@ export function extractSurface(source) {
   const surface = {};
 
   for (const m of masked.matchAll(/\bexport\s+function\s+([A-Za-z_$][\w$]*)/g)) {
-    surface[m[1]] = ["«function»"];
+    surface[m[1]] = ["#function#"];
   }
   for (const m of masked.matchAll(/\bexport\s+(?:interface|type)\s+([A-Za-z_$][\w$]*)\s*[=<{]/g)) {
     // Kiểu suy ra từ zod (`export type X = z.infer<typeof X>`) không phải bề mặt độc lập —
     // nó đi kèm const cùng tên và sẽ được ghi bởi vòng lặp const bên dưới.
-    if (!surface[m[1]]) surface[m[1]] = ["«type»"];
+    if (!surface[m[1]]) surface[m[1]] = ["#type#"];
   }
 
   for (const m of masked.matchAll(/\bexport\s+const\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=/g)) {
@@ -248,7 +248,7 @@ export function extractSurface(source) {
     if (enumAt !== -1 && !objFirst && !extendFirst) {
       const bracket = masked.indexOf("[", exprStart + enumAt);
       const closeB = matchBracket(masked, bracket);
-      const values = [...source.slice(bracket, closeB).matchAll(/["'`]([^"'`]*)["'`]/g)].map((v) => "«enum»" + v[1]);
+      const values = [...source.slice(bracket, closeB).matchAll(/["'`]([^"'`]*)["'`]/g)].map((v) => "#enum#" + v[1]);
       surface[name] = values;
     } else if (objAt !== -1 || extendAt !== -1 || plainObj) {
       const anchor = objAt !== -1 && (extendAt === -1 || objAt < extendAt) ? objAt : extendAt;
@@ -256,11 +256,11 @@ export function extractSurface(source) {
       const fields = objectFields(masked, source, braceAt);
       if (extendAt !== -1) {
         const base = /([A-Za-z_$][\w$]*)\s*\.\s*extend\s*\(/.exec(exprMasked);
-        if (base) fields.unshift("«extends»" + base[1]);
+        if (base) fields.unshift("#extends#" + base[1]);
       }
       surface[name] = fields;
     } else {
-      surface[name] = ["«expr»" + exprOrig.replace(/\s+/g, " ").trim()];
+      surface[name] = ["#expr#" + exprOrig.replace(/\s+/g, " ").trim()];
     }
   }
   return surface;
@@ -297,7 +297,7 @@ function writeSnapshot(versionSource, snapshot) {
   return versionSource.slice(0, open) + OPEN_MARK + "\n" + body + "\n" + versionSource.slice(close);
 }
 
-const OPAQUE = "«expr»";
+const OPAQUE = "#expr#";
 
 /**
  * So hai bề mặt. Ba loại khác nhau vì ba mức nguy hiểm khác nhau:

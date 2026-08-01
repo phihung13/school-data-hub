@@ -6,8 +6,8 @@
 // "Bạn cùng lớp · thầy cô khác · bố mẹ — KHÔNG nhìn thấy". Báo cáo Trưởng thành thì
 // PHỤ HUYNH đọc: `report.getMyLatestReport` tự suy học sinh cho cả tài khoản học sinh
 // lẫn tài khoản cha mẹ. Trước bản 31/07/2026, `buildGrowthReport` đếm
-// `attendance.help_requests` rồi đẩy vào mục Tỏa sáng câu "Chủ động bấm «cần gặp thầy
-// cô» khi có chuyện khó" — tức là báo cho bố mẹ đúng cái việc đã hứa giấu. Với em bấm
+// `attendance.help_requests` rồi đẩy vào mục Tỏa sáng câu "Chủ động bấm "cần gặp thầy
+// cô" khi có chuyện khó" — tức là báo cho bố mẹ đúng cái việc đã hứa giấu. Với em bấm
 // nút vì chuyện Ở NHÀ (topic = 'nha') thì đó không phải lỗi văn phong, đó là rủi ro
 // an toàn: người mà em đang tránh lại là người đọc báo cáo.
 //
@@ -96,11 +96,11 @@ afterAll(async () => {
 function expectNoTraceOfHelpRequest(payload: unknown) {
   const text = JSON.stringify(payload).toLowerCase();
   for (const needle of FORBIDDEN) {
-    expect(text, `payload báo cáo chứa dấu vết bị cấm: «${needle}»`).not.toContain(needle);
+    expect(text, `payload báo cáo chứa dấu vết bị cấm: "${needle}"`).not.toContain(needle);
   }
 }
 
-describe("Báo cáo Trưởng thành không tố việc em bấm «cần gặp thầy cô»", () => {
+describe("Báo cáo Trưởng thành không tố việc em bấm “cần gặp thầy cô”", () => {
   it("dữ liệu nền đúng cảnh nguy hiểm: yêu cầu CHƯA xử lý, chủ đề chuyện ở nhà", async ({ skip }) => {
     if (!ready) return skip();
     // Nếu tiền đề này hỏng thì mọi khẳng định bên dưới thành rỗng nghĩa — kiểm trước.
@@ -136,7 +136,7 @@ describe("Báo cáo Trưởng thành không tố việc em bấm «cần gặp t
     expectNoTraceOfHelpRequest(result);
   });
 
-  it("«Các tuần trước» đi qua cùng một hàm dựng nên cũng phải sạch", async ({ skip }) => {
+  it("“Các tuần trước” đi qua cùng một hàm dựng nên cũng phải sạch", async ({ skip }) => {
     if (!ready) return skip();
     const caller = reportRouter.createCaller(ctxFor(DEV.guardian));
     const result = await caller.getReportForWeek({ weekStart });
@@ -144,7 +144,7 @@ describe("Báo cáo Trưởng thành không tố việc em bấm «cần gặp t
     expectNoTraceOfHelpRequest(result);
   });
 
-  it("không khẳng định «thầy cô đã trò chuyện» khi handled_at còn NULL", async ({ skip }) => {
+  it("không khẳng định “thầy cô đã trò chuyện” khi handled_at còn NULL", async ({ skip }) => {
     if (!ready) return skip();
     const caller = reportRouter.createCaller(ctxFor(DEV.guardian));
     const { report } = await caller.getMyLatestReport();

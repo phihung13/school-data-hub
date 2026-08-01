@@ -119,7 +119,7 @@ export function LoginForm({
 
           <div className="flex items-center gap-2.5">
             <span className="h-px flex-1 bg-[#EFE9DC]" />
-            <span className="text-[11px] font-extrabold text-[#9AA0B2]">hoặc</span>
+            <span className="text-[11px] font-extrabold text-[#5B6B80]">hoặc</span>
             <span className="h-px flex-1 bg-[#EFE9DC]" />
           </div>
 
@@ -140,8 +140,14 @@ export function LoginForm({
               chính sách đã tồn tại và đã được công bố. Repo chưa có trang chính sách nào
               (không route, không nội dung đã duyệt), nên bỏ hẳn link và chỉ để lại đúng
               đường hỗ trợ CÓ THẬT: nhắn GVCN — cùng lối mà GuardianPanel đang chỉ.
-              Trả link về khi trang chính sách thật ra đời và được BGH duyệt nội dung. */}
-          <p className="border-t border-[#F1EADD] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#9AA0B2]">
+              Trả link về khi trang chính sách thật ra đời và được BGH duyệt nội dung.
+
+              Sửa 01/08/2026: màu chữ #9AA0B2 → #5B6B80. Trên thẻ đăng nhập (nền trắng, và
+              nền kem #F4E9D8 ở khung máy tính) #9AA0B2 chỉ đạt 2,61:1 / 2,17:1 — dưới chuẩn
+              4,5:1. Đây là câu DUY NHẤT trên màn nói cho người chưa đăng nhập được biết phải
+              hỏi ai; nó không phải chữ trang trí. #5B6B80 = 5,44:1 trên trắng, 4,53:1 trên
+              #F4E9D8. Cùng lý do cho chữ "hoặc" ở dải phân cách. */}
+          <p className="border-t border-[#F1EADD] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#5B6B80]">
             Tài khoản do Trường Việt Anh cấp · Cần hỗ trợ, nhắn giáo viên chủ nhiệm.
           </p>
         </div>
@@ -187,6 +193,13 @@ function StaffPanel({
   loading: boolean;
   onPick: (authUid: string) => void;
 }) {
+  // GHI RA ĐỂ KHÔNG AI TƯỞNG LÀ ĐÃ SẠCH (01/08/2026): HTML thật của /login vẫn chứa chuỗi
+  // "Cô Lan (GVCN 6A1)". Nó KHÔNG đến từ file này mà từ `full_name` của bảng tài khoản thử
+  // (packages/core/auth-adapter/dev-provider.ts), nên tests/unit/giong-noi.test.ts — vốn chỉ
+  // đọc mã nguồn — không thấy được. Cố ý giữ: khối này nằm sau nhãn DEV, người đọc là nhân
+  // viên đang chọn tài khoản thử, và hậu tố chức danh chính là thứ phân biệt bốn cô chủ
+  // nhiệm với nhau (Cô Vân là "6A3 và 6A4"). Khối biến mất khi Google SSO thật bật.
+  // Nếu sau này ai đó cho phụ huynh/học sinh thấy khối này thì phải đi qua personName().
   return (
     <div className="flex flex-col gap-3">
       <p className="flex items-center gap-2 text-[11px] font-bold text-caption">
@@ -230,14 +243,30 @@ function GuardianPanel({
       <div className="flex flex-col items-center gap-1">
         <Mascot pose="thumbsup" width={52} />
         <div className="text-[15px] font-black text-ink">Chào bố mẹ!</div>
-        <p className="text-center text-[11.5px] text-muted">Mở link mời trong Zalo, hoặc nhập mã mời GVCN đã gửi.</p>
+        {/* "GVCN" là từ vựng vận hành — DESIGN-GUIDELINES §8 chỉ cho nó sống ở buồng lái,
+            tâm lý cụm và điều hành. Bảng này là bảng dành RIÊNG cho phụ huynh, tức là đúng
+            chỗ nó không được xuất hiện. Sửa 01/08/2026: nói như người ta nói. */}
+        <p className="text-center text-[11.5px] text-muted">
+          Mở link mời trong Zalo, hoặc nhập mã mời thầy cô chủ nhiệm đã gửi.
+        </p>
       </div>
+      {/* <label htmlFor> THẬT, thêm 01/08/2026. Trước đó nhãn duy nhất của ô này là
+          placeholder "ABC123" — mà placeholder biến mất ngay khi bố mẹ gõ ký tự đầu tiên
+          (WCAG 3.3.2 Labels or Instructions), nên đúng lúc cần đối chiếu "mình đang gõ cái
+          gì vào đâu" thì không còn gì trên màn hình trả lời. Trình đọc màn hình cũng chỉ
+          nghe "edit text" trống trơn. help-request-view.tsx:253 đã làm đúng cách này rồi. */}
+      <label htmlFor="ma-moi-phu-huynh" className="text-center text-[11.5px] font-black text-muted">
+        Mã mời 6 ký tự
+      </label>
       <input
+        id="ma-moi-phu-huynh"
         value={code}
         onChange={(e) => setCode(e.target.value.toUpperCase())}
         maxLength={6}
         placeholder="ABC123"
-        className="rounded-xl border border-line px-4 py-3 text-center text-[18px] font-black tracking-[0.3em] text-navy outline-none focus:border-navy"
+        // KHÔNG outline-none trần: nó đè lưới an toàn :focus-visible của globals.css và
+        // để lại đúng một tín hiệu focus là màu viền — thứ người mù màu không thấy.
+        className="rounded-xl border border-line px-4 py-3 text-center text-[18px] font-black tracking-[0.3em] text-navy focus:border-navy"
       />
       <button
         type="submit"
@@ -247,7 +276,7 @@ function GuardianPanel({
         Xác nhận mã mời
       </button>
       <p className="text-center text-[11px] text-caption">
-        Thất lạc mã? <b className="text-navy">Nhắn GVCN</b>
+        Thất lạc mã? <b className="text-navy">Nhắn thầy cô chủ nhiệm</b>
       </p>
     </form>
   );

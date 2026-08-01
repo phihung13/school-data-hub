@@ -111,7 +111,7 @@ export function ClassRosterView({ displayName, email }: { displayName: string; e
                             Hồ sơ đang mở
                           </span>
                         )}
-                        {!s.helpPending && !s.hasOpenCase && <span className="text-[11.5px] text-caption">—</span>}
+                        {!s.helpPending && !s.hasOpenCase && <span className="text-[11.5px] text-muted">—</span>}
                       </div>
                     </td>
                   </tr>
@@ -126,5 +126,5 @@ export function ClassRosterView({ displayName, email }: { displayName: string; e
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-caption">{children}</th>;
+  return <th className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-muted">{children}</th>;
 }

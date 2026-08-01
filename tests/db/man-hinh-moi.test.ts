@@ -211,7 +211,7 @@ describe("màn 5 · hồ sơ một học sinh (care.getStudentDetail)", () => {
     expect(d.reportApprovals).toEqual([]);
   });
 
-  it("lời em viết trong «cần gặp thầy cô» tới được đúng GVCN của em — lời hứa in trên màn hình", async ({
+  it("lời em viết trong “cần gặp thầy cô” tới được đúng GVCN của em — lời hứa in trên màn hình", async ({
     skip,
   }) => {
     if (!ready) return skip();

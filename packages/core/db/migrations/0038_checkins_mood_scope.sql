@@ -158,7 +158,7 @@ grant select on attendance.checkins_care to authenticated;
 -- 4. Số tổng hợp cho Báo cáo Trưởng thành — thứ phụ huynh VẪN được thấy
 -- ---------------------------------------------------------------------------
 -- Ranh giới chủ đầu tư đã chốt: phụ huynh không thấy mood TỪNG NGÀY, nhưng vẫn
--- thấy BÁO CÁO TỔNG HỢP. "Cả tuần đến lớp với tâm trạng vui vẻ · 4/5 ngày «Vui»"
+-- thấy BÁO CÁO TỔNG HỢP. "Cả tuần đến lớp với tâm trạng vui vẻ · 4/5 ngày "Vui""
 -- là câu tổng hợp theo tuần, không phải bảng mood từng ngày — nên nó ở lại.
 --
 -- Nếu không có hàm này thì `report.buildGrowthReport` (đường phụ huynh) chỉ còn

@@ -50,7 +50,19 @@ for (const s of stack) errors.push(`<${s.tag}> mở ở dòng ${s.line} không �
 errors.length ? (errors.slice(0, 10).forEach(e => console.error("     " + e)), bad(`Cân bằng thẻ: ${errors.length} lỗi`)) : ok("Cân bằng thẻ (stack parser)");
 
 // 4. Ký tự cấm / lỗi
-const badChars = (html.match(/�/g) || []).length + (html.match(/[«»]/g) || []).length;
+//
+// Sửa 01/08/2026. Luật cũ ở đây cấm ký tự nháy kép nhọn NGUYÊN BẢN trong hồ sơ, buộc
+// phải viết bằng thực thể HTML. Chủ đầu tư 01/08/2026 bỏ hẳn kiểu nháy đó khỏi toàn bộ
+// sản phẩm, nên luật đổi thành: cấm cả ký tự nguyên bản LẪN thực thể. Nhờ vậy quyết
+// định của chủ đầu tư có một cái cổng canh, thay vì chỉ là một lần thay thế hàng loạt
+// mà file sau lại chép kiểu cũ vào.
+//
+// Chú ý cho người sửa file này về sau: chính DÒNG NÀY từng bị lượt thay thế hàng loạt
+// hôm 01/08 làm hỏng — biểu thức nháy-nhọn biến thành `[""]`, khớp mọi dấu nháy thẳng nên
+// cổng báo 8730 lỗi. Vì vậy luật nay viết bằng MÃ ĐIỂM (\u00AB \u00BB) chứ không viết
+// ký tự thẳng vào biểu thức: một lượt thay thế ký tự không thể chạm tới nó nữa.
+const GUILLEMET = /[\u00AB\u00BB]|&laquo;|&raquo;/g;
+const badChars = (html.match(/�/g) || []).length + (html.match(GUILLEMET) || []).length;
 badChars ? bad(`Ký tự cấm/lỗi: ${badChars}`) : ok("Không có ký tự cấm hay mojibake");
 
 // 5. Đủ mục + data-pair

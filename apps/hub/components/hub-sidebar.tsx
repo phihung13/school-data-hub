@@ -230,7 +230,17 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
 
-  useDismissable(menuOpen, [menuRef, menuButtonRef], () => setMenuOpen(false));
+  // Đóng lớp nổi thì TRẢ FOCUS về nút đã mở nó (sửa 01/08/2026).
+  //
+  // Trước đó `useDismissable` gọi `setMenuOpen(false)` rồi thôi. Bấm Escape khi con trỏ
+  // bàn phím đang đứng trên "Đăng xuất" thì phần tử đang giữ focus bị gỡ khỏi DOM, trình
+  // duyệt trả focus về <body>, và người dùng bàn phím mất chỗ đứng — phải Tab lại từ đầu
+  // trang qua trọn bộ menu trái. Trong khi lớp nổi này chứa đường thoát phiên duy nhất.
+  const closeMenu = () => {
+    setMenuOpen(false);
+    menuButtonRef.current?.focus();
+  };
+  useDismissable(menuOpen, [menuRef, menuButtonRef], closeMenu);
 
   const effectiveRoles: HubRole[] = roles ?? (role === "student" ? ["student"] : ["homeroom"]);
   const { items, soon, roleLabel } = resolveNav(effectiveRoles);
@@ -253,7 +263,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
         <img src="/logo.webp?v=ddafa976" alt="" className="h-9 w-9 flex-none rounded-[10px]" />
         <div className="min-w-0">
           <div className="text-[15px] font-black leading-[1.15] text-navy">School Hub</div>
-          <div className="text-[9.5px] font-extrabold tracking-wide text-caption2">{roleTag}</div>
+          <div className="text-[9.5px] font-extrabold tracking-wide text-muted">{roleTag}</div>
         </div>
       </div>
 
@@ -265,13 +275,17 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
               key={item.key}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
+              // min-h-[44px]: py-[11px] + chữ 13,5px cho ra ~40px. §11 đòi 44px cho MỌI
+              // đích bấm, và sidebar này cũng hiện trên máy bảng cảm ứng.
               className={
                 isActive
-                  ? "flex items-center gap-[11px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-3 py-[11px] shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                  : "flex items-center gap-[11px] rounded-xl px-3 py-[11px] hover:bg-[#F5F8FC]"
+                  ? "flex min-h-[44px] items-center gap-[11px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-3 py-[11px] shadow-[0_6px_14px_rgba(10,42,94,.24)]"
+                  : "flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px] hover:bg-[#F5F8FC]"
               }
             >
-              <span className={`msr text-[20px] ${isActive ? "text-gold" : "text-caption"}`}>{item.icon}</span>
+              <span className={`msr text-[20px] ${isActive ? "text-gold" : "text-caption"}`} aria-hidden>
+                {item.icon}
+              </span>
               <span className={`flex-1 text-[13.5px] ${isActive ? "font-extrabold text-white" : "font-bold text-[#33507C]"}`}>
                 {item.label}
               </span>
@@ -288,11 +302,13 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
           <div
             key={item.key}
             aria-disabled="true"
-            className="flex items-center gap-[11px] rounded-xl px-3 py-[11px] opacity-45"
+            className="flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px] opacity-45"
           >
-            <span className="msr text-[20px] text-caption">{item.icon}</span>
+            <span className="msr text-[20px] text-caption" aria-hidden>
+              {item.icon}
+            </span>
             <span className="flex-1 text-[13.5px] font-bold text-[#5B6B80]">{item.label}</span>
-            <span className="rounded-full bg-[#F1F4F8] px-[7px] py-[3px] text-[9px] font-black text-caption">
+            <span className="rounded-full bg-[#F1F4F8] px-[7px] py-[3px] text-[9px] font-black text-muted">
               {item.soonBadge ?? "GĐ2"}
             </span>
           </div>
@@ -304,35 +320,57 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
           type="button"
           ref={menuButtonRef}
           onClick={() => setMenuOpen((v) => !v)}
-          aria-haspopup="menu"
+          // aria-haspopup="true" chứ không phải "menu": giá trị "menu" là một LỜI HỨA
+          // rằng thứ mở ra tuân theo hợp đồng ARIA của role=menu (mũi tên lên/xuống,
+          // Home/End, giam focus). Lớp nổi dưới đây không làm việc đó và cố ý không làm —
+          // xem ghi chú ở chính nó. Hứa sai còn tệ hơn không hứa: trình đọc màn hình đã
+          // đọc "menu" thì người dùng sẽ bấm mũi tên, và không có gì xảy ra.
+          aria-haspopup="true"
           aria-expanded={menuOpen}
-          className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-[9px] hover:bg-[#F5F8FC]"
+          className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2.5 py-[9px] hover:bg-[#F5F8FC]"
         >
           <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[13px] font-black text-navy">
             {initial}
           </span>
           <div className="min-w-0 flex-1 text-left">
             <div className="truncate text-[12.5px] font-extrabold text-[#0F172A]">{fullName}</div>
-            <div className="truncate text-[10px] text-caption2">{email}</div>
+            <div className="truncate text-[10px] text-muted">{email}</div>
           </div>
-          <span className="msr text-[18px] text-caption">unfold_more</span>
+          <span className="msr text-[18px] text-caption" aria-hidden>
+            unfold_more
+          </span>
         </button>
 
         {menuOpen && (
+          // BỎ role="menu" / role="menuitem" (01/08/2026).
+          //
+          // Chúng có ở đây từ đầu nhưng KHÔNG có một hành vi menu nào đi kèm: không
+          // useEffect nào đặt focus vào mục đầu khi mở, không onKeyDown nào xử lý
+          // ArrowUp/ArrowDown/Home/End, không gì giam focus lại trong lớp nổi. Hợp đồng
+          // ARIA của role=menu BẮT BUỘC điều hướng bằng mũi tên — khai role rồi không
+          // thi hành là nói với trình đọc màn hình một điều không đúng, và người dùng
+          // dựa vào lời đó sẽ bấm mũi tên rồi tưởng bàn phím mình hỏng.
+          //
+          // Hai đường sửa: làm trọn hợp đồng, hoặc thôi khai. Ở đây lớp nổi có ĐÚNG HAI
+          // mục (Hồ sơ của tôi · Đăng xuất) nên thôi khai là đường đúng: Tab đã đi theo
+          // thứ tự DOM, Enter/Space đã hoạt động, Escape đã đóng và nay trả focus về nút
+          // mở (xem `closeMenu`). Không mất chức năng nào, chỉ mất một lời hứa suông.
+          // Thêm hai nghi thức menu giả cho hai mục là code không ai bảo trì được.
           <div
             ref={menuRef}
-            role="menu"
+            aria-label="Tài khoản"
             className="absolute bottom-[62px] left-2.5 right-2.5 z-20 flex flex-col gap-px rounded-2xl border border-line bg-white p-[7px] shadow-[0_16px_36px_rgba(10,42,94,.2)]"
           >
             {/* "Cài đặt" và "Trợ giúp" đã bỏ 31/07/2026: mục đầu trỏ trùng /ho-so với
                 "Hồ sơ của tôi", mục sau là href="#" — cả hai là nút bấm không dẫn đi đâu. */}
             <Link
               href="/ho-so"
-              role="menuitem"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-[12.5px] font-bold text-[#1F2A3A] hover:bg-[#F7F9FC]"
+              className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-[12.5px] font-bold text-[#1F2A3A] hover:bg-[#F7F9FC]"
             >
-              <span className="msr text-[18px] text-caption">person</span>
+              <span className="msr text-[18px] text-caption" aria-hidden>
+                person
+              </span>
               Hồ sơ của tôi
             </Link>
             <div className="mx-0.5 my-1 h-px bg-[#F1F4F8]" />
@@ -382,15 +420,16 @@ function LogoutMenuItem() {
   return (
     <button
       type="button"
-      role="menuitem"
       onClick={() => {
         fetch("/api/auth/logout", { method: "POST" }).finally(() => {
           window.location.href = "/login";
         });
       }}
-      className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-left text-[12.5px] font-extrabold text-[#D2383E] hover:bg-[#FFF3F3]"
+      className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-left text-[12.5px] font-extrabold text-[#D2383E] hover:bg-[#FFF3F3]"
     >
-      <span className="msr text-[18px] text-[#D2383E]">logout</span>
+      <span className="msr text-[18px] text-[#D2383E]" aria-hidden>
+        logout
+      </span>
       Đăng xuất
     </button>
   );

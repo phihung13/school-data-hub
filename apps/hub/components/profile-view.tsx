@@ -30,7 +30,7 @@
 //      nhập dữ liệu cảm xúc phải biết ai đọc được. Bối cảnh dùng thật của học sinh
 //      THCS là điện thoại, nên để khối này chỉ ở desktop = giấu nó khỏi gần như toàn
 //      bộ người mà nó sinh ra để bảo vệ.
-//   2. Link «Trợ giúp & liên hệ GVCN» (/can-gap-thay-co) — đường duy nhất từ tab Hồ
+//   2. Link "Trợ giúp & liên hệ GVCN" (/can-gap-thay-co) — đường duy nhất từ tab Hồ
 //      sơ để em nhờ cô giúp. Em cần nó lúc 9 giờ tối, cầm điện thoại.
 // Hai khối nay dựng một lần thành <WhoSeesWhatCard>/<HelpLink> rồi dùng chung cho cả
 // hai khổ màn: không chép markup nên không thể lệch nội dung giữa hai bản. Bố cục
@@ -58,7 +58,7 @@ import { classLabel, personName } from "./ui/labels";
  *
  * Hai lỗi cùng lúc được vá ở đây (gói "giong-noi-va-don-dep", 31/07/2026):
  *  1. `teacherName ?? "GVCN"` biến một chữ viết tắt hành chính thành TÊN NGƯỜI: em đọc
- *     được "GVCN — cảm xúc, điểm danh, lời nhắn «cần gặp thầy cô»". DESIGN-GUIDELINES §8
+ *     được "GVCN — cảm xúc, điểm danh, lời nhắn "cần gặp thầy cô"". DESIGN-GUIDELINES §8
  *     cấm từ vựng vận hành ở bề mặt học sinh, và đây còn là chỗ nhạy nhất: khối nói cho
  *     em biết AI đọc được cảm xúc của mình.
  *  2. `core.users.full_name` mang hậu tố chức danh ("Cô Lan (GVCN 6A1)") nên kể cả khi
@@ -88,7 +88,7 @@ function LogoutButton({ onClick, className }: { onClick: () => void; className: 
 }
 
 /**
- * «Ai thấy gì của mình?» — bắt buộc có ở MỌI khổ màn (DESIGN-GUIDELINES §9).
+ * "Ai thấy gì của mình?" — bắt buộc có ở MỌI khổ màn (DESIGN-GUIDELINES §9).
  * Dùng chung cho điện thoại và desktop: chép làm hai bản là mở đường cho hai bản
  * nói khác nhau về cùng một luật riêng tư.
  */
@@ -105,12 +105,12 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
         <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-          <b>{teacher}</b> — cảm xúc, điểm danh, lời nhắn «cần gặp thầy cô»
+          <b>{teacher}</b> — cảm xúc, điểm danh, lời nhắn "cần gặp thầy cô"
         </span>
       </div>
       {/* Thêm 01/08/2026: sau 0038, `core.can_read_mood()` cho ĐÚNG hai vai đọc cảm xúc —
-          chủ nhiệm và tâm lý cụm. Trước đó khối này chỉ kể chủ nhiệm, nên màn «Ai thấy gì
-          của mình?» — đúng cái màn sinh ra để nói thật — lại là màn duy nhất nói thiếu. */}
+          chủ nhiệm và tâm lý cụm. Trước đó khối này chỉ kể chủ nhiệm, nên màn "Ai thấy gì
+          của mình?" — đúng cái màn sinh ra để nói thật — lại là màn duy nhất nói thiếu. */}
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
         <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
@@ -134,7 +134,7 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
 }
 
 /**
- * Đường tới «Cần gặp thầy cô». Ở desktop nó là một hàng trong thẻ "Tài khoản";
+ * Đường tới "Cần gặp thầy cô". Ở desktop nó là một hàng trong thẻ "Tài khoản";
  * ở điện thoại nó đứng riêng thành một thẻ bấm được — cùng nội dung, khác vỏ, nên
  * `className` là tham số chứ không phải hai bản chép tay.
  */
@@ -390,7 +390,10 @@ function StudentProfile({
                     <span aria-hidden="true" className="msr text-[20px] text-[#D2383E]">logout</span>
                     Đăng xuất
                   </button>
-                  <div className="text-center text-[10.5px] font-semibold text-[#B6BECB]">
+                  {/* #B6BECB = 1,87:1 trên trắng — dưới cả mốc 3:1 của thành phần phi văn
+                      bản, mà đây là dòng em/bố mẹ đọc cho người hỗ trợ khi báo lỗi ("bản
+                      nào?"). Token caption2 = 5,03:1. (01/08/2026) */}
+                  <div className="text-center text-[10.5px] font-semibold text-caption2">
                     School Hub v1.0 · Giai đoạn 1 · Trường Việt Anh
                   </div>
                 </div>

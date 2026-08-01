@@ -79,7 +79,7 @@ async function buildGrowthReport(client: PoolClient, studentId: string, weekStar
   if (stats.happy_days >= 3) {
     glow.push({
       title: "Cả tuần đến lớp với tâm trạng vui vẻ",
-      detail: `Check-in cảm xúc · ${stats.happy_days}/5 ngày «Vui»`,
+      detail: `Check-in cảm xúc · ${stats.happy_days}/5 ngày "Vui"`,
       accentColor: "blue",
     });
   }

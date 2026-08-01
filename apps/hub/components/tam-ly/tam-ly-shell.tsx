@@ -14,6 +14,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { MiniAppHeader } from "../mini-app-header";
 import { MainContent } from "../page-shell";
+import { StaffVoice } from "../ui/query-state";
 
 export function TamLyShell({
   title,
@@ -31,28 +32,33 @@ export function TamLyShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-pagebgDesktop">
-      <MiniAppHeader
-        title={title}
-        subtitle={subtitle}
-        icon="psychology"
-        gradient="from-domain-counselor to-domain-counselorDark"
-      />
-      <MainContent className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-4 p-4 md:p-7">
-        {backHref && (
-          <Link
-            href={backHref}
-            className="inline-flex w-fit items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
-          >
-            <span className="msr text-[18px]" aria-hidden>
-              arrow_back
-            </span>
-            {backLabel ?? "Quay lại"}
-          </Link>
-        )}
-        {children}
-      </MainContent>
-    </div>
+    // §8 hai giọng: người đọc là cán bộ tâm lý cụm, không phải học sinh.
+    <StaffVoice>
+      <div className="flex min-h-screen w-full flex-col bg-pagebgDesktop">
+        <MiniAppHeader
+          title={title}
+          subtitle={subtitle}
+          icon="psychology"
+          gradient="from-domain-counselor to-domain-counselorDark"
+        />
+        <MainContent className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-4 p-4 md:p-7">
+          {backHref && (
+            // min-h-[44px] (§11): trước 01/08/2026 nút này cao ~40px. Đây là đường quay
+            // lại duy nhất trong app — mini app không có tab bar Hub (§6).
+            <Link
+              href={backHref}
+              className="inline-flex min-h-[44px] w-fit items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
+            >
+              <span className="msr text-[18px]" aria-hidden>
+                arrow_back
+              </span>
+              {backLabel ?? "Quay lại"}
+            </Link>
+          )}
+          {children}
+        </MainContent>
+      </div>
+    </StaffVoice>
   );
 }
 
@@ -79,11 +85,39 @@ export function ScopeNotice() {
       <span className="msr mt-[1px] flex-none text-[18px] text-domain-counselor" aria-hidden>
         visibility_off
       </span>
-      <div className="min-w-0 text-[11.5px] font-semibold leading-relaxed text-[#4B3B7A]">
-        Trang này KHÔNG hiện tâm trạng hằng ngày và KHÔNG hiện nội dung lời em viết khi bấm «cần gặp
-        thầy cô». Thầy cô thấy loại tín hiệu và ngày, không thấy lời kể. Muốn đọc nội dung thì GVCN
-        phải hỏi ý em rồi chuyển tuyến — Hub chưa có đường đó.
-      </div>
+      {/*
+        GẤP LẠI, KHÔNG CẮT BỚT (01/08/2026, gói "tiep-can-man-nguoi-lon").
+
+        Dựng lại đúng chuỗi lớp và đúng chuỗi chữ này ở bề rộng 360px rồi đo: khối cũ cao
+        138px — bảy dòng chữ 11,5px. Cộng với header mini app 68px, khối tiêu đề 104px và
+        ba StatTile xếp dọc, ca đầu tiên của /tam-ly bắt đầu ở khoảng y = 586px, trong khi
+        vùng nhìn thấy của một máy 360×640 sau thanh URL và toolbar Safari chỉ còn ~520–
+        560px (DESIGN-GUIDELINES §2). Nghĩa là cô mở hộp việc trên điện thoại và thấy: một
+        khối cảnh báo quyền riêng tư dài, ba con số, KHÔNG một cái tên nào — trong khi câu
+        hỏi màn này sinh ra để trả lời là "hôm nay ai đang chờ tôi?". Cũng trái §1.5
+        ("Ít chữ — Caption tối đa 1 dòng").
+
+        Cách sửa KHÔNG được là xoá bớt sự thật: hai điều bị che là ràng buộc quyền riêng tư
+        thật, và người dùng màn này PHẢI biết mình đang nhìn một bản không đầy đủ. Nên câu
+        chốt ở lại trên mặt màn hình, phần giải thích vào <details> — thông tin còn nguyên,
+        chiều cao còn khoảng 40px, và <details>/<summary> là phần tử gốc: bàn phím tới
+        được, trình đọc màn hình đọc được trạng thái đóng/mở, không cần một dòng JavaScript.
+      */}
+      <details className="min-w-0 flex-1 text-[11.5px] font-semibold leading-relaxed text-[#4B3B7A]">
+        {/* GIỮ tam giác mở/đóng mặc định của trình duyệt, không `list-none`: nó là dấu
+            hiệu "bấm được" mà ai cũng đọc ra, và ẩn nó thì Chrome ẩn còn Safari vẫn hiện
+            (Safari cần thêm ::-webkit-details-marker) — hai trình duyệt hai kiểu. Chữ
+            "vì sao?" là lớp thứ hai, không phải lớp duy nhất. */}
+        <summary className="cursor-pointer">
+          Trang này KHÔNG hiện tâm trạng và KHÔNG hiện lời em viết
+          <span className="ml-1 font-black text-domain-counselor">— vì sao?</span>
+        </summary>
+        <p className="mt-1.5">
+          Thầy cô thấy loại tín hiệu và ngày, không thấy lời kể. Muốn đọc nội dung thì GVCN phải hỏi ý em
+          rồi chuyển tuyến — Hub chưa có đường đó. Vì vậy "không thấy gì bất thường" ở đây KHÔNG đọc được
+          thành "em không có gì bất thường": im lặng vì bị che khác im lặng vì yên ổn.
+        </p>
+      </details>
     </div>
   );
 }

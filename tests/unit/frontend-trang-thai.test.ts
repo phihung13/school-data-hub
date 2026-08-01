@@ -139,7 +139,7 @@ describe("thẻ cờ buồng lái GVCN — màu không được là tín hiệu 
     expect(describeFlag({ helpRequested: true, negativeDays: 3 })).toContain("cần gặp thầy cô");
     expect(describeFlag({ helpRequested: true, negativeDays: 3 })).toContain("3 ngày");
     // Bấm nút nhưng chưa có chuỗi mood xấu: không được đẻ ra "+ mood ... undefined ngày".
-    expect(describeFlag({ helpRequested: true })).toBe("Đã bấm «cần gặp thầy cô»");
+    expect(describeFlag({ helpRequested: true })).toBe("Đã bấm “cần gặp thầy cô”");
     expect(describeFlag({ helpRequested: false, negativeDays: 5 })).toContain("5 ngày");
     expect(describeFlag({})).not.toContain("undefined");
   });

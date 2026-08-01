@@ -28,6 +28,37 @@
 //     chết thì GVCN học cách phớt lờ nó — hỏng nặng hơn là không có cờ.
 //  6. lastScanAt lấy `max(finished_at)` của MỌI job. Job dọn mood chạy muộn hơn là
 //     buồng lái báo "quét đêm qua" bằng giờ của job dọn dẹp.
+//
+// Sửa 01/08/2026 (gói "debt-32-buong-lai-doc-care-flags"), hai việc — và MỘT VIỆC CỐ Ý
+// KHÔNG LÀM:
+//
+//  A. TRẠNG THÁI BỘ QUÉT ĐI RA MÀN HÌNH, MỌI LÚC. Bản cũ trả đúng một `lastScanAt`, và
+//     màn hình chỉ vẽ nó ở NHÁNH BẢNG TRỐNG (gvcn-dashboard.tsx cũ, dòng 470). Có một cờ
+//     là mốc quét biến mất — tức đúng lúc GVCN đang đọc số thì màn hình thôi nói số đó
+//     cũ hay mới. Nay `getDashboard` trả `scanHealth` đọc từ `ops.v_job_health` (0041) và
+//     buồng lái có một dải cố định ở đầu trang. Xem `readScanHealth`.
+//
+//  B. "LỚP MÌNH ĐANG ỔN" THÔI ĐƯỢC NÓI KHI CÒN HỒ SƠ MỞ. Đo trên hub_dev 01/08/2026:
+//     lớp 6A2 có `open_care_cases = 1` (em Trần Thị Bình, tier 2) và 0 cờ hôm nay, nên
+//     buồng lái in "Hết việc rồi — lớp mình đang ổn!" ngay cạnh ô "1 hồ sơ chăm sóc đang
+//     mở". Hai con số cùng màn nói ngược nhau. Điều kiện in câu đó nay có thêm vế
+//     `openCareCases === 0` (xem components/gvcn/scan-status.ts).
+//
+//  C. CHƯA CHUYỂN sang đọc `care.flags` — nợ #32 CÒN NGUYÊN, và lý do nằm ở số đo, không
+//     ở thiếu thời gian. Chạy `care.run_flag_engine(current_date,'live')` rồi FULL OUTER
+//     JOIN hai tập (học sinh × mã luật). Đo ba lượt trong ngày (trước reseed · sau reseed ·
+//     sau reseed lần hai): 7/10 · 7/11 · 6/11 dòng trùng. CON SỐ ĐỔI THEO SEED VÀ THEO THỜI
+//     ĐIỂM CHẠY ENGINE, đừng dùng nó làm mốc — thứ KHÔNG đổi mới là kết luận:
+//       · 0 dòng chỉ có ở buồng lái, cả ba lượt;
+//       · mọi dòng lệch đều là A_ATTENDANCE (bốn em: Trần Thị Bình 6A2, Lê Gia Bảo 6A3,
+//         Phạm Gia Bảo 6A4, Hoàng Gia Bảo 6A5) — cộng thêm E_URGENT của Nguyễn Văn Minh ở
+//         lượt thứ ba, mà chính nó là chốt chặn (b) hiện ra sống: engine chạy trước, dữ
+//         liệu help_request đổi sau, nên care.flags còn giữ cờ mà buồng lái đã thôi tính.
+//     Phần E_MOOD/E_URGENT (khi engine và dữ liệu cùng nhịp) khớp
+//     tuyệt đối — nhưng buồng lái hôm nay chỉ sinh được hai mã đó (dòng `ruleCode:
+//     r.help_requested ? "E_URGENT" : "E_MOOD"` bên dưới), nên chuyển bên đọc là làm GVCN
+//     lần đầu thấy cờ chuyên cần và hành vi. Đó là MỞ RỘNG PHẠM VI, phải có người quyết,
+//     không phải một lần đổi câu SQL. Ba chỗ chặn khác đã ghi đủ trong DEBT.md #32.
 import { TRPCError } from "@trpc/server";
 import {
   AcknowledgeHelpRequestInput,
@@ -56,12 +87,14 @@ import {
   LogInterventionOutput,
   MarkAttendanceInput,
   MarkAttendanceOutput,
+  ScanState,
 } from "@hub/core/contracts";
 import type {
   AttendanceStatus,
   HelpRequestTopic,
   HelpRequestUrgency,
   ReportApprovalStatus,
+  ScanHealth,
 } from "@hub/core/contracts";
 import type { PoolClient } from "@hub/core/db";
 import { mondayOf, toLocalIsoDate } from "@/lib/date";
@@ -282,6 +315,125 @@ async function readClusterRules(
   return out;
 }
 
+/**
+ * Sức khoẻ bộ quét cờ đêm — MỘT câu trả lời cho câu hỏi "màn hình này đứng sau phép đo nào".
+ *
+ * Vì sao đọc `ops.v_job_health` chứ không đọc thẳng `ops.job_runs` như bản cũ (care.ts:539
+ * trước 01/08/2026): câu cũ trả về đúng một dấu thời gian, `max(finished_at)` của các lần
+ * `success`. Dấu thời gian đó KHÔNG phân biệt được năm tình huống mà buồng lái phải phân
+ * biệt — chưa chạy lần nào · lần gần nhất hỏng · dòng `running` treo từ đêm qua · job bị
+ * tắt · quá hạn theo nhịp đã khai. Cả năm đều cho ra `null` hoặc một giờ trông bình thường,
+ * và cả năm đều hiện lên màn hình dưới dạng một bảng cờ trống. `0041` đã dựng sẵn view trả
+ * lời đúng câu đó, kèm cột `needs_attention`; việc còn lại chỉ là ĐỌC nó.
+ *
+ * Quyền: `ops.v_job_health` + `ops.job_schedule` + `ops.job_runs` đều `grant select` cho
+ * `authenticated` (0041 mục 7, policy `job_runs_read` qual = true) — đo lại 01/08/2026 bằng
+ * `set role authenticated`, đọc được. Không cần migration mở quyền cho GVCN.
+ *
+ * BA nhánh trả về, và không nhánh nào được im lặng:
+ *   1. Đọc được, có dòng  → trạng thái thật của view.
+ *   2. Đọc được, KHÔNG có dòng → `chua_khai`. `ops.job_schedule` chưa biết job này tồn tại
+ *      (database chạy `0041` mà thiếu `0039` là ca có thật — xem mệnh đề WHERE của 0041).
+ *      Khác `chua_chay`: không có nhịp nào để mà quá hạn, nên không được báo "quá hạn".
+ *   3. Câu đọc NÉM LỖI → `khong_doc_duoc`, và ghi log. Nuốt lỗi rồi trả `lastScanAt = null`
+ *      là biến "mất quyền đọc sổ" thành "chưa quét lần nào" — hai chuyện khác hẳn nhau, mà
+ *      cái sau còn làm màn hình đề nghị người dùng đi chạy lại một job vẫn đang chạy tốt.
+ *      KHÔNG ném lên tRPC: mất dòng trạng thái không được kéo sập cả buồng lái của cô.
+ */
+async function readScanHealth(client: PoolClient): Promise<ScanHealth> {
+  const trong: ScanHealth = {
+    jobName: "flag_engine",
+    state: "chua_khai",
+    needsAttention: true,
+    lastSuccessAt: null,
+    lastFinishedAt: null,
+    expectedEveryHours: null,
+    graceHours: null,
+    rulesSkipped: [],
+    degradedSources: [],
+  };
+
+  try {
+    const { rows } = await client.query<{
+      state: string;
+      needs_attention: boolean;
+      last_success_at: string | null;
+      last_finished_at: string | null;
+      expected_every_hours: string | null;
+      grace_hours: string | null;
+      rules_skipped: unknown;
+      degraded_sources: string[] | null;
+    }>(
+      // `to_jsonb(...) #>> '{}'` chứ KHÔNG phải `::text`, và đây không phải chuyện thẩm mỹ:
+      // `::text` của Postgres cho ra "2026-08-01 08:38:25.009133+07" — có dấu cách thay vì
+      // chữ T và múi giờ không có dấu hai chấm. Node parse được chuỗi đó, nhưng Safari trên
+      // iPhone thì KHÔNG (nó bám sát ISO 8601), trả về Invalid Date. Mà GVCN là vai dùng
+      // điện thoại nhiều nhất — mốc quét sẽ im lặng biến thành "không rõ" đúng trên thiết bị
+      // đông người dùng nhất, và không ai thấy vì máy dev chạy Node. `to_jsonb` phát ra đúng
+      // ISO 8601 ("2026-08-01T08:38:25.009133+07:00"), mọi trình duyệt đọc được.
+      `select h.state,
+              h.needs_attention,
+              to_jsonb(h.last_success_at)  #>> '{}' as last_success_at,
+              to_jsonb(h.last_finished_at) #>> '{}' as last_finished_at,
+              (extract(epoch from h.expected_every) / 3600)::text as expected_every_hours,
+              (extract(epoch from h.grace) / 3600)::text          as grace_hours,
+              coalesce(h.last_metrics -> 'rules_skipped', '[]'::jsonb) as rules_skipped,
+              h.degraded_sources
+         from ops.v_job_health h
+        where h.job_name = 'flag_engine'`,
+    );
+
+    const row = rows[0];
+    if (!row) return trong;
+
+    // `state` của view là một tập đóng bảy giá trị (0041 mục 7). Vẫn kiểm lại thay vì ép
+    // kiểu: một bản view sau này thêm trạng thái thứ tám sẽ làm Zod ném ở `.parse()` cuối
+    // procedure và giết cả buồng lái — ở đây thì nó thành `khong_doc_duoc`, tức "màn hình
+    // không hiểu câu trả lời", đúng nghĩa hơn và không mất màn.
+    const state = ScanState.safeParse(row.state);
+
+    return {
+      jobName: "flag_engine",
+      state: state.success ? state.data : "khong_doc_duoc",
+      needsAttention: row.needs_attention === true || !state.success,
+      lastSuccessAt: row.last_success_at,
+      lastFinishedAt: row.last_finished_at,
+      expectedEveryHours: toFiniteNumber(row.expected_every_hours),
+      graceHours: toFiniteNumber(row.grace_hours),
+      rulesSkipped: parseSkippedRules(row.rules_skipped),
+      degradedSources: row.degraded_sources ?? [],
+    };
+  } catch (err) {
+    console.error("[care] Không đọc được ops.v_job_health cho flag_engine:", err);
+    return { ...trong, state: "khong_doc_duoc" };
+  }
+}
+
+function toFiniteNumber(value: string | null): number | null {
+  if (value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * `metrics -> 'rules_skipped'` do `care.run_flag_engine` ghi: mảng `{rule_code, ly_do}`.
+ * Đọc phòng thủ vì đây là JSON tự do trong một cột `jsonb` — một lần chạy cũ với khuôn khác
+ * KHÔNG được làm sập buồng lái. Dòng đọc không nổi bị bỏ qua, phần đọc được vẫn hiện ra:
+ * hiện 1 trong 2 luật bị bỏ qua vẫn tốt hơn hiện 0 và im lặng.
+ */
+function parseSkippedRules(raw: unknown): { ruleCode: string; lyDo: string }[] {
+  if (!Array.isArray(raw)) return [];
+  const out: { ruleCode: string; lyDo: string }[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    const ruleCode = typeof rec.rule_code === "string" ? rec.rule_code : null;
+    if (!ruleCode) continue;
+    out.push({ ruleCode, lyDo: typeof rec.ly_do === "string" ? rec.ly_do : "khong_ro" });
+  }
+  return out;
+}
+
 /** Mã lớp để hiện trên màn hình. Không có thì trả chuỗi rỗng — KHÔNG bịa mã lớp. */
 async function readClassCode(client: PoolClient, classId: string): Promise<string> {
   const { rows } = await client.query<{ code: string }>(
@@ -302,7 +454,7 @@ function mondayIso(date?: string): string {
 
 /**
  * Dựng lại ĐÚNG nội dung phụ huynh sẽ đọc, từ cùng ba con số mà `buildGrowthReport`
- * (routers/report.ts) dùng: số ngày có check-in trong tuần, số ngày tâm trạng «Vui»,
+ * (routers/report.ts) dùng: số ngày có check-in trong tuần, số ngày tâm trạng "Vui",
  * và chuỗi ngày đi học liên tiếp tính tới hôm nay.
  *
  * VÌ SAO KHÔNG GỌI THẲNG `buildGrowthReport`: hàm đó chưa export, và nó dựng báo cáo cho
@@ -333,7 +485,7 @@ export function buildReportPreview(stats: {
   if (stats.happyDays >= 3) {
     glow.push({
       title: "Cả tuần đến lớp với tâm trạng vui vẻ",
-      detail: `Check-in cảm xúc · ${stats.happyDays}/5 ngày «Vui»`,
+      detail: `Check-in cảm xúc · ${stats.happyDays}/5 ngày "Vui"`,
       accentColor: "blue",
     });
   }
@@ -534,13 +686,11 @@ export const careRouter = router({
         "select label from ops.v_stale_sources where source in ('attendance','evidence')",
       );
 
-      // Lọc theo job_name: contract nói "Quét đêm qua", nên phải là giờ của ĐÚNG bộ
-      // quét cờ. Không lọc thì job dọn mood/backup chạy muộn hơn sẽ chiếm chỗ.
-      const jobRes = await client.query<{ finished_at: string | null }>(
-        `select max(finished_at)::text as finished_at
-           from ops.job_runs
-          where status = 'success' and job_name = 'flag_engine'`,
-      );
+      // Trạng thái bộ quét cờ — xem `readScanHealth`. Lọc theo `job_name` vẫn là bắt buộc
+      // (contract nói "Quét đêm qua", nên phải là giờ của ĐÚNG bộ quét cờ, không phải giờ
+      // của job dọn mood chạy muộn hơn), nhưng nay câu trả lời là một TRẠNG THÁI chứ không
+      // còn là một dấu thời gian trần.
+      const scanHealth = await readScanHealth(client);
 
       const classSizeRes = await client.query<{ total_students: number; open_care_cases: number }>(
         `select
@@ -571,7 +721,11 @@ export const careRouter = router({
         classId,
         className,
         asOfDate: toLocalIsoDate(new Date()),
-        lastScanAt: jobRes.rows[0]?.finished_at ?? null,
+        // Một sự thật, hai lối đọc: `lastScanAt` là bản rút gọn của `scanHealth.lastSuccessAt`
+        // cho client cũ. Không tính lại từ câu SQL thứ hai — hai câu SQL cho cùng một con số
+        // là cách chúng bắt đầu lệch nhau.
+        lastScanAt: scanHealth.lastSuccessAt,
+        scanHealth,
         staleSources: staleRes.rows.map((r) => r.label),
         totals: {
           checkinCount: totalsRes.rows[0]?.checkin_count ?? 0,
@@ -938,7 +1092,7 @@ export const careRouter = router({
            -- Chuỗi ngày đi học LIÊN TIẾP tính tới hôm nay — sao đúng cách đếm của
            -- buildGrowthReport (report.ts): ngày trừ đi thứ tự đếm lùi cho ra một hằng
            -- số chung cho mọi ngày liền mạch; chuỗi đang chạy là nhóm mang giá trị
-           -- current_date + 1. Đây là số phụ huynh đọc trong dòng «chuỗi N ngày», nên
+           -- current_date + 1. Đây là số phụ huynh đọc trong dòng "chuỗi N ngày", nên
            -- nó KHÔNG bó trong tuần đang duyệt.
            streaks as (
              select t.student_id, count(*)::int as streak_days
@@ -1340,8 +1494,8 @@ export const careRouter = router({
   // hai cho cùng một việc, và nhờ vậy §9 (idempotency) không phải kiểm lại từ đầu.
   //
   // HAI THỨ CỐ TÌNH KHÔNG ĐỌC — xem lời giải thích dài ở đầu khối tương ứng trong
-  // `contracts/care.ts`: `attendance.checkins_care.mood` (màn check-in hứa với em «Chỉ thầy
-  // cô chủ nhiệm thấy») và `attendance.help_requests.note` (màn /can-gap-thay-co hứa
+  // `contracts/care.ts`: `attendance.checkins_care.mood` (màn check-in hứa với em "Chỉ thầy
+  // cô chủ nhiệm thấy") và `attendance.help_requests.note` (màn /can-gap-thay-co hứa
   // rằng phòng tâm lý chỉ đọc SAU một lần chuyển tuyến em đã đồng ý — đường chuyển
   // tuyến đó chưa tồn tại). RLS hiện cho phép cả hai; lời hứa in trên màn hình thì
   // không. Chỗ hụt ở tầng dữ liệu ghi vào canPhoiHop của gói việc, còn ở tầng này thì
@@ -1350,12 +1504,12 @@ export const careRouter = router({
 
   /**
    * Hộp việc của tâm lý cụm: mọi em trong cụm đang có hồ sơ chăm sóc mở HOẶC có tín
-   * hiệu «cần gặp thầy cô» chưa ai xử lý.
+   * hiệu "cần gặp thầy cô" chưa ai xử lý.
    *
-   * GỐC LÀ HỢP CỦA HAI NGUỒN, không phải bảng care_cases: một em vừa bấm «cần gặp thầy
-   * cô» thì chưa có hồ sơ nào (hồ sơ chỉ sinh ra ở `resolveOpenCase`, tức khi đã có
+   * GỐC LÀ HỢP CỦA HAI NGUỒN, không phải bảng care_cases: một em vừa bấm "cần gặp thầy
+   * cô" thì chưa có hồ sơ nào (hồ sơ chỉ sinh ra ở `resolveOpenCase`, tức khi đã có
    * người ghi can thiệp). Lấy hồ sơ làm gốc thì đúng nhóm cần gấp nhất lại là nhóm biến
-   * mất khỏi danh sách — cùng lỗi «tín hiệu khẩn bị nuốt» đã ghi ở đầu file (số 3).
+   * mất khỏi danh sách — cùng lỗi "tín hiệu khẩn bị nuốt" đã ghi ở đầu file (số 3).
    *
    * BA HÀNG RÀO: `counselorProcedure` (có vai thật trong v_my_scopes) → lọc tường minh
    * theo `st.school_id = any(cụm)` → RLS `care_cases_scope`/`help_requests_scope`

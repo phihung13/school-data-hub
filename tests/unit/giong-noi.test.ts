@@ -42,6 +42,20 @@ const readComponent = (file: string) => stripComments(readFileSync(join(componen
 /**
  * Các màn mà NGƯỜI ĐỌC là học sinh hoặc phụ huynh. Danh sách này cố tình liệt kê từng
  * file: thêm một màn cho hai vai đó thì phải thêm vào đây, không có nhánh "tự tìm".
+ *
+ * LỖ ĐÃ BIẾT, ghi ra để không ai đọc nhầm bộ test này là "đã phủ hết" (01/08/2026):
+ * danh sách liệt kê tay nên nó chỉ canh được `components/*.tsx`. Đo sống hôm 01/08 trên
+ * `document.body.innerText` của /home phiên học sinh Minh, chuỗi "menu_book Học tập · GĐ2"
+ * và "favorite Y tế · GĐ2" VẪN hiện ra màn hình — nguồn là `apps/hub/server/mini-apps.ts`
+ * (nhãn app chưa build), và `apps/hub/components/hub-sidebar.tsx` cũng còn `soonBadge ??
+ * "GĐ2"`. Cả hai nằm ngoài tầm quét, nên bộ test này ĐANG XANH trong khi mã giai đoạn dự
+ * án vẫn đến mắt học sinh — loại lỗi tệ hơn không có test.
+ * Luật đúng phải là ĐẢO LẠI: quét cả apps/hub trừ vùng vận hành đã khai (components/gvcn,
+ * components/tam-ly, components/dieu-hanh, gvcn-dashboard.tsx). Chưa làm được ngay vì hai
+ * file trên thuộc phạm vi gói khác đang chạy song song; đảo bây giờ là CI đỏ vì một lỗi
+ * mình không có quyền sửa. Việc còn nợ: xem `conNo` của gói "tuong-phan-man-hoc-sinh".
+ * Trong lúc chờ, danh sách được nới sang những file bề mặt học sinh/phụ huynh khác thuộc
+ * cùng phạm vi — mỗi file thêm vào là một chỗ nữa lỗi không lọt qua được.
  */
 const CHILD_FACING_SCREENS = [
   "home-view.tsx",
@@ -51,6 +65,12 @@ const CHILD_FACING_SCREENS = [
   "attendance-view.tsx",
   "checkin-view.tsx",
   "help-request-view.tsx",
+  // Thêm 01/08/2026. login-form.tsx là chỗ lọt thật: bảng "Dành cho phụ huynh · Zalo" từng
+  // viết "nhập mã mời GVCN đã gửi" và "Thất lạc mã? Nhắn GVCN" — đúng bảng dành riêng cho
+  // phụ huynh, tức đúng chỗ từ vựng vận hành không được phép có.
+  "login-form.tsx",
+  "mini-app-tile.tsx",
+  "tab-bar.tsx",
 ];
 
 // ---------------------------------------------------------------------------
@@ -58,7 +78,7 @@ const CHILD_FACING_SCREENS = [
 // ---------------------------------------------------------------------------
 
 describe("giọng nói: bề mặt học sinh/phụ huynh không nói tiếng vận hành", () => {
-  it.each(CHILD_FACING_SCREENS)("%s không còn chữ «GVCN» nào hiện ra màn hình", (file) => {
+  it.each(CHILD_FACING_SCREENS)("%s không còn chữ “GVCN” nào hiện ra màn hình", (file) => {
     const src = readComponent(file);
     const hits = src.match(/.{0,60}GVCN.{0,40}/g) ?? [];
     expect(hits, `${file} còn ${hits.length} chỗ nói "GVCN" với người đọc là trẻ/phụ huynh`).toEqual([]);

@@ -102,9 +102,13 @@
 ## 11. Accessibility
 
 - Touch target ≥ 44px (mọi nút/tile mobile). `cursor:pointer` cho mọi thứ bấm được (desktop).
-- Tương phản chữ ≥ 4.5:1 — chữ xám nhạt `#9AA5B5` chỉ cho caption ≤11px, không dùng cho nội dung.
-- Màu không phải tín hiệu duy nhất: badge/cờ luôn kèm chữ hoặc icon.
+- Tương phản chữ ≥ 4.5:1 — **không có ngoại lệ theo cỡ chữ**. Đo trên **mặt nền tệ nhất** mà màu đó có thể bị dán vào (`#FFFFFF` · `#F7F9FC` · `#F1F4F8`), không phải chỉ trên nền trắng.
+  - *Sửa 01/08/2026*: dòng cũ ghi "chữ xám nhạt `#9AA5B5` chỉ cho caption ≤11px" — câu đó tự mâu thuẫn với chính vế "≥4.5:1" đứng ngay trước nó (cỡ chữ nhỏ KHÔNG hạ ngưỡng WCAG; ngoại lệ 3:1 của 1.4.3 chỉ dành cho chữ **lớn** ≥18.66px bold / ≥24px). Đo thật ở 360px: `#9AA5B5` = 2,49:1 và `#8A94A6` = 3,06:1, mà chúng đang chở email của học sinh và các câu trạng thái rỗng. Token nay là `caption` `#5F6B7D` (4,90:1 ở nền tệ nhất) và `caption2` `#66707D` (4,56:1). `tests/unit/a11y.test.ts` đo lại từ `tailwind.config.ts`, không chép số.
+- Chữ gợi ý trong ô nhập (`::placeholder`) cũng là chữ: `#5B6B80` đặt một lần ở `globals.css` (mặc định Tailwind là `#9CA3AF` = 2,54:1). Placeholder **không được là nhãn duy nhất** — nó biến mất ngay khi gõ ký tự đầu (WCAG 3.3.2), nên mọi ô nhập phải có `<label htmlFor>` hoặc `aria-label` thật.
+- Màu không phải tín hiệu duy nhất: badge/cờ luôn kèm chữ hoặc icon. Hai trạng thái khác nghĩa (ví dụ *có mặt* vs *gửi muộn*) không được chỉ khác nhau ở màu nền — phải khác **icon + chữ**, và có `sr-only` cho tai.
 - 4 ô mood có `aria-label`; focus ring hiển thị khi điều hướng bàn phím.
+- Hộp thoại nổi (popup) phải là hộp thoại thật: `role="dialog" aria-modal="true" aria-labelledby`, đặt focus vào trong khi mở, trả focus về chỗ cũ khi đóng, Escape đóng được, Tab quẩn trong hộp.
+- Đổi màn sau một cú bấm (form → màn "đã gửi") phải báo cho tai: khối mới bọc `role="status" aria-live="polite"` **và** dời focus lên tiêu đề của nó (`ref` + `tabIndex={-1}`) — nút vừa bấm biến mất thì focus rơi về `<body>`.
 
 ## 12. Checklist trước khi giao màn mới
 

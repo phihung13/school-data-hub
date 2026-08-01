@@ -26,7 +26,8 @@
 "use client";
 
 import { trpc } from "@/lib/trpc-client";
-import type { HubRole } from "@hub/core/contracts";
+import type { AttendanceStatus, HubRole } from "@hub/core/contracts";
+import { ATTENDANCE_STATUS_LABEL } from "@hub/core/contracts";
 import { HubSidebar } from "./hub-sidebar";
 import { MainContent } from "./page-shell";
 import { StudentTabBar } from "./tab-bar";
@@ -63,15 +64,11 @@ export function AttendanceView({
             {/* Không biết lớp thì bỏ hẳn dòng này — xem ui/labels.ts. */}
             {subtitle && <div className="text-[11.5px] text-caption">{subtitle}</div>}
           </div>
-          {query.data?.week.find((d) => d.isToday)?.status && (
-            <span className="flex flex-none items-center gap-1.5 rounded-full bg-[#E3F8ED] px-[13px] py-[7px]">
-              <span aria-hidden="true" className="msr text-[15px] text-[#00A05F]">check_circle</span>
-              <span className="text-[11.5px] font-extrabold text-[#00693F]">
-                <span className="md:hidden">Đã điểm danh</span>
-                <span className="hidden md:inline">Hôm nay đã điểm danh</span>
-              </span>
-            </span>
-          )}
+          {/* Huy hiệu này trước đây hiện xanh lá "Đã điểm danh" cho BẤT KỲ trạng thái nào có
+              mặt trong dữ liệu hôm nay — kể cả 'absent' hay 'queued_late'. Nay chỉ nói "đã
+              điểm danh" khi trạng thái thật sự là `present`; còn lại thì nói đúng tên trạng
+              thái bằng nhãn của contract, trên nền cùng tông với lưới tuần. (01/08/2026) */}
+          <TodayBadge status={query.data?.week.find((d) => d.isToday)?.status ?? null} />
         </div>
 
         {/* Ba nhánh, không nhánh nào được rơi vào khoảng trắng câm lặng. */}
@@ -86,7 +83,13 @@ export function AttendanceView({
               <StatCard icon="local_fire_department" iconBg="bg-[#FFF7E0]" iconColor="text-[#F58F00]" label="Chuỗi hiện tại" value={String(query.data.streakDays)} sub="ngày liên tiếp" />
               <StatCard icon="military_tech" iconBg="bg-[#F0E9FD]" iconColor="text-[#7434E8]" label="Kỷ lục" value={String(query.data.longestStreakDays)} sub="chuỗi dài nhất" />
               <StatCard icon="event_available" iconBg="bg-[#E3F8ED]" iconColor="text-[#00A05F]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
-              <StatCard icon="schedule" iconBg="bg-[#FFF1C9]" iconColor="text-[#E8940D]" label="Gửi muộn" value={String(query.data.lateCount)} sub="cô đã xác nhận" />
+              {/* Phụ đề cũ là "cô đã xác nhận" — nói ngược với chính con số: câu SQL đếm
+                  `status in ('late','queued_late')`, mà `queued_late` đúng là những ngày
+                  CHƯA ai xác nhận (care.acknowledgeLate đổi chúng thành 'present'). Một
+                  con số mà dòng chữ dưới nó nói sai về chính nó thì tệ hơn không có số.
+                  Icon cũng đổi sang màu #8A5A00: #E8940D trên nền #FFF1C9 chỉ 2,15:1,
+                  dưới mốc 3:1 cho thành phần phi văn bản. (01/08/2026) */}
+              <StatCard icon="schedule" iconBg="bg-[#FFF1C9]" iconColor="text-[#8A5A00]" label="Gửi muộn" value={String(query.data.lateCount)} sub="gồm cả ngày đang chờ cô xác nhận" />
             </div>
 
             <div className="mt-[18px] rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
@@ -120,21 +123,17 @@ export function AttendanceView({
                       )}
                     </span>
                     {day.status ? (
-                      <span
-                        className="flex h-[42px] w-[42px] items-center justify-center rounded-full"
-                        style={{
-                          background: day.status === "present" ? "linear-gradient(160deg,#00D97A,#00A85E)" : "#E3F8ED",
-                          boxShadow: day.status === "present" ? "0 5px 12px rgba(0,168,94,.28)" : undefined,
-                        }}
-                      >
-                        <span aria-hidden="true" className="msr text-[22px] text-[#00A05F]">check</span>
-                      </span>
+                      <DayMark status={day.status} />
                     ) : (
                       <span className={`h-[42px] w-[42px] rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#F0474D]"}`} />
                     )}
                     <span className={`text-[11.5px] font-bold ${day.isToday ? "text-navy" : "text-[#33507C]"}`}>
                       {day.checkedInAt ?? (day.isFuture ? "—" : "vắng")}
                     </span>
+                    {/* Dòng chữ ngắn cho ĐÚNG những ngày không phải "có mặt". Ngày có mặt
+                        không cần chữ (giờ check-in đã nói đủ), còn ngày gửi muộn thì giờ
+                        check-in KHÔNG nói đủ — nó trông y hệt một ngày có mặt. */}
+                    <DayNote status={day.status} />
                   </div>
                 ))}
               </div>
@@ -149,16 +148,34 @@ export function AttendanceView({
                       key={h.occurred_on}
                       className={`flex items-center gap-3.5 py-3.5 ${i < query.data!.history.length - 1 ? "border-b border-[#F1F4F8]" : ""}`}
                     >
-                      <span className={`h-2.5 w-2.5 flex-none rounded-full ${h.status === "present" ? "bg-[#00D97A]" : "bg-[#FFB01F]"}`} />
+                      {/* Chấm màu KHÔNG còn là tín hiệu duy nhất và cũng không còn nói sai:
+                          trước đây mọi trạng thái không phải 'present' đều bị gọi chung là
+                          "gửi muộn" (kể cả 'absent'/'excused' do cô ghi tay), và icon
+                          `verified` xanh lá đứng cuối dòng cho MỌI trạng thái — tức một
+                          ngày vắng vẫn được đóng dấu "đã xác nhận" màu xanh. Nay chữ lấy
+                          từ ATTENDANCE_STATUS_LABEL của contract, chấm và icon đi theo
+                          cùng một bảng với lưới tuần phía trên. (01/08/2026) */}
+                      <span
+                        aria-hidden="true"
+                        className="h-2.5 w-2.5 flex-none rounded-full"
+                        style={{ background: dayMarkStyle(h.status)?.iconColor ?? "#5B6B80" }}
+                      />
                       <div className="flex-1">
                         <div className="text-[13.5px] font-extrabold text-ink">
                           {new Date(h.occurred_on).toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit" })}
                           {" · "}
-                          {h.status === "present" ? "có mặt" : "gửi muộn"}
+                          {(ATTENDANCE_STATUS_LABEL as Record<string, string | undefined>)[h.status] ??
+                            "trạng thái chưa đọc được"}
                         </div>
                         <div className="mt-px text-[11.5px] text-caption">check-in {h.checked_in_at}</div>
                       </div>
-                      <span aria-hidden="true" className="msr text-[19px] text-[#00A05F]">verified</span>
+                      <span
+                        aria-hidden="true"
+                        className="msr text-[19px]"
+                        style={{ color: dayMarkStyle(h.status)?.iconColor ?? "#5B6B80" }}
+                      >
+                        {dayMarkStyle(h.status)?.icon ?? "question_mark"}
+                      </span>
                     </div>
                   ))}
                   {query.data.history.length === 0 && (
@@ -194,6 +211,163 @@ export function AttendanceView({
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Ô một ngày trong lưới tuần.
+//
+// Sửa 01/08/2026 (gói "tuong-phan-man-hoc-sinh") — HAI TRẠNG THÁI KHÁC NGHĨA VẼ GIỐNG
+// HỆT NHAU, và dấu tick gần như vô hình. Hai lỗi nằm chung một khối mã cũ:
+//
+//  1. `text-[#00A05F]` cho dấu tick nằm NGOÀI toán tử ba ngôi, nên cùng một màu icon dùng
+//     cho cả hai nhánh nền. Trên nền ngày có mặt (gradient #00D97A→#00A85E) nó chỉ đạt
+//     1,81:1 ở đầu sáng và 1,09:1 ở đầu đậm — chuẩn phi văn bản (WCAG 1.4.11) là 3:1.
+//     Nói cách khác: dấu tick, thứ duy nhất bên trong vòng tròn, gần như biến mất.
+//  2. Ngày `late`/`queued_late` chỉ khác ngày `present` ở MÀU NỀN vòng tròn. Cùng icon
+//     `check`, cùng dòng giờ bên dưới, không chữ, không sr-only. Contract có đủ năm trạng
+//     thái (packages/core/contracts/care.ts) nhưng giao diện chỉ vẽ hai — và vẽ "gửi muộn"
+//     thành xanh lá tức là để em đọc nó thành "có mặt". DESIGN-GUIDELINES §8 ghi thẳng:
+//     "gửi muộn ≠ vắng (vàng, "chờ xác nhận")". Đối chiếu nội bộ càng rõ: khối "Lịch sử
+//     gần đây" ngay dưới cùng trang thì CÓ chữ "có mặt"/"gửi muộn" — hai khối trên một
+//     trang đang nói khác nhau về cùng một dữ liệu.
+//
+// Màu tick ngày có mặt nay là #003D24: 6,62:1 trên #00D97A và 3,99:1 trên #00A85E — vượt
+// 3:1 ở CẢ HAI đầu gradient. Chữ trắng (cách this-week-view vẽ vòng tròn tâm trạng) chỉ
+// được 1,87:1 ở đầu sáng nên KHÔNG dùng lại ở đây; bảng màu không đổi một mã nào.
+// ---------------------------------------------------------------------------
+
+interface DayMarkStyle {
+  icon: string;
+  background: string;
+  boxShadow?: string;
+  iconColor: string;
+  /** Chữ ngắn hiện dưới giờ check-in. `null` = không cần (giờ đã nói đủ). */
+  note: string | null;
+}
+
+const DAY_MARK: Record<AttendanceStatus, DayMarkStyle> = {
+  present: {
+    icon: "check",
+    background: "linear-gradient(160deg,#00D97A,#00A85E)",
+    boxShadow: "0 5px 12px rgba(0,168,94,.28)",
+    iconColor: "#003D24",
+    note: null,
+  },
+  // Cô đã ghi tay là đi muộn — đã xong việc, không còn chờ ai.
+  late: { icon: "schedule", background: "#FFF1C9", iconColor: "#8A5A00", note: "đi muộn" },
+  // Máy nhận lúc sau 8:00 và ĐANG chờ cô xác nhận (care.acknowledgeLate đổi nó thành
+  // 'present'). Đây chính là trạng thái trước đây bị vẽ thành xanh lá.
+  queued_late: { icon: "hourglass_top", background: "#FFF1C9", iconColor: "#8A5A00", note: "chờ xác nhận" },
+  absent: { icon: "close", background: "#FFECEC", iconColor: "#A32127", note: "vắng" },
+  excused: { icon: "event_busy", background: "#EAEFF6", iconColor: "#33507C", note: "có phép" },
+};
+
+/** Trạng thái lạ (schema đi trước giao diện) KHÔNG được vẽ thành dấu tick xanh. */
+function dayMarkStyle(status: string): DayMarkStyle | null {
+  return (DAY_MARK as Record<string, DayMarkStyle | undefined>)[status] ?? null;
+}
+
+/**
+ * Chữ ngắn dưới giờ check-in. Rỗng cho ngày có mặt (giờ đã nói đủ) và cho ngày chưa có dữ
+ * liệu; có chữ cho mọi trạng thái còn lại — kể cả trạng thái lạ, vì "chưa rõ" vẫn là một
+ * câu thật, còn vẽ nó thành dấu tick xanh thì không.
+ * Màu lấy đúng màu icon của trạng thái nên hai tín hiệu không bao giờ nói khác nhau; mọi
+ * cặp đều đo trên nền ô (trắng, và #F7FAFF của ngày hôm nay): #8A5A00 = 5,93:1 · #A32127
+ * = 7,49:1 · #33507C = 8,14:1 · #5B6B80 = 5,44:1.
+ */
+export function dayNoteText(status: string | null): string | null {
+  if (!status) return null;
+  const style = dayMarkStyle(status);
+  // KHÔNG viết `style?.note ?? "chưa rõ"` ở đây. Đó là lỗi thật đã nằm trong bản đầu của
+  // gói này (sửa 01/08/2026): `??` nhận cả `null`, mà `present` CỐ Ý mang note = null để
+  // không có chữ. Viết bằng `??` thì hai thứ khác hẳn nghĩa bị trộn làm một — "trạng thái
+  // đã biết, cố ý im" và "trạng thái lạ, không đọc được" — nên MỌI ngày có mặt in ra chữ
+  // "chưa rõ" ngay dưới giờ check-in. Dữ liệu demo của Minh là 5/5 ngày `present`, tức lỗi
+  // phủ trọn lưới tuần của màn chính, và nó lọt được đúng vì hydrate đang hỏng nên không
+  // ai soi được lưới này bằng mắt. Câu hỏi đúng là "trạng thái này CÓ trong bảng không",
+  // và nó phải hỏi trên `style`, không phải trên `style.note`.
+  return style ? style.note : "chưa rõ";
+}
+
+function DayNote({ status }: { status: string | null }) {
+  const note = dayNoteText(status);
+  if (!note) return null;
+  const style = status ? dayMarkStyle(status) : null;
+  return (
+    <span
+      className="text-center text-[10px] font-bold leading-tight"
+      style={{ color: style?.iconColor ?? "#5B6B80" }}
+    >
+      {note}
+    </span>
+  );
+}
+
+/**
+ * Huy hiệu "hôm nay" ở thanh tiêu đề. Không có dữ liệu hôm nay thì KHÔNG vẽ gì — im lặng
+ * ở đây là đúng: thanh tiêu đề không phải chỗ kết luận "em chưa check-in", lưới tuần ngay
+ * dưới đã nói việc đó bằng vòng tròn nét đứt.
+ */
+function TodayBadge({ status }: { status: string | null }) {
+  if (!status) return null;
+  const style = dayMarkStyle(status);
+  const label =
+    (ATTENDANCE_STATUS_LABEL as Record<string, string | undefined>)[status] ?? "trạng thái chưa đọc được";
+  const present = status === "present";
+  return (
+    <span
+      className="flex flex-none items-center gap-1.5 rounded-full px-[13px] py-[7px]"
+      style={{ background: present ? "#E3F8ED" : (style?.background ?? "#EAEFF6") }}
+    >
+      <span aria-hidden="true" className="msr text-[15px]" style={{ color: present ? "#00693F" : (style?.iconColor ?? "#33507C") }}>
+        {present ? "check_circle" : (style?.icon ?? "question_mark")}
+      </span>
+      <span className="text-[11.5px] font-extrabold" style={{ color: present ? "#00693F" : (style?.iconColor ?? "#33507C") }}>
+        {present ? (
+          <>
+            <span className="md:hidden">Đã điểm danh</span>
+            <span className="hidden md:inline">Hôm nay đã điểm danh</span>
+          </>
+        ) : (
+          <>
+            <span className="md:hidden">{label}</span>
+            <span className="hidden md:inline">Hôm nay: {label}</span>
+          </>
+        )}
+      </span>
+    </span>
+  );
+}
+
+function DayMark({ status }: { status: string }) {
+  const style = dayMarkStyle(status);
+  // Nhãn đầy đủ cho tai lấy từ contract, không viết tay: nơi khác đổi chữ thì chỗ này đổi
+  // theo. Trạng thái ngoài contract nói thẳng là chưa đọc được, không đoán.
+  const label =
+    (ATTENDANCE_STATUS_LABEL as Record<string, string | undefined>)[status] ?? "trạng thái chưa đọc được";
+
+  if (!style) {
+    return (
+      <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed border-[#C9D2DE]">
+        <span aria-hidden="true" className="msr text-[20px] text-[#5B6B80]">question_mark</span>
+        <span className="sr-only">{label}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="flex h-[42px] w-[42px] items-center justify-center rounded-full"
+      style={{ background: style.background, boxShadow: style.boxShadow }}
+    >
+      <span aria-hidden="true" className="msr text-[22px]" style={{ color: style.iconColor }}>
+        {style.icon}
+      </span>
+      {/* Không đổi một pixel nào trên màn, mà vòng tròn thành có nghĩa cho người đọc bằng
+          tai — cùng cách this-week-view.tsx:147 đã làm đúng cho vòng tròn tâm trạng. */}
+      <span className="sr-only">{label}</span>
+    </span>
   );
 }
 

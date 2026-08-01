@@ -38,6 +38,36 @@
 //     lần quét cảnh báo nào chạy xong. Nay câu kết luận đó chỉ in ra khi có mốc
 //     quét CỦA HÔM NAY đứng sau nó — xem `boardEmptyPresentation`.
 //
+//  8. (01/08/2026, gói "debt-32-buong-lai-doc-care-flags") BA CHỖ VÁ CỦA MỤC 6 CHỈ
+//     SỐNG Ở NHÁNH BẢNG TRỐNG. Ba câu fresh/stale/unknown viết đúng, nhưng chúng
+//     nằm trong điều kiện `priorityFlags.length === 0 && pendingLateCheckins.length
+//     === 0` — có MỘT cờ là mốc quét biến mất khỏi màn hình. Grep toàn repo:
+//     `lastScanAt` chỉ được RENDER ở đúng một dòng đó. Trong khi dải "nguồn dữ liệu
+//     chưa tươi" thì hiện mọi lúc. Nay có `ScanBanner` cố định ở đầu trang, đọc
+//     `d.scanHealth` (`ops.v_job_health`, migration 0041) nên nói được cả những
+//     trạng thái mà một dấu thời gian không nói nổi: chưa chạy lần nào · lần gần
+//     nhất hỏng · đang treo · bị tắt · quá hạn · không đọc được sổ.
+//
+//     Kèm theo: câu "Hết việc rồi — lớp mình đang ổn!" nay còn đòi thêm
+//     `openCareCases === 0`. Đo trên hub_dev 01/08/2026, lớp 6A2 có 1 hồ sơ chăm
+//     sóc đang mở và 0 cờ, nên màn hình in câu đó ngay cạnh ô "1 hồ sơ chăm sóc
+//     đang mở" — hai con số cùng màn nói ngược nhau.
+//
+//  9. (01/08/2026, gói "tiep-can-man-nguoi-lon") BA LỖI TIẾP CẬN ĐO ĐƯỢC BẰNG SỐ:
+//     · Chữ nội dung dùng token `caption`. Token đó vừa được gói "tuong-phan-man-hoc-
+//       sinh" nâng lên (#8A94A6 → #5F6B7D) nên tự nó đã đạt chuẩn; nhưng những dòng
+//       NÓI RA SỰ THẬT VỀ DỮ LIỆU — dòng phụ của bốn thẻ số, hai câu trạng thái rỗng —
+//       vẫn đổi sang `muted`, cùng lý do đã ghi ở report-approval-view.tsx: `caption`
+//       là tên dành cho chú thích, và một câu như "gửi muộn — chưa phải vắng" không
+//       phải chú thích. Đặt đúng tên token là cách duy nhất để lần sau ai đó hạ lại
+//       màu của `caption` cũng không kéo theo mấy câu này.
+//     · Nút cao ~40px (px-5 py-3 + chữ 12,5px). §11 và WCAG 2.5.5 đòi 44px. Đây là
+//       những nút GHI VÀO HỒ SƠ CHĂM SÓC của một đứa trẻ, bấm trượt không hoàn tác
+//       được từ giao diện — nay `min-h-[44px]`.
+//     · Ô "Cảm xúc lớp hôm nay" in "Chưa có check-in nào hôm nay" trong khi thẻ số
+//       ngay trên nó ghi "Đã check-in 25/30". Hai con số đến từ HAI truy vấn khác nhau
+//       (xem `MoodEmpty` bên dưới) — nay ba nhánh, mỗi nhánh một sự thật.
+//
 //  7. (31/07/2026, gói "gvcn-nhieu-lop") BUỒNG LÁI CỐ ĐỊNH Ở LỚP ĐẦU TIÊN. Trang gọi
 //     `care.getDashboard()` không tham số, máy chủ lấy lớp chủ nhiệm đầu tiên, và màn
 //     hình không có bộ chọn lớp nào. Cô chủ nhiệm hai lớp mở buồng lái chỉ thấy lớp
@@ -49,14 +79,25 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
-import { toLocalIsoDate } from "@/lib/date";
 import type { FlagSummary, HubRole } from "@hub/core/contracts";
 import Link from "next/link";
 import { HubSidebar } from "./hub-sidebar";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { ClassPicker, useSelectedClass } from "./gvcn/class-picker";
-import { EmptyState, ErrorState, LoadingState, MutationError, MutationSuccess } from "./ui/query-state";
+import {
+  boardEmptyPresentation,
+  scanBannerPresentation,
+  type ScanBannerPresentation,
+} from "./gvcn/scan-status";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  MutationError,
+  MutationSuccess,
+  StaffVoice,
+} from "./ui/query-state";
 import { classLabel, personName } from "./ui/labels";
 
 const MOOD_META: Record<1 | 2 | 3 | 4, { label: string; dot: string; grad: string }> = {
@@ -110,7 +151,7 @@ export function urgencyPresentation(flag: Pick<FlagSummary, "ruleCode">): Urgenc
   if (flag.ruleCode === "E_URGENT") {
     return {
       level: "urgent",
-      label: "KHẨN · EM ĐÃ BẤM «CẦN GẶP THẦY CÔ»",
+      label: "KHẨN · EM ĐÃ BẤM “CẦN GẶP THẦY CÔ”",
       icon: "priority_high",
       borderClass: "border-l-[5px] border-[#F0474D]",
       badgeClass: "bg-[#FFE9E9] text-[#B02A30]",
@@ -139,107 +180,9 @@ export function describeFlag(detail: Record<string, unknown>): string {
   const negativeDays = readNumber(detail, "negativeDays");
   const moodPart = negativeDays !== null && negativeDays > 0 ? `mood buồn/mệt ${negativeDays} ngày gần đây` : "";
   if (helpRequested) {
-    return moodPart ? `Đã bấm «cần gặp thầy cô» + ${moodPart}` : "Đã bấm «cần gặp thầy cô»";
+    return moodPart ? `Đã bấm “cần gặp thầy cô” + ${moodPart}` : "Đã bấm “cần gặp thầy cô”";
   }
   return moodPart ? `Mood ${moodPart.slice("mood ".length)}` : "Tín hiệu cảm xúc cần để ý";
-}
-
-// ---------------------------------------------------------------------------
-// "Hết việc" nghĩa là gì — và khi nào KHÔNG được nói câu đó.
-//
-// Sửa 31/07/2026 (gói "trung-thuc-trang-thai"). Bản cũ hiện nguyên văn:
-//
-//     "Hết việc rồi — lớp mình đang ổn! Đây là trạng thái tốt thật sự, không
-//      phải thiếu dữ liệu"
-//
-// …NGAY CẢ KHI `lastScanAt = null`, tức là bộ quét cảnh báo chưa từng chạy thành
-// công lần nào. Lúc đó danh sách trống KHÔNG phải kết quả của một phép đo: nó là
-// chỗ chưa ai đo. Màn hình đang khẳng định đúng cái điều nó không có cơ sở để
-// biết — và khẳng định theo hướng trấn an, đúng hướng nguy hiểm nhất với một hệ
-// thống chăm sóc trẻ ("im lặng không phải kết luận", RULES.md Rev F điều 8).
-//
-// Ba trạng thái, ba câu khác nhau:
-//   fresh   — quét XONG trong ngày hôm nay → được nói "tốt thật sự".
-//   stale   — có quét, nhưng lần gần nhất KHÔNG phải hôm nay → chỉ được nói
-//             "chưa có kết quả mới", kèm mốc thời gian thật.
-//   unknown — chưa có lần quét nào → nói thẳng là chưa kết luận được.
-//
-// Chỉ nhánh `fresh` được dùng mascot ăn mừng và khung xanh. Hai nhánh kia là
-// khung xám trung tính: không đoán tin tốt, cũng không doạ tin xấu.
-// ---------------------------------------------------------------------------
-export type ScanFreshness = "fresh" | "stale" | "unknown";
-
-/** `asOfDate` là ngày địa phương do máy chủ chốt (GetDashboardOutput.asOfDate). */
-export function scanFreshness(lastScanAt: string | null | undefined, asOfDate: string): ScanFreshness {
-  if (!lastScanAt) return "unknown";
-  const at = new Date(lastScanAt);
-  if (Number.isNaN(at.getTime())) return "unknown";
-  return toLocalIsoDate(at) === asOfDate ? "fresh" : "stale";
-}
-
-export interface BoardEmptyPresentation {
-  state: ScanFreshness;
-  /** Mascot ăn mừng CHỈ dành cho kết quả đo thật của hôm nay. */
-  showMascot: boolean;
-  /** Icon thay mascot ở hai trạng thái chưa chắc chắn (null khi có mascot). */
-  icon: string | null;
-  title: string;
-  body: string;
-  boxClass: string;
-  titleClass: string;
-  bodyClass: string;
-}
-
-/** Mốc quét, dạng người đọc được. Cùng ngày thì chỉ cần giờ; khác ngày phải có ngày. */
-export function formatScanMoment(lastScanAt: string, sameDay: boolean): string {
-  const at = new Date(lastScanAt);
-  return sameDay
-    ? at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-    : at.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
-
-export function boardEmptyPresentation(
-  lastScanAt: string | null | undefined,
-  asOfDate: string,
-): BoardEmptyPresentation {
-  const state = scanFreshness(lastScanAt, asOfDate);
-
-  if (state === "fresh") {
-    return {
-      state,
-      showMascot: true,
-      icon: null,
-      title: "Hết việc rồi — lớp mình đang ổn!",
-      body: `Bộ quét đã chạy lúc ${formatScanMoment(lastScanAt as string, true)} hôm nay và không thấy tín hiệu nào cần xử lý — đây là trạng thái tốt thật sự, không phải thiếu dữ liệu.`,
-      boxClass: "border-2 border-dashed border-[#C9D8CB] bg-[#F2F8F3]",
-      titleClass: "text-[#00693F]",
-      bodyClass: "text-[#4A5B4D]",
-    };
-  }
-
-  if (state === "stale") {
-    return {
-      state,
-      showMascot: false,
-      icon: "history",
-      title: "Chưa có kết quả quét cho hôm nay",
-      body: `Lần quét gần nhất là ${formatScanMoment(lastScanAt as string, false)}. Danh sách trống lúc này chỉ nói rằng chưa có kết quả mới — chưa kết luận được lớp ổn hay chưa đủ dữ liệu.`,
-      boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#F5F7FA]",
-      titleClass: "text-[#33507C]",
-      bodyClass: "text-[#4A5460]",
-    };
-  }
-
-  return {
-    state,
-    showMascot: false,
-    icon: "question_mark",
-    title: "Chưa có kết quả quét nào",
-    body: "Hệ thống chưa ghi nhận lần quét cảnh báo nào, nên chỗ trống này chưa nói được điều gì: không có nghĩa lớp đang ổn, cũng không có nghĩa đang có chuyện.",
-    boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#F5F7FA]",
-    titleClass: "text-[#33507C]",
-    bodyClass: "text-[#4A5460]",
-  };
 }
 
 function newMutationId(): string {
@@ -299,16 +242,23 @@ export function GvcnDashboard({
   // này nằm trong khối `hidden md:flex` của sidebar, nên dưới md trang không còn
   // một đường ra nào: không về /home, không sang bốn màn con, và KHÔNG ĐĂNG XUẤT
   // ĐƯỢC — mà buồng lái tải chậm hoặc lỗi mạng là lúc người ta cần lối ra nhất.
+  //
+  // `StaffVoice` bọc CẢ khung, kể cả nhánh đang tải và nhánh lỗi: câu lỗi mặc định của
+  // query-state viết cho học sinh ("Thử lại giúp nhé"), và buồng lái xưng "nhé" với
+  // GVCN là sai giọng §8 — người lớn dùng câu gọn, nghiệp vụ. Đặt ở đây thay vì truyền
+  // prop xuống từng ErrorState để một màn người lớn mới thêm sau này không thể quên.
   const frame = (children: React.ReactNode) => (
-    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
-      {sidebar}
-      <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-        {children}
-        <div className="md:hidden">
-          <HubTabBar roles={roles} />
+    <StaffVoice>
+      <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
+        {sidebar}
+        <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+          {children}
+          <div className="md:hidden">
+            <HubTabBar roles={roles} />
+          </div>
         </div>
       </div>
-    </div>
+    </StaffVoice>
   );
 
   // Danh sách lớp đi TRƯỚC: buồng lái không được vẽ một con số nào khi còn chưa biết
@@ -376,6 +326,9 @@ export function GvcnDashboard({
 
   const d = dashboard.data;
   const totalMood = d.moodDistribution.reduce((s, m) => s + m.count, 0) || 1;
+  // Tính MỘT LẦN ở đây rồi truyền xuống: dải trạng thái và ô "hết việc" phải nói cùng một
+  // câu chuyện. Gọi hai lần ở hai chỗ là mở đường cho hai câu mâu thuẫn trên cùng màn.
+  const scan = scanBannerPresentation(d.scanHealth, d.asOfDate);
 
   return frame(
     // `key` là lớp do MÁY CHỦ chốt (không phải lớp client vừa bấm): đổi lớp thì cả bảng
@@ -400,6 +353,13 @@ export function GvcnDashboard({
 
       {picker}
 
+      {/* Dải trạng thái bộ quét — HIỆN MỌI LÚC, ngay dưới đầu trang và TRƯỚC mọi con số.
+          Trước 01/08/2026 mốc quét chỉ xuất hiện ở nhánh bảng trống, nên có một cờ là
+          nó biến mất: đúng lúc GVCN đang đọc số thì màn hình thôi nói số đó cũ hay mới.
+          Vị trí này cũng có chủ ý — đứng TRƯỚC bốn thẻ số, vì nó là câu trả lời cho
+          "bốn con số này đáng tin tới đâu", không phải một ghi chú cuối trang. */}
+      <ScanBanner scan={scan} />
+
       {d.staleSources.length > 0 && (
         <div className="mt-3.5 flex items-center gap-2 rounded-xl bg-[#FFF1C9] px-4 py-2.5 text-[11.5px] font-bold text-gold-textDark">
           <span className="msr text-[16px]">warning</span>
@@ -418,7 +378,11 @@ export function GvcnDashboard({
           Lưới 4 cột, tile 52px, nhãn 10px: đúng mẫu "lưới mini app" của §6. */}
       <nav aria-label="Màn hình lớp chủ nhiệm" className="mt-[18px] grid grid-cols-4 gap-3 md:hidden">
         {GVCN_SCREENS.map((screen) => (
-          <Link key={screen.key} href={screen.href} className="flex flex-col items-center gap-1.5">
+          <Link
+            key={screen.key}
+            href={screen.href}
+            className="flex min-h-[44px] flex-col items-center gap-1.5"
+          >
             <span
               aria-hidden="true"
               className="flex h-[52px] w-[52px] items-center justify-center rounded-[17px] bg-gradient-to-br from-[#2A5DA8] to-navy shadow-[0_5px_12px_rgba(10,42,94,.3)]"
@@ -455,7 +419,7 @@ export function GvcnDashboard({
                 type="button"
                 disabled={acknowledgeLate.isPending}
                 onClick={() => acknowledgeLate.mutate({ checkinIds: d.pendingLateCheckins.map((c) => c.checkinId) })}
-                className="flex-none rounded-xl border-[1.6px] border-[#2C7BF2] bg-[#E2F0FC] px-5 py-3 text-[12.5px] font-black text-[#1D4E8F] disabled:opacity-50"
+                className="min-h-[44px] flex-none rounded-xl border-[1.6px] border-[#2C7BF2] bg-[#E2F0FC] px-5 py-3 text-[12.5px] font-black text-[#1D4E8F] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
               >
                 {acknowledgeLate.isPending ? "Đang ghi…" : `Xác nhận cả ${d.pendingLateCheckins.length}`}
               </button>
@@ -467,7 +431,7 @@ export function GvcnDashboard({
           )}
 
           {d.priorityFlags.length === 0 && d.pendingLateCheckins.length === 0 && (
-            <BoardEmpty lastScanAt={d.lastScanAt} asOfDate={d.asOfDate} />
+            <BoardEmpty scan={scan} openCareCases={d.totals.openCareCases} />
           )}
         </div>
 
@@ -475,13 +439,19 @@ export function GvcnDashboard({
           <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
             <div className="flex items-center justify-between">
               <span className="text-[15px] font-black text-navy">Cảm xúc lớp hôm nay</span>
-              <span className="flex items-center gap-1 text-[9.5px] font-bold text-caption">
-                <span className="msr text-[13px]">lock</span>nội bộ
+              <span className="flex items-center gap-1 text-[9.5px] font-bold text-muted">
+                <span className="msr text-[13px]" aria-hidden>
+                  lock
+                </span>
+                nội bộ
               </span>
             </div>
             {d.moodDistribution.length > 0 ? (
               <>
-                <div className="mt-3.5 flex h-[18px] overflow-hidden rounded-lg">
+                {/* Dải màu là bản tóm tắt NHÌN, không mang thông tin nào mà bảng chú giải
+                    ngay dưới nó chưa nói bằng chữ + số (§11: màu không phải tín hiệu duy
+                    nhất). aria-hidden để trình đọc màn hình không đọc bốn ô rỗng. */}
+                <div className="mt-3.5 flex h-[18px] overflow-hidden rounded-lg" aria-hidden>
                   {([4, 3, 2, 1] as const).map((m) => {
                     const count = d.moodDistribution.find((x) => x.mood === m)?.count ?? 0;
                     const pct = (count / totalMood) * 100;
@@ -501,7 +471,7 @@ export function GvcnDashboard({
                 </div>
               </>
             ) : (
-              <p className="mt-3.5 text-[12px] text-caption">Chưa có check-in nào hôm nay.</p>
+              <MoodEmpty checkinCount={d.totals.checkinCount} staleSources={d.staleSources} />
             )}
           </div>
 
@@ -509,7 +479,13 @@ export function GvcnDashboard({
             <div className="text-[15px] font-black text-navy">Hành động gần đây</div>
             <div className="mt-3.5 flex flex-col gap-3">
               {d.recentActions.length === 0 && (
-                <p className="text-[12px] text-caption">Chưa có hành động nào được ghi lại.</p>
+                // "Chưa ai ghi" chứ không phải "chưa có hành động nào": sổ can thiệp chỉ
+                // biết việc ĐƯỢC GHI VÀO HỆ THỐNG. Cô gọi điện cho phụ huynh mà không ghi
+                // lại thì ô này vẫn trống — trống ở đây nói về cái sổ, không nói về lớp.
+                <p className="text-[12px] leading-relaxed text-muted">
+                  Chưa ai ghi hành động nào cho lớp này. Trống ở đây nghĩa là sổ chưa có dòng nào — không
+                  phải là mọi việc đã xong.
+                </p>
               )}
               {d.recentActions.map((a, i) => (
                 <div key={i} className="flex items-start gap-2.5">
@@ -525,7 +501,7 @@ export function GvcnDashboard({
           <div className="flex items-start gap-2.5 rounded-[20px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-[18px]">
             <span className="msr flex-none text-[19px] text-[#E8940D]">translate</span>
             <span className="text-[12px] font-semibold leading-relaxed text-[#8A5A00]">
-              Từ «cờ / ngưỡng» chỉ dùng ở đây. Nội dung gửi phụ huynh tự chuyển sang giọng Glow &amp; Grow.
+              Từ "cờ / ngưỡng" chỉ dùng ở đây. Nội dung gửi phụ huynh tự chuyển sang giọng Glow &amp; Grow.
             </span>
           </div>
         </div>
@@ -535,12 +511,69 @@ export function GvcnDashboard({
 }
 
 /**
- * Ô "không còn việc nào" của buồng lái. Ba hình thức cho ba mức chắc chắn — xem
- * `boardEmptyPresentation`. Câu "tốt thật sự" là một KẾT LUẬN, chỉ được in ra khi
- * có phép đo của hôm nay đứng sau nó.
+ * Dải trạng thái bộ quét — một dòng duy nhất trả lời "màn hình này đứng sau phép đo nào".
+ *
+ * `role="status"` chứ không phải `role="alert"`: đây là thông tin thường trực chứ không
+ * phải một cảnh báo vừa nổ ra, nên trình đọc màn hình đọc nó khi tới lượt thay vì cắt
+ * ngang câu đang đọc dở. Icon mang `aria-hidden` — chữ đã nói đủ, đúng luật đã dùng cho
+ * thẻ cờ: màu và icon không bao giờ là tín hiệu duy nhất.
  */
-function BoardEmpty({ lastScanAt, asOfDate }: { lastScanAt: string | null; asOfDate: string }) {
-  const look = boardEmptyPresentation(lastScanAt, asOfDate);
+function ScanBanner({ scan }: { scan: ScanBannerPresentation }) {
+  return (
+    <div
+      role="status"
+      data-scan-state={scan.state}
+      className={`mt-3.5 flex items-start gap-2.5 rounded-xl px-4 py-2.5 ${scan.boxClass}`}
+    >
+      <span className={`msr mt-[1px] flex-none text-[16px] ${scan.titleClass}`} aria-hidden>
+        {scan.icon}
+      </span>
+      <div className="min-w-0">
+        <div className={`text-[11.5px] font-black ${scan.titleClass}`}>{scan.title}</div>
+        <div className={`mt-0.5 text-[11.5px] font-semibold leading-relaxed ${scan.bodyClass}`}>
+          {scan.detail}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ô "Cảm xúc lớp hôm nay" khi biểu đồ rỗng — BA nhánh, không phải một câu.
+ *
+ * Vì sao (01/08/2026): hai con số trên cùng màn hình này đến từ HAI truy vấn khác nhau ở
+ * server/routers/care.ts — `checkinCount` đếm `attendance.checkins` với `kind='in'`, còn
+ * `moodDistribution` đếm `attendance.checkins_care` với thêm điều kiện `mood is not null`.
+ * Em check-in mà không chọn tâm trạng thì mảng mood rỗng trong khi `checkinCount > 0`.
+ * Bản cũ in thẳng "Chưa có check-in nào hôm nay" ở nhánh rỗng, nên màn hình nói đồng thời
+ * "Đã check-in 25/30" (thẻ số) và "Chưa có check-in nào hôm nay" (ô này) — hai câu mâu
+ * thuẫn cách nhau chưa tới một màn hình cuộn. Câu đúng phải nói rõ CÁI GÌ đang rỗng.
+ */
+export function moodEmptyText(checkinCount: number, staleSources: string[]): string {
+  if (checkinCount === 0) return "Chưa em nào check-in hôm nay — nên chưa có tâm trạng nào để tổng hợp.";
+  const base = `${checkinCount} em đã check-in nhưng chưa em nào chọn tâm trạng.`;
+  // Nguồn chưa tươi là một khả năng KHÁC hẳn: ô trống có thể vì dữ liệu chưa về kịp chứ
+  // không phải vì các em không chọn. Nói ra cả hai, không chọn hộ một cái.
+  return staleSources.length > 0
+    ? `${base} Nguồn dữ liệu đang chưa tươi (${staleSources.join(", ")}) nên số này còn có thể thiếu.`
+    : base;
+}
+
+function MoodEmpty({ checkinCount, staleSources }: { checkinCount: number; staleSources: string[] }) {
+  return (
+    <p className="mt-3.5 text-[12px] leading-relaxed text-muted">
+      {moodEmptyText(checkinCount, staleSources)}
+    </p>
+  );
+}
+
+/**
+ * Ô "không còn việc nào" của buồng lái. Câu "tốt thật sự" là một KẾT LUẬN, chỉ được in ra
+ * khi có phép đo của hôm nay VÀ không còn hồ sơ chăm sóc nào đang mở — xem
+ * `boardEmptyPresentation` trong components/gvcn/scan-status.ts.
+ */
+function BoardEmpty({ scan, openCareCases }: { scan: ScanBannerPresentation; openCareCases: number }) {
+  const look = boardEmptyPresentation(scan, openCareCases);
   return (
     <div className={`flex items-center gap-3.5 rounded-[20px] px-5 py-[18px] ${look.boxClass}`}>
       {look.showMascot ? (
@@ -637,7 +670,10 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
         onChange={(e) => setNote(e.target.value)}
         placeholder="Ghi lại đã trò chuyện gì với em…"
         rows={2}
-        className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none focus:border-navy"
+        // #5B6B80 = 5,44:1 trên trắng. globals.css đã đặt đúng màu này làm lưới an toàn
+        // cho mọi ::placeholder; khai lại ở đây là cố ý — ô này là chỗ GVCN ghi lời đã
+        // nói với một đứa trẻ, không được phụ thuộc vào việc lưới an toàn còn sống.
+        className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
       />
 
       <div className="flex flex-wrap items-center gap-2.5">
@@ -645,19 +681,19 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           type="button"
           disabled={logIntervention.isPending}
           onClick={submitIntervention}
-          className="rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white disabled:opacity-50"
+          className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
         >
           {logIntervention.isPending ? "Đang ghi…" : "Ghi can thiệp"}
         </button>
 
-        {/* Chỉ có nghĩa khi em ĐÃ bấm «cần gặp thầy cô»: nút này tắt đúng tín hiệu đó
+        {/* Chỉ có nghĩa khi em ĐÃ bấm "cần gặp thầy cô": nút này tắt đúng tín hiệu đó
             (attendance.help_requests.handled_at), không đụng tới cờ mood. */}
         {helpRequested && (
           <button
             type="button"
             disabled={acknowledgeHelp.isPending || acknowledgeHelp.isSuccess}
             onClick={() => acknowledgeHelp.mutate({ studentId: flag.studentId, requestedOn: flag.asOfDate })}
-            className="rounded-xl border-[1.6px] border-[#00A05F] bg-[#E3F8ED] px-5 py-3 text-[12.5px] font-black text-[#00693F] disabled:opacity-50"
+            className="min-h-[44px] rounded-xl border-[1.6px] border-[#00A05F] bg-[#E3F8ED] px-5 py-3 text-[12.5px] font-black text-[#00693F] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
           >
             {acknowledgeHelp.isPending ? "Đang ghi…" : "Cô đã gặp em rồi"}
           </button>
@@ -669,7 +705,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           <button
             type="button"
             onClick={() => setClosing(true)}
-            className="rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-[#5B6B80]"
+            className="min-h-[44px] rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-[#5B6B80]"
           >
             Đóng hồ sơ
           </button>
@@ -686,21 +722,22 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
             value={resolution}
             onChange={(e) => setResolution(e.target.value)}
             rows={2}
-            className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none focus:border-navy"
+            placeholder="Ví dụ: em đã ổn định, gia đình đã phối hợp, đã bàn giao cho tâm lý cụm…"
+            className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
           />
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               disabled={closeCase.isPending || resolution.trim().length === 0}
               onClick={() => closeCase.mutate({ caseId: flag.caseId!, resolution: resolution.trim() })}
-              className="rounded-xl bg-[#0F172A] px-5 py-2.5 text-[12.5px] font-black text-white disabled:opacity-40"
+              className="min-h-[44px] rounded-xl bg-[#0F172A] px-5 py-2.5 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
             >
               {closeCase.isPending ? "Đang đóng…" : "Xác nhận đóng"}
             </button>
             <button
               type="button"
               onClick={() => setClosing(false)}
-              className="text-[12.5px] font-extrabold text-[#5B6B80] underline underline-offset-2"
+              className="min-h-[44px] px-2 text-[12.5px] font-extrabold text-[#5B6B80] underline underline-offset-2"
             >
               Thôi
             </button>
@@ -762,12 +799,15 @@ function StatCard({
     >
       <div className="flex items-start justify-between">
         <span className="text-[12px] font-extrabold text-[#5B6B80]">{label}</span>
-        <span className={`flex h-[34px] w-[34px] items-center justify-center rounded-[11px] ${iconBg}`}>
+        <span className={`flex h-[34px] w-[34px] items-center justify-center rounded-[11px] ${iconBg}`} aria-hidden>
           <span className={`msr text-[18px] ${iconColor}`}>{icon}</span>
         </span>
       </div>
       <div className="mt-1.5 text-[26px] font-black text-navy md:text-[30px]">{value}</div>
-      <div className="mt-1.5 text-[11px] font-semibold text-caption">{sub}</div>
+      {/* `muted` chứ không phải `caption`: dòng này là chỗ DUY NHẤT nói "gửi muộn — chưa
+          phải vắng" và "không có ai vắng". Nó đọc được thì con số phía trên mới có nghĩa;
+          đọc không ra thì con số trở thành một con số trần. */}
+      <div className="mt-1.5 text-[11px] font-semibold text-muted">{sub}</div>
     </div>
   );
 }

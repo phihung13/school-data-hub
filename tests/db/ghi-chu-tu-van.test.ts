@@ -150,7 +150,7 @@ describe("ghi chú tư vấn · ai đọc được nội dung buổi tư vấn",
         [caseId],
       ),
     );
-    // Cô biết «tâm lý cụm đã gặp em». Cô không biết em kể gì. Đúng hai vế đó.
+    // Cô biết "tâm lý cụm đã gặp em". Cô không biết em kể gì. Đúng hai vế đó.
     expect(Number(rows[0]!.n)).toBeGreaterThanOrEqual(1);
   });
 

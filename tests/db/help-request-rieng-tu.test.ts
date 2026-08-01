@@ -143,7 +143,7 @@ describe("cần gặp thầy cô · chiều CHO PHÉP — siết không được
     expect(await noteVisibleTo(DEV.gvcn)).toBe(LOI_NHAN);
   });
 
-  it("TÂM LÝ CỤM đọc được — cùng phạm vi với quyền bấm «đã gặp em rồi» (0026)", async ({ skip }) => {
+  it("TÂM LÝ CỤM đọc được — cùng phạm vi với quyền bấm “đã gặp em rồi” (0026)", async ({ skip }) => {
     if (!ready) return skip();
     // Đọc và ghi phải cho CÙNG MỘT kết luận quyền: cô tắt được tín hiệu khẩn thì cô
     // phải đọc được nó trước khi tắt, nếu không là bắt người ta quyết định trong tối.

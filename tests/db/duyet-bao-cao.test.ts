@@ -55,7 +55,7 @@ async function thisMonday(): Promise<string> {
 
 /**
  * Gieo check-in cho `offsets` ngày (tính từ thứ Hai của tuần), `happyCount` ngày đầu mang
- * mood 4 («Vui»). Gieo bằng asSystem: đây là bước DỰNG dữ liệu, không phải khẳng định.
+ * mood 4 ("Vui"). Gieo bằng asSystem: đây là bước DỰNG dữ liệu, không phải khẳng định.
  */
 async function seedWeek(studentId: string, week: string, days: number, happyCount: number) {
   await asSystem(async (c) => {
@@ -126,7 +126,7 @@ beforeEach(async () => {
 
 // ───────────────────────────────────────────────────────────────────────────
 describe("luật dựng bản xem trước (thuần, không chạm DB)", () => {
-  it("đủ 5 ngày + ≥3 ngày «Vui» → hai lời khen và headline «Một tuần rực rỡ!»", () => {
+  it("đủ 5 ngày + ≥3 ngày “Vui” → hai lời khen và headline “Một tuần rực rỡ!”", () => {
     const p = buildReportPreview({ checkinDays: 5, happyDays: 4, streakDays: 12 });
     expect(p.headline).toBe("Một tuần rực rỡ!");
     expect(p.glow).toHaveLength(2);
@@ -218,7 +218,7 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
     }
   });
 
-  it("KHÔNG TỐ CÁO · «cần gặp thầy cô» không biến thành một dòng gửi phụ huynh", async ({ skip }) => {
+  it("KHÔNG TỐ CÁO · “cần gặp thầy cô” không biến thành một dòng gửi phụ huynh", async ({ skip }) => {
     if (!ready) return skip();
     const week = await thisMonday();
     await seedWeek(STUDENT_FULL, week, 5, 4);

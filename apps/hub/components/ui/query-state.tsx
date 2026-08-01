@@ -13,7 +13,37 @@
 // lặng phải được NÓI RA, không được trình bày như một kết quả bình thường.
 "use client";
 
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
+
+// ---------------------------------------------------------------------------
+// Giọng của màn hình đang gọi — §8 của DESIGN-GUIDELINES có HAI giọng, không phải một.
+//
+// Vì sao thêm (01/08/2026, gói "tiep-can-man-nguoi-lon"): file này dùng chung cho cả màn
+// học sinh lẫn buồng lái người lớn, mà ba câu lỗi mặc định của nó viết bằng giọng dỗ trẻ
+// — "Thử lại giúp nhé", "Thử lại sau ít phút nhé". Hệ quả đo được: cả năm màn GVCN, hai
+// màn tâm lý cụm và màn Điều hành đều xưng "nhé" với người lớn đang làm nghiệp vụ. §8 ghi
+// thẳng: "Học sinh xưng con/mình, thân thiện; người lớn gọn, nghiệp vụ."
+//
+// Vì sao là context chứ không phải một prop `tone` truyền tay: có hơn hai chục chỗ gọi
+// ErrorState/MutationError trong các màn người lớn. Prop nào cũng có thể quên, và người
+// quên sẽ là người dựng màn NGƯỜI LỚN THỨ MƯỜI — lúc đó không ai còn nhớ luật này. Khung
+// màn (GvcnShell · TamLyShell · OperationsShell · GvcnDashboard) bọc <StaffVoice> đúng
+// một lần, và mọi thứ bên trong tự nói đúng giọng.
+//
+// Mặc định là "student" chứ không phải "staff": quên bọc ở màn người lớn chỉ làm câu chữ
+// mềm hơn mức cần; quên theo chiều ngược lại là nói giọng vận hành với một đứa trẻ.
+// ---------------------------------------------------------------------------
+export type HubVoice = "student" | "staff";
+
+const VoiceContext = createContext<HubVoice>("student");
+
+export function StaffVoice({ children }: { children: ReactNode }) {
+  return <VoiceContext.Provider value="staff">{children}</VoiceContext.Provider>;
+}
+
+export function useHubVoice(): HubVoice {
+  return useContext(VoiceContext);
+}
 
 /** HTTP status do server tRPC gắn vào `error.data.httpStatus`, nếu có. */
 export function httpStatusOf(error: unknown): number | null {
@@ -31,8 +61,23 @@ export function isNetworkError(error: unknown): boolean {
   return data === null || data === undefined;
 }
 
-const NETWORK_MESSAGE = "Máy chưa nối được với trường. Kiểm tra mạng rồi thử lại nhé.";
-const GENERIC_MESSAGE = "Chưa tải được dữ liệu. Thử lại giúp nhé.";
+/**
+ * Ba câu chung, viết hai lần cho hai giọng của §8. Bản `staff` KHÔNG phải bản `student`
+ * bỏ chữ "nhé": nó bỏ luôn cả "giúp" — người lớn đang làm việc không cần được nhờ vả,
+ * họ cần biết hỏng ở đâu và làm gì tiếp.
+ */
+const MESSAGES: Record<HubVoice, { network: string; generic: string; server: string }> = {
+  student: {
+    network: "Máy chưa nối được với trường. Kiểm tra mạng rồi thử lại nhé.",
+    generic: "Chưa tải được dữ liệu. Thử lại giúp nhé.",
+    server: "Máy chủ của trường đang trục trặc. Thử lại sau ít phút nhé.",
+  },
+  staff: {
+    network: "Máy chưa nối được với trường. Kiểm tra mạng rồi thử lại.",
+    generic: "Chưa tải được dữ liệu. Thử lại.",
+    server: "Máy chủ của trường đang trục trặc. Thử lại sau ít phút.",
+  },
+};
 
 /**
  * Câu tiếng Việt để hiện cho người dùng.
@@ -41,14 +86,17 @@ const GENERIC_MESSAGE = "Chưa tải được dữ liệu. Thử lại giúp nh�
  * viết sẵn tiếng Việt cho mọi mã lỗi VÀ đã che lỗi nội bộ bằng mã sự cố — tự
  * dịch lại ở client sẽ mất chi tiết đúng (vd "em chờ 12 giây"). Chỉ khi không có
  * câu nào từ máy chủ mới rơi về câu chung.
+ *
+ * `voice` mặc định "student" để mọi lời gọi cũ giữ nguyên hành vi.
  */
-export function friendlyErrorMessage(error: unknown): string {
-  if (isNetworkError(error)) return NETWORK_MESSAGE;
+export function friendlyErrorMessage(error: unknown, voice: HubVoice = "student"): string {
+  const say = MESSAGES[voice];
+  if (isNetworkError(error)) return say.network;
   const message = (error as { message?: unknown }).message;
   if (typeof message === "string" && message.trim().length > 0) return message.trim();
   const status = httpStatusOf(error);
-  if (status !== null && status >= 500) return "Máy chủ của trường đang trục trặc. Thử lại sau ít phút nhé.";
-  return GENERIC_MESSAGE;
+  if (status !== null && status >= 500) return say.server;
+  return say.generic;
 }
 
 /** Lỗi này có tự khỏi khi bấm "Thử lại" không? 4xx (trừ 408/429) thì không. */
@@ -175,6 +223,7 @@ export function ErrorState({
   /** Tên màn hình, để câu lỗi nói rõ hỏng ở đâu ("Không tải được Điểm danh"). */
   label?: string;
 }) {
+  const voice = useHubVoice();
   const look = errorPresentation(error, label);
   const expired = look.kind === "expired";
   return (
@@ -186,12 +235,16 @@ export function ErrorState({
         {look.icon}
       </span>
       <p className="text-[14px] font-black text-ink">{look.title}</p>
-      <p className="max-w-[380px] text-[12.5px] leading-relaxed text-caption">{friendlyErrorMessage(error)}</p>
+      {/* `muted` chứ không phải `caption`: câu này là chỗ DUY NHẤT phân biệt "hỏng rồi"
+          với "chưa có gì" — nó mờ hơn phần còn lại thì hai trạng thái đọc thành một. */}
+      <p className="max-w-[380px] text-[12.5px] leading-relaxed text-muted">
+        {friendlyErrorMessage(error, voice)}
+      </p>
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
         {expired ? (
           <a
             href="/login"
-            className="rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white"
+            className="flex min-h-[44px] items-center rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white"
           >
             Đăng nhập lại
           </a>
@@ -201,7 +254,7 @@ export function ErrorState({
             <button
               type="button"
               onClick={onRetry}
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white"
+              className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white"
             >
               <span className="msr text-[17px]" aria-hidden>
                 refresh
@@ -212,7 +265,7 @@ export function ErrorState({
         )}
         <a
           href="/home"
-          className="rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-[#5B6B80]"
+          className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-[#5B6B80]"
         >
           Về trang chủ
         </a>
@@ -233,12 +286,26 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+    // role="status" aria-live="polite" — giống hệt LoadingState, và vì đúng một lý do.
+    //
+    // Trước 01/08/2026 chỉ LoadingState (role=status) và ErrorState (role=alert) có vùng
+    // thông báo; nhánh RỖNG thì không. Nên khi query chuyển từ đang-tải sang rỗng, DOM đổi
+    // từ vùng aria-live sang vùng KHÔNG aria-live: người dùng trình đọc màn hình nghe "Đang
+    // tìm việc đang chờ trong cụm…" rồi hết. Không có gì báo là đã tải xong và kết quả là
+    // rỗng — đúng chỗ mà repo này đặt câu quan trọng nhất của mình ("Trống ở đây nghĩa là
+    // chưa có tín hiệu nào được ghi — không phải đã quét xong và kết luận mọi em đều ổn").
+    // Im lặng bị nghe thành im lặng, theo nghĩa đen.
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center"
+    >
       <span className="msr text-[34px] text-[#C9D2DE]" aria-hidden>
         {icon}
       </span>
       <p className="text-[13.5px] font-black text-ink">{title}</p>
-      {hint && <p className="max-w-[380px] text-[12px] leading-relaxed text-caption">{hint}</p>}
+      {/* `muted`: câu hint là chỗ tách "chưa có gì" khỏi "không đọc được". */}
+      {hint && <p className="max-w-[380px] text-[12px] leading-relaxed text-muted">{hint}</p>}
       {children}
     </div>
   );
@@ -249,6 +316,7 @@ export function EmptyState({
  * không chiếm cả màn: người dùng vẫn thấy form mình vừa điền để bấm lại.
  */
 export function MutationError({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const voice = useHubVoice();
   if (!error) return null;
   return (
     <span role="alert" className="flex flex-wrap items-center gap-2 text-[12px] font-bold text-[#D2383E]">
@@ -256,7 +324,7 @@ export function MutationError({ error, onRetry }: { error: unknown; onRetry?: ()
       <span className="msr text-[16px]" aria-hidden>
         {errorPresentation(error).icon}
       </span>
-      {friendlyErrorMessage(error)}
+      {friendlyErrorMessage(error, voice)}
       {onRetry && isRetryableError(error) && (
         <button type="button" onClick={onRetry} className="underline underline-offset-2">
           Thử lại

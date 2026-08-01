@@ -66,7 +66,7 @@ Bảng dưới là **bề mặt đang chạy thật** tính tới 31/07/2026 —
 2. **Không dùng API chỉ-có-trên-trình-duyệt** ngoài lớp adapter (để webview Capacitor chạy được nguyên vẹn).
 3. **Xóa tài khoản trong app:** Apple bắt buộc app có tạo tài khoản phải cho xóa tài khoản ngay trong app — quyền xóa theo Hiến chương điều 7 đã có sẵn ở backend, chỉ cần màn hình gọi nó.
 
-Việc chỉ làm khi phát hành store (không làm trước): đăng ký Google Play Console + Apple Developer, khai Data safety form / Privacy nutrition label cho dữ liệu trẻ em (DPIA và Hiến chương là nguồn khai sẵn), trang privacy policy công khai, thêm 1–2 tính năng native (push APNs/FCM, đăng nhập sinh trắc học) để qua cửa Apple Guideline 4.2 «minimum functionality» — Apple từ chối app chỉ là website bọc vỏ trần.
+Việc chỉ làm khi phát hành store (không làm trước): đăng ký Google Play Console + Apple Developer, khai Data safety form / Privacy nutrition label cho dữ liệu trẻ em (DPIA và Hiến chương là nguồn khai sẵn), trang privacy policy công khai, thêm 1–2 tính năng native (push APNs/FCM, đăng nhập sinh trắc học) để qua cửa Apple Guideline 4.2 "minimum functionality" — Apple từ chối app chỉ là website bọc vỏ trần.
 
 ## Định danh ra ngoài — Hub là Identity Provider (ADR-014, không phải đường ghi thứ ba)
 

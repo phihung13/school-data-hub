@@ -230,7 +230,7 @@ export const checkinRouter = router({
   }),
 
   /**
-   * Những lần em đã bấm «cần gặp thầy cô», và MỖI lần đó đã được thầy cô xác nhận chưa.
+   * Những lần em đã bấm "cần gặp thầy cô", và MỖI lần đó đã được thầy cô xác nhận chưa.
    *
    * Vì sao phải có (gói "man-hinh-con-thieu-gvcn-hs"): màn thành công của
    * /can-gap-thay-co chỉ sống trong state React. Tải lại trang, đóng máy, mở lại buổi

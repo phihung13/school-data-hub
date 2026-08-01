@@ -15,9 +15,13 @@
 //     WCAG 2.5.8 đều lấy mốc 44px. Nay min-h-[44px] cho MỌI mục, cả hai thanh.
 //   · TƯƠNG PHẢN. Nhãn mục KHÔNG đứng ở trang hiện tại dùng token caption2 (#9AA5B5):
 //     2,49:1 trên nền trắng, ở cỡ chữ 9,5px. Đó là tên của những nơi người dùng có thể
-//     đi tới — không phải chữ trang trí. Nay dùng token muted (#66707D, 5,03:1). Ba mục
-//     kia của app vẫn dùng caption2 và vẫn sai; việc nâng chính TOKEN nằm ở gói khác
-//     (apps/hub/tailwind.config.ts) — đổi token thì file này không phải sửa lại lần nữa.
+//     đi tới — không phải chữ trang trí. Nay dùng token muted (#66707D, 5,03:1).
+//
+// CẬP NHẬT 01/08/2026 (gói "tuong-phan-man-hoc-sinh"): món nợ mà đoạn trên ghi lại
+// ("Ba mục kia của app vẫn dùng caption2 và vẫn sai; việc nâng chính TOKEN nằm ở gói
+// khác") ĐÃ TRẢ — apps/hub/tailwind.config.ts nay đặt caption #5F6B7D (4,90:1 ở nền tệ
+// nhất) và caption2 #66707D (4,56:1), phủ cả 58 chỗ dùng trong apps/hub. File này giữ
+// nguyên `text-muted` vì caption2 nay trỏ về đúng cùng một màu — không cần sửa lần hai.
 // tests/unit/a11y.test.ts giữ cả hai luật, tính tỉ lệ tương phản từ tailwind.config.ts
 // thật chứ không chép số vào test.
 "use client";

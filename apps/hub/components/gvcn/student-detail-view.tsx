@@ -8,7 +8,7 @@
 //
 // BỐN KHỐI, đúng bốn nguồn có thật trong CSDL — không khối nào vẽ ra để cho đầy màn:
 //   1. Dải check-in 14/30 ngày (lịch theo thứ, không phải dãy ô trôi ngang)
-//   2. Tín hiệu «cần gặp thầy cô» + hồ sơ chăm sóc mở/đóng
+//   2. Tín hiệu "cần gặp thầy cô" + hồ sơ chăm sóc mở/đóng
 //   3. Nhật ký can thiệp CỦA RIÊNG EM
 //   4. Trạng thái duyệt Báo cáo Trưởng thành mấy tuần gần đây
 //
@@ -18,11 +18,11 @@
 //     KHÔNG phải "vắng" — và cũng không phải "ổn". Cuối tuần được đánh dấu riêng để không
 //     bị đọc nhầm thành 2 ngày mất tín hiệu mỗi tuần. Khối rỗng nói thẳng là chưa có gì,
 //     kèm đúng khoảng thời gian đã hỏi.
-//   · GIỌNG VẬN HÀNH CHỈ Ở ĐÂY. Đây là màn của người lớn trong buồng lái, nên «cờ / hồ sơ
-//     chăm sóc / can thiệp» được phép xuất hiện (DESIGN-GUIDELINES §8). Không một chữ nào
+//   · GIỌNG VẬN HÀNH CHỈ Ở ĐÂY. Đây là màn của người lớn trong buồng lái, nên "cờ / hồ sơ
+//     chăm sóc / can thiệp" được phép xuất hiện (DESIGN-GUIDELINES §8). Không một chữ nào
 //     của màn này đi ra màn học sinh/phụ huynh.
 //
-// Lời em viết trong «cần gặp thầy cô» hiện ở khối 2. Lý do đầy đủ nằm trong contract
+// Lời em viết trong "cần gặp thầy cô" hiện ở khối 2. Lý do đầy đủ nằm trong contract
 // (`StudentHelpRequest`): màn /can-gap-thay-co in lên mặt em lời hứa "cô đọc được", mà
 // trước hôm nay không màn nào đọc nó — kể cả của cô. Lời hứa in trên màn hình là ràng
 // buộc kỹ thuật, không phải lời quảng cáo.
@@ -42,12 +42,41 @@ import { EmptyState, ErrorState, LoadingState } from "../ui/query-state";
 import { classLabel } from "../ui/labels";
 import { Card, GvcnShell } from "./gvcn-shell";
 
-/** Bốn màu tâm trạng — DESIGN-GUIDELINES §3, ràng buộc cứng với bản giấy dùng trong lớp. */
-const MOOD_CELL: Record<MoodValue, { bg: string; fg: string }> = {
-  4: { bg: "linear-gradient(160deg,#00D97A,#00A85E)", fg: "#FFFFFF" },
-  3: { bg: "linear-gradient(160deg,#4E9BFF,#2C7BF2)", fg: "#FFFFFF" },
-  2: { bg: "linear-gradient(160deg,#FFC833,#F5A300)", fg: "#6B4A00" },
-  1: { bg: "linear-gradient(160deg,#FF7A7F,#F0474D)", fg: "#FFFFFF" },
+/**
+ * Bốn tâm trạng trong ô lịch. Bảng màu §3 KHÔNG đổi — đổi cách dùng nó.
+ *
+ * Bản trước (31/07/2026) tô nguyên gradient bão hoà của §3 làm nền ô rồi đặt số ngày lên
+ * trên. Đo bằng công thức WCAG trên chính hai đầu gradient:
+ *
+ *     Vui   trắng / #00D97A = 1,87:1   → / #00A85E = 3,11:1
+ *     BThg  trắng / #4E9BFF = 2,82:1   → / #2C7BF2 = 4,02:1
+ *     Mệt  #6B4A00/ #FFC833 = 5,21:1   → / #F5A300 = 3,89:1
+ *     Buồn  trắng / #FF7A7F = 2,52:1   → / #F0474D = 3,68:1
+ *
+ * KHÔNG ô nào đạt 4,5:1 trên toàn bề mặt, và ba trong bốn ô không đạt trên bất kỳ điểm
+ * nào. Không có cách nào giữ chữ trên nền bão hoà mà đạt chuẩn: đó là giới hạn của chính
+ * bốn mã màu, không phải của cách viết CSS.
+ *
+ * Nên: nền là bản NHẠT của cùng hue, chữ và icon là bản ĐẬM của cùng hue — đúng cặp mà
+ * `status-badge.tsx`, `Pill` của tâm lý cụm và mọi huy hiệu khác trong Hub đã dùng từ
+ * đầu, nên đây là dùng lại hệ màu sẵn có chứ không phải chế màu mới:
+ *
+ *     Vui   #00693F / #E3F8ED = 6,12:1
+ *     BThg  #1D4E8F / #E2F0FC = 7,13:1
+ *     Mệt   #6B4A00 / #FFF1C9 = 7,17:1
+ *     Buồn  #C0272D / #FFF0F0 = 5,32:1
+ *
+ * Và `icon`: trước hôm nay ô ngày CHỈ mã hoá tâm trạng bằng MÀU — bên trong đúng một con
+ * số ngày, không chữ, không icon; nhãn đầy đủ nằm ở `title=` (không có trên điện thoại)
+ * và `sr-only` (chỉ trình đọc màn hình). Người mù màu đỏ–lục cầm iPhone không đọc được
+ * Vui với Buồn — mà lịch này là khối chính của màn hồ sơ. §11: màu không bao giờ là tín
+ * hiệu duy nhất.
+ */
+export const MOOD_CELL: Record<MoodValue, { bg: string; fg: string; icon: string }> = {
+  4: { bg: "#E3F8ED", fg: "#00693F", icon: "sentiment_very_satisfied" },
+  3: { bg: "#E2F0FC", fg: "#1D4E8F", icon: "sentiment_neutral" },
+  2: { bg: "#FFF1C9", fg: "#6B4A00", icon: "sentiment_dissatisfied" },
+  1: { bg: "#FFF0F0", fg: "#C0272D", icon: "sentiment_sad" },
 };
 
 const WEEKDAY_SHORT = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -155,7 +184,7 @@ export function StudentDetailView({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/gvcn/lop"
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
           >
             <span className="msr text-[17px]" aria-hidden>
               arrow_back
@@ -171,8 +200,8 @@ export function StudentDetailView({
                 onClick={() => setDays(choice)}
                 className={
                   days === choice
-                    ? "rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                    : "rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
+                    ? "min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(10,42,94,.24)]"
+                    : "min-h-[44px] rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
                 }
               >
                 {choice} ngày
@@ -190,7 +219,12 @@ export function StudentDetailView({
         <EmptyState
           icon="person_off"
           title="Chưa mở được hồ sơ của em này"
-          hint="Thử tải lại trang. Nếu vẫn không được, báo quản trị hệ thống giúp em nhé."
+          // §8: người đọc màn này là GVCN, không phải học sinh. Câu cũ — "báo quản trị
+          // hệ thống giúp em nhé" — xưng hô với cô như với một đứa trẻ, và tệ hơn: chữ
+          // "em" ở đây trùng với chữ "em" chỉ HỌC SINH dùng khắp cùng màn ("Em chưa bấm
+          // "cần gặp thầy cô" lần nào", "ghi cho riêng em"), nên câu đó đọc thành "báo
+          // quản trị giúp học sinh". Người lớn: gọn, nghiệp vụ.
+          hint="Thử tải lại trang. Nếu vẫn không được, báo quản trị hệ thống."
         />
       ) : (
         <div className="flex flex-col gap-4">
@@ -236,7 +270,7 @@ function CheckinStrip({
 
       <div className="mt-3 grid grid-cols-7 gap-1.5 sm:gap-2">
         {WEEKDAY_SHORT.map((w) => (
-          <div key={w} className="text-center text-[10px] font-black uppercase tracking-wide text-caption">
+          <div key={w} className="text-center text-[10px] font-black uppercase tracking-wide text-muted">
             {w}
           </div>
         ))}
@@ -248,20 +282,28 @@ function CheckinStrip({
         ))}
       </div>
 
-      {/* Chú giải: màu KHÔNG bao giờ là tín hiệu duy nhất (§11). */}
+      {/* Chú giải: màu KHÔNG bao giờ là tín hiệu duy nhất (§11).
+          Đổi 01/08/2026 — chấm tròn thành CHÍNH icon mà ô ngày đang dùng. Chú giải bằng
+          chấm màu chỉ giải thích được cho người đọc ra màu; với người mù màu nó vẽ lại
+          đúng bài toán vừa đặt ra. Nay ô ngày và chú giải nói cùng một ngôn ngữ. */}
       <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[#F1F4F8] pt-3">
         {([4, 3, 2, 1] as MoodValue[]).map((m) => (
-          <span key={m} className="flex items-center gap-1.5 text-[11px] font-bold text-[#5B6B80]">
+          <span key={m} className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
             <span
               aria-hidden
-              className="h-2.5 w-2.5 flex-none rounded-full"
-              style={{ background: MOOD_CELL[m].bg }}
-            />
+              className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md"
+              style={{ background: MOOD_CELL[m].bg, color: MOOD_CELL[m].fg }}
+            >
+              <span className="msr text-[13px]">{MOOD_CELL[m].icon}</span>
+            </span>
             {MOOD_LABEL[m]}
           </span>
         ))}
-        <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#5B6B80]">
-          <span aria-hidden className="h-2.5 w-2.5 flex-none rounded-full border border-dashed border-[#C9D2DE]" />
+        <span className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
+          <span
+            aria-hidden
+            className="h-[18px] w-[18px] flex-none rounded-md border border-dashed border-[#C9D2DE] bg-white"
+          />
           Chưa có dữ liệu
         </span>
       </div>
@@ -270,7 +312,7 @@ function CheckinStrip({
         Câu này là cả lý do khối trên tồn tại. "Chưa có dữ liệu" ≠ "em vắng" và cũng
         ≠ "em ổn": hai cách đọc sai đó đã xuất hiện bốn lần trong repo này.
       */}
-      <p className="mt-2.5 text-[11.5px] leading-relaxed text-caption">
+      <p className="mt-2.5 text-[11.5px] leading-relaxed text-muted">
         {missingSchoolDays === 0
           ? "Mọi ngày học trong khoảng này đều có dữ liệu."
           : `${missingSchoolDays} ngày học chưa có dòng điểm danh nào — nghĩa là chưa ai ghi, không phải là em vắng.`}
@@ -294,6 +336,13 @@ function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null 
     .filter(Boolean)
     .join(" · ");
 
+  const statusIcon =
+    entry?.status === "absent"
+      ? "person_off"
+      : entry?.status === "queued_late" || entry?.status === "late"
+        ? "schedule"
+        : null;
+
   return (
     <span
       title={label}
@@ -306,18 +355,31 @@ function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null 
       }`}
       style={tone ? { background: tone.bg, color: tone.fg } : undefined}
     >
-      <span className={`text-[12px] font-black tabular-nums ${tone ? "" : weekend ? "text-[#B4BECC]" : "text-[#8A94A6]"}`}>
+      {/* Ngày cuối tuần từng dùng #B4BECC trên #F7F9FC = 1,78:1 — không phải "mờ cho
+          nhẹ", là không đọc được. Ngày thường chưa có dữ liệu từng dùng #8A94A6 = 3,06:1.
+          Cả hai nay là `muted`; sự khác nhau giữa cuối tuần và ngày học đã do NỀN và
+          viền nét đứt nói, không cần nói lại bằng cách làm chữ nhạt đi. */}
+      <span className={`text-[12px] font-black tabular-nums ${tone ? "" : "text-muted"}`}>
         {dayNumber(iso)}
       </span>
-      {entry?.status === "absent" ? (
-        <span className="msr text-[13px]" aria-hidden>
-          person_off
+      {/* Hàng icon — thứ biến ô này từ "chỉ có màu" thành đọc được không cần màu.
+          Icon trạng thái (vắng · muộn) đi trước icon tâm trạng: một ngày có thể có cả
+          hai, và "em vắng" là điều cô cần thấy trước. Cả hai aria-hidden vì `sr-only`
+          bên dưới đã đọc nguyên câu đầy đủ, có cả ngày lẫn giờ. */}
+      {(statusIcon || tone) && (
+        <span className="flex items-center justify-center gap-0.5 leading-none">
+          {statusIcon && (
+            <span className="msr text-[13px]" aria-hidden>
+              {statusIcon}
+            </span>
+          )}
+          {tone && (
+            <span className="msr text-[13px]" aria-hidden>
+              {tone.icon}
+            </span>
+          )}
         </span>
-      ) : entry?.status === "queued_late" || entry?.status === "late" ? (
-        <span className="msr text-[13px]" aria-hidden>
-          schedule
-        </span>
-      ) : null}
+      )}
       <span className="sr-only">{label}</span>
     </span>
   );
@@ -341,7 +403,7 @@ function statusWord(status: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Tín hiệu cần để ý — «cần gặp thầy cô» + hồ sơ chăm sóc.
+// 2. Tín hiệu cần để ý — "cần gặp thầy cô" + hồ sơ chăm sóc.
 // ---------------------------------------------------------------------------
 function SignalCard({
   days,
@@ -385,7 +447,7 @@ function SignalCard({
 
       {helpRequests.length === 0 ? (
         <p className="mt-3 text-[12px] leading-relaxed text-muted">
-          Em chưa bấm «cần gặp thầy cô» lần nào trong {days} ngày qua. Đây là một sự thật về{" "}
+          Em chưa bấm "cần gặp thầy cô" lần nào trong {days} ngày qua. Đây là một sự thật về{" "}
           <b>nút bấm đó</b>, không phải một kết luận về em.
         </p>
       ) : (
@@ -397,7 +459,7 @@ function SignalCard({
                   <span className="msr text-[14px]" aria-hidden>
                     pan_tool
                   </span>
-                  ĐÃ BẤM «CẦN GẶP THẦY CÔ»
+                  ĐÃ BẤM "CẦN GẶP THẦY CÔ"
                 </span>
                 <span className="text-[12px] font-extrabold text-ink">{formatDate(h.requestedOn)}</span>
                 {h.urgency && (
@@ -414,7 +476,7 @@ function SignalCard({
 
               {h.note && (
                 <blockquote className="mt-2.5 rounded-xl bg-white p-3">
-                  <div className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wide text-caption">
+                  <div className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wide text-muted">
                     <span className="msr text-[14px]" aria-hidden>
                       lock
                     </span>
@@ -474,7 +536,7 @@ function InterventionCard({
               <div className="min-w-0 flex-1">
                 <div className="text-[12.5px] font-extrabold text-ink">{r.action}</div>
                 {r.note && <div className="mt-0.5 text-[12px] leading-relaxed text-[#5B6B80]">{r.note}</div>}
-                <div className="mt-0.5 text-[11px] text-caption">
+                <div className="mt-0.5 text-[11px] text-muted">
                   {r.actorName} · {formatDateTime(r.occurredAt)}
                   {r.caseStatus === "closed" && " · hồ sơ đã đóng"}
                 </div>
@@ -505,7 +567,10 @@ function ApprovalCard({
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[15px] font-black text-navy">Duyệt Báo cáo Trưởng thành</h2>
-        <Link href="/gvcn/duyet-bao-cao" className="text-[11.5px] font-black text-[#1D4E8F] underline underline-offset-2">
+        <Link
+          href="/gvcn/duyet-bao-cao"
+          className="inline-flex min-h-[44px] items-center text-[11.5px] font-black text-[#1D4E8F] underline underline-offset-2"
+        >
           Mở màn duyệt
         </Link>
       </div>
@@ -531,7 +596,7 @@ function ApprovalCard({
                   </span>
                   {tone.label}
                 </span>
-                {r.reviewedAt && <span className="text-[11px] text-caption">{formatDateTime(r.reviewedAt)}</span>}
+                {r.reviewedAt && <span className="text-[11px] text-muted">{formatDateTime(r.reviewedAt)}</span>}
                 {r.note && <span className="basis-full text-[11.5px] leading-relaxed text-[#5B6B80]">{r.note}</span>}
               </li>
             );

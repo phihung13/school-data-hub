@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 20
+sync-version: 21
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -104,7 +104,7 @@ Ma trận ở trên không được cài đặt bằng cách chép điều kiệ
 | Đối tượng | Migration | Ghi chú |
 |---|---|---|
 | `core.identity_links(system, external_id, user_id)` | `0010_identity_links.sql` | RLS deny-by-default (chỉ auth-adapter chạm). Hàm `core.link_identity()` upsert idempotent, raise khi xung đột một trong hai chiều. |
-| `ops.source_freshness(source, label, max_age, last_success_at)` + view `ops.v_stale_sources` | `0011_source_freshness.sql` | Seed sẵn 5 nguồn theo bảng System of Record bên dưới. `authenticated` SELECT được (buồng lái cần), không sửa được. |
+| `ops.source_freshness(source, label, max_age, last_success_at)` + view `ops.v_stale_sources` | `0011_source_freshness.sql` | Seed **đúng 2 nguồn** đã có người ghi thật: `attendance`, `evidence` (sửa 31/07/2026 — câu cũ ở đây ghi "5 nguồn"; ba dòng `tutor`/`moodle`/`cor` đã bị chính `0011` xoá đi vì chưa connector nào ghi `last_success_at` cho chúng, để lại thì băng vàng sáng vĩnh viễn từ ngày đầu). `authenticated` SELECT được (buồng lái cần), không sửa được. Cột `age` của view được `0043` sửa để không vỡ khi có nguồn chưa chạy lần nào — xem mục `0043` bên dưới. |
 | `ops.job_runs.degraded_sources text[]` | `0011_source_freshness.sql` | Nguồn bị bỏ qua trong lần chạy — buồng lái đọc để hiện băng vàng. |
 | `care.flags.origin text` (`live` \| `backfill`) | `0012_flag_origin.sql` | Mặc định `live`. Trigger trên `care.care_case_flags` **chặn ở tầng DB** việc gắn cờ `backfill` vào care_case — không phụ thuộc tầng ứng dụng nhớ kiểm tra. |
 | `core.parent_invite_codes(code, student_id, expires_at, redeemed_by)` + hàm `core.redeem_parent_invite_code()` | `0013_parent_invite_codes.sql` | Mã mời 6 ký tự cho đăng nhập phụ huynh (GĐ1 shell, `apps/hub`). RLS deny-by-default như `id_mappings` — chỉ hàm SECURITY DEFINER chạm. Idempotent theo mã (§9): redeem hai lần trả về đúng người cũ. **DEV:** hàm tự sinh `auth_uid` giả vì chưa nối Zalo OAuth thật (hạ tầng chưa mua) — thay 1 dòng khi có Zalo thật, chữ ký hàm giữ nguyên. |
@@ -165,7 +165,7 @@ Kiểm chứng đã chạy (31/07/2026): `0037_help_requests_scope_test.sql` 13 
 
 ## Che cột `mood` (`0038`) — lần thứ BA của cùng một lỗi gốc
 
-Màn `/checkin` in chữ cho học sinh đọc, ngay tại chỗ em bấm bốn ô cảm xúc. Cho tới 01/08/2026 câu đó là **"Chỉ thầy cô chủ nhiệm thấy"**, và `DESIGN-GUIDELINES §9` ghi đúng câu đó. Nay câu đã sửa thành **"Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"** — vì `core.can_read_mood()` cho ĐÚNG hai vai đọc, mà nhãn cũ chỉ kể một: **nói thiếu một vai cũng là nói dối, chỉ khó bắt hơn.** Sửa ở cả bốn chỗ in nhãn (`checkin-view.tsx` ×2, `home-view.tsx`, `this-week-view.tsx`) và ở thẻ «Ai thấy gì của mình?» (`profile-view.tsx`) — màn sinh ra để nói thật thì không được là màn nói thiếu. Ở tầng dữ liệu thì không: `attendance.checkins` nằm trong vòng lặp 16 bảng của `0009:150-176` nên dùng chung `core.can_see_student()` — hàm gồm cả `is_my_child` và `principal_of`. **RLS lọc theo DÒNG, mà `mood` là một CỘT nằm chung dòng với điểm danh.**
+Màn `/checkin` in chữ cho học sinh đọc, ngay tại chỗ em bấm bốn ô cảm xúc. Cho tới 01/08/2026 câu đó là **"Chỉ thầy cô chủ nhiệm thấy"**, và `DESIGN-GUIDELINES §9` ghi đúng câu đó. Nay câu đã sửa thành **"Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"** — vì `core.can_read_mood()` cho ĐÚNG hai vai đọc, mà nhãn cũ chỉ kể một: **nói thiếu một vai cũng là nói dối, chỉ khó bắt hơn.** Sửa ở cả bốn chỗ in nhãn (`checkin-view.tsx` ×2, `home-view.tsx`, `this-week-view.tsx`) và ở thẻ "Ai thấy gì của mình?" (`profile-view.tsx`) — màn sinh ra để nói thật thì không được là màn nói thiếu. Ở tầng dữ liệu thì không: `attendance.checkins` nằm trong vòng lặp 16 bảng của `0009:150-176` nên dùng chung `core.can_see_student()` — hàm gồm cả `is_my_child` và `principal_of`. **RLS lọc theo DÒNG, mà `mood` là một CỘT nằm chung dòng với điểm danh.**
 
 Đo trên hub_dev trước khi vá, dưới đúng danh tính từng vai: phiên **phụ huynh đọc ra 7 dòng có mood**, phiên **hiệu trưởng 8 dòng**.
 
@@ -231,6 +231,21 @@ Trước file này `principal` và `board` có **0 màn hình**: `board` không 
 Đầu vào duy nhất của cả ba: `tools/jobs/run-all.mjs` (Task Scheduler của Windows hoặc cron). Chính bộ lịch cũng có một dòng `kind='batch'` trong `ops.job_schedule` — nhờ dòng đó, "máy chạy cron chết" trở thành **một dòng quá hạn nhìn thấy được** thay vì một buồng lái xanh không có gì để nói.
 
 Kiểm chứng đã chạy (01/08/2026): `0041_job_schedule_test.sql` 42 assertion pgTAP xanh trên database dựng lại từ đầu; `tests/db/job-schedule.test.ts` và `tests/db/flag-engine.test.ts` xanh.
+
+### `0043_rule_health.sql` — luật nào đang ngủ, vì sao, và cái nào đáng gọi người trực
+
+Bộ quét `0039` khai rất tử tế mọi luật nó bỏ qua kèm lý do (`chua_cai_dat`, `chua_khai_nguon_tuoi`, `nguon_het_tuoi`, `khong_co_nguong_dang_bat`) — nhưng khai vào `ops.job_runs.metrics` dạng JSON, và đo ngày 01/08/2026: `grep -rl "v_job_health\|jobHealth" apps/hub packages/core` trả về **0 file**. Muốn biết đêm qua bộ quét chấm mấy luật thì phải mở `psql`. **Một lời khai trung thực mà không ai đọc được thì về hiệu lực không khác gì im lặng.**
+
+| Đối tượng | Ghi chú |
+|---|---|
+| `ops.v_rule_health` (view) | Một dòng một luật: `state` (`dang_cham` · `dang_ngu` · `chua_chay` · `khong_ro`), `ly_do`, `giai_thich` bằng tiếng Việt, `needs_attention`, kèm `last_run_id`/`last_as_of_date`/`stale_verdict`. **Thuật lại** metrics của lượt `care.run_flag_engine` thành công gần nhất chứ không tự suy — chép mảng `c_implemented` của `0039` ra chỗ thứ hai là dựng nguồn sự thật thứ hai, và nguồn thứ hai bao giờ cũng lệch về phía trấn an. `security_invoker = true` (quy tắc `0024`); quyền đi qua policy đọc của `care.rules` + `ops.job_runs`. |
+| `ops.v_stale_sources` (sửa view của `0011`) | Cột `age` **nổ tung** khi có nguồn `last_success_at IS NULL`: `now() - '-infinity'` ⇒ `ERROR: cannot subtract infinite timestamps`. Đo được thật ngày 01/08/2026 — `select source,label` chạy, `select *` chết. Hôm nay chưa ai vấp vì cả hai nguồn đang khai đều đã chạy thật và `care.getDashboard` chỉ `select label` (Postgres cắt luôn biểu thức `age`). Cả hai là may mắn, không phải thiết kế, và cùng hết hiệu lực đúng ngày connector đầu tiên khai nguồn mới. Nay `age` trả **NULL** cho nguồn chưa chạy lần nào; mệnh đề `WHERE` giữ nguyên từng chữ — chưa từng chạy VẪN tính là hết tươi. |
+
+**`needs_attention` cố ý KHÔNG bật cho `chua_cai_dat`/`chua_khai_nguon_tuoi`.** C_CEFR sẽ ngủ nhiều tháng nữa (`DEBT.md` #35); cho nó sáng đèn mỗi đêm là chế tạo lại đúng cái "cảnh báo lúc nào cũng sáng" mà `0011` vừa gỡ ngày 31/07 — và cảnh báo luôn sáng kéo theo mọi cảnh báo thật khác chết chung. Đèn chỉ bật khi có việc cần tay người **đêm nay**: nguồn hết tươi (máy bơm dữ liệu hỏng), ngưỡng bị tắt (ai đó vừa tắt một luật đang bảo vệ trẻ con), chưa quét lần nào, hoặc bảng luật lệch với bộ quét.
+
+**Quyết định đi kèm, ghi ở đây để khỏi bàn lại:** KHÔNG dựng `care.v_signal_cefr` và KHÔNG khai `ops.source_freshness('tutor_cefr')` lúc này. Đo bằng transaction rồi rollback trên hub_dev: khai nguồn không đổi được một chữ trong `rules_skipped` (nhánh `c_implemented` của `0039` chặn trước), chỉ thêm một dòng `degraded_sources` vĩnh viễn; còn dựng view trên hai bảng `tutor.cefr_*` đang rỗng tuyệt đối (0 dòng, không bộ ghi nào trong repo) thì 0 dòng đọc y hệt "không em nào lệch lộ trình" — hỏng im lặng, ADR-016 cấm. Chi tiết + ba câu hỏi thiết kế còn treo: `DEBT.md` #35.
+
+Kiểm chứng đã chạy (01/08/2026): `0043_rule_health_test.sql` **37/37 assertion pgTAP xanh** trên database dựng lại từ đầu (`plan(37)` khớp đúng 37 dòng `ok`), gồm cả hai chiều của cái đèn — luật ngủ vì nợ thì đèn tắt, nguồn hết tươi thì đúng ba luật ăn nguồn đó cùng kêu. Toàn bộ bộ pgTAP sau khi thêm: **564 assertion xanh, 0 not-ok**, tổng `plan(N)` cũng đúng 564.
 
 ## Quy tắc migration (§2)
 

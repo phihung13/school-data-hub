@@ -233,8 +233,189 @@ describe("3 · số liệu và cờ không lẫn giữa hai lớp", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// 4 · Buồng lái nói ra nó đứng sau phép đo nào (gói "debt-32-…", 01/08/2026)
+//
+// Nhóm này KHÔNG kiểm câu chữ trên màn hình — chuyện đó đã khoá ở
+// tests/unit/gvcn-trang-thai-quet.test.ts bằng hàm thuần. Ở đây kiểm phần chỉ Postgres
+// thật mới trả lời được: `care.getDashboard` có ĐỌC ĐÚNG `ops.v_job_health` không, và nó
+// có phân biệt được ba tình huống mà một dấu thời gian trần gộp làm một hay không.
+//
+// Cách dựng ba trạng thái mà KHÔNG xoá dữ liệu thật: "gửi tạm" mọi dòng job_runs của
+// flag_engine sang một tên job khác rồi trả lại trong `finally`. Xoá rồi seed lại là
+// đánh mất 200 lần chạy thật đang nằm trên hub_dev — mà sổ nhật ký máy thì không có
+// đường dựng lại.
+// ---------------------------------------------------------------------------
+
+/** Tên job tạm — có tiền tố rõ ràng để ai soi CSDL cũng biết đây là rác của test. */
+const PARKED = "flag_engine__test_parked";
+
 /**
- * Số em lớp 6A1 check-in với tâm trạng «Buồn» hôm nay, đọc thẳng từ CSDL.
+ * Chạy `fn` trong một thế giới nơi sổ nhật ký của flag_engine đúng bằng `dungSo`.
+ * `finally` trả lại nguyên trạng kể cả khi assertion đỏ giữa chừng — một test đỏ không
+ * được để lại một buồng lái nói dối cho những test chạy sau nó.
+ */
+async function voiSoNhatKy(
+  dungSo: (c: import("@hub/core/db").PoolClient) => Promise<void>,
+  fn: () => Promise<void>,
+): Promise<void> {
+  // Mốc nước: mọi dòng có id LỚN HƠN mốc này là dòng sinh ra trong lúc test chạy. Dọn theo
+  // mốc chứ không theo `delete ... where job_name = 'flag_engine'`, vì cách sau sẽ xoá luôn
+  // một lần quét THẬT nếu có ai đó (job nền, một agent khác, chính bộ lịch) chạy engine
+  // đúng lúc test đang bay — và sổ nhật ký máy thì không có đường dựng lại.
+  const { rows } = await asSystem((c) =>
+    c.query<{ moc: string }>("select coalesce(max(id), 0)::text as moc from ops.job_runs"),
+  );
+  const moc = rows[0]?.moc ?? "0";
+
+  await asSystem((c) => c.query("update ops.job_runs set job_name = $1 where job_name = 'flag_engine'", [PARKED]));
+  try {
+    await asSystem(dungSo);
+    await fn();
+  } finally {
+    await asSystem((c) => c.query("delete from ops.job_runs where id > $1::bigint", [moc]));
+    await asSystem((c) => c.query("update ops.job_runs set job_name = 'flag_engine' where job_name = $1", [PARKED]));
+  }
+}
+
+describe("4 · trạng thái bộ quét cờ đi ra tới buồng lái", () => {
+  it("(b) CHƯA QUÉT LẦN NÀO → state 'chua_chay', needsAttention, và lastScanAt = null", async ({ skip }) => {
+    if (!ready) return skip();
+    // Đây là trạng thái KHÔNG BAO GIỜ xảy ra trên máy dev (flag_engine đã chạy hàng trăm
+    // lần), nên nếu không dựng ra bằng tay thì không có gì bảo vệ nó. Nó cũng đúng là
+    // trạng thái của một trường mới bật hệ thống trong ngày đầu tiên.
+    await voiSoNhatKy(
+      async () => {},
+      async () => {
+        const d = await lan().getDashboard({ classId: FIXTURE.classA });
+        expect(d.scanHealth.state).toBe("chua_chay");
+        expect(d.scanHealth.needsAttention).toBe(true);
+        expect(d.scanHealth.lastSuccessAt).toBeNull();
+        expect(d.lastScanAt).toBeNull();
+        // Nhịp vẫn đọc được từ ops.job_schedule — câu cảnh báo nói được "mỗi 24 giờ"
+        // mà không cần một hằng số nào trong mã (mệnh lệnh 7).
+        expect(d.scanHealth.expectedEveryHours).toBe(24);
+        expect(d.scanHealth.graceHours).toBe(6);
+      },
+    );
+  });
+
+  it("(c) QUÁ HẠN → state 'qua_han', và mốc quét cũ vẫn được nói ra chứ không bị giấu", async ({ skip }) => {
+    if (!ready) return skip();
+    // 40 giờ > expected_every (24h) + grace (6h) đã khai trong ops.job_schedule. Con số 40
+    // nằm trong TEST là đúng chỗ: nó dựng tình huống, không định nghĩa ngưỡng.
+    await voiSoNhatKy(
+      (c) =>
+        c
+          .query(
+            `insert into ops.job_runs (job_name, status, started_at, finished_at, metrics)
+             values ('flag_engine', 'success', now() - interval '40 hours',
+                     now() - interval '40 hours', '{}'::jsonb)`,
+          )
+          .then(() => undefined),
+      async () => {
+        const d = await lan().getDashboard({ classId: FIXTURE.classA });
+        expect(d.scanHealth.state).toBe("qua_han");
+        expect(d.scanHealth.needsAttention).toBe(true);
+        expect(d.scanHealth.lastSuccessAt).not.toBeNull();
+        expect(d.lastScanAt).toBe(d.scanHealth.lastSuccessAt);
+      },
+    );
+  });
+
+  it("(c') LẦN QUÉT GẦN NHẤT HỎNG → 'that_bai', KHÔNG bị đọc thành 'chưa quét'", async ({ skip }) => {
+    if (!ready) return skip();
+    await voiSoNhatKy(
+      (c) =>
+        c
+          .query(
+            `insert into ops.job_runs (job_name, status, started_at, finished_at, metrics) values
+               ('flag_engine', 'success', now() - interval '3 hours', now() - interval '3 hours', '{}'::jsonb),
+               ('flag_engine', 'failed',  now() - interval '1 hour',  now() - interval '1 hour',  '{}'::jsonb)`,
+          )
+          .then(() => undefined),
+      async () => {
+        const d = await lan().getDashboard({ classId: FIXTURE.classA });
+        expect(d.scanHealth.state).toBe("that_bai");
+        expect(d.scanHealth.needsAttention).toBe(true);
+        // Vẫn còn một lần THÀNH CÔNG cách đây 3 giờ: buồng lái phải nói được rằng số
+        // đang hiện đến từ lần đó, chứ không được xoá sạch thành "chưa có gì".
+        expect(d.scanHealth.lastSuccessAt).not.toBeNull();
+        expect(d.scanHealth.lastFinishedAt).not.toBe(d.scanHealth.lastSuccessAt);
+      },
+    );
+  });
+
+  it("(a) QUÉT XONG → 'ok', và luật bị bỏ qua trong lần chạy đó đi ra tới màn hình", async ({ skip }) => {
+    if (!ready) return skip();
+    await voiSoNhatKy(
+      (c) =>
+        c
+          .query(
+            `insert into ops.job_runs (job_name, status, started_at, finished_at, degraded_sources, metrics)
+             values ('flag_engine', 'success', now() - interval '2 minutes', now(), '{}'::text[],
+                     jsonb_build_object('rules_skipped', jsonb_build_array(
+                       jsonb_build_object('rule_code','C_CEFR','ly_do','chua_cai_dat'),
+                       jsonb_build_object('rule_code','C_MASTERY','ly_do','chua_khai_nguon_tuoi'))))`,
+          )
+          .then(() => undefined),
+      async () => {
+        const d = await lan().getDashboard({ classId: FIXTURE.classA });
+        expect(d.scanHealth.state).toBe("ok");
+        expect(d.scanHealth.needsAttention).toBe(false);
+        // Hai luật này bị bỏ qua MỌI ĐÊM trên hub_dev và trước 01/08/2026 không màn hình
+        // nào nói ra. Một bảng cờ sạch khi ấy là kết quả của 4/6 luật, không phải 6/6.
+        expect(d.scanHealth.rulesSkipped.map((r) => r.ruleCode).sort()).toEqual([
+          "C_CEFR",
+          "C_MASTERY",
+        ]);
+        expect(d.scanHealth.rulesSkipped.find((r) => r.ruleCode === "C_CEFR")?.lyDo).toBe(
+          "chua_cai_dat",
+        );
+      },
+    );
+  });
+
+  it("nguồn hết tươi của LẦN CHẠY ĐÓ đi ra riêng, không lẫn với ops.v_stale_sources", async ({ skip }) => {
+    if (!ready) return skip();
+    await voiSoNhatKy(
+      (c) =>
+        c
+          .query(
+            `insert into ops.job_runs (job_name, status, started_at, finished_at, degraded_sources, metrics)
+             values ('flag_engine', 'success', now() - interval '2 minutes', now(),
+                     array['evidence']::text[], '{}'::jsonb)`,
+          )
+          .then(() => undefined),
+      async () => {
+        const d = await lan().getDashboard({ classId: FIXTURE.classA });
+        expect(d.scanHealth.degradedSources).toEqual(["evidence"]);
+        // `staleSources` là câu hỏi khác: "ngay lúc này nguồn nào quá hạn tươi".
+        // `degradedSources` là "lần quét ĐÓ đã bỏ qua nguồn nào". Trộn hai câu là làm
+        // mất khả năng trả lời "cờ tôi đang nhìn có bị thiếu nguồn không".
+        expect(Array.isArray(d.staleSources)).toBe(true);
+      },
+    );
+  });
+
+  it("sổ nhật ký thật đã được trả lại nguyên trạng sau các ca trên", async ({ skip }) => {
+    if (!ready) return skip();
+    // Không có bài này thì một lỗi trong `finally` sẽ âm thầm để lại hub_dev với sổ nhật
+    // ký trống, và mọi phép đo sau đó đọc ra "chưa quét lần nào".
+    const { rows } = await asSystem((c) =>
+      c.query<{ n: string; parked: string }>(
+        `select (select count(*) from ops.job_runs where job_name = 'flag_engine')::text as n,
+                (select count(*) from ops.job_runs where job_name = $1)::text as parked`,
+        [PARKED],
+      ),
+    );
+    expect(Number(rows[0]?.parked ?? -1)).toBe(0);
+    expect(Number(rows[0]?.n ?? 0)).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Số em lớp 6A1 check-in với tâm trạng "Buồn" hôm nay, đọc thẳng từ CSDL.
  *
  * Cố tình KHÔNG viết một con số cứng: dữ liệu seed của Minh đổi theo ngày trong tuần và
  * các file test khác cũng ghi vào lớp này. So sánh với sự thật của chính CSDL thì phép

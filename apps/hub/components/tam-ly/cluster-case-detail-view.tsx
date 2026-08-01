@@ -31,8 +31,8 @@ import { Card, ScopeNotice, TamLyShell } from "./tam-ly-shell";
 
 /**
  * Hành động hay dùng của tâm lý cụm. Nhãn nói đúng việc ĐÃ LÀM, không nói việc hệ thống
- * sẽ làm hộ — cùng luật đã ghi ở `intervention-notes-view.tsx` (nút «đã chuyển tâm lý
- * cụm» từng khiến GVCN tin là ca đã sang tay người khác trong khi đầu kia không ai biết).
+ * sẽ làm hộ — cùng luật đã ghi ở `intervention-notes-view.tsx` (nút "đã chuyển tâm lý
+ * cụm" từng khiến GVCN tin là ca đã sang tay người khác trong khi đầu kia không ai biết).
  */
 const QUICK_ACTIONS = [
   "Đã gặp và trò chuyện với em",
@@ -125,13 +125,13 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                 {!openCase && (
                   // "Chưa có hồ sơ" là một trạng thái THẬT, không phải dữ liệu thiếu:
                   // hồ sơ chỉ sinh ra khi có người ghi hành động đầu tiên.
-                  <div className="mt-1 text-[11px] leading-relaxed text-caption">
+                  <div className="mt-1 text-[11px] leading-relaxed text-muted">
                     Hồ sơ mở ra khi có người ghi hành động đầu tiên. Ghi một dòng ở dưới là hồ sơ tự mở.
                   </div>
                 )}
               </div>
               {data!.cases.length > 1 && (
-                <div className="text-[11px] font-bold text-caption">
+                <div className="text-[11px] font-bold text-muted">
                   {data!.cases.length} hồ sơ trong lịch sử
                 </div>
               )}
@@ -142,8 +142,8 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
             {/* ── Cột trái: những gì ĐÃ XẢY RA ────────────────────────── */}
             <div className="flex min-w-0 flex-1 basis-[460px] flex-col gap-4">
               <Card>
-                <div className="text-[15px] font-black text-navy">Tín hiệu «cần gặp thầy cô»</div>
-                <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                <div className="text-[15px] font-black text-navy">Tín hiệu "cần gặp thầy cô"</div>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted">
                   Loại tín hiệu và ngày em bấm, trong {data!.window.days} ngày gần nhất. Nội dung em viết
                   chỉ GVCN của em đọc được.
                 </p>
@@ -163,7 +163,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                         />
                         <div className="min-w-0">
                           <div className="text-[12.5px] font-extrabold text-ink">{signalLabel(s)}</div>
-                          <div className="mt-0.5 text-[11px] text-caption">
+                          <div className="mt-0.5 text-[11px] text-muted">
                             {formatDate(s.requestedOn)} ·{" "}
                             {s.handledAt
                               ? `đã có người bấm "đã gặp em rồi" lúc ${formatDateTime(s.handledAt)}`
@@ -178,7 +178,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
 
               <Card>
                 <div className="text-[15px] font-black text-navy">Nhật ký can thiệp</div>
-                <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                <p className="mt-1 text-[11px] leading-relaxed text-muted">
                   Việc con người đã làm với em — của cả GVCN lẫn tâm lý cụm.
                 </p>
                 {data!.interventions.length === 0 ? (
@@ -200,7 +200,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                           {i.note && (
                             <div className="mt-0.5 text-[12px] leading-relaxed text-[#4A5460]">{i.note}</div>
                           )}
-                          <div className="mt-0.5 text-[10.5px] text-caption">
+                          <div className="mt-0.5 text-[10.5px] text-muted">
                             {personName(i.actorName)} · {formatDateTime(i.occurredAt)}
                             {i.caseStatus === "closed" ? " · hồ sơ đã đóng" : ""}
                           </div>
@@ -218,7 +218,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                   </span>
                   <div className="text-[15px] font-black text-navy">Ghi chú tư vấn</div>
                 </div>
-                <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                <p className="mt-1 text-[11px] leading-relaxed text-muted">
                   Chỉ người viết và tâm lý cụm đọc được. GVCN và phụ huynh không xem được khối này.
                 </p>
                 {data!.counselorNotes.length === 0 ? (
@@ -260,7 +260,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
               {pendingSignals.length > 0 && (
                 <Card>
                   <div className="text-[15px] font-black text-navy">Cờ khẩn đang chờ</div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-caption">
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted">
                     Bấm khi đã thật sự gặp em. Tín hiệu tắt khỏi hộp việc của cả GVCN lẫn tâm lý cụm.
                   </p>
                   <ul className="mt-3 flex flex-col gap-2">
@@ -275,7 +275,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                           onClick={() =>
                             acknowledgeHelp.mutate({ studentId, requestedOn: s.requestedOn })
                           }
-                          className="rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12px] font-black text-gold-textDark disabled:opacity-40"
+                          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12px] font-black text-gold-textDark disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
                         >
                           Cô đã gặp em rồi
                         </button>
@@ -298,7 +298,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
               <Card>
                 <div className="text-[15px] font-black text-navy">Ghi một việc vừa làm</div>
                 <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
-                  Có dòng ở đây thì hồ sơ không còn là «đo rồi để đó», và đồng hồ nhắc{" "}
+                  Có dòng ở đây thì hồ sơ không còn là "đo rồi để đó", và đồng hồ nhắc{" "}
                   {/* Ngưỡng đọc từ bảng, không viết số ở đây (§7) — nên câu này nói chung. */}
                   được đặt lại.
                 </p>
@@ -314,8 +314,8 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                         onClick={() => setAction(a)}
                         className={
                           action === a
-                            ? "rounded-full bg-domain-counselor px-3 py-1.5 text-[11.5px] font-black text-white"
-                            : "rounded-full border border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-[#33507C] hover:bg-[#F5F8FC]"
+                            ? "min-h-[44px] rounded-full bg-domain-counselor px-4 py-1.5 text-[11.5px] font-black text-white"
+                            : "min-h-[44px] rounded-full border border-line bg-white px-4 py-1.5 text-[11.5px] font-bold text-[#33507C] hover:bg-[#F5F8FC]"
                         }
                       >
                         {a}
@@ -327,7 +327,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                     onChange={(e) => setAction(e.target.value)}
                     maxLength={200}
                     aria-label="Việc đã làm"
-                    className="mt-2 w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] focus:border-navy"
+                    className="mt-2 min-h-[44px] w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-[#5B6B80] focus:border-navy"
                   />
                 </div>
 
@@ -339,10 +339,10 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                     rows={3}
                     maxLength={2000}
                     placeholder="Nội dung ngắn gọn, đủ để lần sau đọc lại còn hiểu…"
-                    className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] focus:border-navy"
+                    className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-[#5B6B80] focus:border-navy"
                   />
                 </label>
-                <p className="mt-1 text-[10.5px] leading-relaxed text-caption">
+                <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
                   Ô này là nhật ký hành động — GVCN của em đọc được. Nội dung buổi tư vấn thì không ghi
                   vào đây.
                 </p>
@@ -361,7 +361,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                         clientMutationId: mutationId,
                       })
                     }
-                    className="rounded-xl bg-gradient-to-br from-domain-counselor to-domain-counselorDark px-5 py-3 text-[12.5px] font-black text-white shadow-[0_7px_16px_rgba(106,52,224,.28)] disabled:opacity-40 disabled:shadow-none"
+                    className="min-h-[44px] rounded-xl bg-gradient-to-br from-domain-counselor to-domain-counselorDark px-5 py-3 text-[12.5px] font-black text-white shadow-[0_7px_16px_rgba(106,52,224,.28)] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
                   >
                     {logIntervention.isPending ? "Đang ghi…" : "Ghi can thiệp"}
                   </button>
@@ -390,7 +390,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                     maxLength={2000}
                     aria-label="Lý do đóng hồ sơ"
                     placeholder="Vì sao đóng: em đã ổn định, đã bàn giao, gia đình đã phối hợp…"
-                    className="mt-2 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] focus:border-navy"
+                    className="mt-2 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-[#5B6B80] focus:border-navy"
                   />
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <button
@@ -399,7 +399,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                       onClick={() =>
                         closeCase.mutate({ caseId: openCase.caseId, resolution: resolution.trim() })
                       }
-                      className="rounded-xl border-[1.6px] border-line bg-white px-5 py-3 text-[12.5px] font-black text-[#33507C] disabled:opacity-40"
+                      className="min-h-[44px] rounded-xl border-[1.6px] border-line bg-white px-5 py-3 text-[12.5px] font-black text-[#33507C] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
                     >
                       {closeCase.isPending ? "Đang đóng…" : "Đóng hồ sơ này"}
                     </button>

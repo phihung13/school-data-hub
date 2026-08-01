@@ -49,7 +49,7 @@ const MOOD_TONE: Record<MoodValue, { dot: string; fg: string }> = {
 
 /** Bốn màu tâm trạng là ràng buộc cứng (thống nhất với bản giấy dùng trong lớp). */
 export function MoodChip({ mood }: { mood: MoodValue | null }) {
-  if (mood === null) return <span className="text-[11.5px] text-caption">—</span>;
+  if (mood === null) return <span className="text-[11.5px] text-muted">—</span>;
   const tone = MOOD_TONE[mood];
   return (
     <span className={`inline-flex items-center gap-1.5 text-[11.5px] font-bold ${tone.fg}`}>

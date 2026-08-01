@@ -67,15 +67,24 @@ function Pill({
   );
 }
 
+/**
+ * Ba con số đầu màn. Dưới `sm` xếp NGANG ba cột chứ không chồng dọc (đổi 01/08/2026).
+ *
+ * Vì sao: bản cũ dùng `flex-col sm:flex-row`, nên trên điện thoại ba thẻ này chiếm khoảng
+ * 212px chiều cao — cộng với header, tiêu đề và khối phạm vi thì ca đầu tiên nằm dưới mép
+ * màn hình của một máy 360×640. Ba con số một chữ số thì không cần cả chiều rộng màn hình;
+ * cái cần chỗ là danh sách tên bên dưới. Trong ô hẹp, icon và số xuống dòng riêng (`flex-col`)
+ * rồi từ `sm` mới quay lại hàng ngang như cũ.
+ */
 function StatTile({ value, label, icon }: { value: number; label: string; icon: string }) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[16px] border border-line bg-white px-4 py-3">
-      <span className="msr flex-none text-[22px] text-domain-counselor" aria-hidden>
+    <div className="flex min-w-0 flex-col gap-1 rounded-[16px] border border-line bg-white px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+      <span className="msr flex-none text-[20px] text-domain-counselor sm:text-[22px]" aria-hidden>
         {icon}
       </span>
       <div className="min-w-0">
         <div className="text-[19px] font-black leading-none text-navy">{value}</div>
-        <div className="mt-1 text-[11px] font-bold text-muted">{label}</div>
+        <div className="mt-1 text-[11px] font-bold leading-tight text-muted">{label}</div>
       </div>
     </div>
   );
@@ -97,10 +106,12 @@ export function ClusterCaseListView() {
     >
       <div>
         <h1 className="text-[22px] font-black text-navy md:text-[24px]">Việc đang chờ trong cụm</h1>
+        {/* Rút còn một dòng ngắn (01/08/2026): câu cũ dài 60 ký tự nên xuống hai dòng ở
+            360px, và nội dung "hồ sơ đang mở + cờ khẩn" đã được ba StatTile ngay dưới nói
+            bằng số. §1.5 — caption tối đa một dòng. Khoảng thời gian thì GIỮ: nó là điều
+            duy nhất trong câu mà không con số nào bên dưới nói ra. */}
         <p className="mt-1 text-[12.5px] font-semibold text-[#5B6B80]">
-          {data
-            ? `Hồ sơ chăm sóc đang mở và cờ khẩn chưa xử lý · nhìn lại ${data.urgentWindowDays} ngày`
-            : "Đang xác định phạm vi cụm…"}
+          {data ? `Nhìn lại ${data.urgentWindowDays} ngày` : "Đang xác định phạm vi cụm…"}
         </p>
       </div>
 
@@ -126,7 +137,7 @@ export function ClusterCaseListView() {
         />
       ) : (
         <>
-          <div className="flex flex-col gap-2.5 sm:flex-row">
+          <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
             <StatTile value={data!.totals.pendingHelp} label="Cờ khẩn chưa xử lý" icon="priority_high" />
             <StatTile value={data!.totals.openCases} label="Hồ sơ đang mở" icon="folder_shared" />
             <StatTile
@@ -143,7 +154,7 @@ export function ClusterCaseListView() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-[14.5px] font-black text-navy">{row.fullName}</div>
-                      <div className="mt-0.5 text-[11px] font-semibold text-caption">
+                      <div className="mt-0.5 text-[11px] font-semibold text-muted">
                         {[row.studentCode, classLabel(row.className), row.schoolName]
                           .filter((p) => p !== "")
                           .join(" · ")}
@@ -166,8 +177,8 @@ export function ClusterCaseListView() {
                       </div>
 
                       {row.helpRequestedOn && (
-                        <div className="mt-1.5 text-[11px] text-caption">
-                          Em bấm «cần gặp thầy cô» ngày{" "}
+                        <div className="mt-1.5 text-[11px] text-muted">
+                          Em bấm "cần gặp thầy cô" ngày{" "}
                           {new Date(`${row.helpRequestedOn}T00:00:00`).toLocaleDateString("vi-VN")}
                         </div>
                       )}
@@ -175,7 +186,11 @@ export function ClusterCaseListView() {
 
                     <Link
                       href={`/tam-ly/ho-so/${row.studentId}`}
-                      className="flex flex-none items-center gap-1.5 rounded-xl bg-gradient-to-br from-domain-counselor to-domain-counselorDark px-4 py-3 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(106,52,224,.26)]"
+                      // aria-label mang TÊN EM: trên một danh sách 12 ca, mười hai liên kết
+                      // cùng đọc "Mở hồ sơ" là danh sách liên kết vô nghĩa với trình đọc màn
+                      // hình. min-h-[44px] (§11) — trước đó ~41px.
+                      aria-label={`Mở hồ sơ chăm sóc của ${row.fullName}`}
+                      className="flex min-h-[44px] flex-none items-center gap-1.5 rounded-xl bg-gradient-to-br from-domain-counselor to-domain-counselorDark px-4 py-3 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(106,52,224,.26)]"
                     >
                       Mở hồ sơ
                       <span className="msr text-[17px]" aria-hidden>
@@ -188,8 +203,8 @@ export function ClusterCaseListView() {
             ))}
           </ul>
 
-          <p className="text-[11px] leading-relaxed text-caption">
-            Danh sách dựng trực tiếp từ tín hiệu thô (hồ sơ chăm sóc, «cần gặp thầy cô»), không phải từ
+          <p className="text-[11px] leading-relaxed text-muted">
+            Danh sách dựng trực tiếp từ tín hiệu thô (hồ sơ chăm sóc, "cần gặp thầy cô"), không phải từ
             một lượt quét đêm — bộ quét cờ tự động chưa chạy. Ngưỡng {data!.quietDays} ngày đọc từ bảng
             ngưỡng của cơ sở, không viết trong mã.
           </p>

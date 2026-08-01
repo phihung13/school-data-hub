@@ -266,4 +266,64 @@ describe("Bộ quét cờ đêm — care.run_flag_engine", () => {
     // can thiệp giả trong một đêm (ADR-016).
     expect(Number(row.cases)).toBe(0);
   });
+
+  // ── Thêm 01/08/2026 — gói "luật C_CEFR chưa có nguồn" ────────────────────
+  // Ca này khoá lại một QUYẾT ĐỊNH, không chỉ một hành vi: đã cân giữa "dựng
+  // care.v_signal_cefr + khai ops.source_freshness cho đủ bộ" và "để trống nhưng
+  // nói ra", và chọn vế sau (lý lẽ + phép đo nằm ở đầu 0043_rule_health.sql).
+  // Nên bài này kiểm cả ba mặt của lựa chọn đó trên database đang sống:
+  //   · engine KHÔNG chấm luật không có dữ liệu — không sinh cờ nào;
+  //   · nhưng cũng KHÔNG im: lý do đi vào metrics, và đúng lý do 'chua_cai_dat'
+  //     chứ không phải 'nguon_het_tuoi' (hai câu ấy dẫn người trực đi hai hướng
+  //     khác hẳn: một bên đi viết luật, một bên đi tìm máy bơm hỏng);
+  //   · và lý do đó ra khỏi được JSON — ops.v_rule_health (0043) là chỗ màn hình
+  //     trực đọc, vì một lời khai trung thực không ai đọc được thì bằng im lặng.
+  it("C_CEFR: bỏ qua KÈM LÝ DO đúng, không sinh cờ, và lý do ra được khỏi JSON", async ({
+    skip,
+  }) => {
+    if (!ready) return skip();
+
+    const m = await runEngine("live");
+
+    // Chiều KHÔNG — luật không có dữ liệu thì tuyệt đối không được chấm.
+    expect(m.rules_evaluated).not.toContain("C_CEFR");
+
+    // Chiều CÓ — nhưng phải nói ra, kèm đúng lý do.
+    const skipped = m.rules_skipped.find((s) => s.rule_code === "C_CEFR");
+    expect(skipped).toBeDefined();
+    expect(skipped!.ly_do).toBe("chua_cai_dat");
+
+    // Chốt chặn cho cám dỗ "khai nguồn cho đủ bộ": khai tutor_cefr lúc chưa có
+    // connector chỉ thêm một dòng degraded_sources sáng vĩnh viễn mà KHÔNG đổi
+    // được một chữ nào ở trên (đo 01/08/2026, nhánh c_implemented chặn trước).
+    expect(m.degraded_sources).not.toContain("tutor_cefr");
+
+    const view = await asSystem(async (c) => {
+      const r = await c.query<{
+        state: string;
+        ly_do: string | null;
+        giai_thich: string;
+        needs_attention: boolean;
+        co_co_cefr: boolean;
+      }>(
+        `select state, ly_do, giai_thich, needs_attention,
+                (select count(*) > 0 from care.flags
+                  where rule_code = 'C_CEFR' and as_of_date = current_date) as co_co_cefr
+           from ops.v_rule_health where rule_code = 'C_CEFR'`,
+      );
+      return r.rows[0]!;
+    });
+
+    expect(view.state).toBe("dang_ngu");
+    expect(view.ly_do).toBe("chua_cai_dat");
+    // Lời giải thích phải chỉ sang sổ nợ: người đọc cần biết việc đúng là đi viết
+    // luật, không phải đi tìm một máy bơm hỏng không tồn tại.
+    expect(view.giai_thich).toContain("DEBT.md");
+    // Và KHÔNG bật đèn: món nợ này còn ngủ nhiều tháng, cho nó sáng mỗi đêm là
+    // dựng lại đúng cái đèn vàng vĩnh viễn mà 0011 vừa gỡ ngày 31/07.
+    expect(view.needs_attention).toBe(false);
+    // Không một cờ C_CEFR nào được sinh — "chưa cài đặt" không được lặng lẽ biến
+    // thành "đã chấm, không có gì".
+    expect(view.co_co_cefr).toBe(false);
+  });
 });
