@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatWeekLabel } from "@/lib/week-label";
+import { NHAN_AI_DOC_CAM_XUC } from "@/components/ui/labels";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 const hubDir = join(repoRoot, "apps", "hub");
@@ -120,6 +121,87 @@ describe("giọng nói: bề mặt học sinh/phụ huynh không nói tiếng v�
         /isStudent/,
       );
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 1b. Nhãn "ai đọc được cảm xúc của con" — một câu, một nguồn
+//
+// Câu này đã đổi BA LẦN trong ngày 01/08/2026, mỗi lần vì phạm vi `core.can_read_mood()`
+// ở tầng dữ liệu đổi:
+//   "Chỉ thầy cô chủ nhiệm thấy"                        (trước 0038)
+//   "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"      (0038 — hai vai đọc được)
+//   "Chỉ thầy cô tâm lý đọc"                            (0044/ADR-026 — cắt vai chủ nhiệm)
+//
+// Ba lần đổi trong một ngày là dấu hiệu xấu, nhưng nhãn SAI còn tệ hơn nhãn sửa nhiều
+// lần: đây là lời hứa với một đứa trẻ về chính câu nó vừa viết ra, in ngay tại chỗ nó
+// viết. Bộ test này khoá ba mệnh đề, và cả ba đều là thứ typecheck không bao giờ bắt được:
+//   · hai câu cũ không còn hiện ra màn hình ở bất kỳ màn nào của trẻ/phụ huynh;
+//   · mọi chỗ in nhãn đi qua HẰNG SỐ dùng chung, không chép tay — chép tay là mở đường
+//     cho lần đổi thứ tư sót một màn, và màn sót sẽ là màn ít người mở nhất;
+//   · hằng số khớp ĐÚNG câu chốt trong DESIGN-GUIDELINES §9, để tài liệu và màn hình
+//     không thể trôi khỏi nhau mà CI vẫn xanh.
+// ---------------------------------------------------------------------------
+
+/** Hai câu nhãn đã HẾT ĐÚNG. Không được xuất hiện ngoài chú thích/tài liệu lịch sử. */
+const NHAN_DA_CHET = [
+  "Chỉ thầy cô chủ nhiệm thấy",
+  "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy",
+];
+
+/** Các màn thực sự IN nhãn này (ô nhập cảm xúc hoặc khối hiện lại cảm xúc của em). */
+const MAN_IN_NHAN = ["checkin-view.tsx", "home-view.tsx", "this-week-view.tsx"];
+
+describe("nhãn riêng tư của ô cảm xúc: một câu, một nguồn", () => {
+  it.each(CHILD_FACING_SCREENS)("%s không còn câu nhãn nào đã hết đúng", (file) => {
+    const src = readComponent(file);
+    for (const chet of NHAN_DA_CHET) {
+      expect(src, `${file} còn in "${chet}" — câu này sai từ 01/08/2026`).not.toContain(chet);
+    }
+  });
+
+  it.each(MAN_IN_NHAN)("%s in nhãn từ hằng số dùng chung, không chép tay chuỗi", (file) => {
+    const src = readComponent(file);
+    expect(src, `${file} không dùng NHAN_AI_DOC_CAM_XUC`).toContain("NHAN_AI_DOC_CAM_XUC");
+    // Chép tay đúng câu hiện tại cũng không được: lần đổi sau nó sẽ là chỗ bị bỏ quên.
+    expect(src, `${file} chép tay chuỗi nhãn thay vì dùng hằng số`).not.toContain(
+      `"${NHAN_AI_DOC_CAM_XUC}"`,
+    );
+  });
+
+  it("hằng số khớp ĐÚNG câu chốt ở DESIGN-GUIDELINES §9", () => {
+    // Tài liệu là nơi hai agent màn hình cùng đọc để in một câu giống nhau. Nếu mã và
+    // tài liệu trôi khỏi nhau thì mỗi bên đúng theo bên mình, và không ai đỏ.
+    const guideline = readFileSync(join(repoRoot, "danh-cho-may", "DESIGN-GUIDELINES.md"), "utf8");
+    expect(guideline).toContain(`**${NHAN_AI_DOC_CAM_XUC}**`);
+  });
+
+  it("nhãn không chứa từ vựng vận hành (§8) — nó in trước mặt trẻ 11 tuổi", () => {
+    for (const word of ["GVCN", "cờ", "ngưỡng", "leo thang", "quét", "định mức"]) {
+      expect(NHAN_AI_DOC_CAM_XUC.toLowerCase()).not.toContain(word.toLowerCase());
+    }
+  });
+
+  it("thẻ “Ai đọc được lời con?” kể ĐỦ người đọc được, gồm cả tâm lý cụm", () => {
+    // `help_requests_scope` (0037) là `core.can_see_care` = chính em ∨ chủ nhiệm ∨ TÂM LÝ
+    // CỤM. Thẻ này từng kể đúng một người, và tests/db/help-request-rieng-tu.test.ts vẫn
+    // xanh y hệt trước và sau — vì nó đo QUYỀN, không đo NHÃN. Đây là chỗ đo nhãn.
+    const src = readComponent("help-request-view.tsx");
+    expect(src, "thẻ không kể thầy cô tâm lý").toMatch(/Thầy cô tâm lý của trường/);
+    // Và không hứa một thao tác chưa tồn tại: chưa có đường chuyển tuyến hỏi ý em.
+    expect(src, "còn hứa 'sẽ hỏi ý con trước khi chuyển tới phòng tâm lý'").not.toMatch(
+      /hỏi ý con trước khi chuyển/,
+    );
+  });
+
+  it("thẻ “Ai thấy gì của mình?” tách dòng cô chủ nhiệm làm HAI ý, không gộp", () => {
+    // §9 chốt: gộp thành "cô không thấy gì" là nói QUÁ (em sẽ tưởng bấm nút cần gặp cũng
+    // vô ích — đường an toàn duy nhất em có), gộp thành "cô thấy cảm xúc" là nói THIẾU
+    // sự thật mới. Phải có cả vế MẤT lẫn vế CÒN trong cùng một dòng.
+    const src = readComponent("profile-view.tsx");
+    expect(src, "thiếu vế 'cô KHÔNG đọc được cảm xúc'").toMatch(/không đọc/);
+    expect(src, "thiếu vế 'cô vẫn biết con cần được để ý'").toContain("cần được để ý");
+    expect(src, "thiếu vế 'cô vẫn thấy điểm danh và lời nhắn'").toMatch(/xem điểm danh và đọc lời nhắn/);
   });
 });
 

@@ -21,12 +21,18 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MOOD_LABEL } from "@hub/core/contracts";
-import { asMoodValue, changeNotice, checkinStage } from "@/components/checkin-view";
+import { asMoodValue, changeNotice, checkinStage, helpSignalState } from "@/components/checkin-view";
+import { dayCaptionText } from "@/components/attendance-view";
 import { sameLocalDay } from "@/lib/offline-queue";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 const viewSource = readFileSync(join(repoRoot, "apps", "hub", "components", "checkin-view.tsx"), "utf8");
 const queueSource = readFileSync(join(repoRoot, "apps", "hub", "lib", "offline-queue.ts"), "utf8");
+const routerSource = readFileSync(join(repoRoot, "apps", "hub", "server", "routers", "checkin.ts"), "utf8");
+const helpViewSource = readFileSync(
+  join(repoRoot, "apps", "hub", "components", "help-request-view.tsx"),
+  "utf8",
+);
 
 /** Bỏ chú thích trước khi quét: chính file này ghi lại lỗi cũ trong chú thích đầu file. */
 function withoutComments(source: string): string {
@@ -124,6 +130,100 @@ describe("hàng đợi offline — một ngày một bản ghi", () => {
 
   it("mốc thời gian hỏng không được coi là 'cùng ngày' (sẽ đè nhầm bản đúng)", () => {
     expect(sameLocalDay("không-phải-ngày", new Date())).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// QĐ-2 (01/08/2026) — em bấm nút cần gặp thì tín hiệu phải TỚI CÔ, và màn hình phải
+// nói đúng nó đã tới hay chưa.
+//
+// Lỗi được khoá ở đây: nút "Mình cần gặp thầy cô" đi chung chuyến với ô tâm trạng
+// (`submitMood({ mood, wantsHelp })`), nên khi mất mạng `pick()` đẩy cả gói vào
+// IndexedDB rồi hiện Y HỆT màn ăn mừng của lần gửi thành công. Với ô tâm trạng thì xếp
+// hàng đợi là đúng — "Offline vẫn lưu — tự gửi sau." in ngay dưới bốn ô. Với lời cầu
+// cứu thì không: nó chỉ rời máy khi em mở lại đúng app này lúc có mạng, mà QĐ-2 đòi nó
+// tới cô NGAY. Em vừa làm việc khó nhất là mở lời, đọc "Đã ghi nhận, cảm ơn em!", và
+// tin rằng cô đã biết.
+// ---------------------------------------------------------------------------
+describe("helpSignalState — hai việc trong một lần bấm, hai số phận", () => {
+  it("không bấm nút cần gặp thì màn hình không nói gì thêm", () => {
+    expect(helpSignalState({ wantsHelp: false, reachedServer: true })).toBe("khong-bam");
+    expect(helpSignalState({ wantsHelp: false, reachedServer: false })).toBe("khong-bam");
+  });
+
+  it("máy chủ đã nhận thì mới được nói là đã tới chỗ thầy cô", () => {
+    expect(helpSignalState({ wantsHelp: true, reachedServer: true })).toBe("da-toi-co");
+  });
+
+  it("còn nằm trên máy thì là CHƯA GỬI ĐƯỢC — không phải một dạng đã gửi", () => {
+    // Mệnh đề trung tâm của cả gói. Hàng đợi offline hợp lệ cho tâm trạng, nhưng với
+    // lời cầu cứu thì "đang nằm trong hàng đợi" và "đã báo cô" là hai thế giới khác nhau.
+    expect(helpSignalState({ wantsHelp: true, reachedServer: false })).toBe("chua-gui-duoc");
+  });
+});
+
+describe("dayCaptionText — không ai điểm danh KHÔNG phải là vắng (QĐ-3)", () => {
+  it("có giờ check-in thì in giờ, không thêm chữ", () => {
+    expect(dayCaptionText({ status: "present", checkedInAt: "07:32", isFuture: false })).toBe("07:32");
+  });
+
+  it("ngày chưa tới thì nói là chưa tới", () => {
+    expect(dayCaptionText({ status: null, checkedInAt: null, isFuture: true })).toBe("chưa tới");
+  });
+
+  it("KHÔNG có dòng nào trong sổ → “chưa điểm danh”, tuyệt đối không phải “vắng”", () => {
+    // Câu cũ: `day.checkedInAt ?? (day.isFuture ? "—" : "vắng")` — gộp "cô đã ghi em nghỉ"
+    // với "chưa ai ghi gì cả". Trường hợp thứ hai rất thường (cô điểm danh lúc 8:15, em mở
+    // app lúc 7 giờ tối), và màn hình khi đó kết luận một tin xấu về chính em từ chỗ không
+    // có dữ liệu — đúng luật "im lặng không phải kết luận" đọc ngược.
+    const caption = dayCaptionText({ status: null, checkedInAt: null, isFuture: false });
+    expect(caption).toBe("chưa điểm danh");
+    expect(caption).not.toContain("vắng");
+  });
+
+  it("có dòng nhưng không có giờ thì nhường chữ cho DayNote, không nói hai lần", () => {
+    expect(dayCaptionText({ status: "absent", checkedInAt: null, isFuture: false })).toBe("—");
+    expect(dayCaptionText({ status: "excused", checkedInAt: null, isFuture: false })).toBe("—");
+  });
+});
+
+describe("quét mã nguồn: đường ghi của QĐ-2", () => {
+  it("màn thành công KHÔNG ăn mừng khi lời cần gặp còn kẹt trên máy", () => {
+    const source = withoutComments(viewSource);
+    expect(source).toContain("helpSignalState");
+    // Sư tử ăn mừng phải nằm sau một điều kiện, không đứng trần như trước.
+    expect(source, "mascot ăn mừng vẫn vô điều kiện").not.toContain('<Mascot pose="celebrate" width={72} />');
+    expect(source).toMatch(/helpStuck \? "think" : "celebrate"/);
+    // Và tiêu đề phải đổi hẳn, không chỉ thêm một dòng chữ nhỏ phía dưới.
+    expect(source).toMatch(/helpStuck \? "Lời con nhắn chưa gửi được"/);
+  });
+
+  it("nói “đã tới chỗ thầy cô”, KHÔNG nói “thầy cô đã đọc”", () => {
+    // Máy chỉ biết vế đầu. Vế sau là suy đoán, và suy đoán ở đây thì đứa trẻ lãnh.
+    const source = withoutComments(viewSource);
+    expect(source).toContain("đã tới chỗ thầy cô");
+    expect(source).not.toMatch(/thầy cô đã đọc/);
+  });
+
+  it("requestHelp trả về ghi được hay không, không trả ok suông", () => {
+    // `on conflict … where handled_at is null` là mệnh đề LỌC: hôm nay cô đã bấm "đã gặp
+    // em rồi" thì lệnh chạy sạch, ghi 0 dòng, không lỗi. Bản cũ vẫn trả `{ ok: true }` và
+    // màn hình hiện "Đã gửi cho cô rồi!" cho một lời không đi đâu hết.
+    const source = withoutComments(routerSource);
+    expect(source).toContain("returning id");
+    expect(source).toMatch(/delivered/);
+  });
+
+  it("màn /can-gap-thay-co không ăn mừng khi máy chủ ghi 0 dòng", () => {
+    const source = withoutComments(helpViewSource);
+    expect(source).toContain("submit.data?.delivered === false");
+    expect(source).toContain("NotDeliveredPanel");
+  });
+
+  it("§9 idempotent giữ nguyên: một em, một yêu cầu mỗi ngày", () => {
+    const source = withoutComments(routerSource);
+    // Cả hai đường ghi (nút trong check-in, và form đầy đủ) đều phải đi qua khoá duy nhất.
+    expect((source.match(/on conflict \(student_id, requested_on\)/g) ?? []).length).toBe(2);
   });
 });
 

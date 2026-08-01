@@ -91,6 +91,22 @@ function LogoutButton({ onClick, className }: { onClick: () => void; className: 
  * "Ai thấy gì của mình?" — bắt buộc có ở MỌI khổ màn (DESIGN-GUIDELINES §9).
  * Dùng chung cho điện thoại và desktop: chép làm hai bản là mở đường cho hai bản
  * nói khác nhau về cùng một luật riêng tư.
+ *
+ * Viết lại 01/08/2026 (ADR-026, migration 0044). Đây là màn SINH RA để nói thật, nên
+ * nó mà nói thiếu thì hỏng gấp đôi — và dòng cô chủ nhiệm là dòng dễ nói thiếu nhất.
+ *
+ * Cái đã đổi ở tầng dữ liệu: `core.can_read_mood()` mất nhánh chủ nhiệm, nay chỉ còn
+ * `is_me ∨ in_my_cluster`. Cô KHÔNG đọc được ô cảm xúc nữa — không trên màn hình, và
+ * hỏi thẳng cơ sở dữ liệu cũng bị Postgres từ chối. Nhưng cô KHÔNG mất hết: cô vẫn
+ * thấy điểm danh, vẫn đọc lời nhắn "cần gặp thầy cô", và vẫn nhận tín hiệu "em này cần
+ * để ý" khi có nhiều ngày liền không vui.
+ *
+ * Vì thế dòng của cô phải TÁCH LÀM HAI Ý, đúng như §9 chốt, và không được gộp:
+ *  · gộp thành "cô không thấy gì" là nói QUÁ — em sẽ tưởng bấm nút cần gặp cũng vô ích,
+ *    và đó là đường an toàn duy nhất em có.
+ *  · gộp thành "cô thấy cảm xúc" là nói THIẾU SỰ THẬT MỚI — đúng câu vừa bị bỏ.
+ * Câu "biết vậy thôi, không biết con đã ghi gì" là câu quan trọng nhất cả khối: nó nói
+ * cho em biết ranh giới, để em không phải tự đoán ranh giới đó bằng cách thử.
  */
 function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
   const teacher = teacherLabel(teacherName);
@@ -105,20 +121,23 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
         <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-          <b>{teacher}</b> — cảm xúc, điểm danh, lời nhắn "cần gặp thầy cô"
+          <b>Thầy cô tâm lý</b> — đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
         </span>
       </div>
-      {/* Thêm 01/08/2026: sau 0038, `core.can_read_mood()` cho ĐÚNG hai vai đọc cảm xúc —
-          chủ nhiệm và tâm lý cụm. Trước đó khối này chỉ kể chủ nhiệm, nên màn "Ai thấy gì
-          của mình?" — đúng cái màn sinh ra để nói thật — lại là màn duy nhất nói thiếu. */}
+      {/* Dòng dài nhất của khối, và cố ý dài: nó là chỗ DUY NHẤT em đọc được ranh giới
+          mới của cô chủ nhiệm. Icon `visibility` (không phải check/cancel) vì dòng này
+          không thuộc hẳn nhóm nào — cô thấy một phần, và phần đó phải được kể ra. */}
       <div className="flex items-start gap-2.5">
-        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#2C7BF2]">visibility</span>
         <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-          <b>Thầy cô tâm lý</b> — cảm xúc và lời nhắn, để giúp khi con gặp chuyện khó
+          <b>{teacher}</b> — xem điểm danh và đọc lời nhắn con gửi. Cô <b>không đọc</b> được con đã
+          ghi cảm xúc gì mỗi ngày. Cô chỉ biết là con <b>cần được để ý</b> khi con bấm nút cần gặp,
+          hoặc khi hệ thống thấy con có nhiều ngày liền không vui — biết vậy thôi, không biết con đã
+          ghi gì.
         </span>
       </div>
       <div className="flex items-start gap-2.5">
-        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#2C7BF2]">visibility</span>
         <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
           <b>Bố mẹ</b> — điểm danh và Báo cáo Trưởng thành (không xem chi tiết cảm xúc từng ngày)
         </span>

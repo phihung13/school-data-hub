@@ -3,7 +3,12 @@
 // đổi phá tương thích phải đi expand–contract, không sửa thẳng field cũ.
 import { z } from "zod";
 
-export const CONTRACTS_VERSION = "0.1.0";
+// `CONTRACTS_VERSION` từng nằm ở đây (thời hằng số này lạc trong contract của MỘT router,
+// DEBT #13) và đã bị gỡ 01/08/2026. Bản chính thức ở `version.ts`. Không khôi phục dòng
+// này: `index.ts` xuất tường minh từ `version.ts` nên bản ở đây luôn bị che — tức là hai
+// số phiên bản có thể lệch nhau bao lâu cũng được mà không ai thấy, cho tới lần đầu có
+// người `import ... from "./checkin.ts"` thẳng. `tools/contracts-lint.mjs` chặn merge khi
+// hai nơi lệch, và chính nó là thứ bắt được lần lệch này lúc tăng lên 0.2.0.
 
 /** 1..4 khớp CHECK constraint attendance.checkins.mood (0004_attendance.sql). */
 export const MoodValue = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);

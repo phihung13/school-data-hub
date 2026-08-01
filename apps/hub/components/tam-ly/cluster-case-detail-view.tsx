@@ -27,6 +27,7 @@ import {
 } from "../ui/query-state";
 import { classLabel, personName } from "../ui/labels";
 import { newMutationId } from "../gvcn/mutation-id";
+import { acknowledgeHelpText } from "../gvcn-dashboard";
 import { Card, ScopeNotice, TamLyShell } from "./tam-ly-shell";
 
 /**
@@ -81,7 +82,6 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
       refreshAll();
     },
   });
-  const acknowledgeHelp = trpc.care.acknowledgeHelpRequest.useMutation({ onSuccess: refreshAll });
   const closeCase = trpc.care.closeCase.useMutation({ onSuccess: refreshAll });
 
   const data = query.data;
@@ -156,7 +156,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2.5">
                     {data!.helpSignals.map((s) => (
-                      <li key={s.requestedOn} className="flex items-start gap-2.5">
+                      <li key={s.helpRequestId} className="flex items-start gap-2.5">
                         <span
                           className={`mt-[6px] h-2 w-2 flex-none rounded-full ${s.handledAt ? "bg-[#C9D2DE]" : "bg-[#F0474D]"}`}
                           aria-hidden
@@ -263,35 +263,25 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                   <p className="mt-1 text-[11px] leading-relaxed text-muted">
                     Bấm khi đã thật sự gặp em. Tín hiệu tắt khỏi hộp việc của cả GVCN lẫn tâm lý cụm.
                   </p>
+                  {/* MỖI DÒNG MỘT COMPONENT, mỗi component một mutation riêng — đổi
+                      01/08/2026. Bản cũ khai đúng MỘT `useMutation` cho cả danh sách, rồi
+                      `disabled={acknowledgeHelp.isPending}` áp cho MỌI nút và câu kết quả
+                      vẽ dưới cả danh sách. Với em có hai yêu cầu treo (đúng ba em trên
+                      hub_dev hôm nay), cô bấm dòng 31/07 thì cả hai nút cùng khoá và câu
+                      "Đã tắt cờ khẩn" hiện cho cả dòng 01/08 chưa ai đụng tới.
+                      Khoá React cũng đổi từ `requestedOn` sang `helpRequestId`: khoá tự
+                      nhiên chỉ hợp lệ nhờ `unique(student_id, requested_on)`, và nó gãy
+                      im lặng ngay khi bảng cho phép hai yêu cầu trong một ngày. */}
                   <ul className="mt-3 flex flex-col gap-2">
                     {pendingSignals.map((s) => (
-                      <li key={s.requestedOn} className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-[12px] font-bold text-ink">
-                          {formatDate(s.requestedOn)} · {signalLabel(s)}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={acknowledgeHelp.isPending}
-                          onClick={() =>
-                            acknowledgeHelp.mutate({ studentId, requestedOn: s.requestedOn })
-                          }
-                          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12px] font-black text-gold-textDark disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
-                        >
-                          Cô đã gặp em rồi
-                        </button>
-                      </li>
+                      <PendingSignalRow
+                        key={s.helpRequestId}
+                        studentId={studentId}
+                        signal={s}
+                        onDone={refreshAll}
+                      />
                     ))}
                   </ul>
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    {acknowledgeHelp.error && <MutationError error={acknowledgeHelp.error} />}
-                    {acknowledgeHelp.isSuccess && !acknowledgeHelp.error && (
-                      <MutationSuccess>
-                        {acknowledgeHelp.data?.alreadyHandled
-                          ? "Người khác đã xử lý trước"
-                          : "Đã tắt cờ khẩn"}
-                      </MutationSuccess>
-                    )}
-                  </div>
                 </Card>
               )}
 
@@ -417,5 +407,57 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
         </>
       )}
     </TamLyShell>
+  );
+}
+
+/**
+ * MỘT dòng cờ khẩn đang chờ, với mutation RIÊNG của nó.
+ *
+ * Tách ra thành component là cả điểm của lần sửa này: trạng thái `isPending` /
+ * `isSuccess` / `error` phải thuộc về ĐÚNG dòng vừa bấm. Gộp chung một mutation cho cả
+ * danh sách thì một cú bấm khoá mọi nút và câu xác nhận nói thay cho những dòng chưa ai
+ * đụng tới — và người đọc không có cách nào biết câu đó nói về dòng nào.
+ *
+ * `acknowledgeHelpText` dùng chung với buồng lái GVCN: hai vai bấm cùng một nút, gọi
+ * cùng một mutation, thì phải đọc được cùng một câu trả lời. Hai bản văn cho cùng một
+ * kết quả là cách hai màn bắt đầu nói khác nhau về cùng một sự thật.
+ */
+function PendingSignalRow({
+  studentId,
+  signal,
+  onDone,
+}: {
+  studentId: string;
+  signal: ClusterHelpSignal;
+  onDone: () => void;
+}) {
+  const acknowledgeHelp = trpc.care.acknowledgeHelpRequest.useMutation({ onSuccess: onDone });
+
+  return (
+    <li className="flex flex-col gap-1.5 border-b border-[#F1F4F8] pb-2 last:border-0 last:pb-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[12px] font-bold text-ink">
+          {formatDate(signal.requestedOn)} · {signalLabel(signal)}
+        </span>
+        <button
+          type="button"
+          // KHÔNG có `|| isSuccess` ở đây: trạng thái nút suy từ DỮ LIỆU (dòng còn treo
+          // thì còn bấm được), không suy từ lịch sử lời gọi trước. Dòng đã xử lý xong sẽ
+          // biến mất khỏi `pendingSignals` ở lượt tải lại — đó mới là thứ tắt nút.
+          disabled={acknowledgeHelp.isPending}
+          onClick={() =>
+            acknowledgeHelp.mutate({ studentId, helpRequestIds: [signal.helpRequestId] })
+          }
+          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12px] font-black text-gold-textDark disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+        >
+          {acknowledgeHelp.isPending ? "Đang ghi…" : "Cô đã gặp em rồi"}
+        </button>
+      </div>
+      {/* Kết quả nằm NGAY DƯỚI DÒNG vừa bấm, không dưới cả danh sách. */}
+      {acknowledgeHelp.error && <MutationError error={acknowledgeHelp.error} />}
+      {acknowledgeHelp.isSuccess && !acknowledgeHelp.error && (
+        <MutationSuccess>{acknowledgeHelpText(acknowledgeHelp.data)}</MutationSuccess>
+      )}
+    </li>
   );
 }

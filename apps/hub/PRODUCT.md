@@ -44,14 +44,30 @@ Việc lõi mà app phải làm trơn tru mỗi sáng:
 
 ## Ràng buộc không thương lượng
 
-- **Dữ liệu trẻ em, chịu Luật 91/2025.** Mood và check-in cảm xúc chỉ GVCN và tâm lý cụm thấy
-  (`core.can_read_mood()`, migration 0038), và phải có nhãn `lock` "Chỉ thầy cô chủ nhiệm và thầy cô
-  tâm lý thấy" ngay tại chỗ nhập — người nhập phải biết ai đọc được. Nhãn phải kể ĐỦ số vai đọc
-  được: nói thiếu một vai cũng là nói dối, chỉ khó bắt hơn.
+- **Dữ liệu trẻ em, chịu Luật 91/2025.** Mood và check-in cảm xúc **chỉ chính em và tâm lý cụm** đọc
+  được (`core.can_read_mood()` = `is_me ∨ in_my_cluster`, migration 0044, ADR-026 — quyết định chủ
+  đầu tư 01/08/2026). Nhãn `lock` ngay tại chỗ nhập là **"Chỉ thầy cô tâm lý đọc"**, in từ hằng số
+  dùng chung `NHAN_AI_DOC_CAM_XUC` (`apps/hub/components/ui/labels.ts`) chứ không chép tay ở từng
+  màn. Nhãn phải kể ĐÚNG số vai đọc được: nói thiếu một vai hay thừa một vai đều là nói dối, chỉ
+  khác nhau ở chỗ khó bắt.
+  *Lịch sử để không ai chép nhầm lại:* câu này đã đổi ba lần trong ngày 01/08/2026 — "Chỉ thầy cô
+  chủ nhiệm thấy" (trước 0038) → "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy" (0038) → câu hiện
+  tại (0044). Cả hai câu cũ **đã sai**.
+- **Giáo viên chủ nhiệm không mất tín hiệu, chỉ mất nội dung.** Cô không đọc được ô cảm xúc nữa,
+  nhưng **vẫn** nhận cờ "cần để ý" (`care.flags`), **vẫn** thấy đủ cột điểm danh, và **vẫn** nhận
+  ngay lời "cần gặp thầy cô". Thẻ "Ai thấy gì của mình?" trong hồ sơ của em phải kể đủ cả hai vế —
+  nói gọn thành "cô không thấy gì" là nói quá, và em sẽ tưởng bấm nút cần gặp cũng vô ích.
+- **Tín hiệu "cần gặp thầy cô" đi NGAY** (QĐ-2, 01/08/2026): ghi thẳng vào `attendance.help_requests`
+  trong cùng lượt gọi, buồng lái đọc bảng đó trực tiếp — không chờ lượt quét đêm. Màn của em chỉ được
+  báo "đã gửi" khi máy chủ đã nhận thật; nằm trong hàng đợi offline thì phải nói là **chưa** gửi được.
 - **Ghi chú tư vấn tâm lý**: GVCN và phụ huynh không xem được, luôn hiện badge `visibility_off`.
+- **Lời nhắn "cần gặp thầy cô"**: chính em, giáo viên chủ nhiệm của em, và tâm lý cụm đọc được
+  (`help_requests_scope`, 0037). Bạn cùng lớp, thầy cô dạy môn, thầy cô lớp khác, bố mẹ, BGH: không.
 - **Cờ cảnh báo chỉ ghi loại tín hiệu**, không sao chép nội dung tâm sự của trẻ.
 - **Care engine chạy ngầm**, không bao giờ hiện như một mini app với học sinh.
-- Trạng thái nghiệp vụ phải phân biệt rõ: **gửi muộn ≠ vắng**; **"lớp ổn" ≠ thiếu dữ liệu**.
+- Trạng thái nghiệp vụ phải phân biệt rõ: **gửi muộn ≠ vắng**; **chưa điểm danh ≠ vắng** (QĐ-3,
+  01/08/2026 — bảng của cô hiện đủ năm trạng thái, và lịch của chính em cũng phải phân biệt được
+  chừng đó); **"lớp ổn" ≠ thiếu dữ liệu**.
 
 ## Chống tham chiếu (anti-references)
 
@@ -66,7 +82,9 @@ Việc lõi mà app phải làm trơn tru mỗi sáng:
 ## Tiếp cận
 
 - Chạm ≥44px trên mọi nút và tile ở mobile.
-- Tương phản chữ ≥4.5:1. Xám nhạt chỉ dùng cho caption ≤11px, không dùng cho nội dung.
+- Tương phản chữ ≥4.5:1, **không có ngoại lệ theo cỡ chữ** — câu cũ ở dòng này ("xám nhạt chỉ dùng
+  cho caption ≤11px") tự mâu thuẫn với chính vế đứng trước nó và đã bị bỏ ở DESIGN-GUIDELINES §11
+  hôm 01/08/2026. Đo trên **mặt nền tệ nhất**, không phải chỉ trên nền trắng.
 - Màu không bao giờ là tín hiệu duy nhất — badge và cờ luôn kèm chữ hoặc icon.
 - Bốn ô chọn tâm trạng phải có `aria-label`; focus ring hiện rõ khi đi bằng bàn phím.
 - Tôn trọng `prefers-reduced-motion`.

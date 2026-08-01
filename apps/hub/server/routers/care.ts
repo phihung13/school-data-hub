@@ -1,9 +1,30 @@
 // apps/hub/server/routers/care.ts — router `care`, GĐ1 rút gọn (buồng lái P4).
 //
-// Flag engine (04-flag-engine.md) CHƯA chạy — chưa có pg_cron job tạo care.flags
-// tự động, nên "priority flags" ở đây được TÍNH TRỰC TIẾP từ tín hiệu thô (mood,
-// help_requests) thay vì đọc care.flags. Khi flag engine thật chạy, đổi phần này
-// sang đọc care.flags (đã sẵn contract FlagSummary.flagId), không đổi UI.
+// ── 01/08/2026 · BA QUYẾT ĐỊNH CỦA CHỦ ĐẦU TƯ, phần tầng màn hình ────────────
+//
+// [QĐ-1] GVCN KHÔNG còn đọc nhật ký cảm xúc từng ngày. Tầng dữ liệu đã cắt (0044 —
+//   `core.can_read_mood()` = `is_me ∨ in_my_cluster`); tầng này cắt nốt đường còn lại:
+//   không câu SQL nào trong file này còn chọn cột `mood`, và không câu nào còn đọc
+//   `attendance.checkins_care`. Cô VẪN nhận cờ (`care.flags`) và VẪN nhận tín hiệu "cần
+//   gặp thầy cô" — biết CÓ CHUYỆN mà không đọc được CHUYỆN GÌ.
+//
+//   Ba chỗ từng đọc `checkins_care` cho CẢ cột điểm danh chứ không riêng mood, và cả ba
+//   sẽ hỏng câm nếu để nguyên (view lọc theo DÒNG, không theo CỘT): `getClassRoster`,
+//   `getStudentDetail`, `listReportApprovals`. Đo cùng câu LEFT JOIN dưới phiên Cô Lan:
+//   nguồn `checkins_care` trả 5/5 em `status = NULL`, nguồn `attendance.checkins` trả
+//   5/5 em `status = present`. Không đổi lại thì bảng lớp trắng toàn NULL và màn hình vẽ
+//   NULL thành "Chưa điểm danh" — tức là hệ tự khai lớp chưa ai điểm danh.
+//
+// [QĐ-2] Em bấm nút cần gặp thì báo cô NGAY. E_URGENT vì thế vẫn được TÍNH THẲNG từ
+//   `attendance.help_requests` trong lượt gọi, không chờ `care.run_flag_engine`. Còn
+//   E_MOOD nay đọc từ `care.flags` (nợ #32, chốt chặn (a)–(d)) nên nó đi theo NHỊP QUÉT
+//   ĐÊM. Hai nhịp trong cùng một danh sách, nên mỗi cờ mang `detail.cadence` và màn hình
+//   phải nói ra — người đọc một bảng gộp hai nhịp mà không biết là đang bị chính bảng đó
+//   đánh lừa.
+//
+// [QĐ-3] Bảng điểm danh hiện đủ trạng thái. Xem `ARRIVAL_BAND_UNAVAILABLE_NOTE` trong
+//   contracts: bốn trạng thái có chỗ chứa thật, "đi sớm" thì KHÔNG — và chỗ này chọn nói
+//   thẳng thay vì bịa một giá trị thứ sáu mà dữ liệu không đỡ nổi.
 //
 // Viết lại 31/07/2026. Sáu thứ đã sai, ghi ra để lần sau không ai "sửa lại như cũ":
 //
@@ -471,9 +492,21 @@ function mondayIso(date?: string): string {
  */
 export function buildReportPreview(stats: {
   checkinDays: number;
-  happyDays: number;
+  /**
+   * `null` = NGƯỜI ĐANG XEM không được đọc nguồn của con số này (ADR-026 — GVCN). Khác
+   * hẳn `0`, và khác đúng ở chỗ nguy hiểm nhất: `0` làm mục Glow biến mất y như khi em
+   * thật sự không có ngày vui nào, nên bản xem trước im lặng thiếu một mục so với bản
+   * phụ huynh đọc. `null` làm mục đó biến mất KÈM một lời khai (`glowIncomplete`).
+   */
+  happyDays: number | null;
   streakDays: number;
-}): { headline: string; glow: Array<{ title: string; detail: string; accentColor: "green" | "blue" | "amber" }>; grow: Array<{ title: string; detail: string }>; streakDays: number } {
+}): {
+  headline: string;
+  glow: Array<{ title: string; detail: string; accentColor: "green" | "blue" | "amber" }>;
+  grow: Array<{ title: string; detail: string }>;
+  streakDays: number;
+  glowIncomplete: boolean;
+} {
   const glow: Array<{ title: string; detail: string; accentColor: "green" | "blue" | "amber" }> = [];
   if (stats.checkinDays >= 5) {
     glow.push({
@@ -482,10 +515,15 @@ export function buildReportPreview(stats: {
       accentColor: "green",
     });
   }
-  if (stats.happyDays >= 3) {
+  // `stats.happyDays !== null && …` chứ không phải `(stats.happyDays ?? 0) >= 3`: viết
+  // kiểu sau là đúng thứ vừa cấm — `null` rơi xuống 0 rồi so sánh, và cả hai ca cho ra
+  // cùng một màn hình.
+  const happyDays = stats.happyDays;
+  const happyDaysUnknown = happyDays === null;
+  if (happyDays !== null && happyDays >= 3) {
     glow.push({
       title: "Cả tuần đến lớp với tâm trạng vui vẻ",
-      detail: `Check-in cảm xúc · ${stats.happyDays}/5 ngày "Vui"`,
+      detail: `Check-in cảm xúc · ${happyDays}/5 ngày "Vui"`,
       accentColor: "blue",
     });
   }
@@ -502,10 +540,15 @@ export function buildReportPreview(stats: {
       : [];
 
   return {
+    // `headline` dựng từ SỐ MỤC GLOW DỰNG ĐƯỢC, nên bản của cô có thể nhẹ hơn bản phụ
+    // huynh đọc ("Một tuần ổn định" thay vì "Một tuần rực rỡ!"). Đó chính là cái mà
+    // `glowIncomplete` cảnh báo — không có cách nào dựng đúng headline mà không đọc được
+    // số ngày vui, nên nói ra thay vì đoán.
     headline: glow.length >= 2 ? "Một tuần rực rỡ!" : "Một tuần ổn định",
     glow,
     grow,
     streakDays: stats.streakDays,
+    glowIncomplete: happyDaysUnknown,
   };
 }
 
@@ -560,23 +603,19 @@ export const careRouter = router({
         checkin_count: number;
         pending_late_count: number;
         absent_count: number;
+        students_with_row: number;
       }>(
+        // `students_with_row` đếm SỐ EM có ít nhất một dòng hôm nay, không đếm số dòng:
+        // nó là mẫu số của "chưa điểm danh" ([QĐ-3]). Đếm dòng thì một em có cả dòng 'in'
+        // lẫn dòng khác sẽ tính hai lần và số "chưa điểm danh" tụt xuống âm thầm.
         `select
            count(*) filter (where c.kind = 'in')::int as checkin_count,
            count(*) filter (where c.status = 'queued_late')::int as pending_late_count,
-           count(*) filter (where c.status = 'absent')::int as absent_count
+           count(*) filter (where c.status = 'absent')::int as absent_count,
+           count(distinct c.student_id)::int as students_with_row
          from attendance.checkins c
          join core.enrollments e on e.student_id = c.student_id and e.valid_to is null
          where e.class_id = $1 and c.occurred_on = current_date`,
-        [classId],
-      );
-
-      const moodRes = await client.query<{ mood: number; count: string }>(
-        `select c.mood, count(*)::int as count
-           from attendance.checkins_care c
-           join core.enrollments e on e.student_id = c.student_id and e.valid_to is null
-          where e.class_id = $1 and c.occurred_on = current_date and c.mood is not null
-          group by c.mood`,
         [classId],
       );
 
@@ -595,17 +634,34 @@ export const careRouter = router({
         [classId],
       );
 
-      // ── Cờ ưu tiên ────────────────────────────────────────────────────────
-      // Gốc là DANH SÁCH LỚP, không phải bảng check-in: hai nguồn tín hiệu (mood,
-      // "cần gặp thầy cô") nối vào độc lập nên không nguồn nào che nguồn kia.
-      // Mọi con số trong câu này là THAM SỐ đọc từ care.thresholds (§6).
-      const flagsRes = await client.query<{
+      // ── Cờ ưu tiên: HAI NGUỒN, HAI NHỊP, NÓI RA CẢ HAI ────────────────────
+      //
+      // Viết lại 01/08/2026 theo [QĐ-1] (ADR-026) và [QĐ-2]. Bản cũ tự tính CẢ HAI mã cờ
+      // từ `attendance.checkins_care` — tức là buồng lái tự đọc nhật ký cảm xúc của từng
+      // em rồi tự đếm chuỗi ngày xấu. Sau 0044 cô không còn quyền đọc bảng đó (đo trên
+      // hub_dev: cô Lan 75 dòng → 0), nên câu SQL cũ không trả về cờ E_MOOD nào nữa và
+      // buồng lái sẽ sạch cờ trong im lặng — đúng loại hỏng nguy hiểm nhất, vì bảng cờ
+      // trống đọc y hệt "lớp mình đang ổn".
+      //
+      // Nay:
+      //   · E_MOOD  ← `care.flags` (do `care.run_flag_engine` sinh theo lượt quét đêm).
+      //     Cô vẫn nhận cờ — đó là nửa còn lại của [QĐ-1]: cô biết CÓ CHUYỆN mà không đọc
+      //     được CHUYỆN GÌ. Câu SELECT cố ý KHÔNG lấy `f.detail`: cột đó chứa
+      //     `negative_days`/`negative_streak`/`nguong`, và DESIGN-GUIDELINES §9 cấm ba thứ
+      //     đi ra phía GVCN — chiều của cảm xúc, SỐ NGÀY, mọi trích dẫn. Cắt ở đây là cắt
+      //     tại contract; ẩn ở CSS thì số vẫn nằm trong tab Network của máy cô.
+      //   · E_URGENT ← tính THẲNG từ `attendance.help_requests` ngay trong lượt gọi này.
+      //     [QĐ-2] đòi báo NGAY, không chờ quét đêm. Đo đường đầy đủ qua HTTP trên hub_dev:
+      //     em bấm nút 195 ms, lượt đọc kế tiếp của cô thấy cờ sau thêm 226 ms.
+      //
+      // Vì sao KHÔNG gộp một em thành một dòng như bản cũ: hai mã cờ nay có hai NHỊP khác
+      // nhau, và gộp là in một thẻ mang nhãn "tức thì" cho một tín hiệu thật ra chờ tới
+      // đêm. Em có cả hai thì có hai thẻ, mỗi thẻ tự khai nhịp của mình.
+      const urgentRes = await client.query<{
         student_id: string;
         student_name: string;
-        negative_days: number;
-        negative_streak: number;
-        help_requested: boolean;
         as_of_date: string;
+        open_help_requests: Array<{ helpRequestId: string; requestedOn: string; urgency: string | null }>;
         case_id: string | null;
         case_status: string | null;
         recently_handled: boolean;
@@ -616,35 +672,13 @@ export const careRouter = router({
              join core.students s on s.id = e.student_id
             where e.class_id = $1 and e.valid_to is null
          ),
-         mood_days as (
-           select r.student_id, c.occurred_on, c.mood,
-                  row_number() over (partition by r.student_id order by c.occurred_on desc) as rn
-             from roster r
-             join attendance.checkins_care c
-               on c.student_id = r.student_id
-              and c.kind = 'in'
-              and c.mood is not null
-              and c.occurred_on >= current_date - $2::int
-         ),
-         mood_agg as (
-           select student_id,
-                  count(*) filter (where mood <= $3::int)::int as negative_days,
-                  -- Chuỗi LIÊN TIẾP: hàng đầu tiên (tính lùi từ lần check-in gần nhất)
-                  -- có mood TỐT nằm ở vị trí rn = k ⇒ chuỗi xấu dài đúng k-1.
-                  -- Không có hàng tốt nào ⇒ cả cửa sổ đều xấu.
-                  coalesce(min(rn) filter (where mood > $3::int) - 1, count(*))::int as negative_streak,
-                  max(occurred_on) as last_checkin_on
-             from mood_days
-            group by student_id
-         ),
-         help_agg as (
-           select r.student_id, max(h.requested_on) as last_help_on
+         open_help as (
+           select h.student_id, h.id as help_request_id, h.requested_on, h.urgency
              from roster r
              join attendance.help_requests h
                on h.student_id = r.student_id
-              and h.requested_on >= current_date - $6::int
+              and h.requested_on >= current_date - $2::int
               and h.handled_at is null
-            group by r.student_id
          ),
          last_action as (
            select cc.student_id, max(i.occurred_at) as last_intervention_at
@@ -652,34 +686,75 @@ export const careRouter = router({
              join care.interventions i on i.case_id = cc.id
             group by cc.student_id
          )
-         select r.student_id, r.full_name as student_name,
-                coalesce(m.negative_days, 0) as negative_days,
-                coalesce(m.negative_streak, 0) as negative_streak,
-                (h.student_id is not null) as help_requested,
-                coalesce(greatest(m.last_checkin_on, h.last_help_on), current_date)::text as as_of_date,
+         select r.student_id,
+                r.full_name as student_name,
+                current_date::text as as_of_date,
+                -- MẢNG ID THẬT, không phải một ngày gộp. Đây là thứ nút "Cô đã gặp em
+                -- rồi" gửi lên, và là lý do lỗi cờ-khẩn-không-tắt-được không quay lại:
+                -- màn hình chỉ đóng đúng những dòng nó đang vẽ.
+                jsonb_agg(
+                  jsonb_build_object(
+                    'helpRequestId', oh.help_request_id,
+                    'requestedOn', oh.requested_on::text,
+                    'urgency', oh.urgency
+                  ) order by oh.requested_on desc
+                ) as open_help_requests,
                 cc.id as case_id, cc.status as case_status,
-                coalesce(la.last_intervention_at >= now() - make_interval(days => $7::int), false) as recently_handled
+                coalesce(la.last_intervention_at >= now() - make_interval(days => $3::int), false) as recently_handled
            from roster r
-           left join mood_agg m on m.student_id = r.student_id
-           left join help_agg h on h.student_id = r.student_id
+           join open_help oh on oh.student_id = r.student_id
            left join care.care_cases cc on cc.student_id = r.student_id and cc.status = 'open'
            left join last_action la on la.student_id = r.student_id
-          where h.student_id is not null
-             or (case when $5 = 'streak' then coalesce(m.negative_streak, 0)
-                      else coalesce(m.negative_days, 0) end) >= $4::int
-          -- Cờ khẩn lên đầu; cờ vừa được xử lý xuống cuối (không xoá — vẫn phải thấy).
-          order by (h.student_id is not null) desc,
-                   coalesce(la.last_intervention_at >= now() - make_interval(days => $7::int), false) asc,
-                   coalesce(m.negative_streak, 0) desc`,
-        [
-          classId,
-          rules.emotion.windowDays,
-          rules.emotion.badMoodMax,
-          rules.emotion.negativeDays,
-          rules.emotion.mode,
-          rules.urgent.windowDays,
-          rules.emotion.quietDays,
-        ],
+          group by r.student_id, r.full_name, cc.id, cc.status, la.last_intervention_at
+          -- Cờ vừa được xử lý xuống cuối (KHÔNG xoá — cô vẫn phải thấy).
+          order by coalesce(la.last_intervention_at >= now() - make_interval(days => $3::int), false) asc,
+                   max(oh.requested_on) desc,
+                   r.full_name`,
+        [classId, rules.urgent.windowDays, rules.emotion.quietDays],
+      );
+
+      const moodFlagRes = await client.query<{
+        student_id: string;
+        student_name: string;
+        as_of_date: string;
+        case_id: string | null;
+        case_status: string | null;
+        recently_handled: boolean;
+      }>(
+        // `distinct on (student_id)` — một em một thẻ, lấy lượt quét mới nhất. Engine ghi
+        // một dòng mỗi ngày (khoá `flags_uq (student_id, rule_code, as_of_date)`), nên
+        // không lọc thì một em có cờ năm hôm liền sẽ thành năm thẻ giống hệt nhau.
+        //
+        // `origin = 'live'`: dòng `backfill` là kết quả chạy bù cho quá khứ (0039), không
+        // phải tình hình hôm nay của lớp.
+        `with roster as (
+           select e.student_id, s.full_name
+             from core.enrollments e
+             join core.students s on s.id = e.student_id
+            where e.class_id = $1 and e.valid_to is null
+         ),
+         last_action as (
+           select cc.student_id, max(i.occurred_at) as last_intervention_at
+             from care.care_cases cc
+             join care.interventions i on i.case_id = cc.id
+            group by cc.student_id
+         )
+         select distinct on (r.student_id)
+                r.student_id,
+                r.full_name as student_name,
+                f.as_of_date::text as as_of_date,
+                cc.id as case_id, cc.status as case_status,
+                coalesce(la.last_intervention_at >= now() - make_interval(days => $3::int), false) as recently_handled
+           from roster r
+           join care.flags f
+             on f.student_id = r.student_id
+            and f.rule_code = 'E_MOOD'
+            and f.origin = 'live'
+            and f.as_of_date >= current_date - $2::int
+           left join care.care_cases cc on cc.student_id = r.student_id and cc.status = 'open'
+           left join last_action la on la.student_id = r.student_id
+          order by r.student_id, f.as_of_date desc`,
+        [classId, rules.emotion.windowDays, rules.emotion.quietDays],
       );
 
       const staleRes = await client.query<{ label: string }>(
@@ -717,6 +792,9 @@ export const careRouter = router({
         [classId],
       );
 
+      const totalStudents = classSizeRes.rows[0]?.total_students ?? 0;
+      const studentsWithRow = totalsRes.rows[0]?.students_with_row ?? 0;
+
       return GetDashboardOutput.parse({
         classId,
         className,
@@ -731,30 +809,54 @@ export const careRouter = router({
           checkinCount: totalsRes.rows[0]?.checkin_count ?? 0,
           pendingLateCount: totalsRes.rows[0]?.pending_late_count ?? 0,
           absentCount: totalsRes.rows[0]?.absent_count ?? 0,
-          totalStudents: classSizeRes.rows[0]?.total_students ?? 0,
+          totalStudents,
           openCareCases: classSizeRes.rows[0]?.open_care_cases ?? 0,
+          // `Math.max(0, …)`: sĩ số và số dòng điểm danh đến từ hai câu SQL, và một em vừa
+          // chuyển lớp giữa hai câu đó cho ra số âm. Một con số âm trên thẻ "chưa điểm
+          // danh" là thứ không ai đọc nổi, còn 0 thì ít nhất đọc được là "không thiếu ai".
+          notCheckedInCount: Math.max(0, totalStudents - studentsWithRow),
         },
-        moodDistribution: moodRes.rows.map((r) => ({ mood: r.mood as 1 | 2 | 3 | 4, count: Number(r.count) })),
-        priorityFlags: flagsRes.rows.map((r) => ({
-          flagId: `${r.student_id}:${r.as_of_date}`, // tính trực tiếp, chưa có care.flags.id thật (xem ghi chú đầu file)
-          studentId: r.student_id,
-          studentName: r.student_name,
-          className,
-          ruleCode: r.help_requested ? "E_URGENT" : "E_MOOD",
-          asOfDate: r.as_of_date,
-          detail: {
-            // `negativeDays` giữ đúng tên cũ vì màn hình GVCN đang đọc khoá này.
-            negativeDays: r.negative_streak,
-            negativeDaysInWindow: r.negative_days,
-            negativeStreak: r.negative_streak,
-            helpRequested: r.help_requested,
-            recentlyHandled: r.recently_handled,
-            mode: rules.emotion.mode,
-            threshold: rules.emotion.negativeDays,
-          },
-          caseId: r.case_id,
-          caseStatus: r.case_status as "open" | "closed" | null,
-        })),
+        // Cô không đọc được nhật ký cảm xúc nữa (ADR-026) — nhưng ô đó KHÔNG được biến
+        // mất trong im lặng: màn hình in một câu nói rõ đây là quy định, không phải lỗi.
+        moodVisibility: { readable: false, reason: "chi_tam_ly" },
+        priorityFlags: [
+          ...urgentRes.rows.map((r) => ({
+            // Chuỗi ghép, KHÔNG phải một UUID: `resolveOpenCase` (logIntervention) coi mọi
+            // chuỗi 36 ký tự không có dấu ":" là `care_cases.id` thật. Trả `care.flags.id`
+            // ra đây sẽ khiến nút "Ghi can thiệp" gửi một mã cờ vào chỗ đợi mã hồ sơ.
+            flagId: `${r.student_id}:E_URGENT:${r.as_of_date}`,
+            studentId: r.student_id,
+            studentName: r.student_name,
+            className,
+            ruleCode: "E_URGENT",
+            asOfDate: r.as_of_date,
+            detail: {
+              cadence: "tuc_thi" as const,
+              openHelpRequests: r.open_help_requests ?? [],
+              recentlyHandled: r.recently_handled,
+            },
+            caseId: r.case_id,
+            caseStatus: r.case_status as "open" | "closed" | null,
+          })),
+          ...moodFlagRes.rows.map((r) => ({
+            flagId: `${r.student_id}:E_MOOD:${r.as_of_date}`,
+            studentId: r.student_id,
+            studentName: r.student_name,
+            className,
+            ruleCode: "E_MOOD",
+            asOfDate: r.as_of_date,
+            detail: {
+              cadence: "quet_dem" as const,
+              // Cờ cảm xúc KHÔNG mang yêu cầu gặp nào: nút "Cô đã gặp em rồi" chỉ tắt
+              // `attendance.help_requests`, mà cờ này không sinh ra từ bảng đó. Mảng rỗng
+              // ở đây là sự thật, không phải thiếu dữ liệu.
+              openHelpRequests: [],
+              recentlyHandled: r.recently_handled,
+            },
+            caseId: r.case_id,
+            caseStatus: r.case_status as "open" | "closed" | null,
+          })),
+        ],
         pendingLateCheckins: pendingRes.rows.map((r) => ({
           checkinId: r.checkin_id,
           studentId: r.student_id,
@@ -789,22 +891,115 @@ export const careRouter = router({
   }),
 
   /**
-   * "Đã gặp em rồi" — tắt tín hiệu khẩn khỏi buồng lái. Trước đây hai cột
-   * handled_by/handled_at (có từ 0004) không có đường ghi nào, nên cờ khẩn nằm lại
-   * tới khi hết cửa sổ dù cô đã gặp em ngay sáng hôm đó.
+   * "Đã gặp em rồi" — tắt ĐÚNG những tín hiệu khẩn đang hiện trên màn.
+   *
+   * Viết lại 01/08/2026 sau khi tái hiện được lỗi trên hub_dev. Nguyên văn phép đo, để
+   * lần sau ai sửa lại như cũ thì biết mình đang mở lại cái gì:
+   *
+   *   Phiên Cô Vân (GVCN 6A3), em Lê Tiến Dũng có HAI yêu cầu treo 31/07 và 01/08. Buồng
+   *   lái trả cờ E_URGENT với `asOfDate = 2026-08-01`. Bấm lần 1 (màn hình gửi
+   *   `requestedOn = flag.asOfDate`) → `{"updated":1}`; DB còn dòng 31/07 chưa xử lý. Gọi
+   *   lại buồng lái → VẪN E_URGENT, `asOfDate` VẪN 01/08, vì `asOfDate` cũ là
+   *   `greatest(ngày check-in gần nhất, ngày yêu cầu treo gần nhất)` và em check-in 01/08
+   *   với tâm trạng Vui — một buổi sáng vui đã che mất ngày của lời em gửi hôm trước. Bấm
+   *   lần 2 → `{"updated":0,"alreadyHandled":true}` → màn hình in "Người khác đã xử lý
+   *   trước rồi." trong khi KHÔNG AI xử lý gì cả. Bấm bao nhiêu lần nữa cũng vậy: cờ này
+   *   không tắt được từ buồng lái, sống tới hết cửa sổ E_URGENT 14 ngày. Ba em trên
+   *   hub_dev đang ở đúng tình trạng đó.
+   *
+   * Hai thứ đổi, và phải đổi CÙNG NHAU:
+   *   1. Đầu vào là TẬP ID THẬT (`attendance.help_requests.id`), không còn là ngày suy từ
+   *      một trường hiển thị. Bảng đã có khoá chính từ đầu; bản cũ không dùng.
+   *   2. Đầu ra là bốn con số, không còn một boolean. Xem `AcknowledgeHelpRequestOutput`.
+   *
+   * §9 — MỘT câu SQL, một giao dịch: `target` chụp trạng thái TRƯỚC khi ghi, `done` ghi và
+   * trả về đúng những dòng nó đổi. Gọi lần hai với cùng payload cho `justHandled = 0`,
+   * `alreadyHandled = N`, `handledByMe = true` — không nhân đôi tác dụng, và trả lời khác
+   * hẳn ca "gửi id sai" (`notFound = N`).
    */
   acknowledgeHelpRequest: careStaffProcedure
     .input(AcknowledgeHelpRequestInput)
     .mutation(async ({ ctx, input }) => {
       return ctx.runWithDb(async (client) => {
-        const { rowCount } = await client.query(
-          `update attendance.help_requests
-              set handled_by = core.current_user_id(), handled_at = now()
-            where student_id = $1 and requested_on = $2::date and handled_at is null`,
-          [input.studentId, input.requestedOn],
-        );
-        const updated = rowCount ?? 0;
-        return AcknowledgeHelpRequestOutput.parse({ updated, alreadyHandled: updated === 0 });
+        const { rows } = await client.query<{
+          just_handled: number;
+          already_handled: number;
+          not_found: number;
+          remaining_open: number;
+          handled_by_me: boolean;
+          handled_by_name: string | null;
+          handled_at: string | null;
+        }>(
+          // `student_id = $1` là hàng rào thứ hai bên cạnh RLS `help_requests_handle_care`:
+          // id đúng nhưng của em khác thì rơi vào `not_found`, không âm thầm tắt hộ.
+          `with asked as (
+             select unnest($2::uuid[]) as id
+           ),
+           target as (
+             select a.id, h.handled_at, h.handled_by
+               from asked a
+               left join attendance.help_requests h
+                 on h.id = a.id and h.student_id = $1
+           ),
+           done as (
+             update attendance.help_requests h
+                set handled_by = core.current_user_id(), handled_at = now()
+               from target t
+              where h.id = t.id
+                and h.student_id = $1
+                and h.handled_at is null
+              returning h.id
+           ),
+           prior as (
+             -- Dòng ĐÃ có người xử lý TRƯỚC lần gọi này. Lấy dòng gần nhất để nói được
+             -- "ai, lúc mấy giờ" thay vì một câu chung chung.
+             select t.handled_at, t.handled_by
+               from target t
+              where t.handled_at is not null
+              order by t.handled_at desc
+              limit 1
+           )
+           select
+             (select count(*)::int from done) as just_handled,
+             (select count(*)::int from target where handled_at is not null) as already_handled,
+             -- Bằng phép trừ, KHÔNG bằng một điều kiện WHERE thứ ba: mọi id gửi lên phải
+             -- rơi vào đúng một trong ba rổ, và phép trừ là cách duy nhất bảo đảm ba rổ
+             -- cộng lại đúng bằng số id đã gửi. Rổ này gộp "id không có thật", "id của em
+             -- khác" và "dòng RLS không cho ghi" — cả ba đều dẫn tới cùng một việc phải
+             -- làm (tải lại màn hình), nên gộp ở đây là gộp có lý do, khác hẳn cái
+             -- alreadyHandled cũ gộp "đã xong" với "trượt".
+             ((select count(*)::int from asked)
+               - (select count(*)::int from done)
+               - (select count(*)::int from target where handled_at is not null)) as not_found,
+             -- TRỪ ĐI done, không đếm thẳng. Trong cùng MỘT câu lệnh, các nhánh WITH chạy
+             -- trên cùng một ảnh chụp dữ liệu và KHÔNG thấy tác dụng ghi của nhau: một
+             -- câu đếm "handled_at is null" đặt ở đây sẽ đếm cả những dòng mà chính câu
+             -- này vừa đóng. Bài test bắt được đúng chỗ đó — đóng dòng cuối cùng của em
+             -- mà màn hình vẫn in "em còn 1 lời nhắn chưa xử lý", tức là một lời nhắc sai
+             -- ngay sau một thao tác đúng.
+             -- Phép trừ chính xác chứ không xấp xỉ: done chỉ trả về những dòng TRƯỚC ĐÓ
+             -- đang mở, nên nó luôn là tập con của số đếm kia.
+             ((select count(*)::int from attendance.help_requests
+                where student_id = $1 and handled_at is null)
+               - (select count(*)::int from done)) as remaining_open,
+             coalesce((select p.handled_by = core.current_user_id() from prior p), false) as handled_by_me,
+             -- core.users chỉ mở SELECT cho CHÍNH MÌNH (policy users_self, 0009): tên
+             -- đồng nghiệp ra NULL. Không bịa tên — màn hình in "Thầy cô khác".
+             (select u.full_name from prior p left join core.users u on u.id = p.handled_by) as handled_by_name,
+             (select p.handled_at::text from prior p) as handled_at`,
+          [input.studentId, input.helpRequestIds],
+        ).catch(asScopeError);
+
+        const r = rows[0];
+        return AcknowledgeHelpRequestOutput.parse({
+          justHandled: r?.just_handled ?? 0,
+          alreadyHandled: r?.already_handled ?? 0,
+          notFound: r?.not_found ?? 0,
+          remainingOpen: r?.remaining_open ?? 0,
+          handledByMe: r?.handled_by_me ?? false,
+          handledByName: r?.handled_by_name ?? null,
+          handledAt: r?.handled_at ?? null,
+        });
       });
     }),
 
@@ -943,25 +1138,39 @@ export const careRouter = router({
         student_code: string;
         full_name: string;
         status: string | null;
-        mood: number | null;
         checked_in_at: string | null;
+        source: string | null;
         has_open_case: boolean;
         help_pending: boolean;
       }>(
         // Gốc là DANH SÁCH LỚP (core.enrollments) rồi LEFT JOIN các nguồn tín hiệu —
         // cùng lý do đã ghi ở getDashboard: lấy bảng check-in làm gốc thì em không
         // check-in sẽ biến mất khỏi chính danh sách lớp của mình.
+        //
+        // NGUỒN LÀ `attendance.checkins`, KHÔNG phải `attendance.checkins_care` (đổi lại
+        // 01/08/2026). View `checkins_care` gác cột `mood` sau `core.can_read_mood()`, mà
+        // sau 0044 cô không qua được cổng đó nữa — và view lọc theo DÒNG, nên mất mood là
+        // mất cả dòng. Đo thật, cùng câu LEFT JOIN, cùng phiên Cô Lan: nguồn
+        // `checkins_care` trả 5/5 em `status = NULL`; nguồn `attendance.checkins` trả 5/5
+        // em `status = present`. Không đổi lại thì bảng lớp trắng toàn NULL và UI vẽ NULL
+        // thành "Chưa điểm danh" — đâm thẳng vào [QĐ-3]. RLS `can_see_student` vẫn cho cô
+        // đọc bảng gốc; chỉ cột cảm xúc là đóng, và câu này không chọn cột đó.
+        //
+        // `checked_in_at` chỉ có giá trị khi `source = 'app'`: xem lời giải thích dài
+        // trong contract `ClassRosterEntry.checkedInAt`. Trước đây câu này trả
+        // `occurred_at::text` thô nên màn hình nhận cả micro giây lẫn offset — mà thật ra
+        // không màn nào vẽ nó, nên lỗi nằm im.
         `select e.student_id,
                 s.student_code,
                 s.full_name,
                 c.status,
-                c.mood,
-                c.occurred_at::text as checked_in_at,
+                case when c.source = 'app' then to_char(c.occurred_at, 'HH24:MI') end as checked_in_at,
+                c.source,
                 (cc.id is not null) as has_open_case,
                 (h.student_id is not null) as help_pending
            from core.enrollments e
            join core.students s on s.id = e.student_id
-           left join attendance.checkins_care c
+           left join attendance.checkins c
              on c.student_id = e.student_id and c.occurred_on = $2::date and c.kind = 'in'
            left join care.care_cases cc
              on cc.student_id = e.student_id and cc.status = 'open'
@@ -981,8 +1190,8 @@ export const careRouter = router({
           studentCode: r.student_code,
           fullName: r.full_name,
           status: r.status as AttendanceStatus | null,
-          mood: r.mood as 1 | 2 | 3 | 4 | null,
           checkedInAt: r.checked_in_at,
+          source: r.source,
           hasOpenCase: r.has_open_case,
           helpPending: r.help_pending,
         })),
@@ -1070,7 +1279,6 @@ export const careRouter = router({
           reviewed_at: string | null;
           note: string | null;
           checkin_days: number;
-          happy_days: number;
           streak_days: number;
         }>(
           `with roster as (
@@ -1079,12 +1287,18 @@ export const careRouter = router({
                join core.students s on s.id = e.student_id
               where e.class_id = $1 and e.valid_to is null
            ),
+           -- attendance.checkins, KHÔNG phải checkins_care: view kia lọc theo DÒNG sau
+           -- core.can_read_mood(), nên với cô nó trả 0 dòng và checkin_days tụt về 0 cho
+           -- CẢ LỚP. Một bản xem trước ghi "0 ngày đi học" cho em đi đủ 5 buổi là thứ cô
+           -- ký nhầm mà không có cách nào biết.
+           --
+           -- KHÔNG còn happy_days ở đây. Số ngày "Vui" đọc từ cột cảm xúc, mà ADR-026
+           -- đóng cột đó với cô. Không thay bằng 0: xem ReportApprovalRow.happyDays.
            week_stats as (
              select r.student_id,
-                    count(*) filter (where c.kind = 'in')::int as checkin_days,
-                    count(*) filter (where c.mood = 4)::int as happy_days
+                    count(*) filter (where c.kind = 'in')::int as checkin_days
                from roster r
-               left join attendance.checkins_care c
+               left join attendance.checkins c
                  on c.student_id = r.student_id
                 and c.occurred_on between $2::date and $2::date + 4
               group by r.student_id
@@ -1102,7 +1316,7 @@ export const careRouter = router({
                           partition by c.student_id order by c.occurred_on desc
                         )::int as grp
                    from roster r
-                   join attendance.checkins_care c on c.student_id = r.student_id
+                   join attendance.checkins c on c.student_id = r.student_id
                   where c.kind = 'in'
                     and c.status in ('present','late')
                     and c.occurred_on <= current_date
@@ -1117,7 +1331,6 @@ export const careRouter = router({
                   a.reviewed_at::text as reviewed_at,
                   a.note,
                   coalesce(w.checkin_days, 0) as checkin_days,
-                  coalesce(w.happy_days, 0) as happy_days,
                   coalesce(st.streak_days, 0) as streak_days
              from roster r
              left join report.growth_report_approvals a
@@ -1140,10 +1353,11 @@ export const careRouter = router({
             reviewedAt: r.reviewed_at,
             note: r.note,
             checkinDays: r.checkin_days,
-            happyDays: r.happy_days,
+            // `null` = "cô không được phép biết", KHÔNG phải "em không có ngày vui nào".
+            happyDays: null,
             preview: buildReportPreview({
               checkinDays: r.checkin_days,
-              happyDays: r.happy_days,
+              happyDays: null,
               streakDays: r.streak_days,
             }),
           })),
@@ -1343,16 +1557,22 @@ export const careRouter = router({
       const checkinRes = await client.query<{
         occurred_on: string;
         status: string | null;
-        mood: number | null;
         checked_in_at: string | null;
         source: string | null;
       }>(
+        // Nguồn đổi từ `attendance.checkins_care` về `attendance.checkins` (01/08/2026),
+        // cùng lý do đã ghi dài ở `getClassRoster`: view kia lọc theo DÒNG, nên sau 0044
+        // lịch của cô trắng trơn và mọi ngày em đi học đầy đủ đọc ra thành "chưa có dữ
+        // liệu". Cột `mood` biến mất khỏi câu SELECT — đó là [QĐ-1], không phải sơ suất.
+        //
+        // `checked_in_at` chỉ có nghĩa khi `source = 'app'`: dòng cô ghi hộ mang giờ cô
+        // bấm Lưu (đo thật: một ngày cách đây 30 hôm mang "giờ check-in" là 03:28 sáng
+        // nay), dòng gửi bù mang giờ máy chủ nhận. In giờ đó như giờ em vào lớp là bịa.
         `select occurred_on::text,
                 status,
-                mood,
-                to_char(occurred_at, 'HH24:MI') as checked_in_at,
+                case when source = 'app' then to_char(occurred_at, 'HH24:MI') end as checked_in_at,
                 source
-           from attendance.checkins_care
+           from attendance.checkins
           where student_id = $1 and kind = 'in' and occurred_on >= $2::date
           order by occurred_on desc`,
         [input.studentId, bounds.from_date],
@@ -1361,6 +1581,7 @@ export const careRouter = router({
       // Cùng cửa sổ với dải check-in để hai khối trên màn nói về cùng một quãng thời
       // gian. `note` đi ra ở đây — xem lời giải thích dài trong contract StudentHelpRequest.
       const helpRes = await client.query<{
+        id: string;
         requested_on: string;
         requested_at: string;
         topic: string | null;
@@ -1368,7 +1589,9 @@ export const careRouter = router({
         note: string | null;
         handled_at: string | null;
       }>(
-        `select requested_on::text, requested_at::text, topic, urgency, note, handled_at::text
+        // `id` đi ra màn hình từ 01/08/2026: nút "Cô đã gặp em rồi" gửi khoá chính, không
+        // còn gửi ngày suy từ một trường hiển thị (xem `acknowledgeHelpRequest`).
+        `select id, requested_on::text, requested_at::text, topic, urgency, note, handled_at::text
            from attendance.help_requests
           where student_id = $1 and requested_on >= $2::date
           order by requested_on desc`,
@@ -1442,11 +1665,11 @@ export const careRouter = router({
         checkins: checkinRes.rows.map((r) => ({
           occurredOn: r.occurred_on,
           status: r.status as AttendanceStatus | null,
-          mood: r.mood as 1 | 2 | 3 | 4 | null,
           checkedInAt: r.checked_in_at,
           source: r.source,
         })),
         helpRequests: helpRes.rows.map((r) => ({
+          helpRequestId: r.id,
           requestedOn: r.requested_on,
           requestedAt: r.requested_at,
           topic: r.topic as HelpRequestTopic | null,
@@ -1493,13 +1716,21 @@ export const careRouter = router({
   // (acknowledgeHelpRequest · logIntervention · closeCase) — không viết đường ghi thứ
   // hai cho cùng một việc, và nhờ vậy §9 (idempotency) không phải kiểm lại từ đầu.
   //
-  // HAI THỨ CỐ TÌNH KHÔNG ĐỌC — xem lời giải thích dài ở đầu khối tương ứng trong
-  // `contracts/care.ts`: `attendance.checkins_care.mood` (màn check-in hứa với em "Chỉ thầy
-  // cô chủ nhiệm thấy") và `attendance.help_requests.note` (màn /can-gap-thay-co hứa
-  // rằng phòng tâm lý chỉ đọc SAU một lần chuyển tuyến em đã đồng ý — đường chuyển
-  // tuyến đó chưa tồn tại). RLS hiện cho phép cả hai; lời hứa in trên màn hình thì
-  // không. Chỗ hụt ở tầng dữ liệu ghi vào canPhoiHop của gói việc, còn ở tầng này thì
-  // câu SQL đơn giản là không chọn hai cột đó.
+  // HAI THỨ KHÔNG ĐỌC Ở ĐÂY — và sau ADR-026 chúng có HAI lý do khác hẳn nhau, đừng gộp:
+  //
+  //   · `attendance.checkins_care.mood` — KHÔNG phải bị cấm. Từ 01/08/2026 nhãn tại chỗ
+  //     em nhập là "Chỉ thầy cô tâm lý đọc", và `core.can_read_mood()` = `is_me ∨
+  //     in_my_cluster`: tâm lý cụm là vai DUY NHẤT còn đọc được nhật ký cảm xúc. Hai màn
+  //     này không hiện nó chỉ vì chúng là màn QUẢN LÝ VIỆC ("hôm nay ai đang chờ tôi" ·
+  //     "đọc gì trước khi đóng hồ sơ"), chưa phải màn đọc nhật ký. Đây là MỘT MÀN CÒN
+  //     THIẾU, không phải một quyền bị chặn. Lý lẽ cũ ở chỗ này ("tâm lý cụm không phải
+  //     thầy cô chủ nhiệm") nay ngược hướng, và để nguyên là dựng sẵn lý do cho người đọc
+  //     sau cắt nốt quyền của vai cuối cùng còn nhìn thấy chuỗi ngày em không vui.
+  //
+  //   · `attendance.help_requests.note` — ĐÚNG là đang bị lời hứa chặn. Màn
+  //     /can-gap-thay-co in cho em đọc trước khi gửi rằng phòng tâm lý chỉ đọc SAU một
+  //     lần chuyển tuyến em đã đồng ý, và đường chuyển tuyến đó chưa tồn tại. RLS hiện
+  //     cho phép; lời hứa in trên màn hình thì không, và lời hứa thắng.
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
@@ -1789,13 +2020,14 @@ export const careRouter = router({
         // in trên màn /can-gap-thay-co là ràng buộc kỹ thuật, và chỗ dễ vi phạm nhất
         // chính là một màn "gộp mọi thứ về một em" như màn này.
         const helpRes = await client.query<{
+          id: string;
           requested_on: string;
           requested_at: string;
           topic: string | null;
           urgency: string | null;
           handled_at: string | null;
         }>(
-          `select requested_on::text, requested_at::text, topic, urgency, handled_at::text
+          `select id, requested_on::text, requested_at::text, topic, urgency, handled_at::text
              from attendance.help_requests
             where student_id = $1 and requested_on >= $2::date
             order by requested_on desc`,
@@ -1839,6 +2071,7 @@ export const careRouter = router({
             mine: r.mine,
           })),
           helpSignals: helpRes.rows.map((r) => ({
+            helpRequestId: r.id,
             requestedOn: r.requested_on,
             requestedAt: r.requested_at,
             topic: r.topic as HelpRequestTopic | null,

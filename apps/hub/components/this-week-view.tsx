@@ -28,10 +28,12 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc-client";
 import { formatWeekLabel } from "@/lib/week-label";
 import type { HubRole, MoodValue } from "@hub/core/contracts";
+import { DayNote, dayCaptionText } from "./attendance-view";
 import { HubSidebar } from "./hub-sidebar";
 import { Mascot } from "./mascot";
 import { MainContent } from "./page-shell";
 import { StudentTabBar } from "./tab-bar";
+import { NHAN_AI_DOC_CAM_XUC } from "./ui/labels";
 import { ErrorState, LoadingState } from "./ui/query-state";
 
 const MOOD_ICON: Record<MoodValue, string> = {
@@ -147,16 +149,26 @@ export function ThisWeekView({
                           <span className="sr-only">{MOOD_NAME[day.mood as MoodValue]}</span>
                         </span>
                       ) : (
-                        <span className={`h-[52px] w-[52px] rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#F0474D]"}`} />
+                        // Vòng tròn rỗng = hôm đó KHÔNG có ô cảm xúc nào của em. Viền đỏ cũ
+                        // đọc thành "ngày xấu"; nhưng nguyên nhân thường nhất là em bận,
+                        // quên, hoặc cô chưa điểm danh — không có gì để trách. Xám.
+                        <span className={`h-[52px] w-[52px] rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#B9C4D4]"}`} />
                       )}
+                      {/* Cùng một hàm với /diem-danh (attendance-view.tsx). Trước 01/08/2026
+                          hai lưới tuần này chép tay hai câu khác nhau cho cùng một dữ liệu,
+                          và cả hai đều in "vắng" cho ngày chưa ai điểm danh. */}
                       <span className={`text-center text-[11px] font-bold leading-tight ${day.isToday ? "text-navy" : "text-caption"}`}>
-                        {day.checkedInAt ?? (day.isFuture ? "chưa tới" : "vắng")}
+                        {dayCaptionText(day)}
                         {day.isToday && day.checkedInAt ? (
                           <span className="block md:inline">
                             <span className="hidden md:inline"> · </span>hôm nay
                           </span>
                         ) : null}
                       </span>
+                      {/* Trạng thái điểm danh bằng chữ, cùng bảng với /diem-danh: ngày cô ghi
+                          tay (vắng / có phép) không có giờ check-in nên nếu thiếu dòng này,
+                          ô của nó trống trơn và em không có cách nào biết chuyện gì. */}
+                      <DayNote status={day.status} />
                     </div>
                   ))}
                 </div>
@@ -235,9 +247,14 @@ export function ThisWeekView({
                     ) : (
                       <p className="mt-3 text-[12px] text-caption">Chưa có check-in nào tuần này.</p>
                     )}
+                    {/* Khối này VẼ RA cảm xúc cả tuần của em, nên nó là một "chỗ nhập/hiện
+                        cảm xúc" theo nghĩa của §9 và phải mang đúng nhãn đã chốt. Câu chốt
+                        ghép thẳng từ hằng số dùng chung (ui/labels.ts) thay vì chép tay:
+                        câu này đã sai một lần đúng theo kiểu đó — nó vẫn hứa "thầy cô chủ
+                        nhiệm xem" sau khi ADR-026/migration 0044 cắt hẳn quyền đọc của cô. */}
                     <p className="mt-3 text-[11.5px] leading-relaxed text-caption">
-                      Cảm xúc là chuyện riêng của con — chỉ thầy cô chủ nhiệm và thầy cô tâm lý xem để
-                      biết khi nào con cần giúp.
+                      Cảm xúc là chuyện riêng của con. {NHAN_AI_DOC_CAM_XUC}, để biết khi nào con
+                      cần giúp.
                     </p>
                   </div>
 

@@ -1,20 +1,25 @@
 // apps/hub/components/gvcn/class-roster-view.tsx — màn "Lớp chủ nhiệm".
 //
-// Đây là màn ĐỌC: danh sách em trong lớp, mỗi em một dòng, kèm ba tín hiệu có thật
-// hôm nay (điểm danh · tâm trạng · đang có hồ sơ chăm sóc mở). KHÔNG có nút hành động
+// Đây là màn ĐỌC: danh sách em trong lớp, mỗi em một dòng, kèm những tín hiệu có thật
+// hôm nay (điểm danh + giờ em bấm · đang có hồ sơ chăm sóc mở). KHÔNG có nút hành động
 // nào ở đây — hành động nằm ở ba màn còn lại. Trộn "xem" với "sửa" trên cùng một bảng
 // 40 dòng là cách sinh ra những cú bấm nhầm không ai phát hiện.
 //
 // Ba trạng thái bắt buộc (gói "frontend-trang-thai"): đang tải · lỗi · rỗng. Không màn
 // nào của Hub được phép trắng.
+//
+// Cột "Tâm trạng" bị gỡ 01/08/2026 ([QĐ-1], ADR-026): GVCN không còn đọc được nhật ký
+// cảm xúc. Thay vào chỗ đó KHÔNG phải một cột trống — là GIỜ EM BẤM dưới huy hiệu trạng
+// thái, cộng một câu dưới bảng nói thẳng vì sao không có nhãn "đi sớm" ([QĐ-3]).
 "use client";
 
+import { ARRIVAL_BAND_UNAVAILABLE_NOTE } from "@hub/core/contracts";
 import { trpc } from "@/lib/trpc-client";
 import { EmptyState, ErrorState, LoadingState } from "../ui/query-state";
 import { classLabel } from "../ui/labels";
 import { ClassPicker, useSelectedClass } from "./class-picker";
 import { Card, GvcnShell } from "./gvcn-shell";
-import { AttendanceBadge, MoodChip } from "./status-badge";
+import { ArrivalTime, AttendanceBadge } from "./status-badge";
 
 export function ClassRosterView({ displayName, email }: { displayName: string; email: string }) {
   const classesQuery = trpc.care.getMyClasses.useQuery();
@@ -77,7 +82,6 @@ export function ClassRosterView({ displayName, email }: { displayName: string; e
                   <Th>Học sinh</Th>
                   <Th>Mã học sinh</Th>
                   <Th>Điểm danh hôm nay</Th>
-                  <Th>Tâm trạng</Th>
                   <Th>Chăm sóc</Th>
                 </tr>
               </thead>
@@ -89,9 +93,7 @@ export function ClassRosterView({ displayName, email }: { displayName: string; e
                     <td className="px-4 py-3 text-[12px] font-semibold tabular-nums text-muted">{s.studentCode}</td>
                     <td className="px-4 py-3">
                       <AttendanceBadge status={s.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <MoodChip mood={s.mood} />
+                      <ArrivalTime status={s.status} checkedInAt={s.checkedInAt} source={s.source} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
@@ -119,6 +121,12 @@ export function ClassRosterView({ displayName, email }: { displayName: string; e
               </tbody>
             </table>
           </div>
+          {/* MỘT lần, dưới bảng, không lặp lại ở từng dòng: [QĐ-3] đòi năm trạng thái mà
+              dữ liệu chỉ đỡ nổi bốn. Nói thẳng chỗ hụt còn hơn phong cho một cột giờ cái
+              tên "đi sớm" mà nó không mang nổi. Lý do đầy đủ nằm trong chính hằng số. */}
+          <p className="border-t border-line px-4 py-3 text-[11px] leading-relaxed text-muted">
+            {ARRIVAL_BAND_UNAVAILABLE_NOTE}
+          </p>
         </Card>
       )}
     </GvcnShell>

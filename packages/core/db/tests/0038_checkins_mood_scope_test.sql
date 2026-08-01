@@ -13,10 +13,19 @@
 -- phụ huynh và hiệu trưởng KHÔNG thấy mood từng ngày, nhưng phụ huynh VẪN thấy
 -- điểm danh và báo cáo tổng hợp.
 --
+-- ── SỬA 01/08/2026 (ADR-026, migration 0044) ───────────────────────────────
+-- Chủ đầu tư siết thêm một nấc: GVCN cũng KHÔNG còn đọc mood từng ngày. Phạm vi
+-- `core.can_read_mood` nay là `is_me ∨ in_my_cluster` — chính em và tâm lý cụm.
+-- Assertion đầu tiên của file này vì thế ĐÃ ĐỔI CHIỀU (xem chú thích tại chỗ);
+-- phần còn lại của bài test không đổi một chữ, vì thứ nó canh — che CỘT chứ không
+-- chặn DÒNG, phụ huynh giữ điểm danh và số tổng hợp — vẫn nguyên giá trị.
+-- Chiều mới của GVCN được canh đầy đủ ở `0044_mood_chi_tam_ly_test.sql`.
+--
 -- Bốn nhóm assertion. Nhóm 2 là lý do bài test tồn tại; nhóm 3 là lý do nó không
 -- được siết tay quá đà; nhóm 4 chặn kiểu hồi quy mà ba nhóm trên không thấy.
---   1. CHO PHÉP   — chính em, GVCN của em, tâm lý cụm.
---   2. TỪ CHỐI    — phụ huynh, hiệu trưởng/quản trị, GV bộ môn, GVCN lớp khác.
+--   1. CHO PHÉP   — chính em, tâm lý cụm (GVCN đã rời nhóm này từ ADR-026).
+--   2. TỪ CHỐI    — GVCN của em, phụ huynh, hiệu trưởng/quản trị, GV bộ môn,
+--                   GVCN lớp khác.
 --   3. KHÔNG SIẾT NHẦM — phụ huynh vẫn đọc được DÒNG điểm danh và số tổng hợp;
 --      học sinh vẫn ghi được mood (đường check-in hằng ngày không gãy).
 --   4. HÌNH DẠNG  — cột `mood` phải nằm ngoài grant, mọi cột khác phải nằm trong
@@ -34,12 +43,18 @@ insert into attendance.checkins (student_id, occurred_on, kind, mood, status, so
   ('70000000-0000-0000-0000-000000000001', current_date - 1, 'in', 4, 'present', 'app');
 
 -- ═══ 1. CHIỀU CHO PHÉP ═════════════════════════════════════════════════════
+-- ĐÃ ĐỔI CHIỀU 01/08/2026 — ADR-026, migration 0044.
+-- Câu cũ ở đây là: "GVCN CỦA EM đọc được ĐÚNG GIÁ TRỊ mood — 'chỉ thầy cô chủ
+-- nhiệm thấy' nghĩa là cô PHẢI thấy". Câu đó đúng với quyết định 31/07/2026 và
+-- hết đúng với quyết định 01/08/2026: chủ đầu tư chốt cô chủ nhiệm không còn đọc
+-- nhật ký cảm xúc từng ngày, chỉ còn nhận cờ "cần để ý" và tín hiệu "cần gặp
+-- thầy cô". Không xoá assertion — LẬT nó, để chỗ này vẫn có người canh và để ai
+-- đọc sau còn thấy hệ đã từng hứa điều gì. Lý do đầy đủ + đánh đổi: ADR-026.
 select test_support.login_as('90000000-0000-0000-0000-000000000001');  -- cô Lan, GVCN 6A1
-select is(
-  (select mood from attendance.checkins_care
-    where student_id = '70000000-0000-0000-0000-000000000001' and occurred_on = current_date),
-  1::smallint,
-  'GVCN CỦA EM đọc được ĐÚNG GIÁ TRỊ mood — "chỉ thầy cô chủ nhiệm thấy" nghĩa là cô PHẢI thấy');
+select is_empty(
+  $$ select 1 from attendance.checkins_care
+      where student_id = '70000000-0000-0000-0000-000000000001' $$,
+  'GVCN CỦA EM đọc attendance.checkins_care ra 0 DÒNG (ADR-026 lật assertion cũ) — 0 dòng chứ không phải lỗi, để màn hình cô hiện "không có" chứ không hiện "hỏng"');
 select test_support.logout();
 
 select test_support.login_as('90000000-0000-0000-0000-000000000003');  -- cô Mai, tâm lý cụm
@@ -93,7 +108,10 @@ select test_support.logout();
 select test_support.login_as('90000000-0000-0000-0000-000000000006');  -- cô Hạnh, GVCN 6A2
 select is_empty(
   $$ select 1 from attendance.checkins_care $$,
-  'GVCN LỚP KHÁC đọc ra 0 dòng — "chủ nhiệm" là chủ nhiệm CỦA EM ĐÓ');
+  -- Từ ADR-026 câu này không còn là câu về "chủ nhiệm của ai" nữa (mọi chủ nhiệm
+  -- đều ra 0 dòng). Giữ nguyên assertion vì nó vẫn canh một thứ thật: view chủ-quyền
+  -- không được rò dữ liệu qua một vai chỉ vì vai đó có mặt trong cùng cơ sở.
+  'GVCN LỚP KHÁC đọc ra 0 dòng — sau ADR-026 mọi GVCN đều 0 dòng, câu này canh riêng việc view không rò theo cơ sở');
 select test_support.logout();
 
 -- ═══ 3. KHÔNG SIẾT NHẦM ════════════════════════════════════════════════════

@@ -193,6 +193,14 @@ export const checkinRouter = router({
       if (!row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       if (input.wantsHelp) {
+        // QĐ-2 (01/08/2026): tín hiệu "cần gặp thầy cô" ghi THẲNG vào bảng ngay trong
+        // cùng lượt gọi, không đợi `care.run_flag_engine` chạy đêm — buồng lái đọc
+        // `attendance.help_requests` trực tiếp nên cô thấy trong nhịp làm mới kế tiếp.
+        //
+        // `do nothing` là đúng cho đường này (khác `requestHelp` ở dưới): lần bấm này
+        // không mang chủ đề/lời nhắn nào để cập nhật, nên gặp dòng đã có thì giữ nguyên
+        // dòng cũ — đè lên bằng một bản trống là XOÁ thông tin em đã viết. §9: bấm hai
+        // lần trong ngày vẫn đúng một yêu cầu.
         await client.query(
           `insert into attendance.help_requests (student_id, requested_on)
            values ($1, current_date)
@@ -211,21 +219,57 @@ export const checkinRouter = router({
     });
   }),
 
+  /**
+   * QĐ-2 (01/08/2026): em bấm nút cần gặp thì tín hiệu phải tới cô NGAY, không chờ lượt
+   * quét đêm. Đường ghi này thoả điều đó — nó `insert` thẳng vào
+   * `attendance.help_requests`, và buồng lái đọc bảng đó trực tiếp chứ không đợi
+   * `care.run_flag_engine`. Không có hàng đợi nào ở giữa.
+   *
+   * Sửa 01/08/2026 — CÂU "ĐÃ GỬI" IN RA KHI KHÔNG GHI ĐƯỢC GÌ:
+   *
+   * `on conflict … do update … where handled_at is null` là một mệnh đề LỌC, không phải
+   * một điều kiện lỗi: khi hôm nay đã có yêu cầu và cô ĐÃ bấm "đã gặp em rồi", câu lệnh
+   * chạy xong sạch sẽ, cập nhật 0 dòng, và hàm cũ vẫn trả `{ ok: true }`. Màn hình đọc
+   * `submit.isSuccess` rồi hiện "Đã gửi cho cô rồi!" — trong khi lời mới của em không
+   * nằm ở đâu cả và cô không có cách nào biết em vừa nhắn lần nữa.
+   *
+   * Kịch bản này không hiếm và cũng không lành: cô gặp em lúc ra chơi, bấm xác nhận;
+   * chiều em gặp chuyện khác, mở app nhắn tiếp; máy nói đã gửi. Đây đúng loại im lặng
+   * mà luật "im lặng không phải kết luận" cấm — chỉ khác là nó im bằng một câu vui vẻ.
+   *
+   * Nay `returning id` cho biết có ghi được thật không, và kết quả trả về NÓI RA điều đó
+   * để màn hình nói theo. KHÔNG ném lỗi: đây không phải lỗi hệ thống, và một hộp lỗi đỏ
+   * ở đây sẽ làm em tưởng mình làm sai cái gì.
+   *
+   * §9 idempotent giữ nguyên: 1 học sinh 1 yêu cầu/ngày. Bấm gửi hai lần trong ngày (khi
+   * cô chưa xử lý, xem `help_requests_update_self` ở 0020) chỉ cập nhật nội dung dòng cũ,
+   * không sinh dòng thứ hai.
+   */
   requestHelp: protectedProcedure.input(RequestHelpInput).mutation(async ({ ctx, input }) => {
     return ctx.runWithDb(async (client) => {
       const studentId = await getMyStudentId(client);
-      // §9 idempotent: 1 học sinh 1 yêu cầu/ngày — bấm gửi lại trong ngày (khi cô
-      // chưa xử lý, xem help_requests_update_self ở 0020) chỉ cập nhật nội dung.
-      await client.query(
+      const { rows } = await client.query<{ id: string }>(
         `insert into attendance.help_requests (student_id, requested_on, topic, urgency, note)
          values ($1, current_date, $2, $3, $4)
          on conflict (student_id, requested_on)
          do update set topic = excluded.topic, urgency = excluded.urgency, note = excluded.note,
                        requested_at = now()
-         where attendance.help_requests.handled_at is null`,
+         where attendance.help_requests.handled_at is null
+         returning id`,
         [studentId, input.topic, input.urgency, input.note ?? null],
       );
-      return { ok: true as const };
+      const delivered = rows.length > 0;
+      return {
+        ok: true as const,
+        /** Lời của lần bấm NÀY có vào sổ không. `false` ⇒ màn hình KHÔNG được ăn mừng. */
+        delivered,
+        /**
+         * Vì sao không vào sổ. Chỉ có đúng một lý do khả dĩ ở câu lệnh trên (dòng hôm nay
+         * đã được cô xác nhận xong), nhưng vẫn để dạng chuỗi có tên: thêm nhánh sau này
+         * mà chỉ có `delivered: false` thì màn hình lại phải đoán.
+         */
+        reason: delivered ? null : ("da_xac_nhan_hom_nay" as const),
+      };
     });
   }),
 

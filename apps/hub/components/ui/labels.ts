@@ -6,6 +6,27 @@
 // trong hệ dữ liệu học sinh (cùng gốc với lỗi số 2 đã vá ở hub-sidebar.tsx).
 // Không biết lớp thì trả chuỗi rỗng để nơi gọi bỏ hẳn dòng đó, không đoán.
 
+/**
+ * Nhãn `lock` in NGAY TẠI CHỖ em nhập cảm xúc — bốn ô mặt cười ở /checkin, lưới
+ * check-in trên trang chủ, và mọi ô nhập cảm xúc phát sinh sau này.
+ *
+ * Đây là một HẰNG SỐ dùng chung chứ không phải chuỗi viết tay ở từng màn, và lý do rất
+ * cụ thể: câu này đã đổi BA LẦN trong ngày 01/08/2026 ("Chỉ thầy cô chủ nhiệm thấy" →
+ * "…chủ nhiệm và thầy cô tâm lý thấy" → câu hiện tại), mỗi lần vì phạm vi
+ * `core.can_read_mood()` ở tầng dữ liệu đổi. Ba lần chép tay ra ba màn là ba cơ hội để
+ * một màn quên sửa — và màn quên sửa sẽ là màn ít người mở nhất, tức là lời hứa sai
+ * sống lâu nhất ở chỗ khó bắt nhất. Nhãn nói ít hơn hoặc nhiều hơn sự thật đều là nói
+ * dối, và đây là lời hứa với một đứa trẻ về chính câu nó vừa viết ra.
+ *
+ * Nguồn chốt: `danh-cho-may/DESIGN-GUIDELINES.md` §9 (ADR-026, migration 0044 —
+ * `core.can_read_mood()` = `is_me ∨ in_my_cluster`). ĐỔI QUYỀN THÌ ĐỔI CÂU NÀY TRONG
+ * CÙNG MỘT LẦN, không hẹn lại.
+ *
+ * §8 cấm từ vựng vận hành trước mặt học sinh, nên câu này không có chữ "GVCN", "cờ",
+ * "ngưỡng", "quét".
+ */
+export const NHAN_AI_DOC_CAM_XUC = "Chỉ thầy cô tâm lý đọc";
+
 /** "6A2" → "Lớp 6A2". null/rỗng → "" (nơi gọi phải bỏ hẳn dòng, không thay bằng gì). */
 export function classLabel(classCode: string | null | undefined): string {
   const trimmed = classCode?.trim();

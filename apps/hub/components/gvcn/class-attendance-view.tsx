@@ -22,15 +22,33 @@ import { EmptyState, ErrorState, LoadingState, MutationError, MutationSuccess } 
 import { classLabel } from "../ui/labels";
 import { ClassPicker, useSelectedClass } from "./class-picker";
 import { Card, GvcnShell } from "./gvcn-shell";
-import { AttendanceBadge, MoodChip } from "./status-badge";
+import { ArrivalTime, AttendanceBadge } from "./status-badge";
 
 const CHOICES: TeacherAttendanceStatus[] = ["present", "late", "absent", "excused"];
 
-const CHOICE_STYLE: Record<TeacherAttendanceStatus, { on: string; off: string }> = {
-  present: { on: "bg-[#00A85E] text-white", off: "text-[#00693F] hover:bg-[#E3F8ED]" },
+/**
+ * Nền của nút ĐANG CHỌN đổi 01/08/2026 — ba trong bốn nút không đạt 4,5:1.
+ *
+ * Đo lại theo công thức WCAG trên bản cũ (chữ trắng, chữ 11,5px/900):
+ *   · "Có mặt"  trắng trên #00A85E = 3,15:1  ✗
+ *   · "Có phép" trắng trên #2C7BF2 = 4,02:1  ✗
+ *   · "Vắng"    trắng trên #E23A41 = 4,27:1  ✗
+ *   · "Đi muộn" #4A3200 trên #F5A300 = 5,74:1 ✓ (nút duy nhất làm đúng)
+ * DESIGN-GUIDELINES §11 ghi thẳng "không có ngoại lệ theo cỡ chữ".
+ *
+ * Cách sửa: giữ chữ trắng, hạ nền xuống ĐÚNG tông đậm mà bảng màu đã có sẵn và ba nút
+ * này đang dùng làm màu chữ ở trạng thái tắt (#00693F · #C0272D · #1D4E8F) — không chế
+ * thêm màu mới. Đo lại sau khi đổi: 6,79:1 · 5,88:1 · 8,27:1.
+ *
+ * Vì sao đáng làm ngay chứ không xếp hàng chờ đợt tiếp cận: đây là đường ghi DUY NHẤT
+ * chạm chuyên cần, và chữ trên nút đang chọn là thứ nói cho cô biết mình vừa chọn gì.
+ * `tests/unit/a11y-man-nguoi-lon.test.ts` đo lại từ chính bảng này, không chép số.
+ */
+export const CHOICE_STYLE: Record<TeacherAttendanceStatus, { on: string; off: string }> = {
+  present: { on: "bg-[#00693F] text-white", off: "text-[#00693F] hover:bg-[#E3F8ED]" },
   late: { on: "bg-[#F5A300] text-[#4A3200]", off: "text-gold-textDark hover:bg-[#FFF1C9]" },
-  absent: { on: "bg-[#E23A41] text-white", off: "text-[#C0272D] hover:bg-[#FFF0F0]" },
-  excused: { on: "bg-[#2C7BF2] text-white", off: "text-[#1D4E8F] hover:bg-[#E2F0FC]" },
+  absent: { on: "bg-[#C0272D] text-white", off: "text-[#C0272D] hover:bg-[#FFF0F0]" },
+  excused: { on: "bg-[#1D4E8F] text-white", off: "text-[#1D4E8F] hover:bg-[#E2F0FC]" },
 };
 
 export function ClassAttendanceView({ displayName, email }: { displayName: string; email: string }) {
@@ -172,11 +190,13 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-[13.5px] font-extrabold text-ink">{s.fullName}</span>
                     <span className="text-[11px] tabular-nums text-muted">{s.studentCode}</span>
-                    <MoodChip mood={s.mood} />
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-[10.5px] font-black uppercase tracking-wide text-muted">Đang lưu</span>
-                    <AttendanceBadge status={s.status} />
+                    <span>
+                      <AttendanceBadge status={s.status} />
+                      <ArrivalTime status={s.status} checkedInAt={s.checkedInAt} source={s.source} />
+                    </span>
                   </div>
                   <div className="mt-2.5">
                     <StatusPicker
@@ -219,11 +239,11 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
                           <div className="text-[13px] font-extrabold text-ink">{s.fullName}</div>
                           <div className="mt-0.5 flex items-center gap-2">
                             <span className="text-[11px] tabular-nums text-muted">{s.studentCode}</span>
-                            <MoodChip mood={s.mood} />
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <AttendanceBadge status={s.status} />
+                          <ArrivalTime status={s.status} checkedInAt={s.checkedInAt} source={s.source} />
                         </td>
                         <td className="px-4 py-3">
                           <StatusPicker

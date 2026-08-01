@@ -40,6 +40,16 @@
 //   · CHƯA XÁC NHẬN ≠ CHƯA ĐỌC. `handled_at` chỉ nói "chưa ai bấm nút đã-gặp-em". Dải
 //     phải nói đúng chừng đó, không được suy ra tin xấu ("cô chưa đọc") và cũng không
 //     được suy ra tin tốt ("cô đang xử lý rồi").
+//
+// Sửa 01/08/2026 (ADR-026 + QĐ-2), hai việc — cả hai đều là LỜI HỨA NÓI SAI SỰ THẬT:
+//   1. Thẻ "Ai đọc được lời con?" kể đúng MỘT người đọc được (cô chủ nhiệm) trong khi
+//      policy `help_requests_scope` (0037) là `core.can_see_care` — gồm cả TÂM LÝ CỤM,
+//      đọc được ngay từ lúc em bấm gửi. Và câu chân thẻ còn hứa một thao tác chưa tồn
+//      tại ("cô sẽ hỏi ý con trước khi chuyển tới phòng tâm lý"). Đã sửa cả hai tại chỗ.
+//   2. `submit.isSuccess` được dùng làm bằng chứng "lời đã tới cô". Nó không phải: câu
+//      lệnh ghi có mệnh đề `where handled_at is null`, nên khi hôm nay cô đã xác nhận
+//      xong thì lệnh chạy sạch, ghi 0 dòng, và màn hiện "Đã gửi cho cô rồi!". Nay
+//      `requestHelp` trả về `delivered`, và có `NotDeliveredPanel` cho nhánh còn lại.
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -163,7 +173,12 @@ export function HelpRequestView({
               requests={myRequests.data?.requests ?? []}
             />
 
-            {submit.isSuccess ? (
+            {/* `isSuccess` chỉ nói "lời gọi không ném lỗi" — nó KHÔNG nói "lời của con đã
+                vào sổ". Hai điều đó tách nhau kể từ 01/08/2026, xem `requestHelp` trong
+                apps/hub/server/routers/checkin.ts. */}
+            {submit.isSuccess && submit.data?.delivered === false ? (
+              <NotDeliveredPanel teacherName={teacherFirstWord} onGoHome={() => router.push("/home")} />
+            ) : submit.isSuccess ? (
               <SentSuccessPanel teacherName={teacherFirstWord} onGoHome={() => router.push("/home")} />
             ) : (
               <div className="flex flex-wrap items-start gap-4 md:gap-5">
@@ -319,15 +334,37 @@ export function HelpRequestView({
                         {teacherFirstWord} — chủ nhiệm của con
                       </span>
                     </div>
+                    {/* Thêm 01/08/2026. Khối này kể ra người ĐỌC ĐƯỢC lời của em, mà nó thiếu
+                        mất một người: policy `help_requests_scope` (0037) là
+                        `core.can_see_care` = chính em ∨ chủ nhiệm của em ∨ TÂM LÝ CỤM. Thầy cô
+                        tâm lý đọc được lời nhắn NGAY từ lúc em bấm gửi — cùng phạm vi với
+                        quyền bấm "đã gặp em rồi" (0026), và tests/db/help-request-rieng-tu.test.ts
+                        đo đúng điều đó (1 dòng dưới phiên cô Mai). Nói thiếu một vai đọc được
+                        cũng là nói dối, chỉ khó bắt hơn — và ở đúng ô em gõ chuyện riêng nhất
+                        thì đây là kiểu nói dối tệ nhất. */}
+                    <div className="flex items-start gap-2">
+                      <span aria-hidden="true" className="msr flex-none text-[17px] text-[#00A05F]">check_circle</span>
+                      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+                        Thầy cô tâm lý của trường — đọc cùng {teacherFirstWord}, để giúp khi chuyện
+                        cần người chuyên môn
+                      </span>
+                    </div>
                     <div className="flex items-start gap-2">
                       <span aria-hidden="true" className="msr flex-none text-[17px] text-[#D2383E]">cancel</span>
                       <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-                        Bạn cùng lớp · thầy cô khác · bố mẹ — <b>không</b> nhìn thấy
+                        Bạn cùng lớp · thầy cô dạy môn · thầy cô lớp khác · bố mẹ — <b>không</b> nhìn
+                        thấy
                       </span>
                     </div>
+                    {/* Câu cũ ở chỗ này ("{cô} sẽ hỏi ý con trước khi chuyển tới phòng tâm lý")
+                        đã bỏ, vì nó sai hai lần: thầy cô tâm lý ĐÃ đọc được từ đầu, không cần
+                        chuyển; và đường chuyển tuyến có hỏi ý em thì HỆ THỐNG CHƯA CÓ — hứa một
+                        thao tác không tồn tại là hứa suông đúng chỗ em đang cân nhắc có nên kể
+                        hay không. Thay bằng một câu vừa thật vừa dùng được: ô lời nhắn không bắt
+                        buộc, bỏ trống vẫn gửi được. */}
                     <div className="border-t border-[#CFE4FB] pt-2.5 text-[11.5px] leading-relaxed text-[#4E7BB0]">
-                      Nếu chuyện cần người chuyên môn hỗ trợ, {teacherFirstWord} sẽ hỏi ý con trước khi chuyển tới
-                      phòng tâm lý.
+                      Con viết bao nhiêu cũng được. Không viết gì cũng gửi được — thầy cô vẫn biết là
+                      con muốn gặp.
                     </div>
                   </div>
 
@@ -384,6 +421,60 @@ function SentSuccessPanel({ teacherName, onGoHome }: { teacherName: string; onGo
       </h2>
       <p className="text-[13.5px] leading-relaxed text-caption">
         {teacherName} sẽ đọc và tìm con sớm. Đây là một bước dũng cảm.
+      </p>
+      <button
+        onClick={onGoHome}
+        className="min-h-[44px] rounded-[15px] bg-gradient-to-r from-navy to-[#1E5FB8] px-7 py-3.5 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.28)]"
+      >
+        Về trang chủ
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Màn "lời này CHƯA vào sổ" — anh em sinh đôi của `SentSuccessPanel`, và lý do nó tồn tại
+ * là để `SentSuccessPanel` không bị dùng cho một chuyện nó không đúng.
+ *
+ * Khi nào gặp: hôm nay em đã gửi một lần, cô đã bấm "cô gặp em rồi", rồi chiều em mở app
+ * nhắn tiếp. Câu lệnh ghi có mệnh đề `where handled_at is null` nên nó cập nhật 0 dòng và
+ * không báo lỗi gì cả — trước 01/08/2026 màn hình đọc `isSuccess` rồi hiện "Đã gửi cho cô
+ * rồi!" cho một lời không đi đâu hết.
+ *
+ * Ba việc khối này phải làm, theo thứ tự quan trọng:
+ *  1. Nói thẳng là chưa vào sổ, không vòng vo.
+ *  2. Nói VÌ SAO bằng chuyện em nhớ được ("cô đã gặp con về lời sáng nay"), để em không
+ *     tự hiểu thành "máy hỏng" hay "mình bị chặn".
+ *  3. Cho đường đi thật ngay hôm nay: gặp cô trực tiếp. Không có đường nào khác trong app
+ *     — nói ra chứ không giấu.
+ * Giọng KHÔNG phải giọng lỗi hệ thống (không nền đỏ, không "Lỗi"): em không làm sai gì.
+ *
+ * a11y: cùng hợp đồng với `SentSuccessPanel` — `role="status" aria-live="polite"` và dời
+ * focus lên tiêu đề, vì cả form vừa biến mất khỏi DOM cùng cái nút em vừa bấm.
+ */
+function NotDeliveredPanel({ teacherName, onGoHome }: { teacherName: string; onGoHome: () => void }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-6 text-center md:p-10"
+    >
+      <Mascot pose="think" width={72} />
+      <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-navy">
+        Lời này chưa vào sổ của {teacherName}
+      </h2>
+      <p className="text-[13.5px] leading-relaxed text-[#8A5A00]">
+        Hôm nay con đã gửi một lần rồi, và {teacherName} đã đánh dấu là cô gặp con về lời đó. Mỗi
+        ngày sổ chỉ giữ một lời, nên lời vừa rồi chưa được ghi thêm.
+      </p>
+      <p className="text-[12.5px] leading-relaxed text-[#8A5A00]">
+        Nếu con còn chuyện muốn nói <b>hôm nay</b>, con tìm {teacherName} nói trực tiếp nhé. Ngày mai
+        con gửi ở đây được như bình thường.
       </p>
       <button
         onClick={onGoHome}

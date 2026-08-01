@@ -133,7 +133,12 @@ describe("màn 1 · danh sách lớp", () => {
     const row = roster.students.find((s) => s.studentId === TEST_STUDENT);
     expect(row).toBeDefined();
     expect(row!.status).toBeNull();
-    expect(row!.mood).toBeNull();
+    // `mood` đã bị GỠ khỏi hợp đồng (ADR-026) chứ không phải trả về null: null ở đây sẽ
+    // gộp "chưa ai ghi" với "không được phép đọc" vào cùng một giá trị. Khẳng định bằng
+    // hình dạng object — nếu ai đó nối lại cột này thì test đỏ.
+    expect(Object.keys(row!)).not.toContain("mood");
+    expect(row!.source).toBeNull();
+    expect(row!.checkedInAt).toBeNull();
     expect(row!.studentCode).toBe("VA-2026-99002");
   });
 

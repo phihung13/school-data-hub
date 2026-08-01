@@ -209,8 +209,20 @@ function ApprovalRow({
             {meta.label}
           </span>
         </div>
+        {/* `happyDays` là `null` với GVCN kể từ ADR-026 / migration 0044 — cô không đọc được
+            nguồn của con số đó nữa. Câu cũ nội suy thẳng `{row.happyDays}` vào giữa dòng, và
+            React vẽ `null` thành CHUỖI RỖNG: đo thật qua HTTP phiên Cô Lan 01/08/2026, dòng
+            in ra là `Tuần này: 5 ngày có check-in ·  ngày tâm trạng "Vui"` — một khoảng trống
+            đúng chỗ con số. Cô đọc nó thành "màn hình lỗi", không thành "mình không được
+            phép biết". Đó là im lặng bị đọc thành kết luận, ngay trên màn KÝ một thứ gửi ra
+            ngoài nhà trường.
+            Không thay bằng `0` (0 là một lời nói dối trông giống hệt một phép đo) và không
+            bỏ hẳn vế đó (bỏ rồi im là bắt cô tự dựng lấy lời giải thích). Nói thẳng ra. */}
         <div className="mt-1 text-[12px] leading-relaxed text-muted">
-          Tuần này: {row.checkinDays} ngày có check-in · {row.happyDays} ngày tâm trạng "Vui"
+          Tuần này: {row.checkinDays} ngày có check-in ·{" "}
+          {row.happyDays === null
+            ? "số ngày tâm trạng “Vui” thì chỉ thầy cô tâm lý đọc được"
+            : `${row.happyDays} ngày tâm trạng “Vui”`}
           {row.checkinDays === 0 && " — báo cáo tuần này gần như không có dữ liệu thật để kể"}
         </div>
         {row.reviewedAt && (
@@ -323,6 +335,27 @@ function ReportPreviewBlock({ preview, studentName }: { preview: ReportPreview; 
       </div>
 
       <p className="mt-2 text-[14px] font-black text-navy">"{preview.headline}"</p>
+
+      {/* `glowIncomplete` do MÁY CHỦ phát ra, không phải màn hình tự suy: nó bật khi
+          `attendance.happy_days()` trả `null` cho cô (ADR-026), nghĩa là bản dựng ở đây có
+          thể THIẾU mục Glow "Cả tuần đến lớp với tâm trạng vui vẻ" mà bản phụ huynh đọc vẫn
+          có. Trước 01/08/2026 trường này đi ra tới trình duyệt rồi KHÔNG ai vẽ — tức là màn
+          duyệt lại đúng lỗi nó sinh ra để chữa: cô ký một bản khác bản người khác đọc, và
+          lần này còn không biết là mình đang ký bản rút gọn.
+          "có thể còn", KHÔNG phải "chắc chắn có" — máy chủ chỉ biết mình không đọc được
+          nguồn, không biết em có đủ 3 ngày Vui hay không. Câu in ra không được nói mạnh hơn
+          thứ máy chủ thật sự biết. */}
+      {preview.glowIncomplete && (
+        <p className="mt-2 flex gap-1.5 text-[11.5px] leading-snug text-muted">
+          <span className="msr mt-px flex-none text-[14px] text-[#33507C]" aria-hidden>
+            info
+          </span>
+          <span>
+            Bản phụ huynh đọc có thể còn một mục nữa dựa trên tâm trạng cả tuần. Màn này không
+            dựng được mục đó vì thầy cô không đọc nhật ký cảm xúc của em.
+          </span>
+        </p>
+      )}
 
       {empty ? (
         <p className="mt-2 text-[12.5px] leading-relaxed text-muted">

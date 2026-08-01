@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/query-state";
 import { classLabel, personName } from "@/components/ui/labels";
 import { shouldQueueOffline } from "@/components/checkin-view";
-import { describeFlag, readNumber, urgencyPresentation } from "@/components/gvcn-dashboard";
+import { describeFlag, urgencyPresentation } from "@/components/gvcn-dashboard";
 import { statState } from "@/components/home-view";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -128,20 +128,28 @@ describe("thẻ cờ buồng lái GVCN — màu không được là tín hiệu 
     expect(urgencyPresentation({ ruleCode: "B_HOC_TAP" }).level).toBe("watch");
   });
 
-  it("đọc số trong detail an toàn (contract khai là unknown)", () => {
-    expect(readNumber({ negativeDays: 3 }, "negativeDays")).toBe(3);
-    expect(readNumber({ negativeDays: "5" }, "negativeDays")).toBe(5);
-    expect(readNumber({ negativeDays: null }, "negativeDays")).toBeNull();
-    expect(readNumber({}, "negativeDays")).toBeNull();
-  });
+  // `readNumber` đã bị gỡ 01/08/2026 cùng với `FlagSummary.detail` kiểu tự do. Không có
+  // con số nào trong detail nữa để mà đọc an toàn — xem `FlagDetail` trong contract.
 
-  it("mô tả cờ ghép đúng hai tín hiệu, không in 'undefined ngày'", () => {
-    expect(describeFlag({ helpRequested: true, negativeDays: 3 })).toContain("cần gặp thầy cô");
-    expect(describeFlag({ helpRequested: true, negativeDays: 3 })).toContain("3 ngày");
-    // Bấm nút nhưng chưa có chuỗi mood xấu: không được đẻ ra "+ mood ... undefined ngày".
-    expect(describeFlag({ helpRequested: true })).toBe("Đã bấm “cần gặp thầy cô”");
-    expect(describeFlag({ helpRequested: false, negativeDays: 5 })).toContain("5 ngày");
-    expect(describeFlag({})).not.toContain("undefined");
+  it("mô tả cờ KHÔNG lộ nội dung cảm xúc (ADR-026 · DESIGN-GUIDELINES §9)", () => {
+    const urgent = describeFlag({
+      cadence: "tuc_thi",
+      openHelpRequests: [
+        { helpRequestId: "11111111-1111-4111-8111-111111111111", requestedOn: "2026-08-01", urgency: "urgent" },
+      ],
+      recentlyHandled: false,
+    });
+    expect(urgent).toContain("cần gặp thầy cô");
+
+    const mood = describeFlag({ cadence: "quet_dem", openHelpRequests: [], recentlyHandled: false });
+    // Ba thứ §9 cấm in phía GVCN: chiều của cảm xúc, số ngày, trích dẫn lời em.
+    for (const forbidden of ["buồn", "mệt", "đi xuống", "ngày"]) {
+      expect(mood.toLowerCase()).not.toContain(forbidden);
+    }
+    expect(mood).not.toMatch(/\d/);
+    expect(mood).not.toContain("undefined");
+    // Nhưng vẫn phải nói ĐƯỢC là có chuyện — im lặng ở đây là mất luôn tác dụng của cờ.
+    expect(mood.length).toBeGreaterThan(0);
   });
 });
 

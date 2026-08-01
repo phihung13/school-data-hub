@@ -17,6 +17,121 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-01
+
+Ba quyết định của chủ đầu tư ngày 01/08/2026 chạm tới bề mặt hợp đồng. Đây là bản **PHÁ
+VỠ** đầu tiên của `@hub/core/contracts` — đọc kỹ mục `Removed` trước khi cập nhật client.
+
+### Removed
+
+- **`GetDashboardOutput.moodDistribution`**, **`ClassRosterEntry.mood`**,
+  **`StudentCheckinDay.mood`**, và schema **`MoodBucket`** — [QĐ-1] / ADR-026: giáo viên
+  chủ nhiệm không còn đọc được nhật ký cảm xúc từng ngày của học sinh. Tầng dữ liệu đã
+  cắt ở migration `0044` (`core.can_read_mood()` = `is_me ∨ in_my_cluster`); ba field này
+  là đường còn lại ở tầng hợp đồng.
+
+  **Vì sao GỠ HẲN chứ không giữ field rồi luôn trả `null`/`[]`** — và đây là chỗ bản này
+  cố ý đi lệch nhịp expand–contract, nên phải giải thích chứ không lặng lẽ làm: cả ba
+  field đều đã có `null`/rỗng mang một nghĩa CÓ SẴN. `ClassRosterEntry.mood = null` nghĩa
+  là "em chưa chọn tâm trạng hôm nay"; `moodDistribution = []` nghĩa là "chưa em nào
+  chọn". Giữ field rồi luôn trả giá trị đó là dạy client đọc "không được phép biết" thành
+  "không có gì" — đúng loại nói dối mà cả hệ này chống, và tệ hơn hẳn một lỗi biên dịch.
+  Một field biến mất thì `tsc` kêu ngay lúc build; một field luôn trả `null` thì không ai
+  biết cho tới lúc một giáo viên đọc sai về một đứa trẻ.
+
+  Không có client nào đã phát hành (chưa lên CH Play/App Store), nên cái giá thật của
+  việc bỏ nhịp Deprecated ở đây bằng không.
+
+- **`AcknowledgeHelpRequestInput.requestedOn`** — thay bằng `helpRequestIds`. Xem
+  `Changed` bên dưới.
+
+- **`AcknowledgeHelpRequestOutput.updated`** — thay bằng bốn con số. Xem `Changed`.
+
+- **`contracts/checkin.ts` không còn khai `CONTRACTS_VERSION`.** Bản sao cũ đó đã bị
+  `index.ts` che từ lâu (export tường minh thắng export sao), nên giá trị lọt ra ngoài
+  KHÔNG đổi và không client nào gãy. Gỡ ở đây vì `contracts-lint` chuyển từ cảnh báo
+  sang chặn ngay khi hai số lệch nhau — và lần tăng lên 0.2.0 này là lần đầu chúng lệch.
+
+### Changed
+
+- **`AcknowledgeHelpRequestInput`: `{ studentId, requestedOn }` → `{ studentId,
+  helpRequestIds: uuid[] }`.** Sửa một lỗi ĐANG SỐNG, tái hiện được trên hub_dev:
+  buồng lái gửi `requestedOn = flag.asOfDate`, mà `asOfDate` cũ là `greatest(ngày
+  check-in gần nhất, ngày yêu cầu treo gần nhất)`. Em có hai yêu cầu treo (31/07 và
+  01/08) và một buổi sáng 01/08 vui vẻ: cú bấm đầu tắt dòng 01/08, rồi ngày check-in che
+  mất ngày của yêu cầu còn lại, nên mọi cú bấm sau khớp 0 dòng — cờ khẩn KHÔNG TẮT ĐƯỢC
+  từ buồng lái, sống tới hết cửa sổ 14 ngày. `attendance.help_requests` đã có khoá chính
+  `id uuid` từ đầu; bản cũ không dùng.
+
+  **Luôn gửi tập id ĐANG HIỆN TRÊN MÀN**, đừng gửi "đóng hết yêu cầu treo của em": màn
+  hình có thể đang vẽ trạng thái của mười phút trước, và đóng hết sẽ nuốt luôn lời em vừa
+  gửi mà chưa ai đọc — rồi em nhận dấu "cô đã gặp em rồi" cho lời đó.
+
+- **`AcknowledgeHelpRequestOutput`: `{ updated, alreadyHandled: boolean }` → `{
+  justHandled, alreadyHandled, notFound, remainingOpen, handledByMe, handledByName,
+  handledAt }`.** `alreadyHandled` cũ là một boolean gộp ít nhất bốn nguyên nhân khác hẳn
+  nhau, và hai màn đang in cùng một câu ("Người khác đã xử lý trước rồi.") cho cả bốn.
+  `alreadyHandled` nay là một SỐ, không phải boolean — client cũ đọc nó như boolean sẽ
+  thấy `0` là falsy và `N` là truthy, tình cờ đúng, nhưng đừng dựa vào.
+
+- **`FlagSummary.detail`: `z.record(z.unknown())` → `FlagDetail` (schema đóng).** Bản cũ
+  chở `negativeDays`, `negativeDaysInWindow`, `negativeStreak`, `mode`, `threshold` —
+  tức số ngày em có tâm trạng xấu, đi thẳng ra trình duyệt của giáo viên chủ nhiệm.
+  DESIGN-GUIDELINES §9 cấm ba thứ ở phía GVCN vì cả ba nói nhiều hơn "cần để ý": chiều
+  của cảm xúc, SỐ NGÀY, và mọi trích dẫn từ ô nhập của em — **cắt tại contract, không
+  chỉ ẩn bằng CSS**. `FlagDetail` nay có đúng ba khoá: `cadence`, `openHelpRequests`,
+  `recentlyHandled`.
+
+- **`ReportApprovalRow.happyDays`: `number` → `number | null`.** Số ngày "Vui" đọc từ cột
+  cảm xúc, nên với GVCN nó là `null`. Không để rơi xuống `0`: `0` ở đây là lời nói dối
+  thay cho "không được phép biết", và là loại tệ nhất vì trông giống hệt một phép đo —
+  cô sẽ đọc "tuần này em không có ngày nào vui" về một em có thể vui cả tuần.
+
+### Added
+
+- **`FlagCadence` + `FlagDetail.cadence`** ([QĐ-2], VIỆC 4). Buồng lái GVCN trộn HAI nhịp
+  trong cùng một danh sách: `tuc_thi` (E_URGENT tính thẳng từ `attendance.help_requests`
+  ngay trong lượt gọi — đo đường đầy đủ qua HTTP: 195 ms ghi + 226 ms đọc) và `quet_dem`
+  (E_MOOD do `care.run_flag_engine` sinh theo lượt quét). **Màn hình BẮT BUỘC nói ra nhịp
+  của từng thẻ.** Chỗ nguy hiểm nhất là chiều VẮNG MẶT: không có cờ khẩn nghĩa là "chưa em
+  nào bấm", còn không có cờ cảm xúc có thể chỉ nghĩa là "bộ quét chưa chạy".
+
+- **`OpenHelpRequest`** + `FlagDetail.openHelpRequests`, **`StudentHelpRequest.helpRequestId`**,
+  **`ClusterHelpSignal.helpRequestId`** — khoá chính thật đi ra tới màn hình. Dùng nó làm
+  khoá React thay cho `requestedOn`: khoá tự nhiên chỉ hợp lệ nhờ
+  `unique(student_id, requested_on)` và sẽ gãy im lặng khi bảng cho phép hai yêu cầu một ngày.
+
+- **`MoodVisibility`** + `GetDashboardOutput.moodVisibility`. Bỏ một ô khỏi màn hình rồi
+  im lặng cũng là một cách nói dối — nó để người dùng tự dựng lấy một lời giải thích sai
+  ("màn hình hỏng"). Máy chủ phát ra mã lý do, màn hình chọn câu chữ, không tự suy.
+
+- **`GetDashboardOutput.totals.notCheckedInCount`** ([QĐ-3]). Thẻ "Vắng" đếm
+  `status = 'absent'`, nên buổi sáng chưa ai điểm danh thì nó bằng 0 và phụ đề in "không
+  có ai vắng". "Chưa ai ghi gì" và "đã ghi và không ai vắng" là hai sự thật khác nhau.
+
+- **`ClassRosterEntry.source`** và ý nghĩa mới của `checkedInAt`. `checkedInAt` nay là
+  `"HH:MM"` **chỉ khi `source = 'app'`**. Trước đó câu SQL trả `occurred_at::text` thô
+  (gọi thật qua HTTP: `"2026-08-01 00:41:49.075267+07"`), trong khi contract đã hứa "null
+  khi dòng do cô ghi hộ" — mà cột là `not null default now()` nên không bao giờ null: dòng
+  cô đánh vắng cho một ngày cách đây 30 hôm vẫn mang "giờ check-in" là 3 giờ sáng nay.
+
+- **`ATTENDANCE_STATUS_ICON`, `ATTENDANCE_UNKNOWN_LABEL`, `ATTENDANCE_UNKNOWN_ICON`**
+  ([QĐ-3]). Một bảng icon cho MỌI màn. Trước đó lịch trong hồ sơ học sinh gộp `late` và
+  `queued_late` vào cùng icon `schedule`, và để `present`/`excused` không có icon nào —
+  nên ngày cô ghi "có mặt" vẽ y hệt ngày chưa ai ghi gì.
+
+- **`ARRIVAL_BAND_UNAVAILABLE_NOTE`** ([QĐ-3]). [QĐ-3] đòi năm trạng thái, trong đó có
+  "đi sớm". Bốn trạng thái có chỗ chứa thật; "đi sớm" thì **không**:
+  `attendance.resolve_checkin` không đọc `opens_at` ở bất kỳ nhánh nào (đo trên hub_dev
+  trong giao dịch đã rollback, luật tạm 06:45–07:30: 05:30 → present · 07:29 → present ·
+  07:31 → late), cột duy nhất tách được là `occurred_at` — mà nó là giờ máy chủ nhận lượt
+  bấm — và `attendance.checkin_rules` hôm nay có 0 dòng. Nên màn hình hiện GIỜ THẬT và
+  nói thẳng chỗ hụt, thay vì bịa một giá trị thứ sáu trong `status`.
+
+- **`ReportPreview.glowIncomplete`.** Bản xem trước của GVCN có thể thiếu một mục Glow so
+  với bản phụ huynh đọc (mục "tâm trạng vui vẻ" dựng từ số ngày Vui). Để nó lặng lẽ biến
+  mất là quay lại đúng thứ màn duyệt sinh ra để chữa: ký một bản khác bản người khác đọc.
+
 ### Changed
 
 - **Dạng dấu mốc của BẢN CHỤP đổi, bề mặt hợp đồng KHÔNG đổi** (01/08/2026). Bản chụp

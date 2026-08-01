@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 21
+sync-version: 23
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -42,7 +42,7 @@ Dữ liệu lõi (người dùng, học sinh, giáo viên, phụ huynh, cơ sở
 ## Dữ liệu cảm xúc (§3, ADR-002) — lưu như dữ liệu thường
 
 - Không mã hóa, không khu vực khóa riêng: check-in cảm xúc nằm trong `attendance.checkins` như dữ liệu thường; `counselor_notes` trong `care`.
-- ~~Phân quyền theo ma trận chung dưới đây, y như mọi dữ liệu khác.~~ **Sửa 31/07/2026 (`0038`):** cột `attendance.checkins.mood` **KHÔNG** đi theo hàng 1 ma trận nữa. "Lưu như dữ liệu thường" là câu về CÁCH LƯU (không mã hóa, không bảng riêng) — nó chưa bao giờ có nghĩa "ai cũng đọc được như nhau". Phạm vi đọc mood là `core.can_read_mood()` = chính em ∪ GVCN của em ∪ tâm lý cụm; xem mục "Che cột `mood`" bên dưới.
+- ~~Phân quyền theo ma trận chung dưới đây, y như mọi dữ liệu khác.~~ **Sửa 31/07/2026 (`0038`):** cột `attendance.checkins.mood` **KHÔNG** đi theo hàng 1 ma trận nữa. "Lưu như dữ liệu thường" là câu về CÁCH LƯU (không mã hóa, không bảng riêng) — nó chưa bao giờ có nghĩa "ai cũng đọc được như nhau". Phạm vi đọc mood là `core.can_read_mood()`; xem mục "Che cột `mood`" bên dưới. **Siết tiếp 01/08/2026 (`0044`, ADR-026):** phạm vi đó nay là **chính em ∪ tâm lý cụm** — **GVCN đã bị cắt**. Dòng này trước đó còn ghi "chính em ∪ GVCN của em ∪ tâm lý cụm" và đã sai kể từ `0044`: nó nói **rộng hơn** quyền thật, tức là người đọc sau sẽ tưởng GVCN được đọc và mở lại đúng cửa vừa đóng. Ma trận ngay dưới (ô `homeroom` của hai hàng ngoại lệ) là bản có hiệu lực.
 - Cờ E chỉ ghi loại tín hiệu, không sao chép nội dung vào cờ.
 - Job xóa chi tiết mood >12 tháng (giữ aggregate `attendance.mood_trends`) — lời hứa công khai, **đã có hàm thật + test từ 31/07/2026**: `attendance.rollup_mood_trends()` chạy trước, `attendance.purge_old_emotion_details()` xóa sau (`0031`). Phần còn thiếu là bộ lập lịch gọi chúng hằng đêm — ghi `DEBT.md` #24, không được nói là đã tự chạy.
 - Báo cáo học thuật/xếp loại không dùng dữ liệu cảm xúc (§5).
@@ -55,7 +55,8 @@ Luật đọc bảng này (siết lại 31/07/2026): **ô nào không ghi `GĐ2`
 | Dữ liệu ↓ / Role → | student | guardian | teacher | homeroom | counselor | principal | board |
 |---|---|---|---|---|---|---|---|
 | core / tutor / evidence / attendance | own | children | assigned classes | homeroom class | cluster | campus | **GĐ2** |
-| ↳ **ngoại lệ: cột `attendance.checkins.mood`** (`0038`) | own | **—** | **—** | homeroom class | cluster | **—** | **GĐ2** |
+| ↳ **ngoại lệ: cột `attendance.checkins.mood`** (`0038`, siết tiếp `0044`) | own | **—** | **—** | **—** | cluster | **—** | **GĐ2** |
+| ↳ **ngoại lệ: `attendance.mood_trends`** (`0044` — cùng phạm vi, vì bảng này chỉ chứa cảm xúc) | own | **—** | **—** | **—** | cluster | **—** | **GĐ2** |
 | care.flags + interventions | — | — | **GĐ2** | homeroom class | cluster | **GĐ2** | **GĐ2** |
 | health.logs (y tế) | — | children | **—** | homeroom | cluster | — | — |
 | care.counselor_notes | — | — | — | homeroom | cluster | — | — |
@@ -165,7 +166,9 @@ Kiểm chứng đã chạy (31/07/2026): `0037_help_requests_scope_test.sql` 13 
 
 ## Che cột `mood` (`0038`) — lần thứ BA của cùng một lỗi gốc
 
-Màn `/checkin` in chữ cho học sinh đọc, ngay tại chỗ em bấm bốn ô cảm xúc. Cho tới 01/08/2026 câu đó là **"Chỉ thầy cô chủ nhiệm thấy"**, và `DESIGN-GUIDELINES §9` ghi đúng câu đó. Nay câu đã sửa thành **"Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"** — vì `core.can_read_mood()` cho ĐÚNG hai vai đọc, mà nhãn cũ chỉ kể một: **nói thiếu một vai cũng là nói dối, chỉ khó bắt hơn.** Sửa ở cả bốn chỗ in nhãn (`checkin-view.tsx` ×2, `home-view.tsx`, `this-week-view.tsx`) và ở thẻ "Ai thấy gì của mình?" (`profile-view.tsx`) — màn sinh ra để nói thật thì không được là màn nói thiếu. Ở tầng dữ liệu thì không: `attendance.checkins` nằm trong vòng lặp 16 bảng của `0009:150-176` nên dùng chung `core.can_see_student()` — hàm gồm cả `is_my_child` và `principal_of`. **RLS lọc theo DÒNG, mà `mood` là một CỘT nằm chung dòng với điểm danh.**
+> **Đọc mục này cùng mục `0044` bên dưới.** Nhãn và phạm vi ghi ở đây là bản 31/07/2026 và **đã bị ADR-026 siết tiếp ngày 01/08/2026**: giáo viên chủ nhiệm không còn đọc mood. Giữ nguyên văn bản cũ ở đây (không viết đè) vì nó là hồ sơ của một quyết định đã ban hành và của một lỗi đã sửa; phần hiệu lực hiện hành nằm ở mục `0044`.
+
+Màn `/checkin` in chữ cho học sinh đọc, ngay tại chỗ em bấm bốn ô cảm xúc. Cho tới 01/08/2026 câu đó là **"Chỉ thầy cô chủ nhiệm thấy"**, và `DESIGN-GUIDELINES §9` ghi đúng câu đó. Câu đã sửa một lần trong ngày thành **"Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"** — vì `core.can_read_mood()` khi đó cho ĐÚNG hai vai đọc, mà nhãn cũ chỉ kể một: **nói thiếu một vai cũng là nói dối, chỉ khó bắt hơn.** (Chiều ngày 01/08, ADR-026 cắt tiếp vai chủ nhiệm nên nhãn chuẩn nay là **"Chỉ thầy cô tâm lý đọc"** — xem mục `0044`.) Ở tầng dữ liệu thì trước `0038` câu đó không đúng: `attendance.checkins` nằm trong vòng lặp 16 bảng của `0009:150-176` nên dùng chung `core.can_see_student()` — hàm gồm cả `is_my_child` và `principal_of`. **RLS lọc theo DÒNG, mà `mood` là một CỘT nằm chung dòng với điểm danh.**
 
 Đo trên hub_dev trước khi vá, dưới đúng danh tính từng vai: phiên **phụ huynh đọc ra 7 dòng có mood**, phiên **hiệu trưởng 8 dòng**.
 
@@ -185,7 +188,45 @@ Quyết định nghiệp vụ chủ đầu tư 31/07/2026: mood CHỈ GVCN và t
 
 Lý do quyết định không phải "ít việc hơn" mà là: **một lời hứa bị phá phải hỏng thành tiếng.** Với cách che cột, ngày nó che nhầm chỗ thì không ai biết cho tới lúc mở bảng xu hướng ra thấy trống.
 
-Kiểm chứng đã chạy (31/07/2026): `0038_checkins_mood_scope_test.sql` 20 assertion và `tests/db/mood-rieng-tu.test.ts` 11 ca, cả hai xanh trên Postgres thật. Hai bài test cũ đổi chiều **có chủ ý** và phải đi kèm ADR: `0023_principal_scope_test.sql` (chính file đó đã viết sẵn "nếu Hội đồng dữ liệu sau này quyết định che mood khỏi BGH thì đây là assertion đỏ đầu tiên") và `0017_checkins_self_update_test.sql` (`excluded.mood` bị Postgres tính là ĐỌC cột `mood` nên đòi quyền SELECT — gán thẳng tham số thì không).
+Kiểm chứng đã chạy (31/07/2026): `0038_checkins_mood_scope_test.sql` 20 assertion và `tests/db/mood-rieng-tu.test.ts` 11 ca, cả hai xanh trên Postgres thật. Hai bài test cũ đổi chiều **có chủ ý** và phải đi kèm ADR: `0023_principal_scope_test.sql` (chính file đó đã viết sẵn "nếu Hội đồng dữ liệu sau này quyết định che mood khỏi BGH thì đây là assertion đỏ đầu tiên") và `0017_checkins_self_update_test.sql` (`excluded.mood` bị Postgres tính là ĐỌC cột `mood` nên đòi quyền SELECT — gán thẳng tham số thì không). *(Sau `0044`: bài pgTAP `0038` vẫn 20 assertion nhưng assertion #1 đã đổi chiều — xem mục `0044`.)*
+
+## `0042_nguong_theo_co_so.sql` — ngưỡng E_MOOD hết lệch tầng
+
+`0026` dựng `care.resolve_threshold(rule_code, school_id)` và đổi khoá của `care.thresholds` thành `(rule_code, school_id)` với đúng một mục đích: cho phép "mỗi cơ sở một ngưỡng riêng, cơ sở chưa khai thì dùng số chung". Cùng file đó, `care.v_signal_emotion` lại gọi `care.resolve_threshold('E_MOOD')` — **thiếu tham số thứ hai**. Thân hàm lọc `(t.school_id = p_school_id or t.school_id is null)`, mà `t.school_id = null` không bao giờ đúng, nên nhánh "dòng riêng của cơ sở" bị loại sạch và view **luôn** lấy dòng toàn hệ. Trong khi tầng ứng dụng (`apps/hub/server/care-thresholds.ts`) gọi CÓ `school_id`.
+
+Vì sao chưa ai thấy: đo trên hub_dev 01/08/2026, cả 6 dòng `care.thresholds` đều `school_id IS NULL` — hai đường trùng nhau **ngẫu nhiên**. Ngày đầu tiên có người khai một dòng riêng cho một cơ sở là ngày buồng lái và bộ quét cờ tính bằng hai con số khác nhau, và **không lỗi nào được ném**: cả hai đều trả số, chỉ là số khác nhau. Người khai ngưỡng tưởng mình vừa đổi hành vi hệ thống, trong khi chỉ đổi được một nửa.
+
+| Đối tượng | Migration | Ghi chú |
+|---|---|---|
+| View `care.v_signal_emotion` (viết lại) | `0042_nguong_theo_co_so.sql` | Đọc `window_days` **và** `bad_mood_max` qua `care.resolve_threshold('E_MOOD', s.school_id)` bằng `cross join lateral` trên `core.students` — đúng khuôn `0039` đã dùng cho `care.v_signal_attendance` / `care.v_signal_behavior`. Từ nay ba view tín hiệu hỏi ngưỡng theo cùng một cách. `bad_mood_max` đi theo **từng dòng** check-in thay vì nhân chéo một ngưỡng cho cả bảng, nếu không mỗi em lại bị so với ngưỡng của mọi cơ sở. Cột và kiểu giữ nguyên từng nét nên `create or replace` chạy được và `care.run_flag_engine` không phải sửa một chữ. `coalesce(..., 14/2)` giữ nguyên: bảng ngưỡng thiếu dòng thì view vẫn trả số chứ không trả rỗng — rỗng ở đây trông y hệt "cả lớp đều ổn". View này **chưa từng grant cho `authenticated`** nên việc nó join thêm `core.students` không mở thêm quyền cho ai. |
+
+Kiểm chứng đã chạy (01/08/2026): `0042_nguong_theo_co_so_test.sql` **11 assertion xanh** trên database dựng lại từ đầu. Bài test tự khai một dòng ngưỡng riêng cho cơ sở Q2 rồi khẳng định view đổi theo, và chứng minh **hai tham số riêng biệt** (`window_days` trước, `bad_mood_max` sau) với một em ở cơ sở khác làm đối chứng mỗi lần — không có bước khai đó thì bài test xanh y hệt trên cả bản cũ lẫn bản mới. **Thử ngược:** dựng lại bản `0026` cũ rồi chạy lại đúng bài đó cho **4 assertion đỏ**. Trả xong chốt chặn (e) của `DEBT.md` #32.
+
+## `0044_mood_chi_tam_ly.sql` (ADR-026) — nhật ký cảm xúc rời khỏi tầm đọc của GVCN
+
+Quyết định chủ đầu tư 01/08/2026, **đảo một phần ADR-025**: giáo viên chủ nhiệm không còn xem được nhật ký cảm xúc từng ngày — không trên màn hình, và hỏi thẳng cơ sở dữ liệu cũng bị từ chối. Cô **vẫn** nhận cờ "em này cần để ý" và **vẫn** nhận ngay tín hiệu "cần gặp thầy cô". Tâm lý cụm, chính em, phụ huynh, BGH: không đổi.
+
+Lý do đảo, ghi như biên bản chứ không như lời khen: ADR-025 đặt đúng câu hỏi ("ai được thấy em này" ≠ "ai được thấy em này CẢM THẤY GÌ") nhưng trả lời còn rộng một vai. Nhật ký cảm xúc từng ngày là lời một đứa trẻ nói với chính mình, không phải dữ kiện quản lý lớp; để nó trong tầm đọc thường ngày của đúng người chấm điểm và xếp loại em là bắt §5 sống bằng kỷ luật cá nhân thay vì bằng ràng buộc kỹ thuật.
+
+**Ba cửa, không phải một** — cắt một cửa mà để hai cửa kia là chưa cắt gì:
+
+| Đối tượng | Migration | Ghi chú |
+|---|---|---|
+| `core.can_read_mood(uuid)` (viết lại) | `0044_mood_chi_tam_ly.sql` | `core.is_me() OR core.in_my_cluster()`. **Cố ý không gọi `core.can_see_care()`** nữa (bản `0038` gọi): hàm đó còn nhánh `is_homeroom_of`, gọi lại nó là mở lại đúng cửa vừa đóng, kín đáo hơn nhiều so với thêm thẳng một chữ. Thân hàm chỉ có một dòng và **không có chú thích bên trong** — pgTAP `0044` đọc `pg_proc.prosrc` để khẳng định hàm không nhắc `can_see_care` / `is_homeroom_of` / `can_see_student`, mà `prosrc` giữ cả chú thích. |
+| Policy `mood_trends_scope` trên `attendance.mood_trends` (viết lại) | `0044_mood_chi_tam_ly.sql` | Từ `core.can_see_student(student_id)` sang `core.can_read_mood(student_id)`. Bảng này chứa `avg_mood` + `sample_count` theo tháng của từng em và **không chứa gì khác** — nó lọt vào vòng lặp 16 bảng của `0009` chỉ vì "có cột student_id", đúng cái bẫy mà ADR-025 đặt tên. Hôm nay chưa lộ **chỉ vì** `attendance.rollup_mood_trends()` chưa từng chạy (`DEBT` #33): 0 dòng vì bảng rỗng, không phải vì cửa đóng. Giữ nguyên TÊN policy để `ops.v_rls_gaps` (`0024`) và các bài test đang gọi tên nó không phải sửa theo. |
+| `attendance.happy_days(uuid, date, date)` (viết lại) | `0044_mood_chi_tam_ly.sql` | Hai thay đổi. **(a) Cổng:** bỏ `core.can_see_student()` (6 nhánh, có chủ nhiệm / bộ môn / hiệu trưởng), thay bằng `is_me ∨ is_my_child ∨ in_my_cluster` — cổng của hàm nay khớp **người đọc báo cáo**, không khớp người quản lý lớp. **(b) Độ rộng khoảng hỏi:** từ chối khoảng hẹp hơn 5 ngày bằng lỗi `22023`. Không có (b) thì cổng (a) vẫn để lọt câu hỏi "hôm qua em có Vui không" cho phụ huynh, mà ranh giới `0038` đã chốt là họ xem SỐ TỔNG HỢP. 5 ngày là số nhỏ nhất còn dùng được: `report.buildGrowthReport` hỏi thứ Hai → thứ Sáu (`p_to - p_from = 4`), khít mép và cố ý khít. Đổi `language sql` → `plpgsql` **chỉ** để ném được lỗi có thông điệp: NULL ở hàm này đã mang nghĩa "không được phép biết về EM NÀY", nhồi thêm nghĩa "câu hỏi sai hình dạng" vào cùng một giá trị là dựng sẵn một lần đọc nhầm (`report.ts` làm `stats.happy_days >= 3`, mà `null >= 3` là false ⇒ mục Glow biến mất trong im lặng). |
+
+**Cửa hậu `happy_days` đo được thật, không phải giả định:** đăng nhập cô Lan rồi gọi hàm cho từng ngày một, 25/07 → 01/08, nhận đúng chuỗi `1/0/1/1/0/0/0/0` — tức là đọc lại nguyên nhật ký "hôm nay em có Vui không", chỉ khác cách gõ.
+
+**`core.can_see_care()` giữ nguyên cả ba nhánh** — đó không phải là quên. Nó đang gác `care.flags`, `care.care_cases`, `care.interventions` và `attendance.help_requests`, tức gác đúng hai thứ quyết định trên hứa cô vẫn nhận được. Siết nó ở đây là phá đúng lời hứa vừa ký, và phá theo kiểu im lặng: cô mở buồng lái thấy trống, màn hình không nói gì.
+
+Đo trước/sau trên hub_dev (số dòng có mood đọc được qua `attendance.checkins_care`): cô Lan **75 → 0** · cô Mai (tâm lý cụm) **358 → 358** · Minh (chính em) **9 → 9** · phụ huynh **0 → 0**. Bộ quét cờ chạy trước/sau trên cùng dữ liệu: **11/11 cờ, phân bố y hệt** (A_ATTENDANCE 4 · E_MOOD 3 · E_URGENT 4) — vì `care.run_flag_engine` **không** phải `SECURITY DEFINER` nên chạy bằng vai người gọi (`postgres`, bỏ qua RLS lẫn grant theo cột) và đọc mood qua `care.v_signal_emotion` → `attendance.checkins` **trực tiếp**. Bảo đảm đó chết ngay nếu ai đổi view sang đọc `checkins_care` hoặc cho engine chạy dưới vai `authenticated`; pgTAP `0044` ghim đúng hai điều kiện ấy.
+
+**Đánh đổi, nói thẳng:** (1) cô mất ngữ cảnh — thấy cờ mà không thấy chuỗi ngày dẫn tới cờ, mà **đường chuyển tuyến GVCN ↔ tâm lý cụm chưa tồn tại**; (2) tâm lý cụm thành nút thắt, một người cho nhiều lớp và nay là vai duy nhất ngoài chính em; (3) mất khả năng cô tự phát hiện sớm bằng mắt, đổi lại phải tin ngưỡng `care.thresholds` mà ngưỡng đó chưa qua một học kỳ dữ liệu thật (ADR-023); (4) buồng lái phụ thuộc hoàn toàn vào nhịp quét đêm cho E_MOOD — dải "Quét đêm qua" từ chỗ tiện lợi trở thành **thiết bị an toàn**. Khe còn hở (phép trừ hai khoảng trên `happy_days`) ghi thành nợ có tên: `DEBT.md` #38.
+
+**Việc bắt buộc của tầng màn hình, cùng commit:** bốn màn GVCN đang lấy `attendance.checkins_care` làm nguồn cho CẢ cột điểm danh chứ không riêng mood — đo thật sau khi cắt, cùng một câu LEFT JOIN cho 5/5 em `status NULL`, đổi nguồn về `attendance.checkins` thì 5/5 em `status=present`. Không sửa cùng lượt thì bảng điểm danh của cô trắng toàn NULL và UI vẽ NULL thành "chưa điểm danh". Chi tiết ba việc: `DEBT.md` #34. Nhãn chuẩn mà màn hình phải in: `DESIGN-GUIDELINES` §9.
+
+Kiểm chứng đã chạy (01/08/2026): `0044_mood_chi_tam_ly_test.sql` **26 assertion xanh** trên database dựng lại từ đầu (`plan(26)` khớp đúng 26 dòng `ok`), và `tests/db/mood-rieng-tu.test.ts` **14 ca xanh** trên hub_dev thật. **Thử ngược:** trả cả ba cửa về đúng bản `0038` rồi chạy lại bài pgTAP → **7/26 assertion đỏ**, gồm cả ba cửa và ba câu khoá hình dạng — bài test bắt đúng lỗ đang vá, không xanh vì may. Toàn bộ bộ pgTAP sau khi thêm `0042` + `0044`: **601 assertion xanh, 0 not-ok**, tổng `plan(N)` cũng đúng 601. Hai assertion đổi chiều **có chủ ý**: `0038_checkins_mood_scope_test.sql` #1 ("GVCN CỦA EM đọc được ĐÚNG GIÁ TRỊ mood" → "đọc ra 0 DÒNG") và ca cùng tên trong `tests/db/mood-rieng-tu.test.ts`. Cả hai được **lật chứ không xoá**, kèm chú thích tại chỗ trỏ về ADR-026 — một ca bị xoá là một lời hứa mất người canh.
 
 ## Đợt mở cho cả khối (`0039`–`0041`, 31/07–01/08/2026)
 

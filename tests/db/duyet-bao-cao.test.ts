@@ -146,6 +146,20 @@ describe("luật dựng bản xem trước (thuần, không chạm DB)", () => {
     const p = buildReportPreview({ checkinDays: 0, happyDays: 0, streakDays: 0 });
     expect(p.glow).toEqual([]);
     expect(p.grow).toHaveLength(1); // "đi học đều hơn" — sự thật duy nhất suy được
+    // 0 là một PHÉP ĐO thật (em có 0 ngày vui), nên bản xem trước ở đây là đầy đủ.
+    expect(p.glowIncomplete).toBe(false);
+  });
+
+  it("happyDays = null KHÁC happyDays = 0 — một cái là chưa vui, một cái là không được biết", () => {
+    // Đây là ca mà `(happyDays ?? 0) >= 3` sẽ làm hỏng trong im lặng: cả hai cho ra cùng
+    // một bản xem trước, và người ký không có cách nào phân biệt.
+    const dowhile = buildReportPreview({ checkinDays: 5, happyDays: 0, streakDays: 12 });
+    const unknown = buildReportPreview({ checkinDays: 5, happyDays: null, streakDays: 12 });
+    expect(dowhile.glow).toHaveLength(1);
+    expect(unknown.glow).toHaveLength(1);
+    // Cùng số mục Glow, nhưng KHÁC nhau ở lời khai — và lời khai mới là thứ cứu người ký.
+    expect(dowhile.glowIncomplete).toBe(false);
+    expect(unknown.glowIncomplete).toBe(true);
   });
 });
 
@@ -159,7 +173,9 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
     const row = await rowOf(STUDENT_FULL, week);
     expect(row).toBeDefined();
     expect(row!.checkinDays).toBe(5);
-    expect(row!.happyDays).toBe(4);
+    // ADR-026: cô không đọc được số ngày "Vui". `null`, KHÔNG phải 0 — 0 sẽ đọc thành
+    // "em không có ngày nào vui" về một em vừa có 4 ngày Vui thật trong tuần đó.
+    expect(row!.happyDays).toBeNull();
 
     // Không so với hằng số viết tay: bản xem trước phải là HỆ QUẢ của chính hai con số
     // đứng cạnh nó. Lệch nhau ở đây nghĩa là màn hình hiện một đằng, phụ huynh đọc một nẻo.
@@ -170,8 +186,12 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
         streakDays: row!.preview.streakDays,
       }),
     );
-    expect(row!.preview.headline).toBe("Một tuần rực rỡ!");
-    expect(row!.preview.glow).toHaveLength(2);
+    // Bản của CÔ chỉ dựng được mục Glow từ điểm danh — mục tâm trạng cần nguồn cô không
+    // đọc được. Nên headline nhẹ hơn bản phụ huynh đọc, và màn hình PHẢI nói ra chỗ hụt
+    // đó thay vì để nó biến mất lặng lẽ.
+    expect(row!.preview.headline).toBe("Một tuần ổn định");
+    expect(row!.preview.glow).toHaveLength(1);
+    expect(row!.preview.glowIncomplete).toBe(true);
     // Ở đây TỪNG có `expect(row!.preview.streakDays).toBeGreaterThan(0)`. Bỏ 01/08/2026:
     // câu đó xanh hay đỏ phụ thuộc HÔM NAY LÀ THỨ MẤY. seedWeek() gieo 5 ngày Hai→Sáu,
     // còn chuỗi chỉ tính khi có check-in ĐÚNG NGÀY HÔM NAY — nên chạy trong tuần thì
@@ -237,7 +257,10 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
     // nút để GẶP THẦY CÔ, không để việc đó được kể lại cho bố mẹ dưới dạng lời khen.
     expect(text).not.toContain("cần gặp");
     expect(text).not.toContain("dũng cảm");
-    expect(row!.preview.glow).toHaveLength(2); // vẫn đúng hai lời khen từ điểm danh + tâm trạng
+    // Đúng một lời khen — từ điểm danh. Lời khen về tâm trạng cần nguồn cô không đọc
+    // được sau ADR-026; `glowIncomplete` là chỗ nói ra điều đó.
+    expect(row!.preview.glow).toHaveLength(1);
+    expect(row!.preview.glowIncomplete).toBe(true);
   });
 
   it("IM LẶNG · em chưa có dữ liệu vẫn có mặt, kèm bản xem trước trống thật", async ({ skip }) => {

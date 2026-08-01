@@ -23,8 +23,9 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { moodEmptyText } from "@/components/gvcn-dashboard";
-import { MOOD_CELL } from "@/components/gvcn/student-detail-view";
+import { absentSubtitle, cadenceNote, moodClosedText } from "@/components/gvcn-dashboard";
+import { STATUS_CELL } from "@/components/gvcn/student-detail-view";
+import { CHOICE_STYLE } from "@/components/gvcn/class-attendance-view";
 import { checkinRate, rateReason } from "@/components/dieu-hanh/operations-view";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -156,27 +157,55 @@ function contrast(a: string, b: string): number {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
 
-describe("ô lịch check-in — bốn mức tâm trạng", () => {
-  it("mỗi mức có ICON riêng, không chỉ có màu", () => {
-    const icons = Object.values(MOOD_CELL).map((m) => m.icon);
-    expect(icons.filter(Boolean)).toHaveLength(4);
-    // Bốn icon PHẢI khác nhau: bốn ô cùng icon thì icon không phân biệt được gì, và ta
-    // quay lại đúng chỗ cũ — màu là tín hiệu duy nhất.
-    expect(new Set(icons).size).toBe(4);
+describe("ô lịch điểm danh — năm trạng thái ([QĐ-3], 01/08/2026)", () => {
+  it("mỗi trạng thái có ICON riêng, không chỉ có màu", () => {
+    const icons = Object.values(STATUS_CELL).map((m) => m.icon);
+    expect(icons.filter(Boolean)).toHaveLength(5);
+    // Năm icon PHẢI khác nhau. Đây chính là chỗ từng hỏng: 'late' và 'queued_late' dùng
+    // chung icon `schedule` trên lịch này, trong khi huy hiệu bên màn lớp đã tách đúng —
+    // hai màn của cùng một người nói hai kiểu về cùng một dữ liệu.
+    expect(new Set(icons).size).toBe(5);
+  });
+
+  it("'đi muộn' và 'gửi muộn' dùng chung màu nên BẮT BUỘC khác icon", () => {
+    // Cặp nguy hiểm nhất khi bỏ hết màu: PRODUCT.md gọi "gửi muộn ngược với vắng" là ràng
+    // buộc không thương lượng, mà phân biệt với "đi muộn" cũng nặng ngang thế — một đằng
+    // là em đến muộn, một đằng là máy gửi bù và đang chờ cô xác nhận.
+    expect(STATUS_CELL.late.bg).toBe(STATUS_CELL.queued_late.bg);
+    expect(STATUS_CELL.late.icon).not.toBe(STATUS_CELL.queued_late.icon);
   });
 
   it("chữ trên nền mỗi ô đạt ≥4,5:1 — kể cả ô đậm nhất", () => {
     // Bản trước tô nguyên gradient bão hoà của §3 rồi đặt chữ lên: trắng/#00D97A = 1,87:1.
     // Phép đo này chỉ chạy được vì `bg` nay là MỘT mã màu đặc; nếu ai đó trả lại gradient
     // thì `slice` sẽ không cho ra hex hợp lệ và test đỏ — đúng ý.
-    for (const [mood, tone] of Object.entries(MOOD_CELL)) {
-      expect(tone.bg, `mood ${mood}: nền phải là một mã màu đặc, không phải gradient`).toMatch(
+    for (const [status, tone] of Object.entries(STATUS_CELL)) {
+      expect(tone.bg, `${status}: nền phải là một mã màu đặc, không phải gradient`).toMatch(
         /^#[0-9A-Fa-f]{6}$/,
       );
       const ratio = contrast(tone.fg, tone.bg);
-      expect(ratio, `mood ${mood}: ${tone.fg} trên ${tone.bg} chỉ đạt ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
+      expect(ratio, `${status}: ${tone.fg} trên ${tone.bg} chỉ đạt ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
         4.5,
       );
+    }
+  });
+});
+
+describe("nút chọn trạng thái ở màn điểm danh — chữ trên nút ĐANG CHỌN", () => {
+  it("cả bốn nút đạt ≥4,5:1 ở trạng thái đang chọn", () => {
+    // Đây là đường GHI duy nhất chạm chuyên cần, và chữ trên nút đang chọn là thứ nói cho
+    // cô biết mình vừa chọn gì. Đo trên bản cũ: trắng/#00A85E = 3,15:1 · trắng/#2C7BF2 =
+    // 4,02:1 · trắng/#E23A41 = 4,27:1 — ba trong bốn nút trượt, ở chữ 11,5px/900.
+    // §11 ghi thẳng "không có ngoại lệ theo cỡ chữ".
+    for (const [status, style] of Object.entries(CHOICE_STYLE)) {
+      const bg = /bg-\[(#[0-9A-Fa-f]{6})\]/.exec(style.on)?.[1];
+      expect(bg, `${status}: nền nút đang chọn phải là một mã hex đọc được`).toBeTruthy();
+      const fg = style.on.includes("text-white")
+        ? "#FFFFFF"
+        : (/text-\[(#[0-9A-Fa-f]{6})\]/.exec(style.on)?.[1] ?? "");
+      expect(fg, `${status}: màu chữ nút đang chọn phải đọc được`).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      const ratio = contrast(fg, bg!);
+      expect(ratio, `${status}: ${fg} trên ${bg} chỉ đạt ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
     }
   });
 });
@@ -214,25 +243,45 @@ describe("không màn người lớn nào dựa vào title= để giải thích 
 // 3. Im lặng không phải kết luận — mỗi ô trống nói đúng loại trống của nó
 // ---------------------------------------------------------------------------
 
-describe("buồng lái: ô “Cảm xúc lớp hôm nay” không nói ngược với thẻ số", () => {
-  it("không có check-in nào → nói về check-in", () => {
-    expect(moodEmptyText(0, [])).toContain("Chưa em nào check-in");
+describe("buồng lái: ô “Cảm xúc lớp hôm nay” nói VÌ SAO nó không còn ([QĐ-1])", () => {
+  it("không đọc được vì quy định → nói ra quy định, không để ô trống", () => {
+    const text = moodClosedText({ readable: false, reason: "chi_tam_ly" });
+    expect(text).toContain("tâm lý");
+    // Phải nói CẢ phần cô còn giữ — bỏ mất vế này là để cô tưởng mình mất luôn cả cờ.
+    expect(text).toContain("cần để ý");
+    expect(text.length).toBeGreaterThan(40);
   });
 
-  it("có check-in nhưng không ai chọn tâm trạng → nói ĐÚNG chuyện đó, và giữ lại con số", () => {
-    // Đây là ca sinh ra lỗi cũ: `checkinCount` đếm attendance.checkins, `moodDistribution`
-    // đếm attendance.checkins_care với thêm `mood is not null`. Bản cũ in "Chưa có check-in
-    // nào hôm nay" trong khi thẻ số ngay trên ghi 25/30.
-    const text = moodEmptyText(25, []);
-    expect(text).toContain("25");
-    expect(text).toContain("chưa em nào chọn tâm trạng");
-    expect(text).not.toContain("Chưa em nào check-in");
+  it("máy chủ không nói lý do → KHÔNG bịa lý do hộ nó", () => {
+    const text = moodClosedText({ readable: false, reason: null });
+    expect(text).not.toContain("tâm lý");
+    expect(text).toContain("chưa nhận được lý do");
+  });
+});
+
+describe("thẻ “Vắng” không được đọc thành lớp đi đủ khi chưa ai điểm danh ([QĐ-3])", () => {
+  it("còn em chưa điểm danh → nói thẳng là chưa kết luận được", () => {
+    const text = absentSubtitle(0, 12);
+    expect(text).toContain("12");
+    expect(text).toContain("chưa kết luận được");
+    // Đây là câu cũ, và nó là một kết luận dựng từ im lặng.
+    expect(text).not.toContain("không có ai vắng");
   });
 
-  it("nguồn dữ liệu chưa tươi là một khả năng THỨ BA, được nói ra chứ không nuốt", () => {
-    const text = moodEmptyText(25, ["evidence"]);
-    expect(text).toContain("chưa tươi");
-    expect(text).toContain("evidence");
+  it("cả lớp đã điểm danh và không ai vắng → LÚC ĐÓ mới được kết luận", () => {
+    expect(absentSubtitle(0, 0)).toContain("không ai vắng");
+  });
+});
+
+describe("hai nhịp cờ phải nói ra trên màn ([QĐ-2] · VIỆC 4)", () => {
+  it("tức thì và quét đêm cho hai câu KHÁC HẲN nhau", () => {
+    const now = cadenceNote("tuc_thi");
+    const night = cadenceNote("quet_dem");
+    expect(now).not.toBe(night);
+    expect(now).toContain("ngay");
+    expect(night).toContain("quét");
+    // Người đọc một bảng gộp hai nhịp mà không biết là đang bị chính bảng đó đánh lừa.
+    expect(night).toContain("chờ");
   });
 });
 

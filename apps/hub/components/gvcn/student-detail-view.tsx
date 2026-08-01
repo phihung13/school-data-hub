@@ -7,7 +7,9 @@
 // rồi tự lọc mắt theo một cái tên. Phần lớn sẽ không làm, và dấu hiệu hiện ra rồi trôi qua.
 //
 // BỐN KHỐI, đúng bốn nguồn có thật trong CSDL — không khối nào vẽ ra để cho đầy màn:
-//   1. Dải check-in 14/30 ngày (lịch theo thứ, không phải dãy ô trôi ngang)
+//   1. Dải điểm danh 14/30 ngày (lịch theo thứ, không phải dãy ô trôi ngang). Từ
+//      01/08/2026 lịch này tô theo TRẠNG THÁI ĐIỂM DANH, không còn theo tâm trạng —
+//      [QĐ-1] cắt quyền đọc cảm xúc của GVCN, và [QĐ-3] đòi năm trạng thái đọc được.
 //   2. Tín hiệu "cần gặp thầy cô" + hồ sơ chăm sóc mở/đóng
 //   3. Nhật ký can thiệp CỦA RIÊNG EM
 //   4. Trạng thái duyệt Báo cáo Trưởng thành mấy tuần gần đây
@@ -32,10 +34,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import {
+  ARRIVAL_BAND_UNAVAILABLE_NOTE,
+  ATTENDANCE_STATUS_ICON,
+  ATTENDANCE_STATUS_LABEL,
+  ATTENDANCE_UNKNOWN_ICON,
+  ATTENDANCE_UNKNOWN_LABEL,
   HELP_REQUEST_TOPIC_LABEL,
   HELP_REQUEST_URGENCY_LABEL,
-  MOOD_LABEL,
-  type MoodValue,
+  type AttendanceStatus,
   type StudentCheckinDay,
 } from "@hub/core/contracts";
 import { EmptyState, ErrorState, LoadingState } from "../ui/query-state";
@@ -43,41 +49,40 @@ import { classLabel } from "../ui/labels";
 import { Card, GvcnShell } from "./gvcn-shell";
 
 /**
- * Bốn tâm trạng trong ô lịch. Bảng màu §3 KHÔNG đổi — đổi cách dùng nó.
+ * Năm trạng thái điểm danh trong ô lịch ([QĐ-3], 01/08/2026).
  *
- * Bản trước (31/07/2026) tô nguyên gradient bão hoà của §3 làm nền ô rồi đặt số ngày lên
- * trên. Đo bằng công thức WCAG trên chính hai đầu gradient:
+ * Trước hôm nay bảng này khoá theo TÂM TRẠNG (`MOOD_CELL`), và đó là gốc của một lỗi
+ * đọc-ngược đã đo được: `tone` chỉ đến từ mood, còn `statusIcon` chỉ có giá trị cho
+ * 'absent' và 'late' — nên ô ngày mang `status='present'` do CÔ ghi hộ (mà dòng cô ghi
+ * hộ luôn có mood = null, vì markAttendance cố ý không đặt hộ tâm trạng cho em) rơi
+ * đúng vào nhánh "border-dashed bg-white", TRÙNG KHÍT với ô không có dữ liệu — và chú
+ * giải ngay dưới lưới gọi hình dạng đó là "Chưa có dữ liệu". Cô ghi em có mặt, lịch vẽ
+ * là chưa ai ghi gì.
  *
- *     Vui   trắng / #00D97A = 1,87:1   → / #00A85E = 3,11:1
- *     BThg  trắng / #4E9BFF = 2,82:1   → / #2C7BF2 = 4,02:1
- *     Mệt  #6B4A00/ #FFC833 = 5,21:1   → / #F5A300 = 3,89:1
- *     Buồn  trắng / #FF7A7F = 2,52:1   → / #F0474D = 3,68:1
+ * Nay ô lịch nói về ĐIỂM DANH, đúng thứ nó có dữ liệu để nói sau ADR-026. Màu lấy nguyên
+ * các cặp nhạt/đậm mà `status-badge.tsx` đã dùng (không chế màu mới), icon lấy từ
+ * `ATTENDANCE_STATUS_ICON` trong contract nên hai màn không thể trôi lệch nhau nữa —
+ * chính là chỗ 'late' và 'queued_late' từng dùng CHUNG icon `schedule` ở màn này trong
+ * khi huy hiệu bên kia đã tách đúng.
  *
- * KHÔNG ô nào đạt 4,5:1 trên toàn bề mặt, và ba trong bốn ô không đạt trên bất kỳ điểm
- * nào. Không có cách nào giữ chữ trên nền bão hoà mà đạt chuẩn: đó là giới hạn của chính
- * bốn mã màu, không phải của cách viết CSS.
- *
- * Nên: nền là bản NHẠT của cùng hue, chữ và icon là bản ĐẬM của cùng hue — đúng cặp mà
- * `status-badge.tsx`, `Pill` của tâm lý cụm và mọi huy hiệu khác trong Hub đã dùng từ
- * đầu, nên đây là dùng lại hệ màu sẵn có chứ không phải chế màu mới:
- *
- *     Vui   #00693F / #E3F8ED = 6,12:1
- *     BThg  #1D4E8F / #E2F0FC = 7,13:1
- *     Mệt   #6B4A00 / #FFF1C9 = 7,17:1
- *     Buồn  #C0272D / #FFF0F0 = 5,32:1
- *
- * Và `icon`: trước hôm nay ô ngày CHỈ mã hoá tâm trạng bằng MÀU — bên trong đúng một con
- * số ngày, không chữ, không icon; nhãn đầy đủ nằm ở `title=` (không có trên điện thoại)
- * và `sr-only` (chỉ trình đọc màn hình). Người mù màu đỏ–lục cầm iPhone không đọc được
- * Vui với Buồn — mà lịch này là khối chính của màn hồ sơ. §11: màu không bao giờ là tín
- * hiệu duy nhất.
+ * `late` và `queued_late` dùng chung cặp màu, nên khác nhau bằng ICON + CHỮ (§11).
+ * Tương phản chữ/nền, đo theo công thức WCAG trên chính các cặp dưới đây:
+ *     present     #00693F / #E3F8ED = 6,12:1
+ *     late        #6B4A00 / #FFF1C9 = 7,17:1
+ *     queued_late #6B4A00 / #FFF1C9 = 7,17:1
+ *     absent      #C0272D / #FFF0F0 = 5,32:1
+ *     excused     #1D4E8F / #E2F0FC = 7,13:1
  */
-export const MOOD_CELL: Record<MoodValue, { bg: string; fg: string; icon: string }> = {
-  4: { bg: "#E3F8ED", fg: "#00693F", icon: "sentiment_very_satisfied" },
-  3: { bg: "#E2F0FC", fg: "#1D4E8F", icon: "sentiment_neutral" },
-  2: { bg: "#FFF1C9", fg: "#6B4A00", icon: "sentiment_dissatisfied" },
-  1: { bg: "#FFF0F0", fg: "#C0272D", icon: "sentiment_sad" },
+export const STATUS_CELL: Record<AttendanceStatus, { bg: string; fg: string; icon: string }> = {
+  present: { bg: "#E3F8ED", fg: "#00693F", icon: ATTENDANCE_STATUS_ICON.present },
+  late: { bg: "#FFF1C9", fg: "#6B4A00", icon: ATTENDANCE_STATUS_ICON.late },
+  queued_late: { bg: "#FFF1C9", fg: "#6B4A00", icon: ATTENDANCE_STATUS_ICON.queued_late },
+  absent: { bg: "#FFF0F0", fg: "#C0272D", icon: ATTENDANCE_STATUS_ICON.absent },
+  excused: { bg: "#E2F0FC", fg: "#1D4E8F", icon: ATTENDANCE_STATUS_ICON.excused },
 };
+
+/** Thứ tự trong chú giải — đi từ "bình thường nhất" tới "cần chú ý nhất". */
+const LEGEND_ORDER: AttendanceStatus[] = ["present", "late", "queued_late", "absent", "excused"];
 
 const WEEKDAY_SHORT = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
@@ -287,24 +292,29 @@ function CheckinStrip({
           chấm màu chỉ giải thích được cho người đọc ra màu; với người mù màu nó vẽ lại
           đúng bài toán vừa đặt ra. Nay ô ngày và chú giải nói cùng một ngôn ngữ. */}
       <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[#F1F4F8] pt-3">
-        {([4, 3, 2, 1] as MoodValue[]).map((m) => (
-          <span key={m} className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
+        {LEGEND_ORDER.map((st) => (
+          <span key={st} className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
             <span
               aria-hidden
               className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md"
-              style={{ background: MOOD_CELL[m].bg, color: MOOD_CELL[m].fg }}
+              style={{ background: STATUS_CELL[st].bg, color: STATUS_CELL[st].fg }}
             >
-              <span className="msr text-[13px]">{MOOD_CELL[m].icon}</span>
+              <span className="msr text-[13px]">{STATUS_CELL[st].icon}</span>
             </span>
-            {MOOD_LABEL[m]}
+            {ATTENDANCE_STATUS_LABEL[st]}
           </span>
         ))}
+        {/* Ô thứ SÁU, và là ô quan trọng nhất của cả chú giải: "chưa ai ghi" phải có
+            hình dạng riêng, khác hẳn "vắng". Một đằng là chưa biết, một đằng là đã biết
+            và biết là em không có mặt. */}
         <span className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
           <span
             aria-hidden
-            className="h-[18px] w-[18px] flex-none rounded-md border border-dashed border-[#C9D2DE] bg-white"
-          />
-          Chưa có dữ liệu
+            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border border-dashed border-[#C9D2DE] bg-white text-[#5B6B80]"
+          >
+            <span className="msr text-[13px]">{ATTENDANCE_UNKNOWN_ICON}</span>
+          </span>
+          {ATTENDANCE_UNKNOWN_LABEL}
         </span>
       </div>
 
@@ -317,37 +327,44 @@ function CheckinStrip({
           ? "Mọi ngày học trong khoảng này đều có dữ liệu."
           : `${missingSchoolDays} ngày học chưa có dòng điểm danh nào — nghĩa là chưa ai ghi, không phải là em vắng.`}
       </p>
+      {/* Lịch này từng tô màu theo TÂM TRẠNG. Sau ADR-026 cô không đọc được cột đó nữa,
+          nên nói ra chỗ đổi thay vì để cô tự đoán tại sao màu khác đi. */}
+      <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted">
+        Lịch này nói về điểm danh. Nhật ký cảm xúc từng ngày chỉ thầy cô tâm lý đọc được.{" "}
+        {ARRIVAL_BAND_UNAVAILABLE_NOTE}
+      </p>
     </Card>
   );
 }
 
-function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null }) {
-  const weekend = weekdayIndex(iso) >= 5;
-  const mood = entry?.mood ?? null;
-  const tone = mood ? MOOD_CELL[mood] : null;
-
-  const label = [
+export function dayCellLabel(iso: string, entry: StudentCheckinDay | null): string {
+  return [
     formatDate(iso),
     entry?.status ? statusWord(entry.status) : "chưa có dữ liệu",
-    mood ? `tâm trạng ${MOOD_LABEL[mood]}` : null,
-    entry?.checkedInAt ? `lúc ${entry.checkedInAt}` : null,
+    // Giờ CHỈ đọc ra khi em tự bấm. Nhãn cũ ghép "lúc HH:MM" cho mọi dòng, nên ô ngày
+    // cô đánh vắng đọc thành "… vắng · lúc 03:28 · thầy cô ghi hộ" — vừa nói em vắng
+    // vừa nói em có giờ check-in, mà con số đó là giờ cô bấm Lưu.
+    entry?.source === "app" && entry.checkedInAt ? `em bấm lúc ${entry.checkedInAt}` : null,
     entry?.source === "teacher" ? "thầy cô ghi hộ" : null,
+    entry?.source === "offline_queue" ? "gửi bù khi có mạng lại" : null,
   ]
     .filter(Boolean)
     .join(" · ");
+}
 
-  const statusIcon =
-    entry?.status === "absent"
-      ? "person_off"
-      : entry?.status === "queued_late" || entry?.status === "late"
-        ? "schedule"
-        : null;
+function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null }) {
+  const weekend = weekdayIndex(iso) >= 5;
+  // Đổi 01/08/2026: `tone` bám vào TRẠNG THÁI ĐIỂM DANH, không còn bám vào tâm trạng.
+  // Và điều kiện viền nét đứt đổi từ "không có tone" sang "KHÔNG CÓ DÒNG NÀO" — nét đứt
+  // phải nghĩa là chưa ai ghi, không phải là chưa có tâm trạng.
+  const tone = entry?.status ? STATUS_CELL[entry.status] : null;
+  const label = dayCellLabel(iso, entry);
 
   return (
     <span
       title={label}
       className={`flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center ${
-        tone
+        entry
           ? ""
           : weekend
             ? "bg-[#F7F9FC]"
@@ -366,20 +383,11 @@ function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null 
           Icon trạng thái (vắng · muộn) đi trước icon tâm trạng: một ngày có thể có cả
           hai, và "em vắng" là điều cô cần thấy trước. Cả hai aria-hidden vì `sr-only`
           bên dưới đã đọc nguyên câu đầy đủ, có cả ngày lẫn giờ. */}
-      {(statusIcon || tone) && (
-        <span className="flex items-center justify-center gap-0.5 leading-none">
-          {statusIcon && (
-            <span className="msr text-[13px]" aria-hidden>
-              {statusIcon}
-            </span>
-          )}
-          {tone && (
-            <span className="msr text-[13px]" aria-hidden>
-              {tone.icon}
-            </span>
-          )}
+      <span className="flex items-center justify-center leading-none">
+        <span className={`msr text-[13px] ${tone ? "" : "text-muted"}`} aria-hidden>
+          {tone ? tone.icon : ATTENDANCE_UNKNOWN_ICON}
         </span>
-      )}
+      </span>
       <span className="sr-only">{label}</span>
     </span>
   );

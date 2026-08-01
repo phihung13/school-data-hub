@@ -1,9 +1,15 @@
 // tests/db/help-request-rieng-tu.test.ts — gói "rls-help-requests" (31/07/2026).
 //
-// Màn hình `/can-gap-thay-co` in cho học sinh đọc, ngay tại chỗ em gõ lời nhắn
-// (`apps/hub/components/help-request-view.tsx:292`):
+// Màn hình `/can-gap-thay-co` in cho học sinh đọc, ngay tại chỗ em gõ lời nhắn (thẻ "Ai
+// đọc được lời con?" trong `apps/hub/components/help-request-view.tsx`):
 //
-//     "Bạn cùng lớp · thầy cô khác · bố mẹ — KHÔNG nhìn thấy"
+//     "Bạn cùng lớp · thầy cô dạy môn · thầy cô lớp khác · bố mẹ — KHÔNG nhìn thấy"
+//
+// (Câu này đã sửa 01/08/2026. Bản cũ viết gọn "thầy cô khác", mà thầy cô TÂM LÝ CỤM thì
+// đọc được — `help_requests_scope` (0037) dùng `core.can_see_care`. Bài "TÂM LÝ CỤM đọc
+// được" phía dưới vẫn xanh y hệt trước và sau, nên chính bộ test này KHÔNG bắt được lỗi
+// đó: nó là lỗi ở phía màn hình nói thiếu, không phải ở phía quyền. Ghi ra đây để lần sau
+// không ai đọc màu xanh của file này thành "nhãn trên màn đã đúng".)
 //
 // Trước migration 0037 câu đó KHÔNG đúng ở tầng dữ liệu. `attendance.help_requests`
 // nằm trong vòng lặp 16 bảng của `0009:150-176`, dùng chung `core.can_see_student()`
@@ -30,6 +36,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { asSystem, asUser, requireDb, DEV, FIXTURE } from "../helpers/db";
 import { careRouter } from "@/server/routers/care";
+import { checkinRouter } from "@/server/routers/checkin";
 import type { TrpcContext } from "@/server/trpc";
 
 let ready = false;
@@ -44,6 +51,30 @@ function ctxFor(authUid: string | null): TrpcContext {
 }
 
 const gvcn = () => careRouter.createCaller(ctxFor(DEV.gvcn)); // Cô Lan — GVCN 6A1
+/** Chính em (Minh) — vai DUY NHẤT gọi được đường GHI `checkin.requestHelp`. */
+const minh = () => checkinRouter.createCaller(ctxFor(DEV.student));
+
+
+/** Số dòng yêu cầu HÔM NAY của Minh, đọc bằng quyền hệ thống để đếm sự thật trong bảng. */
+async function minhRowsToday(): Promise<Array<{ note: string | null; handled_at: string | null }>> {
+  const { rows } = await asSystem((c) =>
+    c.query<{ note: string | null; handled_at: string | null }>(
+      `select note, handled_at::text
+         from attendance.help_requests
+        where student_id = $1 and requested_on = current_date`,
+      [FIXTURE.studentMinh],
+    ),
+  );
+  return rows;
+}
+
+async function clearMinhToday(): Promise<void> {
+  await asSystem((c) =>
+    c.query("delete from attendance.help_requests where student_id = $1 and requested_on = current_date", [
+      FIXTURE.studentMinh,
+    ]),
+  );
+}
 
 /** Số dòng help_requests mà MỘT NGƯỜI CỤ THỂ đọc được — dưới RLS thật, không phải asSystem. */
 async function requestsVisibleTo(authUid: string): Promise<number> {
@@ -175,7 +206,11 @@ describe("cần gặp thầy cô · chiều ĐẦU CUỐI qua tRPC — tín hi�
     const dashboard = await gvcn().getDashboard();
     const flag = dashboard.priorityFlags.find((f) => f.studentId === TEST_STUDENT);
     expect(flag).toBeDefined();
-    expect(flag!.detail.helpRequested).toBe(true);
+    // Sửa 01/08/2026: `detail.helpRequested` (một cờ boolean) nay là
+    // `detail.openHelpRequests` — mảng ID của đúng những lời đang treo, để nút "Cô đã gặp
+    // em rồi" đóng đúng tập đó thay vì đóng-hết. Mệnh đề của bài này không đổi: cô PHẢI
+    // thấy tín hiệu của em này, không được im.
+    expect(flag!.detail.openHelpRequests.length).toBeGreaterThanOrEqual(1);
   });
 
   it("cờ mang TÍN HIỆU chứ không mang LỜI EM KỂ — nội dung không đi theo cờ ra buồng lái", async ({
@@ -188,5 +223,98 @@ describe("cần gặp thầy cô · chiều ĐẦU CUỐI qua tRPC — tín hi�
     // mới nằm trong phạm vi đã hứa.
     const dashboard = await gvcn().getDashboard();
     expect(JSON.stringify(dashboard)).not.toContain(LOI_NHAN);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// [QĐ-2] ĐƯỜNG GHI — bấm là tới cô NGAY, và màn hình phải nói đúng nó có tới hay không.
+//
+// Ba mệnh đề, chạy trên Postgres thật dưới đúng phiên của Minh (đường ghi này CHỈ chính
+// em gọi được — `getMyStudentId` chặn mọi vai khác).
+// ───────────────────────────────────────────────────────────────────────────
+describe("cần gặp thầy cô · đường GHI (QĐ-2)", () => {
+  beforeAll(async () => {
+    if (!ready) return;
+    await clearMinhToday();
+  });
+
+  afterAll(async () => {
+    if (!ready) return;
+    await clearMinhToday();
+  });
+
+  it("§9 idempotent: bấm gửi HAI lần trong ngày vẫn đúng MỘT dòng, và cả hai lần đều vào sổ", async ({
+    skip,
+  }) => {
+    if (!ready) return skip();
+    await clearMinhToday();
+
+    const lan1 = await minh().requestHelp({ topic: "lop", urgency: "today", note: "Lần một." });
+    const lan2 = await minh().requestHelp({ topic: "nha", urgency: "urgent", note: "Lần hai." });
+
+    expect(lan1.delivered).toBe(true);
+    expect(lan2.delivered).toBe(true);
+    expect(lan1.reason).toBeNull();
+
+    const rows = await minhRowsToday();
+    expect(rows).toHaveLength(1);
+    // Lần sau ghi ĐÈ nội dung lần trước (đúng ngữ nghĩa "sửa lại lời mình vừa gửi"),
+    // không xếp thêm một dòng thứ hai cho cùng một ngày.
+    expect(rows[0]!.note).toBe("Lần hai.");
+  });
+
+  it("cô đã bấm “đã gặp em rồi” → lần gửi tiếp KHÔNG vào sổ, và hàm NÓI RA điều đó", async ({
+    skip,
+  }) => {
+    if (!ready) return skip();
+    await clearMinhToday();
+    await minh().requestHelp({ topic: "hoc", urgency: "this_week", note: "Lời buổi sáng." });
+
+    // Cô xử lý xong lời buổi sáng. Dựng trạng thái này bằng `asSystem` chứ KHÔNG gọi
+    // `care.acknowledgeHelpRequest`: bài này khẳng định về đường GHI của em (checkin.ts),
+    // và hình dạng đầu vào của nút bên buồng lái thuộc gói việc khác, đang đổi. Buộc bài
+    // này vào đó là để một thay đổi hợp lệ ở màn của cô làm đỏ một bài về màn của em.
+    // `handled_at is not null` là ĐÚNG điều kiện mà mệnh đề `where` của router nhìn vào.
+    await asSystem((c) =>
+      c.query(
+        `update attendance.help_requests
+            set handled_at = now(), handled_by = (select id from core.users where auth_uid = $2)
+          where student_id = $1 and requested_on = current_date`,
+        [FIXTURE.studentMinh, DEV.gvcn],
+      ),
+    );
+
+    const lanBaChieu = await minh().requestHelp({
+      topic: "nha",
+      urgency: "urgent",
+      note: "Chiều nay con lại có chuyện khác.",
+    });
+
+    // Trước 01/08/2026 lời gọi này trả `{ ok: true }` và màn hình hiện "Đã gửi cho cô
+    // rồi!" — cho một lời không đi đâu hết. `where handled_at is null` là mệnh đề LỌC,
+    // không phải điều kiện lỗi: lệnh chạy sạch, ghi 0 dòng, không ném gì.
+    expect(lanBaChieu.delivered).toBe(false);
+    expect(lanBaChieu.reason).toBe("da_xac_nhan_hom_nay");
+
+    // Và nó KHÔNG được lặng lẽ đè lên lời cũ đã xử lý xong.
+    const rows = await minhRowsToday();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.note).toBe("Lời buổi sáng.");
+    expect(rows[0]!.handled_at).not.toBeNull();
+  });
+
+  it("nút trong màn check-in cũng ghi ngay, và không đè mất lời em đã viết", async ({ skip }) => {
+    if (!ready) return skip();
+    await clearMinhToday();
+    await minh().requestHelp({ topic: "nha", urgency: "urgent", note: "Con muốn kể chuyện ở nhà." });
+
+    // Đường thứ hai: em bật công tắc "Mình cần gặp thầy cô" ngay trong lượt check-in cảm
+    // xúc. Lượt này KHÔNG mang chủ đề/lời nhắn nào, nên nó phải `do nothing` — đè bằng một
+    // bản trống là XOÁ đúng câu em đã khó khăn lắm mới viết ra.
+    await minh().submitMood({ mood: 2, wantsHelp: true });
+
+    const rows = await minhRowsToday();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.note).toBe("Con muốn kể chuyện ở nhà.");
   });
 });

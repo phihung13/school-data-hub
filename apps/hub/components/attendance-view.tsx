@@ -23,6 +23,12 @@
 //      nhưng đọc được vẫn hơn hẳn chặn hẳn.
 //   2. Vùng nội dung là <MainContent> (landmark <main id="noi-dung">) để đường tắt
 //      "Bỏ qua menu" ở layout.tsx nhảy tới được, và tiêu đề màn là <h1> thật.
+//
+// Sửa 01/08/2026 (QĐ-3 phía học sinh) — NGÀY KHÔNG AI GHI GÌ BỊ IN THÀNH "VẮNG":
+// lưới tuần viết `day.checkedInAt ?? (day.isFuture ? "—" : "vắng")` và vẽ viền ĐỎ, nên một
+// ngày cô chưa kịp điểm danh lớp trông y hệt một ngày em nghỉ học. Chi tiết đầy đủ ở
+// `dayCaptionText` phía dưới; kèm theo là dòng luật thứ tư trong khối "Điểm danh tính thế
+// nào?" để ô trống được giải thích chứ không để em tự đoán.
 "use client";
 
 import { trpc } from "@/lib/trpc-client";
@@ -125,10 +131,19 @@ export function AttendanceView({
                     {day.status ? (
                       <DayMark status={day.status} />
                     ) : (
-                      <span className={`h-[42px] w-[42px] rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#F0474D]"}`} />
+                      // Vòng tròn rỗng của ngày CHƯA CÓ DÒNG NÀO trong sổ. Viền đỏ cũ nói
+                      // "vắng" bằng màu — xem ghi chú của `dayCaptionText`. Nay viền xám và
+                      // có nhãn cho tai, vì thứ duy nhất máy biết là "chưa ai ghi gì".
+                      <span
+                        className={`flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#B9C4D4]"}`}
+                      >
+                        <span className="sr-only">
+                          {day.isFuture ? "chưa tới ngày này" : "chưa có ai điểm danh ngày này"}
+                        </span>
+                      </span>
                     )}
-                    <span className={`text-[11.5px] font-bold ${day.isToday ? "text-navy" : "text-[#33507C]"}`}>
-                      {day.checkedInAt ?? (day.isFuture ? "—" : "vắng")}
+                    <span className={`text-center text-[11.5px] font-bold leading-tight ${day.isToday ? "text-navy" : "text-[#33507C]"}`}>
+                      {dayCaptionText(day)}
                     </span>
                     {/* Dòng chữ ngắn cho ĐÚNG những ngày không phải "có mặt". Ngày có mặt
                         không cần chữ (giờ check-in đã nói đủ), còn ngày gửi muộn thì giờ
@@ -196,6 +211,14 @@ export function AttendanceView({
                 </RuleRow>
                 <RuleRow n={3} bg="bg-[#5B6B80]" color="text-white">
                   <b>Mất mạng</b> → máy vẫn lưu và tự gửi khi có mạng, giờ ghi là giờ con chạm.
+                </RuleRow>
+                {/* Dòng thứ tư thêm 01/08/2026 cùng với `dayCaptionText`. Không thêm nó thì
+                    khối "Điểm danh tính thế nào?" chỉ kể ba đường có kết quả, và ô "chưa
+                    điểm danh" trong lưới tuần trở thành thứ duy nhất trên trang không được
+                    giải thích — đúng chỗ em sẽ tự đoán ra tin xấu về mình. */}
+                <RuleRow n={4} bg="bg-[#B9C4D4]" color="text-[#33507C]">
+                  <b>Ô để trống</b> → hôm đó chưa ai điểm danh cả. Đây <b>không phải</b> vắng — con
+                  hỏi thầy cô nếu thấy lạ nhé.
                 </RuleRow>
               </div>
             </div>
@@ -290,7 +313,45 @@ export function dayNoteText(status: string | null): string | null {
   return style ? style.note : "chưa rõ";
 }
 
-function DayNote({ status }: { status: string | null }) {
+/**
+ * Dòng chữ NGAY DƯỚI vòng tròn của một ngày: giờ check-in nếu có, còn không thì nói đúng
+ * cái đang thiếu.
+ *
+ * Sửa 01/08/2026 (QĐ-3 phía học sinh) — "VẮNG" IN CHO NGÀY KHÔNG AI GHI GÌ:
+ *
+ * Câu cũ là `day.checkedInAt ?? (day.isFuture ? "—" : "vắng")`. Nó gộp hai chuyện khác hẳn
+ * nhau vào một chữ: (a) cô đã ghi `absent` — em nghỉ thật, và (b) hôm đó KHÔNG có dòng nào
+ * trong sổ, tức em không tự check-in và cô cũng chưa điểm danh lớp. Trường hợp (b) rất
+ * thường: cô mở màn điểm danh lúc 8 giờ 15, còn em mở app lúc 7 giờ tối. Máy khi đó không
+ * biết gì cả — mà màn hình lại kết luận "vắng", rồi vẽ thêm viền ĐỎ cho chắc.
+ *
+ * Đây đúng là luật "im lặng không phải kết luận" đọc ngược: thiếu dữ liệu bị in thành một
+ * tin xấu về chính em, trên màn em mở ra để tự kiểm tra. QĐ-3 (01/08/2026) đòi bảng của cô
+ * phân biệt đủ năm trạng thái, trong đó có "chưa điểm danh"; màn của em phải phân biệt
+ * đúng chừng ấy, bằng chữ của em.
+ *
+ * Bốn nhánh, không nhánh nào đoán:
+ *  · có giờ check-in       → in giờ (đủ nghĩa, không cần chữ).
+ *  · ngày chưa tới         → "chưa tới".
+ *  · có dòng, không có giờ → "—", vì `DayNote` ngay dưới đã gọi tên trạng thái (vắng / có
+ *                            phép / đi muộn). Lặp lại ở đây là hai dòng nói một điều.
+ *  · KHÔNG có dòng nào     → "chưa điểm danh". KHÔNG phải "vắng".
+ *
+ * Thuần hàm để test được (tests/unit/checkin-view.test.ts).
+ */
+export function dayCaptionText(day: {
+  status: string | null;
+  checkedInAt: string | null;
+  isFuture: boolean;
+}): string {
+  if (day.checkedInAt) return day.checkedInAt;
+  if (day.isFuture) return "chưa tới";
+  if (day.status) return "—";
+  return "chưa điểm danh";
+}
+
+/** Export để /tuan-nay dùng lại — hai lưới tuần phải nói cùng một câu về cùng một ngày. */
+export function DayNote({ status }: { status: string | null }) {
   const note = dayNoteText(status);
   if (!note) return null;
   const style = status ? dayMarkStyle(status) : null;

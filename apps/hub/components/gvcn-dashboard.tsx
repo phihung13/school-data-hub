@@ -100,12 +100,9 @@ import {
 } from "./ui/query-state";
 import { classLabel, personName } from "./ui/labels";
 
-const MOOD_META: Record<1 | 2 | 3 | 4, { label: string; dot: string; grad: string }> = {
-  4: { label: "Vui", dot: "#00C96F", grad: "linear-gradient(160deg,#00D97A,#00A85E)" },
-  3: { label: "Bình thường", dot: "#2C7BF2", grad: "linear-gradient(160deg,#4E9BFF,#2C7BF2)" },
-  2: { label: "Mệt", dot: "#F5A300", grad: "linear-gradient(160deg,#FFC833,#F5A300)" },
-  1: { label: "Buồn", dot: "#F0474D", grad: "linear-gradient(160deg,#FF7A7F,#F0474D)" },
-};
+// `MOOD_META` (bốn nhãn Vui/Bình thường/Mệt/Buồn + màu) đã bị gỡ 01/08/2026 cùng với ô
+// "Cảm xúc lớp hôm nay". Không để lại "phòng khi cần": một bảng tra cảm xúc nằm sẵn
+// trong bundle của màn GVCN là lời mời cho lần sửa sau nối lại đúng thứ vừa cắt.
 
 /**
  * Bốn màn con của buồng lái. Trên máy tính chúng nằm trong sidebar (TEACHER_ITEMS);
@@ -157,32 +154,135 @@ export function urgencyPresentation(flag: Pick<FlagSummary, "ruleCode">): Urgenc
       badgeClass: "bg-[#FFE9E9] text-[#B02A30]",
     };
   }
+  // Nhãn cũ: "CẦN ĐỂ Ý · CẢM XÚC ĐI XUỐNG NHIỀU NGÀY". Đổi 01/08/2026 — DESIGN-GUIDELINES
+  // §9 cấm in phía GVCN cả CHIỀU của cảm xúc ("đi xuống") lẫn SỐ NGÀY, vì cả hai đều nói
+  // nhiều hơn "cần để ý". Cô cần biết CÓ CHUYỆN, không đọc được CHUYỆN GÌ; "đi xuống
+  // nhiều ngày" đã là đọc được chuyện gì rồi, chỉ là bằng ít chữ hơn.
   return {
     level: "watch",
-    label: "CẦN ĐỂ Ý · CẢM XÚC ĐI XUỐNG NHIỀU NGÀY",
+    label: "CẦN ĐỂ Ý",
     icon: "visibility",
     borderClass: "border-l-[5px] border-gold",
     badgeClass: "bg-[#FFF1C9] text-gold-textDark",
   };
 }
 
-/** `detail` là `Record<string, unknown>` theo contract — đọc số an toàn, không ép kiểu bừa. */
-export function readNumber(detail: Record<string, unknown>, key: string): number | null {
-  const raw = detail[key];
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-  if (typeof raw === "string" && raw.trim() !== "" && Number.isFinite(Number(raw))) return Number(raw);
-  return null;
+/**
+ * Nhịp của một cờ, viết cho người đọc ([QĐ-2] · VIỆC 4).
+ *
+ * Buồng lái trộn hai nhịp trong cùng một danh sách: E_URGENT tính thẳng trong lượt gọi
+ * (em bấm là lượt tải sau đã thấy), E_MOOD do bộ quét đêm sinh ra. Một bảng gộp hai nhịp
+ * mà không nói ra thì chính bảng đó đánh lừa người đọc — nhất là ở chiều VẮNG MẶT: không
+ * có cờ khẩn nghĩa là "chưa em nào bấm", còn không có cờ cảm xúc thì có thể chỉ nghĩa là
+ * "bộ quét chưa chạy". Hai sự vắng mặt khác nghĩa không được vẽ giống nhau.
+ */
+/**
+ * Phụ đề thẻ "Vắng" — phụ thuộc vào SỐ EM CHƯA ĐIỂM DANH, không đứng một mình.
+ *
+ * Câu cũ: `absentCount === 0 ? "không có ai vắng" : "học sinh"`. Con số 0 ở đó không phân
+ * biệt được "đã ghi và không ai vắng" với "chưa ai ghi gì" — mà buổi sáng sớm thì ca thứ
+ * hai mới là ca thường gặp. Thuần hàm để test được.
+ */
+export function absentSubtitle(absentCount: number, notCheckedInCount: number): string {
+  if (notCheckedInCount > 0) {
+    return `còn ${notCheckedInCount} em chưa điểm danh — chưa kết luận được`;
+  }
+  return absentCount === 0 ? "cả lớp đã điểm danh, không ai vắng" : "học sinh";
 }
 
-/** Câu mô tả cờ, ghép từ hai tín hiệu thật — không có tín hiệu nào thì nói thẳng là không có. */
-export function describeFlag(detail: Record<string, unknown>): string {
-  const helpRequested = detail.helpRequested === true;
-  const negativeDays = readNumber(detail, "negativeDays");
-  const moodPart = negativeDays !== null && negativeDays > 0 ? `mood buồn/mệt ${negativeDays} ngày gần đây` : "";
-  if (helpRequested) {
-    return moodPart ? `Đã bấm “cần gặp thầy cô” + ${moodPart}` : "Đã bấm “cần gặp thầy cô”";
+export function cadenceNote(cadence: FlagSummary["detail"]["cadence"]): string {
+  return cadence === "tuc_thi"
+    ? "Hiện ngay khi em bấm — không chờ lượt quét đêm."
+    : "Do lượt quét đêm tìm ra — dấu hiệu của hôm nay phải chờ lượt quét kế tiếp.";
+}
+
+/**
+ * Câu mô tả cờ. Viết lại 01/08/2026 (ADR-026).
+ *
+ * Bản cũ ghép "mood buồn/mệt {N} ngày gần đây" từ `detail.negativeDays` — đúng ba thứ
+ * DESIGN-GUIDELINES §9 cấm in phía GVCN, gói gọn trong một dòng: chiều của cảm xúc, số
+ * ngày, và (qua hai chữ "buồn/mệt") nội dung em đã ghi. Nay `FlagDetail` không còn chở
+ * con số nào nữa — cắt tại contract, nên hàm này KHÔNG THỂ in ra chúng kể cả nếu ai đó
+ * quên mất luật. Đó là cả điểm của việc cắt ở đó thay vì ẩn bằng CSS.
+ */
+export function describeFlag(detail: FlagSummary["detail"]): string {
+  const open = detail.openHelpRequests.length;
+  if (open > 0) {
+    return open === 1
+      ? "Em đã bấm “cần gặp thầy cô” và chưa ai đánh dấu đã gặp."
+      : `Em đã bấm “cần gặp thầy cô” ${open} lần, chưa ai đánh dấu đã gặp.`;
   }
-  return moodPart ? `Mood ${moodPart.slice("mood ".length)}` : "Tín hiệu cảm xúc cần để ý";
+  return "Hệ thấy em có dấu hiệu cần được để ý. Nội dung em ghi chỉ thầy cô tâm lý đọc được.";
+}
+
+/**
+ * Câu trả lời cho cú bấm "Cô đã gặp em rồi" — BỐN câu khác nhau cho bốn kết quả khác nhau.
+ *
+ * Bản cũ in đúng một chuỗi ("Người khác đã xử lý trước rồi.") cho mọi ca `updated === 0`,
+ * mà `updated === 0` có ít nhất bốn nguyên nhân: người khác bấm trước · chính cô bấm
+ * trước · không khớp dòng nào · RLS chặn. Tái hiện được trên hub_dev: câu đó hiện ra
+ * trong khi KHÔNG AI xử lý gì cả và yêu cầu của em vẫn treo nguyên.
+ *
+ * `remainingOpen > 0` luôn được nói THÊM ở cuối, kể cả khi lần bấm này thành công: buồng
+ * lái không tự làm tươi, nên em hoàn toàn có thể vừa gửi thêm một lời nhắn sau khi màn
+ * hình này được tải. Im ở chỗ đó là để cô tin mình đã xử lý xong.
+ *
+ * Thuần hàm — tests/unit/gvcn-flag-card.test.ts gọi thẳng, không dựng React.
+ */
+export function acknowledgeHelpText(r: {
+  justHandled: number;
+  alreadyHandled: number;
+  notFound: number;
+  remainingOpen: number;
+  handledByMe: boolean;
+  handledByName: string | null;
+  handledAt: string | null;
+}): string {
+  const parts: string[] = [];
+
+  if (r.justHandled > 0) {
+    parts.push(
+      r.justHandled === 1
+        ? "Đã đánh dấu cô đã gặp em."
+        : `Đã đánh dấu cô đã gặp em (${r.justHandled} lời nhắn).`,
+    );
+  }
+
+  if (r.alreadyHandled > 0) {
+    const when = r.handledAt ? ` lúc ${shortTime(r.handledAt)}` : "";
+    // "Chính cô" và "người khác" là hai câu chuyện khác nhau: một cái là double-tap vô
+    // hại, cái kia nghĩa là có đồng nghiệp đang cùng làm việc trên em này.
+    if (r.handledByMe) {
+      parts.push(`Thầy cô đã đánh dấu việc này${when} rồi.`);
+    } else {
+      // `handledByName` null vì `core.users` không mở tên đồng nghiệp — "Thầy cô khác"
+      // là sự thật đầy đủ mà màn hình biết, không phải một chỗ trống.
+      parts.push(`${r.handledByName ?? "Thầy cô khác"} đã xử lý${when}.`);
+    }
+  }
+
+  if (r.notFound > 0) {
+    parts.push(
+      r.notFound === 1
+        ? "Có 1 lời nhắn không tìm thấy — màn hình có thể đã cũ, hãy tải lại."
+        : `Có ${r.notFound} lời nhắn không tìm thấy — màn hình có thể đã cũ, hãy tải lại.`,
+    );
+  }
+
+  if (r.remainingOpen > 0) {
+    parts.push(`Em này còn ${r.remainingOpen} lời nhắn chưa xử lý — hãy xem lại.`);
+  }
+
+  // Không rơi vào ca rỗng được (ba rổ cộng lại luôn bằng số id đã gửi, mà input đòi
+  // `.min(1)`), nhưng nếu máy chủ đổi mà quên chỗ này thì im lặng vẫn là hỏng tệ nhất.
+  return parts.length > 0 ? parts.join(" ") : "Đã gửi, nhưng máy chủ không nói rõ kết quả — hãy tải lại màn hình.";
+}
+
+/** "2026-08-01T09:12:33+07" → "09:12". Không parse được thì trả nguyên văn, KHÔNG bịa giờ. */
+export function shortTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function newMutationId(): string {
@@ -325,7 +425,6 @@ export function GvcnDashboard({
   }
 
   const d = dashboard.data;
-  const totalMood = d.moodDistribution.reduce((s, m) => s + m.count, 0) || 1;
   // Tính MỘT LẦN ở đây rồi truyền xuống: dải trạng thái và ô "hết việc" phải nói cùng một
   // câu chuyện. Gọi hai lần ở hai chỗ là mở đường cho hai câu mâu thuẫn trên cùng màn.
   const scan = scanBannerPresentation(d.scanHealth, d.asOfDate);
@@ -367,11 +466,35 @@ export function GvcnDashboard({
         </div>
       )}
 
+      {/* Năm thẻ, không còn bốn ([QĐ-3]). Thẻ "Chưa điểm danh" thêm 01/08/2026 vì thẻ
+          "Vắng" một mình đọc sai: nó đếm `status = 'absent'`, nên buổi sáng chưa ai ghi
+          gì thì nó bằng 0 và phụ đề in "không có ai vắng" — một kết luận dựng từ im lặng,
+          đúng thứ Rev F điều 3 cấm. Nay phụ đề của thẻ Vắng phụ thuộc vào thẻ bên cạnh:
+          còn em chưa điểm danh thì nó nói thẳng là chưa kết luận được. */}
       <div className="mt-[18px] flex flex-wrap gap-3 md:gap-4">
         <StatCard label="Đã check-in" icon="how_to_reg" iconBg="bg-[#E3F8ED]" iconColor="text-[#00A05F]" value={`${d.totals.checkinCount}/${d.totals.totalStudents}`} sub="tính đến giờ" />
-        <StatCard label="Chờ xác nhận" icon="schedule" iconBg="bg-[#FFF1C9]" iconColor="text-[#E8940D]" value={String(d.totals.pendingLateCount)} sub="gửi muộn — chưa phải vắng" accentTop="#FFC629" />
+        <StatCard label="Chờ xác nhận" icon="hourglass_top" iconBg="bg-[#FFF1C9]" iconColor="text-[#E8940D]" value={String(d.totals.pendingLateCount)} sub="gửi muộn — chưa phải vắng" accentTop="#FFC629" />
         <StatCard label="Cờ đang mở" icon="flag" iconBg="bg-[#FFF0F0]" iconColor="text-[#D2383E]" value={String(d.priorityFlags.length)} sub={d.priorityFlags.length > 0 ? "cần xử lý" : "không có cờ nào"} accentTop={d.priorityFlags.length > 0 ? "#F0474D" : undefined} />
-        <StatCard label="Vắng" icon="person_off" iconBg="bg-[#F1F4F8]" iconColor="text-[#5B6B80]" value={String(d.totals.absentCount)} sub={d.totals.absentCount === 0 ? "không có ai vắng" : "học sinh"} />
+        <StatCard
+          label="Vắng"
+          icon="person_off"
+          iconBg="bg-[#FFF0F0]"
+          iconColor="text-[#C0272D]"
+          value={String(d.totals.absentCount)}
+          sub={absentSubtitle(d.totals.absentCount, d.totals.notCheckedInCount)}
+        />
+        <StatCard
+          label="Chưa điểm danh"
+          icon="remove"
+          iconBg="bg-[#F1F4F8]"
+          iconColor="text-[#5B6B80]"
+          value={String(d.totals.notCheckedInCount)}
+          sub={
+            d.totals.notCheckedInCount === 0
+              ? "cả lớp đã có dòng điểm danh"
+              : "chưa ai ghi — không phải vắng"
+          }
+        />
       </div>
 
       {/* CHỈ mobile — trên md bốn đích này đã có trong sidebar, vẽ lại là thừa.
@@ -436,44 +559,7 @@ export function GvcnDashboard({
         </div>
 
         <div className="min-w-0 flex-[1_1_280px] flex flex-col gap-4">
-          <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-            <div className="flex items-center justify-between">
-              <span className="text-[15px] font-black text-navy">Cảm xúc lớp hôm nay</span>
-              <span className="flex items-center gap-1 text-[9.5px] font-bold text-muted">
-                <span className="msr text-[13px]" aria-hidden>
-                  lock
-                </span>
-                nội bộ
-              </span>
-            </div>
-            {d.moodDistribution.length > 0 ? (
-              <>
-                {/* Dải màu là bản tóm tắt NHÌN, không mang thông tin nào mà bảng chú giải
-                    ngay dưới nó chưa nói bằng chữ + số (§11: màu không phải tín hiệu duy
-                    nhất). aria-hidden để trình đọc màn hình không đọc bốn ô rỗng. */}
-                <div className="mt-3.5 flex h-[18px] overflow-hidden rounded-lg" aria-hidden>
-                  {([4, 3, 2, 1] as const).map((m) => {
-                    const count = d.moodDistribution.find((x) => x.mood === m)?.count ?? 0;
-                    const pct = (count / totalMood) * 100;
-                    return pct > 0 ? <span key={m} style={{ width: `${pct}%`, background: MOOD_META[m].grad }} /> : null;
-                  })}
-                </div>
-                <div className="mt-3.5 flex flex-col gap-2">
-                  {([4, 3, 2, 1] as const).map((m) => (
-                    <div key={m} className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: MOOD_META[m].dot }} />
-                      <span className="flex-1 text-[12px] font-bold text-[#33507C]">{MOOD_META[m].label}</span>
-                      <span className="text-[12px] font-black text-navy">
-                        {d.moodDistribution.find((x) => x.mood === m)?.count ?? 0}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <MoodEmpty checkinCount={d.totals.checkinCount} staleSources={d.staleSources} />
-            )}
-          </div>
+          <MoodClosedCard visibility={d.moodVisibility} />
 
           <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
             <div className="text-[15px] font-black text-navy">Hành động gần đây</div>
@@ -539,31 +625,44 @@ function ScanBanner({ scan }: { scan: ScanBannerPresentation }) {
 }
 
 /**
- * Ô "Cảm xúc lớp hôm nay" khi biểu đồ rỗng — BA nhánh, không phải một câu.
+ * Chỗ từng là ô "Cảm xúc lớp hôm nay" — nay là MỘT câu nói vì sao nó không còn.
  *
- * Vì sao (01/08/2026): hai con số trên cùng màn hình này đến từ HAI truy vấn khác nhau ở
- * server/routers/care.ts — `checkinCount` đếm `attendance.checkins` với `kind='in'`, còn
- * `moodDistribution` đếm `attendance.checkins_care` với thêm điều kiện `mood is not null`.
- * Em check-in mà không chọn tâm trạng thì mảng mood rỗng trong khi `checkinCount > 0`.
- * Bản cũ in thẳng "Chưa có check-in nào hôm nay" ở nhánh rỗng, nên màn hình nói đồng thời
- * "Đã check-in 25/30" (thẻ số) và "Chưa có check-in nào hôm nay" (ô này) — hai câu mâu
- * thuẫn cách nhau chưa tới một màn hình cuộn. Câu đúng phải nói rõ CÁI GÌ đang rỗng.
+ * Vì sao không bỏ hẳn ô đi (01/08/2026, [QĐ-1]): cô mở buồng lái quen thuộc, thấy thiếu
+ * một ô, và kết luận màn hình đang lỗi rồi đi báo IT. Bỏ trong im lặng cũng là một cách
+ * nói dối — nó để người dùng tự dựng lấy một lời giải thích sai. Một câu, gọn, đúng một
+ * lần: đây là quy định, không phải hỏng.
+ *
+ * Câu chữ bám sát NHÃN CHUẨN đã chốt ở DESIGN-GUIDELINES §9 ("Chỉ thầy cô tâm lý đọc"),
+ * và cố ý KHÔNG hứa hẹn gì thêm: không "sẽ mở lại sau", không "liên hệ quản trị" — chưa
+ * ai quyết hai điều đó.
  */
-export function moodEmptyText(checkinCount: number, staleSources: string[]): string {
-  if (checkinCount === 0) return "Chưa em nào check-in hôm nay — nên chưa có tâm trạng nào để tổng hợp.";
-  const base = `${checkinCount} em đã check-in nhưng chưa em nào chọn tâm trạng.`;
-  // Nguồn chưa tươi là một khả năng KHÁC hẳn: ô trống có thể vì dữ liệu chưa về kịp chứ
-  // không phải vì các em không chọn. Nói ra cả hai, không chọn hộ một cái.
-  return staleSources.length > 0
-    ? `${base} Nguồn dữ liệu đang chưa tươi (${staleSources.join(", ")}) nên số này còn có thể thiếu.`
-    : base;
+export function moodClosedText(visibility: { readable: boolean; reason: string | null }): string {
+  if (visibility.readable) {
+    // Chưa có ca này hôm nay (buồng lái là màn của GVCN). Có nhánh để lần sau ai mở lại
+    // quyền thì không phải sửa hàm này ở hai chỗ.
+    return "Nhật ký cảm xúc của lớp hiện ở màn riêng.";
+  }
+  if (visibility.reason === "chi_tam_ly") {
+    return "Từ 01/08/2026, nhật ký cảm xúc từng ngày chỉ thầy cô tâm lý đọc được. Thầy cô vẫn nhận cờ “cần để ý” và vẫn nhận ngay khi em bấm nút cần gặp — biết là có chuyện, không đọc nội dung em ghi.";
+  }
+  // Máy chủ nói không đọc được nhưng không nói vì sao: KHÔNG bịa lý do hộ nó.
+  return "Mục này hiện không mở cho thầy cô. Màn hình chưa nhận được lý do cụ thể — nếu cần biết, hỏi quản trị hệ thống.";
 }
 
-function MoodEmpty({ checkinCount, staleSources }: { checkinCount: number; staleSources: string[] }) {
+function MoodClosedCard({ visibility }: { visibility: { readable: boolean; reason: string | null } }) {
   return (
-    <p className="mt-3.5 text-[12px] leading-relaxed text-muted">
-      {moodEmptyText(checkinCount, staleSources)}
-    </p>
+    <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[15px] font-black text-navy">Cảm xúc lớp hôm nay</span>
+        <span className="flex flex-none items-center gap-1 rounded-full bg-chip px-2 py-1 text-[9.5px] font-bold text-[#5B6B80]">
+          <span className="msr text-[13px]" aria-hidden>
+            lock
+          </span>
+          chỉ thầy cô tâm lý
+        </span>
+      </div>
+      <p className="mt-3 text-[12px] leading-relaxed text-muted">{moodClosedText(visibility)}</p>
+    </div>
   );
 }
 
@@ -626,7 +725,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
   });
 
   const look = urgencyPresentation(flag);
-  const helpRequested = flag.detail.helpRequested === true;
+  const openHelp = flag.detail.openHelpRequests;
 
   function submitIntervention() {
     logIntervention.mutate({
@@ -657,8 +756,19 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           </span>
           {look.label}
         </span>
-        <div className="mt-2.5 text-[15px] font-black text-ink">Cờ E — cảm xúc · {flag.studentName}</div>
+        <div className="mt-2.5 text-[15px] font-black text-ink">
+          {flag.ruleCode === "E_URGENT" ? "Em cần gặp thầy cô" : "Em cần được để ý"} · {flag.studentName}
+        </div>
         <div className="mt-0.5 text-[12.5px] leading-relaxed text-[#5B6B80]">{describeFlag(flag.detail)}</div>
+        {/* NHỊP của thẻ này, in ngay dưới câu mô tả — VIỆC 4 / [QĐ-2]. Hai thẻ cạnh nhau
+            trong cùng một danh sách có thể đến từ hai đồng hồ khác nhau, và người đọc
+            không có cách nào tự biết điều đó. `msr` + chữ, không chỉ màu (§11). */}
+        <div className="mt-2 flex items-start gap-1.5 text-[11px] font-semibold leading-relaxed text-muted">
+          <span className="msr mt-[1px] flex-none text-[14px]" aria-hidden>
+            {flag.detail.cadence === "tuc_thi" ? "bolt" : "nightlight"}
+          </span>
+          <span>{cadenceNote(flag.detail.cadence)}</span>
+        </div>
       </div>
 
       <label className="sr-only" htmlFor={`note-${flag.flagId}`}>
@@ -686,16 +796,35 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           {logIntervention.isPending ? "Đang ghi…" : "Ghi can thiệp"}
         </button>
 
-        {/* Chỉ có nghĩa khi em ĐÃ bấm "cần gặp thầy cô": nút này tắt đúng tín hiệu đó
-            (attendance.help_requests.handled_at), không đụng tới cờ mood. */}
-        {helpRequested && (
+        {/* Chỉ có nghĩa khi em ĐANG có yêu cầu treo: nút này tắt đúng những dòng đó
+            (attendance.help_requests.handled_at), không đụng tới cờ cảm xúc.
+
+            HAI thứ đổi 01/08/2026, và cả hai đều là sửa lỗi tái hiện được:
+              · Gửi TẬP ID đang hiện trên thẻ, không gửi `flag.asOfDate`. Ngày suy từ
+                trường hiển thị là nguyên nhân cờ khẩn không tắt được (xem
+                `acknowledgeHelpRequest` trong routers/care.ts).
+              · Bỏ `isSuccess` khỏi điều kiện `disabled`. Trước đây bấm xong một lần là
+                nút xám vĩnh viễn cho tới khi thẻ được dựng lại — kể cả khi cờ VẪN CÒN
+                trên màn. Cô nhìn thấy một cờ đỏ với một nút xám và không có chữ nào giải
+                thích. Trạng thái nút nay suy từ DỮ LIỆU (còn yêu cầu treo thì còn bấm
+                được), không suy từ lịch sử của lời gọi trước. */}
+        {openHelp.length > 0 && (
           <button
             type="button"
-            disabled={acknowledgeHelp.isPending || acknowledgeHelp.isSuccess}
-            onClick={() => acknowledgeHelp.mutate({ studentId: flag.studentId, requestedOn: flag.asOfDate })}
+            disabled={acknowledgeHelp.isPending}
+            onClick={() =>
+              acknowledgeHelp.mutate({
+                studentId: flag.studentId,
+                helpRequestIds: openHelp.map((h) => h.helpRequestId),
+              })
+            }
             className="min-h-[44px] rounded-xl border-[1.6px] border-[#00A05F] bg-[#E3F8ED] px-5 py-3 text-[12.5px] font-black text-[#00693F] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
           >
-            {acknowledgeHelp.isPending ? "Đang ghi…" : "Cô đã gặp em rồi"}
+            {acknowledgeHelp.isPending
+              ? "Đang ghi…"
+              : openHelp.length > 1
+                ? `Cô đã gặp em rồi (${openHelp.length} lời nhắn)`
+                : "Cô đã gặp em rồi"}
           </button>
         )}
 
@@ -758,9 +887,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
         )}
         <MutationError error={acknowledgeHelp.error} />
         {acknowledgeHelp.isSuccess && (
-          <MutationSuccess>
-            {acknowledgeHelp.data.alreadyHandled ? "Người khác đã xử lý trước rồi." : "Đã đánh dấu là cô đã gặp em."}
-          </MutationSuccess>
+          <MutationSuccess>{acknowledgeHelpText(acknowledgeHelp.data)}</MutationSuccess>
         )}
         <MutationError error={closeCase.error} />
         {closeCase.isSuccess && (

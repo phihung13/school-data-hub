@@ -16,12 +16,16 @@
 //  2. PHẠM VI CÓ BIÊN THẬT — cụm không phải "mọi cơ sở". Em ngoài cụm, cơ sở ngoài cụm,
 //     và các vai khác (GVCN thuần, học sinh, phụ huynh, quản trị) đều phải bị chặn.
 //
-//  3. LỜI HỨA IN TRÊN MÀN HÌNH LÀ RÀNG BUỘC KỸ THUẬT. Hai lời hứa đang in cho trẻ đọc:
-//       · /checkin      — "Chỉ thầy cô chủ nhiệm thấy" (mood)
+//  3. LỜI HỨA IN TRÊN MÀN HÌNH LÀ RÀNG BUỘC KỸ THUẬT. Cập nhật 01/08/2026 (ADR-026) —
+//     hai lời hứa đang in cho trẻ đọc nay KHÁC NHAU về hướng, đừng đọc gộp:
+//       · /checkin      — "Chỉ thầy cô tâm lý đọc" (mood). Câu cũ ở dòng này là "Chỉ thầy
+//         cô chủ nhiệm thấy", và nó đã SAI từ 01/08/2026: `core.can_read_mood()` nay là
+//         `is_me ∨ in_my_cluster`, tức tâm lý cụm ĐƯỢC đọc còn GVCN thì không.
 //       · /can-gap-thay-co — dấu tích xanh cho ĐÚNG GVCN của em, và "cô sẽ hỏi ý con
 //         trước khi chuyển tới phòng tâm lý" (nội dung lời em viết)
-//     Tâm lý cụm KHÔNG phải "thầy cô chủ nhiệm", và đường chuyển tuyến có xin phép thì
-//     chưa tồn tại (GĐ2). Nên hai màn mới KHÔNG được trả ra `mood` lẫn `help_requests.note`
+//     Nên lý do hai màn dưới đây không trả `mood` KHÔNG còn là "tâm lý cụm bị cấm" — mà
+//     là chưa ai dựng màn đọc nhật ký cảm xúc cho vai đó. Còn `help_requests.note` thì
+//     vẫn đúng là bị lời hứa chặn: đường chuyển tuyến có xin phép chưa tồn tại (GĐ2).
 //     — dù RLS ở tầng dữ liệu HIỆN VẪN CHO PHÉP đọc cả hai (0009 loop + 0037 dùng
 //     `core.can_see_care`). Khoảng hụt đó là chỗ tính năng sau rất dễ mở lại trong im
 //     lặng, nên bài kiểm ở đây soi thẳng vào chuỗi JSON trả về chứ không soi từng field:
@@ -395,8 +399,12 @@ describe("lời hứa in trên màn hình · hai thứ hai màn này KHÔNG đư
     expect(Object.keys(detail.helpSignals[0]!)).not.toContain("note");
   });
 
-  it("KHÔNG có mood — “Chỉ thầy cô chủ nhiệm thấy” in ngay tại chỗ em nhập", async ({ skip }) => {
+  it("hai màn QUẢN LÝ VIỆC này không chở mood — vì chưa dựng màn đọc, KHÔNG vì bị cấm", async ({ skip }) => {
     if (!ready) return skip();
+    // Tên ca này đổi 01/08/2026. Bản cũ tên là "Chỉ thầy cô chủ nhiệm thấy in ngay tại
+    // chỗ em nhập" — assertion vẫn xanh y hệt, nhưng cái TÊN đã thành lời nói dối: nhãn
+    // đó không còn tồn tại trên màn của em, và vai bị nó loại trừ nay chính là vai duy
+    // nhất còn quyền. Một bài test xanh mang tên sai là thứ người sau đọc rồi tin.
     const list = await counselor().listClusterCases({ includeClosed: false, limit: 100 });
     const detail = await counselor().getClusterCaseDetail({ studentId: IN_CLUSTER_STUDENT, days: 30 });
     expect(JSON.stringify(list)).not.toContain('"mood"');

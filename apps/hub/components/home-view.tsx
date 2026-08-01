@@ -33,7 +33,10 @@
 //
 //  1. GIỌNG. Popup check-in nói với đứa trẻ "Chỉ GVCN của con nhìn thấy" — "GVCN" là
 //     từ vựng hành chính, DESIGN-GUIDELINES §8 chỉ cho nó sống ở buồng lái/tâm lý/điều
-//     hành. Nay dùng đúng câu nhãn của PRODUCT.md: "Chỉ thầy cô chủ nhiệm thấy".
+//     hành. Lúc đó câu thay thế là "Chỉ thầy cô chủ nhiệm thấy" — ĐÃ HẾT ĐÚNG từ
+//     01/08/2026, xem ADR-026 và chú thích ở chỗ in nhãn bên dưới. Ghi lại thay vì
+//     sửa đè: đoạn này kể một lần sửa GIỌNG, và cái sai lúc đó là chữ "GVCN" chứ
+//     không phải phạm vi người đọc.
 //     Kèm theo: lời chào gọi tên người bằng personName() — trước đây /home in nguyên
 //     "Chào Cô Lan (GVCN 6A1) 👋" (full_name kèm hậu tố chức danh) trong khi /gvcn đã
 //     gọi đúng "Chào Cô Lan"; và 👋 chỉ dành cho học sinh (§4: emoji chỉ trong lời chào
@@ -68,7 +71,7 @@ import { MiniAppTile } from "./mini-app-tile";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { HubSidebar } from "./hub-sidebar";
-import { personName } from "./ui/labels";
+import { NHAN_AI_DOC_CAM_XUC, personName } from "./ui/labels";
 import { MutationError, SkeletonBlock } from "./ui/query-state";
 
 /**
@@ -620,13 +623,15 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
             </div>
             <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#6B7789]">
               <span aria-hidden="true" className="msr text-[15px] text-caption">lock</span>
-              {/* Đúng câu nhãn của PRODUCT.md §"Ràng buộc không thương lượng". "GVCN" là
-                  từ vựng vận hành, không được xuất hiện trước mặt học sinh (§8).
-                  Sửa 01/08/2026: thêm "và thầy cô tâm lý". Sau 0038, cột mood đọc được bởi
-                  ĐÚNG hai vai — chủ nhiệm và tâm lý cụm (core.can_read_mood). Câu cũ hứa một
-                  vai trong khi hệ cho hai vai đọc: nhãn nói ít hơn sự thật cũng là nói dối,
-                  và đây là nhãn in ngay trên ô trẻ em ghi cảm xúc. */}
-              Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy
+              {/* Nhãn nay đến từ MỘT hằng số dùng chung (ui/labels.ts), không chép tay.
+                  Vì sao: câu này đã đổi ba lần trong ngày 01/08/2026 — "Chỉ thầy cô chủ
+                  nhiệm thấy" → "…chủ nhiệm và thầy cô tâm lý thấy" → câu hiện tại, mỗi lần
+                  vì phạm vi core.can_read_mood() ở tầng dữ liệu đổi. Lần cuối là ADR-026 +
+                  migration 0044: nhánh chủ nhiệm bị cắt hẳn, cô không đọc được ô cảm xúc
+                  nữa (cô vẫn nhận cờ "cần để ý" và vẫn nhận ngay tín hiệu cần gặp). Ba lần
+                  chép tay ra ba màn là ba cơ hội cho một màn quên sửa — và popup này là màn
+                  duy nhất TỰ MỞ trước mặt em, tức chỗ lời hứa sai sẽ được đọc nhiều nhất. */}
+              {NHAN_AI_DOC_CAM_XUC}
             </div>
             <div className="mt-5 grid w-full grid-cols-4 gap-3">
               {MOOD_ORDER.map((mood) => {

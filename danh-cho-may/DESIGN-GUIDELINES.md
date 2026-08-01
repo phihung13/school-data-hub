@@ -86,7 +86,21 @@
 
 ## 9. Riêng tư & phân quyền
 
-- Mood/check-in cảm xúc: chỉ GVCN **và tâm lý cụm** thấy (`core.can_read_mood()`, migration `0038`) — ghi chú `lock` "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy" ngay tại nơi nhập. **Nhãn phải kể ĐỦ số vai đọc được**: sửa 01/08/2026 vì nhãn cũ kể một vai trong khi hệ cho hai vai đọc.
+- Mood/check-in cảm xúc: **chỉ chính em và thầy cô tâm lý** đọc được (`core.can_read_mood()` = `is_me ∨ in_my_cluster`, migration `0044`, ADR-026 — quyết định chủ đầu tư 01/08/2026). Giáo viên chủ nhiệm **không** đọc được nữa: không trên màn hình, và hỏi thẳng cơ sở dữ liệu cũng bị Postgres từ chối. Cô **vẫn** nhận cờ "cần để ý" (`care.flags`) và **vẫn** nhận ngay tín hiệu "cần gặp thầy cô". Câu cũ ở dòng này ("chỉ GVCN và tâm lý cụm thấy") **đã sai từ 01/08/2026** — giữ lại đây để không ai chép nhầm.
+
+  **NHÃN CHUẨN — hai câu dưới đây là hợp đồng, tầng màn hình in ĐÚNG chữ này.** Lý do phải chốt ở đây chứ không để mỗi màn tự viết: nhãn nói ít hơn hoặc nhiều hơn sự thật đều là nói dối, và một màn viết lệch là cả lời hứa lệch. Viết cho trẻ 11 tuổi đọc — §8 cấm từ vựng vận hành (cờ / ngưỡng / quét / leo thang) trước mặt học sinh, nên hai câu này không được chứa chữ nào trong số đó.
+
+  1. **Nhãn ngắn, đặt ngay tại chỗ em nhập** (dưới bốn ô mặt cười ở `/checkin`, lưới check-in trang chủ, mọi ô nhập cảm xúc phát sinh sau này), kèm icon `lock`:
+
+     > **Chỉ thầy cô tâm lý đọc**
+
+  2. **Câu dài, trong thẻ "Ai thấy gì của mình?"** (`profile-view.tsx`) — dòng dành cho giáo viên chủ nhiệm phải tách làm hai ý đúng sự thật mới, không được gộp:
+
+     > **Thầy cô tâm lý** — đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
+     >
+     > **{tên cô chủ nhiệm}** — xem điểm danh và đọc lời nhắn con gửi. Cô **không đọc** được con đã ghi cảm xúc gì mỗi ngày. Cô chỉ biết là con **cần được để ý** khi con bấm nút cần gặp, hoặc khi hệ thống thấy con có nhiều ngày liền không vui — biết vậy thôi, không biết con đã ghi gì.
+
+  Ba điều **cấm** in ra phía GVCN, vì cả ba đều nói nhiều hơn "cần để ý": chiều của cảm xúc ("cảm xúc đi xuống", "buồn/mệt"), **số ngày** (`negativeDays`, `negativeStreak`), và bất kỳ trích dẫn nào từ ô nhập của em. Cắt tại contract (`packages/core/contracts/care.ts`, `FlagSummary.detail`), không chỉ ẩn bằng CSS — ẩn bằng CSS thì số vẫn đi tới trình duyệt của cô.
 - Ghi chú tư vấn (Tâm lý cụm): GVCN & PH không xem được — luôn hiện badge `visibility_off`.
 - BGH/Điều hành: chỉ dữ liệu **tổng hợp theo lô**, ghi rõ "không tra cứu học sinh cá nhân".
 - Cờ chỉ ghi *loại tín hiệu*, không sao chép nội dung tâm sự.

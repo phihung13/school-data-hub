@@ -1,21 +1,100 @@
 // packages/core/contracts/care.ts — router `care`, phạm vi GĐ1: buồng lái GVCN rút gọn.
 // GĐ2 (chuyển tâm lý cụm, cờ B/C học thuật-hành vi) chưa có contract ở đây — chưa xây (DESIGN-GUIDELINES).
 import { z } from "zod";
-import { HelpRequestTopic, HelpRequestUrgency, MoodValue } from "./checkin.ts";
+import { HelpRequestTopic, HelpRequestUrgency } from "./checkin.ts";
 import { GlowItem, GrowItem } from "./report.ts";
 
+/**
+ * Ngày dạng ISO `YYYY-MM-DD` — không nhận timestamp để không lẫn múi giờ.
+ *
+ * Khai ngay đầu file (dời lên 01/08/2026): trước đó nó nằm giữa file nên mọi schema đứng
+ * trước phải dùng `z.string()` trần, và một trường ngày không được kiểm hình dạng là chỗ
+ * `"2026-8-1"` hay một timestamp đầy đủ lọt vào rồi so sánh chuỗi sai lặng lẽ.
+ */
+const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày phải ở dạng YYYY-MM-DD");
+
+/**
+ * Một lần em bấm "cần gặp thầy cô" mà chưa ai xử lý — ĐI KÈM ID THẬT.
+ *
+ * Vì sao phải có `helpRequestId` (lỗi tái hiện được trên hub_dev 01/08/2026): nút "Cô đã
+ * gặp em rồi" trước đây gửi `{ studentId, requestedOn: flag.asOfDate }`, mà `asOfDate`
+ * của buồng lái là `greatest(ngày check-in gần nhất, ngày yêu cầu treo gần nhất)`. Em Lê
+ * Tiến Dũng có hai yêu cầu treo (31/07 và 01/08) và một buổi sáng 01/08 vui vẻ; cú bấm
+ * đầu tắt dòng 01/08, rồi `asOfDate` VẪN là 01/08 vì ngày check-in che mất ngày yêu cầu
+ * còn lại — mọi cú bấm sau đó khớp 0 dòng và màn hình in "Người khác đã xử lý trước rồi."
+ * trong khi yêu cầu 31/07 treo nguyên tới hết cửa sổ 14 ngày. Cờ khẩn KHÔNG tắt được từ
+ * buồng lái.
+ *
+ * `attendance.help_requests` đã có khoá chính `id uuid` từ đầu. Khoá tự nhiên suy từ một
+ * trường hiển thị là cách lỗi này sinh ra; gửi thẳng id là cách nó không sinh lại được.
+ */
+export const OpenHelpRequest = z.object({
+  helpRequestId: z.string().uuid(),
+  requestedOn: IsoDate,
+  urgency: HelpRequestUrgency.nullable(),
+});
+export type OpenHelpRequest = z.infer<typeof OpenHelpRequest>;
+
+/**
+ * Nhịp sinh ra một cờ. Buồng lái GVCN trộn HAI nhịp trong cùng một danh sách, nên
+ * mỗi thẻ phải tự khai mình thuộc nhịp nào ([QĐ-2], 01/08/2026).
+ *
+ *   · `tuc_thi`  — tính thẳng từ nguồn ngay trong lượt gọi này (`attendance.help_requests`).
+ *                  Em bấm nút lúc 09:00 thì lượt tải kế tiếp đã thấy. Đo trên hub_dev:
+ *                  ghi 195 ms + lượt đọc kế tiếp 226 ms = 421 ms từ nút em tới màn cô.
+ *   · `quet_dem` — do `care.run_flag_engine` sinh ra theo lượt quét (`ops.job_schedule`
+ *                  khai `flag_engine` mỗi 1 ngày). Dữ liệu hôm nay chỉ thành cờ ở lượt
+ *                  chạy sau; engine ngủ một đêm là cô không có cờ E_MOOD nào cả.
+ *
+ * Người đọc một bảng gộp hai nhịp mà không biết là đang bị chính bảng đó đánh lừa: cờ
+ * khẩn vắng mặt nghĩa là "chưa em nào bấm", còn cờ cảm xúc vắng mặt có thể chỉ nghĩa là
+ * "bộ quét chưa chạy". Hai sự vắng mặt khác nghĩa nhau thì không được vẽ giống nhau.
+ */
+export const FlagCadence = z.enum(["tuc_thi", "quet_dem"]);
+export type FlagCadence = z.infer<typeof FlagCadence>;
+
+/**
+ * `detail` của một cờ, NHÌN TỪ PHÍA GVCN. Trước 01/08/2026 đây là `z.record(z.unknown())`
+ * và router nhồi vào đó `negativeDays`, `negativeDaysInWindow`, `negativeStreak`, `mode`,
+ * `threshold` — tức là số ngày em có tâm trạng xấu, đi thẳng ra trình duyệt của cô.
+ *
+ * ADR-026 (quyết định chủ đầu tư 01/08/2026) cắt quyền đọc nhật ký cảm xúc của GVCN.
+ * DESIGN-GUIDELINES §9 ghi ba thứ CẤM in phía GVCN vì cả ba đều nói nhiều hơn "cần để
+ * ý": chiều của cảm xúc, SỐ NGÀY, và mọi trích dẫn từ ô nhập của em. Và ghi rõ: cắt tại
+ * contract, không chỉ ẩn bằng CSS — ẩn bằng CSS thì số vẫn đi tới máy của cô, chỉ cần mở
+ * tab Network là đọc được.
+ *
+ * Nên hình dạng này là schema ĐÓNG (`.strict()` ở chỗ dùng không cần thiết vì zod mặc
+ * định bỏ field lạ, nhưng cái quan trọng là: không có khoá nào ở đây chở con số cảm xúc).
+ * Ai muốn thêm khoá mới phải đọc lại §9 trước.
+ */
+export const FlagDetail = z.object({
+  cadence: FlagCadence,
+  /**
+   * Rỗng = không có yêu cầu "cần gặp thầy cô" nào đang treo. Nút "Cô đã gặp em rồi" gửi
+   * ĐÚNG tập id đang nằm trong mảng này, không gửi mệnh lệnh đóng-hết: buồng lái không
+   * tự làm tươi liên tục, nên "đóng hết yêu cầu treo của em" sẽ nuốt mất lời em vừa gửi
+   * sau lần tải màn hình gần nhất — và em nhận dấu "cô đã gặp em rồi" cho một lời chưa
+   * ai đọc.
+   */
+  openHelpRequests: z.array(OpenHelpRequest),
+  /** Đã có người ghi can thiệp trong cửa sổ "yên" (`care.thresholds`) — xuống cuối danh sách, KHÔNG xoá. */
+  recentlyHandled: z.boolean(),
+});
+export type FlagDetail = z.infer<typeof FlagDetail>;
+
 export const FlagSummary = z.object({
-  // KHÔNG ép .uuid(): flag engine (04-flag-engine.md) chưa chạy nên GĐ1 tính
-  // trực tiếp từ tín hiệu thô, flagId là chuỗi ghép "studentId:asOfDate"
-  // (xem care.ts). Khi flag engine thật chạy, giá trị này đổi thành care.flags.id
-  // (UUID thật) — chữ ký contract giữ nguyên vì đã là string chung.
+  // KHÔNG ép .uuid(): cờ E_MOOD nay đọc từ `care.flags` nên mang UUID thật, nhưng cờ
+  // E_URGENT vẫn được tính trực tiếp trong lượt gọi ([QĐ-2] — báo NGAY, không chờ quét
+  // đêm) nên flagId của nó là chuỗi ghép "studentId:urgent:requestedOn". Hai nguồn, một
+  // kiểu chung: string.
   flagId: z.string(),
   studentId: z.string().uuid(),
   studentName: z.string(),
   className: z.string(),
   ruleCode: z.string(),
   asOfDate: z.string(), // date ISO
-  detail: z.record(z.unknown()),
+  detail: FlagDetail,
   caseId: z.string().uuid().nullable(),
   caseStatus: z.enum(["open", "closed"]).nullable(),
 });
@@ -29,10 +108,26 @@ export const PendingLateCheckin = z.object({
 });
 export type PendingLateCheckin = z.infer<typeof PendingLateCheckin>;
 
-export const MoodBucket = z.object({
-  mood: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
-  count: z.number().int().nonnegative(),
+/**
+ * Vì sao buồng lái GVCN KHÔNG còn ô "Cảm xúc lớp hôm nay".
+ *
+ * Bỏ một ô khỏi màn hình rồi im lặng là hỏng theo kiểu khác: cô mở buồng lái quen thuộc,
+ * thấy thiếu một ô, và kết luận màn hình đang lỗi. Nên chỗ đó nay có MỘT câu nói rõ đây
+ * là quy định, kèm mã lý do do máy chủ phát ra — màn hình không tự suy.
+ *
+ * `readable = false` KHÔNG đồng nghĩa "hôm nay chưa em nào ghi tâm trạng". Đó chính là
+ * hai câu trả lời mà một mảng rỗng gộp làm một, và là lý do trường này là một object có
+ * `reason` chứ không phải một mảng rỗng.
+ */
+export const MoodVisibility = z.object({
+  readable: z.boolean(),
+  /**
+   * `chi_tam_ly` — chỉ chính em và thầy cô tâm lý cụm đọc được nhật ký cảm xúc
+   * (`core.can_read_mood()`, migration 0044, ADR-026). `null` khi `readable = true`.
+   */
+  reason: z.enum(["chi_tam_ly"]).nullable(),
 });
+export type MoodVisibility = z.infer<typeof MoodVisibility>;
 
 export const RecentAction = z.object({
   studentName: z.string(),
@@ -161,9 +256,19 @@ export const GetDashboardOutput = z.object({
     absentCount: z.number().int(),
     totalStudents: z.number().int(), // 30/07/2026: "27/30" ở V10 cần mẫu số thật
     openCareCases: z.number().int(), // 30/07/2026: "hồ sơ chăm sóc đang mở"
+    /**
+     * Sĩ số trừ số em ĐÃ CÓ một dòng điểm danh hôm nay ([QĐ-3], 01/08/2026).
+     *
+     * Vì sao phải là một con số riêng chứ không để cô tự trừ hai thẻ: thẻ "Vắng" đếm
+     * `status = 'absent'`, nên buổi sáng chưa ai điểm danh thì nó bằng 0 và phụ đề in
+     * "không có ai vắng" — một câu kết luận dựng từ im lặng. "Chưa ai ghi gì" và "đã ghi
+     * và không ai vắng" là hai sự thật khác nhau, và chỉ con số này tách được chúng.
+     */
+    notCheckedInCount: z.number().int(),
   }),
-  moodDistribution: z.array(MoodBucket),
-  priorityFlags: z.array(FlagSummary), // origin='live' + case open, sắp theo mức độ
+  /** Vì sao không còn ô "Cảm xúc lớp hôm nay" — xem `MoodVisibility`. */
+  moodVisibility: MoodVisibility,
+  priorityFlags: z.array(FlagSummary), // E_URGENT tức thì + E_MOOD từ care.flags, sắp theo mức độ
   pendingLateCheckins: z.array(PendingLateCheckin),
   recentActions: z.array(RecentAction), // 30/07/2026: care.interventions gần nhất — "Hành động gần đây"
 });
@@ -196,19 +301,56 @@ export const LogInterventionOutput = z.object({
 });
 export type LogInterventionOutput = z.infer<typeof LogInterventionOutput>;
 
-/** Ngày dạng ISO `YYYY-MM-DD` — không nhận timestamp để không lẫn múi giờ. */
-const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày phải ở dạng YYYY-MM-DD");
-
+/**
+ * "Cô đã gặp em rồi" — tắt ĐÚNG những tín hiệu đang hiện trên màn.
+ *
+ * `requestedOn` (khoá tự nhiên suy từ một trường hiển thị) bị gỡ 01/08/2026. Lý do đầy
+ * đủ ở `OpenHelpRequest`; tóm tắt: `flag.asOfDate` không phải ngày của yêu cầu, nên nút
+ * khớp nhầm dòng rồi tự khoá vĩnh viễn.
+ *
+ * Vì sao là MẢNG id chứ không phải một id: một em có thể có nhiều yêu cầu treo (ba em ở
+ * đúng tình trạng đó trên hub_dev hôm nay), và cô nhìn thấy cả cụm rồi bấm một lần.
+ * Nhưng cũng vì sao KHÔNG phải chỉ `{ studentId }` với nghĩa "đóng hết": buồng lái có
+ * thể đang vẽ trạng thái của mười phút trước, nên "đóng hết" sẽ đóng luôn yêu cầu em vừa
+ * gửi mà cô chưa từng thấy — và em nhận xác nhận "cô đã gặp em rồi" cho một lời chưa ai
+ * đọc. Gửi đúng tập id ĐANG HIỆN TRÊN MÀN là cách duy nhất không có ca đó.
+ */
 export const AcknowledgeHelpRequestInput = z.object({
   studentId: z.string().uuid(),
-  requestedOn: IsoDate,
+  helpRequestIds: z.array(z.string().uuid()).min(1),
 });
 export type AcknowledgeHelpRequestInput = z.infer<typeof AcknowledgeHelpRequestInput>;
 
+/**
+ * Bốn con số thay cho một boolean.
+ *
+ * `alreadyHandled: boolean` cũ gộp ÍT NHẤT bốn nguyên nhân khác hẳn nhau vào một câu trên
+ * màn ("Người khác đã xử lý trước rồi."): người khác bấm trước · chính cô bấm trước
+ * (double-tap §9, đúng và vô hại) · id gửi lên không khớp dòng nào (chính là lỗi vừa vá)
+ * · dòng nằm ngoài phạm vi RLS. Đo được cả bốn đều trả về đúng một chuỗi giống hệt nhau.
+ * Đó là "im lặng bị đọc thành kết luận" ở ngay chỗ cô cần biết mình vừa làm được gì.
+ */
 export const AcknowledgeHelpRequestOutput = z.object({
-  updated: z.number().int().nonnegative(),
-  /** Người khác đã xử lý trước — gọi lại là no-op, KHÔNG phải lỗi (§9). */
-  alreadyHandled: z.boolean(),
+  /** Số dòng CHÍNH LẦN GỌI NÀY chuyển từ chưa xử lý sang đã xử lý. Gọi lần hai = 0 (§9). */
+  justHandled: z.number().int().nonnegative(),
+  /** Trong tập id gửi lên, số dòng ĐÃ có `handled_at` từ trước lần gọi này. */
+  alreadyHandled: z.number().int().nonnegative(),
+  /** Số id gửi lên mà người gọi không đọc thấy dòng nào — sai id, hoặc ngoài phạm vi RLS. */
+  notFound: z.number().int().nonnegative(),
+  /**
+   * Sau lời gọi, em này CÒN mấy yêu cầu chưa xử lý. `> 0` nghĩa là em vừa gửi thêm sau
+   * lần màn hình được tải — màn hình phải nói ra, không được im.
+   */
+  remainingOpen: z.number().int().nonnegative(),
+  /** Người đã xử lý là CHÍNH người đang bấm (tính trên các dòng đã xử lý từ trước). */
+  handledByMe: z.boolean(),
+  /**
+   * Tên người đã xử lý trước. `null` khi không ai xử lý trước, HOẶC khi `core.users` không
+   * mở tên đồng nghiệp (policy `users_self`) — màn hình in "Thầy cô khác", KHÔNG bịa tên.
+   */
+  handledByName: z.string().nullable(),
+  /** Dấu thời gian của lần xử lý trước gần nhất trong tập id gửi lên. */
+  handledAt: z.string().nullable(),
 });
 export type AcknowledgeHelpRequestOutput = z.infer<typeof AcknowledgeHelpRequestOutput>;
 
@@ -257,6 +399,54 @@ export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
   queued_late: "Gửi muộn — chờ xác nhận",
 };
 
+/**
+ * Icon cho từng trạng thái, và cho ca "chưa ai ghi gì" (`null`).
+ *
+ * Vì sao bảng này nằm trong contract chứ không trong từng component ([QĐ-3], 01/08/2026):
+ * hai màn của CÙNG một người đang nói hai kiểu về cùng một dữ liệu. `AttendanceBadge`
+ * (dùng ở bảng lớp và màn điểm danh) cho `late` icon `schedule` và `queued_late` icon
+ * `hourglass_top`; còn lịch trong hồ sơ học sinh gộp cả hai vào `schedule`, đồng thời để
+ * `present` và `excused` KHÔNG có icon nào — nên ngày cô ghi "có mặt" vẽ y hệt ngày chưa
+ * ai ghi gì. DESIGN-GUIDELINES §11: hai trạng thái khác nghĩa không được chỉ khác màu
+ * nền; PRODUCT.md gọi "gửi muộn ngược với vắng" là ràng buộc không thương lượng.
+ *
+ * Một bảng, hai người đọc: lần sau đổi một icon là đổi cả hai màn.
+ */
+export const ATTENDANCE_STATUS_ICON: Record<AttendanceStatus, string> = {
+  present: "how_to_reg",
+  late: "schedule",
+  absent: "person_off",
+  excused: "event_available",
+  queued_late: "hourglass_top",
+};
+
+/** Chưa có dòng điểm danh nào. KHÔNG phải "vắng" — một đằng là chưa biết, một đằng là đã biết. */
+export const ATTENDANCE_UNKNOWN_LABEL = "Chưa điểm danh";
+export const ATTENDANCE_UNKNOWN_ICON = "remove";
+
+/**
+ * Câu nói thẳng thứ hệ CHƯA nói được, in một lần dưới bảng điểm danh ([QĐ-3]).
+ *
+ * [QĐ-3] đòi năm trạng thái: đi sớm · đúng giờ · muộn · vắng · chưa điểm danh. Bốn cái
+ * sau có chỗ chứa thật trong `attendance.checkins.status`. "Đi sớm" thì KHÔNG:
+ *
+ *   · `attendance.resolve_checkin` (0027) đọc `closes_at`, `campus_cidrs`,
+ *     `queue_max_age_days` — và KHÔNG đọc `opens_at` ở bất kỳ nhánh nào. Đo thật trên
+ *     hub_dev trong một giao dịch đã rollback (chèn tạm luật 06:45–07:30): 05:30 →
+ *     present · 07:00 → present · 07:29 → present · 07:31 → late. Em đến lúc 5 rưỡi
+ *     sáng và em đến lúc 7:29 nằm chung một ô dữ liệu.
+ *   · Cột duy nhất tách được hai ca đó là `occurred_at`, mà nó là GIỜ MÁY CHỦ NHẬN LƯỢT
+ *     BẤM, không phải giờ vào cổng: dòng cô ghi hộ mang giờ cô bấm Lưu, dòng gửi bù mang
+ *     giờ đồng bộ. Nên giờ chỉ được trình bày như giờ em bấm khi `source = 'app'`.
+ *   · `attendance.checkin_rules` trên hub_dev hôm nay có 0 dòng, nên kể cả muốn so với
+ *     `opens_at` cũng không có mốc nào để so.
+ *
+ * Bịa một trạng thái thứ sáu là in lên màn một thứ dữ liệu không đỡ nổi. Chọn cách còn
+ * lại: hiện GIỜ THẬT em bấm, và nói thẳng vì sao không có nhãn "đi sớm".
+ */
+export const ARRIVAL_BAND_UNAVAILABLE_NOTE =
+  "Bảng này hiện giờ em bấm nút, không hiện nhãn “đi sớm”. Hệ chỉ ghi được giờ máy chủ nhận lượt bấm, chưa ghi giờ em vào cổng, nên không nói chắc được em đến sớm hay đúng giờ.";
+
 export const HomeroomClass = z.object({
   classId: z.string().uuid(),
   classCode: z.string(),
@@ -280,8 +470,25 @@ export const ClassRosterEntry = z.object({
   studentCode: z.string(), // §1 — mã hiển thị bất biến, không phải id nội bộ
   fullName: z.string(),
   status: AttendanceStatus.nullable(), // null = chưa có dòng điểm danh nào hôm đó
-  mood: MoodValue.nullable(),
+  /**
+   * `"HH:MM"` giờ em bấm nút, CHỈ khi `source = 'app'`. `null` ở mọi ca khác — và mỗi ca
+   * đó đã có `source` nói ra mình là ca nào, nên `null` ở đây không gộp hai nghĩa.
+   *
+   * Trước 01/08/2026 câu SQL trả `occurred_at::text` thô: gọi thật qua HTTP bằng phiên Cô
+   * Lan cho ra `"2026-08-01 00:41:49.075267+07"` — cả micro giây lẫn offset. Đồng thời
+   * contract đã hứa "null khi dòng do cô ghi hộ" trong khi cột là `not null default now()`
+   * nên không bao giờ null: dòng cô đánh vắng cho một ngày cách đây 30 hôm vẫn mang "giờ
+   * check-in" là 3 giờ sáng nay, và nhãn cho trình đọc màn hình ghép ra "… vắng — lúc
+   * 03:28 — thầy cô ghi hộ". Nay lời hứa và câu SQL nói cùng một thứ.
+   */
   checkedInAt: z.string().nullable(),
+  /**
+   * `'app'` (em tự bấm) | `'teacher'` (cô ghi hộ) | `'offline_queue'` (gửi bù khi có
+   * mạng lại) | `null` (chưa có dòng nào). Đi ra màn hình vì `checkedInAt` chỉ có nghĩa
+   * ở đúng một trong ba giá trị đó — thiếu nó thì một ô trống không phân biệt được "cô
+   * ghi hộ nên không có giờ" với "chưa ai ghi gì".
+   */
+  source: z.string().nullable(),
   /** Có hồ sơ chăm sóc đang mở — dấu hiệu để cô mở trước, KHÔNG phải nhãn dán lên em. */
   hasOpenCase: z.boolean(),
   /** Đã bấm "cần gặp thầy cô" và chưa ai xử lý. */
@@ -346,6 +553,19 @@ export const ReportPreview = z.object({
   /** GĐ1: tối đa 1 gợi ý — giống hệt `GetGrowthReportOutput.grow`, tránh liệt kê nặng nề. */
   grow: z.array(GrowItem).max(1),
   streakDays: z.number().int().nonnegative(),
+  /**
+   * Bản xem trước này CÓ THỂ thiếu một mục Glow so với bản phụ huynh đọc, và người ký
+   * phải biết điều đó.
+   *
+   * `report.buildGrowthReport` thêm mục "Cả tuần đến lớp với tâm trạng vui vẻ" khi em có
+   * từ 3 ngày "Vui" trở lên. Số ngày Vui đọc từ nhật ký cảm xúc, mà ADR-026 đã đóng nguồn
+   * đó với GVCN — nên bản xem trước của CÔ không dựng được mục ấy. Để nó lặng lẽ biến mất
+   * là quay lại đúng thứ màn duyệt sinh ra để chữa: ký một bản khác bản người khác đọc.
+   *
+   * `true` = "có thể còn một mục Glow nữa mà màn này không dựng được", KHÔNG phải "chắc
+   * chắn có". Màn hình in đúng nghĩa đó, không in mạnh hơn.
+   */
+  glowIncomplete: z.boolean(),
 });
 export type ReportPreview = z.infer<typeof ReportPreview>;
 
@@ -356,9 +576,17 @@ export const ReportApprovalRow = z.object({
   status: ReportApprovalStatus,
   reviewedAt: z.string().nullable(),
   note: z.string().nullable(),
-  /** Hai con số để cô biết báo cáo tuần đó dựa trên bao nhiêu dữ liệu thật. */
+  /** Số ngày em CÓ dòng điểm danh trong tuần — đọc từ `attendance.checkins`. */
   checkinDays: z.number().int().nonnegative(),
-  happyDays: z.number().int().nonnegative(),
+  /**
+   * Số ngày tâm trạng "Vui". **`null` với GVCN** kể từ ADR-026 — cô không đọc được nguồn
+   * của con số này.
+   *
+   * `.nullable()` chứ không để rơi xuống `0`: `0` ở đây là một lời nói dối thay cho
+   * "không được phép biết", và nó là loại nói dối tệ nhất vì trông giống hệt một phép đo.
+   * Cô sẽ đọc "tuần này em không có ngày nào vui" về một em có thể vui cả tuần.
+   */
+  happyDays: z.number().int().nonnegative().nullable(),
   /** Bản xem trước bắt buộc — không optional: thiếu nó thì màn duyệt quay lại ký mù. */
   preview: ReportPreview,
 });
@@ -463,8 +691,10 @@ export type GetStudentDetailInput = z.infer<typeof GetStudentDetailInput>;
 export const StudentCheckinDay = z.object({
   occurredOn: IsoDate,
   status: AttendanceStatus.nullable(),
-  mood: MoodValue.nullable(),
-  /** "HH:MM" giờ máy chủ, hoặc null khi dòng do cô ghi hộ (không có giờ em bấm). */
+  /**
+   * "HH:MM" giờ em bấm, CHỈ khi `source = 'app'` — cùng luật với `ClassRosterEntry`,
+   * xem lời giải thích dài ở đó.
+   */
   checkedInAt: z.string().nullable(),
   /** 'app' | 'teacher' | … — để phân biệt "em tự bấm" với "cô ghi hộ" (ADR-007). */
   source: z.string().nullable(),
@@ -486,6 +716,8 @@ export type StudentCheckinDay = z.infer<typeof StudentCheckinDay>;
  * sao chép sang `care.flags.detail` (luật "cờ E gọn" — cờ chỉ ghi LOẠI tín hiệu).
  */
 export const StudentHelpRequest = z.object({
+  /** Khoá chính thật của dòng. Nút "Cô đã gặp em rồi" gửi id này — xem `OpenHelpRequest`. */
+  helpRequestId: z.string().uuid(),
   requestedOn: IsoDate,
   requestedAt: z.string(),
   topic: HelpRequestTopic.nullable(),
@@ -553,9 +785,21 @@ export type GetStudentDetailOutput = z.infer<typeof GetStudentDetailOutput>;
 //
 // ── HAI THỨ CỐ TÌNH KHÔNG CÓ TRONG HAI HỢP ĐỒNG NÀY ───────────────────────
 //
-// (a) `mood` / dải check-in cảm xúc. Màn check-in in cho học sinh đọc, ngay tại chỗ
-//     nhập: "Chỉ thầy cô chủ nhiệm thấy" (checkin-view.tsx). DESIGN-GUIDELINES §9 nói
-//     lại đúng câu đó. Tâm lý cụm KHÔNG nằm trong "thầy cô chủ nhiệm".
+// (a) `mood` / dải check-in cảm xúc — LÝ DO VIẾT LẠI 01/08/2026, ADR-026.
+//
+//     Lý lẽ cũ ở đây là: màn check-in hứa với em "Chỉ thầy cô chủ nhiệm thấy", mà tâm lý
+//     cụm không phải chủ nhiệm, nên tâm lý cụm không được đọc. Lý lẽ đó nay NGƯỢC HƯỚNG
+//     và phải gỡ, không phải sửa nhẹ: nhãn trên màn check-in đã đổi thành "Chỉ thầy cô
+//     tâm lý đọc", và `core.can_read_mood()` (migration 0044) nay là
+//     `is_me ∨ in_my_cluster` — tâm lý cụm là vai DUY NHẤT còn đọc được nhật ký cảm xúc.
+//     Để nguyên câu cũ là dựng sẵn lý do cho người đọc sau cắt nốt quyền của vai ấy, và
+//     khi đó không còn ai nhìn thấy chuỗi ngày em không vui.
+//
+//     Vì sao hai hợp đồng NÀY vẫn không có `mood`: đây là hai màn QUẢN LÝ VIỆC ("hôm nay
+//     ai đang chờ tôi" · "đọc gì trước khi đóng hồ sơ của em"), không phải màn đọc nhật
+//     ký cảm xúc. Tâm lý cụm có quyền đọc mood ở tầng dữ liệu; hai màn này chưa dựng chỗ
+//     hiển thị nó. Đó là MỘT MÀN CÒN THIẾU, không phải một quyền bị chặn — khác hẳn ca
+//     (b) bên dưới, nơi lời hứa với đứa trẻ là thứ đang chặn.
 //
 // (b) `note` của "cần gặp thầy cô" — nguyên văn lời em viết. Màn /can-gap-thay-co in
 //     cho em đọc TRƯỚC KHI gửi: dấu tích xanh cho ĐÚNG một người (GVCN của em), dấu đỏ
@@ -654,6 +898,12 @@ export type ListClusterCasesOutput = z.infer<typeof ListClusterCasesOutput>;
  * gộp lại làm một schema là mở lại đúng thứ vừa đóng.
  */
 export const ClusterHelpSignal = z.object({
+  /**
+   * Khoá chính thật. Cũng là khoá React của từng dòng: `key={requestedOn}` chỉ hợp lệ nhờ
+   * `unique(student_id, requested_on)` — một khoá React trỏ vào khoá tự nhiên là thứ gãy
+   * im lặng ngay khi bảng cho phép hai yêu cầu trong một ngày.
+   */
+  helpRequestId: z.string().uuid(),
   requestedOn: IsoDate,
   requestedAt: z.string(),
   topic: HelpRequestTopic.nullable(),

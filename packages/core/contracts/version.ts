@@ -22,7 +22,7 @@ import { z } from "zod";
  * lẫn `tsc` của package lõi, mỗi nơi một luật về import JSON; thay vào đó
  * `tools/contracts-lint.mjs` kiểm hai giá trị bằng nhau và CI chặn merge khi lệch.
  */
-export const CONTRACTS_VERSION = "0.1.0";
+export const CONTRACTS_VERSION = "0.2.0";
 
 /**
  * Phiên bản contract cũ nhất mà server còn phục vụ. Tăng số này = chủ động cắt các client
@@ -91,7 +91,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 // tăng version → fail (expand–contract, `03-api.md` luật 6).
 // <contracts-surface>
 // {
-//   "version": "0.1.0",
+//   "version": "0.2.0",
 //   "schemas": {
 //     "HubRole": [
 //       "#enum#student",
@@ -127,6 +127,20 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "studentId",
 //       "homeroomClassId"
 //     ],
+//     "OpenHelpRequest": [
+//       "helpRequestId",
+//       "requestedOn",
+//       "urgency"
+//     ],
+//     "FlagCadence": [
+//       "#enum#tuc_thi",
+//       "#enum#quet_dem"
+//     ],
+//     "FlagDetail": [
+//       "cadence",
+//       "openHelpRequests",
+//       "recentlyHandled"
+//     ],
 //     "FlagSummary": [
 //       "flagId",
 //       "studentId",
@@ -143,6 +157,10 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "studentId",
 //       "studentName",
 //       "occurredOn"
+//     ],
+//     "MoodVisibility": [
+//       "readable",
+//       "reason"
 //     ],
 //     "RecentAction": [
 //       "studentName",
@@ -191,7 +209,8 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "totals.absentCount",
 //       "totals.totalStudents",
 //       "totals.openCareCases",
-//       "moodDistribution",
+//       "totals.notCheckedInCount",
+//       "moodVisibility",
 //       "priorityFlags",
 //       "pendingLateCheckins",
 //       "recentActions"
@@ -212,11 +231,16 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     ],
 //     "AcknowledgeHelpRequestInput": [
 //       "studentId",
-//       "requestedOn"
+//       "helpRequestIds"
 //     ],
 //     "AcknowledgeHelpRequestOutput": [
-//       "updated",
-//       "alreadyHandled"
+//       "justHandled",
+//       "alreadyHandled",
+//       "notFound",
+//       "remainingOpen",
+//       "handledByMe",
+//       "handledByName",
+//       "handledAt"
 //     ],
 //     "CloseCaseInput": [
 //       "caseId",
@@ -257,8 +281,8 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "studentCode",
 //       "fullName",
 //       "status",
-//       "mood",
 //       "checkedInAt",
+//       "source",
 //       "hasOpenCase",
 //       "helpPending"
 //     ],
@@ -292,7 +316,8 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "headline",
 //       "glow",
 //       "grow",
-//       "streakDays"
+//       "streakDays",
+//       "glowIncomplete"
 //     ],
 //     "ReportApprovalRow": [
 //       "studentId",
@@ -352,11 +377,11 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     "StudentCheckinDay": [
 //       "occurredOn",
 //       "status",
-//       "mood",
 //       "checkedInAt",
 //       "source"
 //     ],
 //     "StudentHelpRequest": [
+//       "helpRequestId",
 //       "requestedOn",
 //       "requestedAt",
 //       "topic",
@@ -435,6 +460,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "rows"
 //     ],
 //     "ClusterHelpSignal": [
+//       "helpRequestId",
 //       "requestedOn",
 //       "requestedAt",
 //       "topic",
@@ -471,16 +497,28 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "helpSignals",
 //       "notesWritable"
 //     ],
-//     "MoodBucket": [
-//       "mood",
-//       "count"
-//     ],
 //     "ATTENDANCE_STATUS_LABEL": [
 //       "present",
 //       "late",
 //       "absent",
 //       "excused",
 //       "queued_late"
+//     ],
+//     "ATTENDANCE_STATUS_ICON": [
+//       "present",
+//       "late",
+//       "absent",
+//       "excused",
+//       "queued_late"
+//     ],
+//     "ATTENDANCE_UNKNOWN_LABEL": [
+//       "#expr#\"Chưa điểm danh\""
+//     ],
+//     "ATTENDANCE_UNKNOWN_ICON": [
+//       "#expr#\"remove\""
+//     ],
+//     "ARRIVAL_BAND_UNAVAILABLE_NOTE": [
+//       "#expr#\"Bảng này hiện giờ em bấm nút, không hiện nhãn “đi sớm”. Hệ chỉ ghi được giờ máy chủ nhận lượt bấm, chưa ghi giờ em vào cổng, nên không nói chắc được em đến sớm hay đúng giờ.\""
 //     ],
 //     "MoodValue": [
 //       "#expr#z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])"
@@ -515,9 +553,6 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "topic",
 //       "urgency",
 //       "note"
-//     ],
-//     "CONTRACTS_VERSION": [
-//       "#expr#\"0.1.0\""
 //     ],
 //     "MOOD_LABEL": [
 //       "1",
@@ -598,6 +633,9 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     ],
 //     "Semver": [
 //       "#type#"
+//     ],
+//     "CONTRACTS_VERSION": [
+//       "#expr#\"0.2.0\""
 //     ],
 //     "MIN_SUPPORTED_CONTRACTS_VERSION": [
 //       "#expr#\"0.1.0\""

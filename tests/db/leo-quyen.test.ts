@@ -226,44 +226,78 @@ describe("leo quyền · học sinh KHÔNG tự duyệt được check-in gửi 
 });
 
 // ───────────────────────────────────────────────────────────────────────────
-describe("cờ E_MOOD · 5 ngày LIÊN TIẾP, ngưỡng đọc từ bảng (§6 · quyết định 31/07/2026)", () => {
-  it("4 ngày xấu liên tiếp → CHƯA bật cờ", async ({ skip }) => {
+// Viết lại 01/08/2026 ([QĐ-1] · ADR-026 · nợ #32).
+//
+// Sáu ca cũ ở đây gieo lịch sử mood rồi bấm ngưỡng trong `care.thresholds` để xem buồng
+// lái có bật cờ E_MOOD không — tức là chúng kiểm THUẬT TOÁN ĐẾM NGÀY XẤU qua đường buồng
+// lái, vì hồi đó buồng lái tự đếm. Nay nó không đếm nữa: `care.run_flag_engine` đếm, ghi
+// vào `care.flags`, buồng lái chỉ đọc. Giữ nguyên các ca cũ là bắt buồng lái chịu trách
+// nhiệm cho một phép tính nó không còn làm — chúng sẽ đỏ mãi mãi mà không chỉ ra lỗi nào.
+//
+// Phần ngưỡng/chuỗi ngày nay được khoá ở ĐÚNG chỗ nó sống:
+//   · `packages/core/db/tests/0042_nguong_theo_co_so_test.sql` — ngưỡng theo từng cơ sở
+//   · `tests/db/flag-engine.test.ts` — engine sinh cờ
+// Ở đây chỉ còn câu hỏi thuộc về buồng lái: nó có ĐỌC ĐƯỢC cờ không, và có LỘ số không.
+describe("cờ E_MOOD đọc từ care.flags — buồng lái không tự đếm nữa (ADR-026)", () => {
+  /** Ghi thẳng một cờ như engine ghi. `detail` cố tình mang đủ số để test có cái mà soi. */
+  async function seedMoodFlag(studentId: string): Promise<void> {
+    await asSystem((c) =>
+      c.query(
+        `insert into care.flags (student_id, rule_code, as_of_date, detail, origin)
+         values ($1, 'E_MOOD', current_date, $2::jsonb, 'live')
+         on conflict (student_id, rule_code, as_of_date) do update set detail = excluded.detail`,
+        [studentId, JSON.stringify({ mode: "streak", nguong: 5, negative_days: 6, negative_streak: 6 })],
+      ),
+    );
+  }
+
+  it("không có dòng nào trong care.flags → buồng lái không có cờ E_MOOD", async ({ skip }) => {
     if (!ready) return skip();
-    await seedMoods(TEST_STUDENT, [1, 2, 1, 2]);
+    // Gieo 6 ngày mood xấu liên tiếp — thừa sức vượt ngưỡng 5 của bảng. Buồng lái VẪN
+    // phải im, vì nó không còn nhìn vào nhật ký cảm xúc: đây chính là [QĐ-1] đo được.
+    await seedMoods(TEST_STUDENT, [1, 1, 1, 1, 1, 1]);
     expect(await flagIdsOfClass()).not.toContain(TEST_STUDENT);
   });
 
-  it("5 ngày xấu liên tiếp → BẬT cờ E_MOOD", async ({ skip }) => {
+  it("engine đã ghi cờ → buồng lái đọc ra, KÈM nhịp 'quét đêm'", async ({ skip }) => {
     if (!ready) return skip();
-    await seedMoods(TEST_STUDENT, [1, 2, 1, 2, 1]);
+    await seedMoodFlag(TEST_STUDENT);
     const dashboard = await gvcn().getDashboard();
     const flag = dashboard.priorityFlags.find((f) => f.studentId === TEST_STUDENT);
     expect(flag?.ruleCode).toBe("E_MOOD");
-    expect(flag?.detail.negativeStreak).toBe(5);
+    // VIỆC 4: hai nhịp trong một danh sách thì mỗi thẻ phải tự khai nhịp của mình.
+    expect(flag?.detail.cadence).toBe("quet_dem");
+    expect(flag?.detail.openHelpRequests).toEqual([]);
   });
 
-  it("5 ngày xấu nhưng ĐỨT QUÃNG (có 1 ngày vui ở giữa) → KHÔNG bật cờ", async ({ skip }) => {
+  it("KHÔNG một con số cảm xúc nào lọt ra tới client (DESIGN-GUIDELINES §9)", async ({ skip }) => {
     if (!ready) return skip();
-    // Đây chính là ca mà bản cũ bắn cờ sai: nó đếm "3 ngày bất kỳ trong 14 ngày".
-    await seedMoods(TEST_STUDENT, [1, 2, 1, 4, 1, 2]);
+    await seedMoodFlag(TEST_STUDENT);
+    const dashboard = await gvcn().getDashboard();
+    const flag = dashboard.priorityFlags.find((f) => f.studentId === TEST_STUDENT);
+    expect(flag).toBeDefined();
+
+    // `care.flags.detail` TRONG CSDL vẫn có đủ negative_days/negative_streak/nguong —
+    // RLS `flags_scope` cho GVCN đọc cả cột đó. Chỗ cắt là ở TẦNG HỢP ĐỒNG, và đây là
+    // assertion chứng minh nó cắt thật: soi nguyên chuỗi JSON đi ra client.
+    const wire = JSON.stringify(flag);
+    for (const leak of ["negative_days", "negativeDays", "negative_streak", "negativeStreak", "nguong", "threshold"]) {
+      expect(wire, `"${leak}" không được đi tới trình duyệt của cô`).not.toContain(leak);
+    }
+    expect(Object.keys(flag!.detail).sort()).toEqual(["cadence", "openHelpRequests", "recentlyHandled"]);
+  });
+
+  it("cờ backfill (chạy bù quá khứ) KHÔNG hiện như tình hình hôm nay", async ({ skip }) => {
+    if (!ready) return skip();
+    await asSystem((c) =>
+      c.query(
+        `insert into care.flags (student_id, rule_code, as_of_date, detail, origin)
+         values ($1, 'E_MOOD', current_date, '{}'::jsonb, 'backfill')
+         on conflict (student_id, rule_code, as_of_date) do update set origin = 'backfill'`,
+        [TEST_STUDENT],
+      ),
+    );
     expect(await flagIdsOfClass()).not.toContain(TEST_STUDENT);
-  });
-
-  it("mode='window' trong bảng → chính bộ dữ liệu đứt quãng đó LẠI bật cờ", async ({ skip }) => {
-    if (!ready) return skip();
-    // Khoá lời hứa "đổi cách đếm chỉ là một câu UPDATE, không phải một lần deploy".
-    await seedMoods(TEST_STUDENT, [1, 2, 1, 4, 1, 2]);
-    await setEmotionParams({ ...STREAK_5, mode: "window" });
-    expect(await flagIdsOfClass()).toContain(TEST_STUDENT);
-  });
-
-  it("hạ ngưỡng xuống 2 trong bảng → 2 ngày xấu là đủ (ngưỡng KHÔNG nằm trong code)", async ({ skip }) => {
-    if (!ready) return skip();
-    await seedMoods(TEST_STUDENT, [1, 2]);
-    expect(await flagIdsOfClass()).not.toContain(TEST_STUDENT);
-
-    await setEmotionParams({ ...STREAK_5, negative_days_streak: 2 });
-    expect(await flagIdsOfClass()).toContain(TEST_STUDENT);
   });
 
   it("học sinh lớp 6A2 không lọt vào buồng lái của Cô Lan", async ({ skip }) => {
@@ -299,7 +333,13 @@ describe("tín hiệu khẩn · em không check-in hôm đó vẫn phải hiện
     const dashboard = await gvcn().getDashboard();
     const flag = dashboard.priorityFlags.find((f) => f.studentId === TEST_STUDENT);
     expect(flag?.ruleCode).toBe("E_URGENT");
-    expect(flag?.detail.helpRequested).toBe(true);
+    // [QĐ-2]: tín hiệu khẩn tính THẲNG trong lượt gọi, không chờ lượt quét đêm.
+    expect(flag?.detail.cadence).toBe("tuc_thi");
+    expect(flag?.detail.openHelpRequests).toHaveLength(1);
+    expect(flag?.detail.openHelpRequests[0]!.requestedOn).toBe(await today());
+    expect(flag?.detail.openHelpRequests[0]!.helpRequestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
   });
 
   it("GVCN bấm 'đã gặp em rồi' → cờ rời buồng lái; gọi lại là no-op", async ({ skip }) => {
@@ -313,13 +353,85 @@ describe("tín hiệu khẩn · em không check-in hôm đó vẫn phải hiện
     );
     const day = await today();
 
-    const first = await gvcn().acknowledgeHelpRequest({ studentId: TEST_STUDENT, requestedOn: day });
-    expect(first).toEqual({ updated: 1, alreadyHandled: false });
+    const { rows: hr } = await asSystem((c) =>
+      c.query<{ id: string }>(
+        "select id from attendance.help_requests where student_id = $1 and requested_on = current_date",
+        [TEST_STUDENT],
+      ),
+    );
+    const helpRequestIds = [hr[0]!.id];
 
-    const second = await gvcn().acknowledgeHelpRequest({ studentId: TEST_STUDENT, requestedOn: day });
-    expect(second).toEqual({ updated: 0, alreadyHandled: true });
+    const first = await gvcn().acknowledgeHelpRequest({ studentId: TEST_STUDENT, helpRequestIds });
+    expect(first.justHandled).toBe(1);
+    expect(first.alreadyHandled).toBe(0);
+    expect(first.notFound).toBe(0);
+    expect(first.remainingOpen).toBe(0);
+
+    // §9 — gọi lại KHÔNG nhân đôi tác dụng, và trả lời KHÁC HẲN lần đầu chứ không gộp
+    // vào cùng một câu. `handledByMe` phân biệt double-tap của chính cô với việc đồng
+    // nghiệp đã xử lý trước: hai chuyện khác nhau, hai câu khác nhau trên màn.
+    const second = await gvcn().acknowledgeHelpRequest({ studentId: TEST_STUDENT, helpRequestIds });
+    expect(second.justHandled).toBe(0);
+    expect(second.alreadyHandled).toBe(1);
+    expect(second.notFound).toBe(0);
+    expect(second.handledByMe).toBe(true);
+    expect(second.handledAt).not.toBeNull();
 
     expect(await flagIdsOfClass()).not.toContain(TEST_STUDENT);
+  });
+
+  it("em gửi thêm sau khi màn hình đã tải → remainingOpen NÓI RA, không im", async ({ skip }) => {
+    if (!ready) return skip();
+    // Đây là ca mà phương án "đóng hết yêu cầu treo của em" sẽ nuốt mất lời em vừa gửi:
+    // buồng lái không tự làm tươi, nên nó có thể đang vẽ trạng thái của mười phút trước.
+    // Gửi đúng tập id ĐANG HIỆN TRÊN MÀN thì dòng mới sống sót — và máy chủ phải báo là
+    // nó còn đó, nếu không cô đóng màn hình với niềm tin đã xử lý xong.
+    await asSystem((c) =>
+      c.query(
+        `insert into attendance.help_requests (student_id, requested_on, urgency)
+         values ($1, current_date - 1, 'today'), ($1, current_date, 'urgent')`,
+        [TEST_STUDENT],
+      ),
+    );
+    const { rows } = await asSystem((c) =>
+      c.query<{ id: string }>(
+        `select id from attendance.help_requests
+          where student_id = $1 and requested_on = current_date - 1`,
+        [TEST_STUDENT],
+      ),
+    );
+
+    // Cô chỉ nhìn thấy (và chỉ bấm) dòng hôm qua.
+    const res = await gvcn().acknowledgeHelpRequest({
+      studentId: TEST_STUDENT,
+      helpRequestIds: [rows[0]!.id],
+    });
+    expect(res.justHandled).toBe(1);
+    // Dòng hôm nay KHÔNG bị đóng ké, và màn hình được báo là nó còn treo.
+    expect(res.remainingOpen).toBe(1);
+
+    const { rows: still } = await asSystem((c) =>
+      c.query<{ n: string }>(
+        "select count(*)::text as n from attendance.help_requests where student_id = $1 and handled_at is null",
+        [TEST_STUDENT],
+      ),
+    );
+    expect(Number(still[0]!.n)).toBe(1);
+  });
+
+  it("gửi id không thuộc em này → notFound, KHÔNG gộp vào 'đã có người xử lý'", async ({ skip }) => {
+    if (!ready) return skip();
+    // Bản cũ trả về đúng một chuỗi cho cả hai ca, nên màn hình in "Người khác đã xử lý
+    // trước rồi." trong khi thật ra không dòng nào khớp và yêu cầu của em treo nguyên.
+    const res = await gvcn().acknowledgeHelpRequest({
+      studentId: TEST_STUDENT,
+      helpRequestIds: ["00000000-0000-4000-8000-000000000000"],
+    });
+    expect(res.notFound).toBe(1);
+    expect(res.justHandled).toBe(0);
+    expect(res.alreadyHandled).toBe(0);
+    expect(res.handledByMe).toBe(false);
+    expect(res.handledAt).toBeNull();
   });
 
   it("học sinh không tự tắt được tín hiệu khẩn của chính mình", async ({ skip }) => {
@@ -332,11 +444,19 @@ describe("tín hiệu khẩn · em không check-in hôm đó vẫn phải hiện
         [FIXTURE.studentMinh],
       ),
     );
-    const day = await today();
+    const { rows: hr } = await asSystem((c) =>
+      c.query<{ id: string }>(
+        "select id from attendance.help_requests where student_id = $1 and requested_on = current_date",
+        [FIXTURE.studentMinh],
+      ),
+    );
 
     expect(
       await codeOfRejection(() =>
-        student().acknowledgeHelpRequest({ studentId: FIXTURE.studentMinh, requestedOn: day }),
+        student().acknowledgeHelpRequest({
+          studentId: FIXTURE.studentMinh,
+          helpRequestIds: [hr[0]!.id],
+        }),
       ),
     ).toBe("FORBIDDEN");
 

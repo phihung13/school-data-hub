@@ -199,17 +199,20 @@ describe("3 · số liệu và cờ không lẫn giữa hai lớp", () => {
     const small = await lan().getDashboard({ classId: TEST_CLASS });
     expect(small.totals.totalStudents).toBe(1);
     expect(small.totals.checkinCount).toBe(1);
-    expect(small.moodDistribution).toEqual([{ mood: 1, count: 1 }]);
+    // Em duy nhất của lớp đã có dòng điểm danh ⇒ không còn ai "chưa điểm danh" ([QĐ-3]).
+    expect(small.totals.notCheckedInCount).toBe(0);
+    // Phân bố tâm trạng KHÔNG còn đi ra buồng lái (ADR-026). Nhưng chỗ đó không được im:
+    // máy chủ phải nói ra vì sao, để màn hình khỏi vẽ một ô trống trông như lỗi tải.
+    expect(small.moodVisibility).toEqual({ readable: false, reason: "chi_tam_ly" });
 
     const big = await lan().getDashboard({ classId: FIXTURE.classA });
     // Lớp 6A1 có Minh (seed) và có thể có em do file test khác để lại — chỉ khẳng định
     // điều CHẮC CHẮN đúng: em của lớp thử nghiệm không được đếm sang đây.
     expect(big.totals.totalStudents).toBeGreaterThanOrEqual(1);
     expect(big.classId).toBe(FIXTURE.classA);
-    // Check-in vừa tạo là của lớp kia; buổi sáng nay của 6A1 không được cộng thêm nó.
-    expect(big.moodDistribution.find((m) => m.mood === 1)?.count ?? 0).toBe(
-      await moodOneCountOfClassA(),
-    );
+    // Check-in vừa tạo là của lớp kia: sĩ số 6A1 không được cộng thêm em đó, và số
+    // "chưa điểm danh" của 6A1 không bao giờ vượt quá chính sĩ số của nó.
+    expect(big.totals.notCheckedInCount).toBeLessThanOrEqual(big.totals.totalStudents);
   });
 
   it("cờ khẩn của lớp này không hiện trên buồng lái lớp kia", async ({ skip }) => {

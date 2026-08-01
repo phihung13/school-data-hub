@@ -38,6 +38,28 @@
 // Hỏi được trạng thái thì nói chắc; không hỏi được (mất mạng, 500) thì nói thẳng
 // là chưa biết rồi VẪN cho em ghi — offline-first là lời hứa in trên màn hình, nên
 // không được lấy "chưa đọc được trạng thái" làm cớ chặn em check-in.
+//
+// Sửa 01/08/2026 (quyết định chủ đầu tư QĐ-2) — MÀN ĂN MỪNG NUỐT LỜI CẦU CỨU:
+//
+// Đúng con lỗi kể ở đầu file này, nhưng ở nhánh chưa ai soi: nút "Mình cần gặp thầy
+// cô" đi CHUNG chuyến với tâm trạng (`submitMood({ mood, wantsHelp })`). Khi mất
+// mạng, `pick()` đẩy cả gói vào IndexedDB rồi hiện Y HỆT màn ăn mừng của lần gửi
+// thành công. Với ô tâm trạng thì xếp hàng đợi là đúng — "Offline vẫn lưu — tự gửi
+// sau." là lời hứa in ngay dưới bốn ô. Với nút cần gặp thì KHÔNG: QĐ-2 nói tín hiệu
+// đó phải tới cô NGAY, không chờ lượt quét đêm; mà một bản ghi nằm trong IndexedDB
+// thì không tới ai cả, và nó chỉ đi khi em mở lại đúng app này lúc có mạng. Em vừa
+// làm việc khó nhất là mở lời, đọc "Đã ghi nhận, cảm ơn em!", và tin rằng cô đã biết.
+//
+// Nay hai thứ trong cùng một lần bấm được nói bằng hai câu riêng, vì chúng có hai số
+// phận khác nhau: tâm trạng "đã lưu trên máy, tự gửi sau" · lời cần gặp "CHƯA gửi
+// được". Màn đổi hẳn giọng khi lời cần gặp còn kẹt — không mascot ăn mừng, tiêu đề
+// nói thẳng là chưa gửi được, và có đường đi thật cho em (thử lại, hoặc tìm thầy cô
+// nói trực tiếp). Xem `helpSignalState` ngay dưới.
+//
+// Sửa 01/08/2026 (ADR-026) — NHÃN: câu "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"
+// đã hết đúng. Migration 0044 cắt nhánh chủ nhiệm khỏi `core.can_read_mood()`, nên
+// người đọc được ô cảm xúc nay chỉ còn chính em và thầy cô tâm lý. Nhãn chuẩn chốt ở
+// DESIGN-GUIDELINES §9.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -50,6 +72,7 @@ import { MiniAppHeader } from "./mini-app-header";
 import { MoodTile } from "./mood-tile";
 import { Mascot } from "./mascot";
 import { PageShell } from "./page-shell";
+import { NHAN_AI_DOC_CAM_XUC } from "./ui/labels";
 import { httpStatusOf, isNetworkError, LoadingState, MutationError } from "./ui/query-state";
 
 type ViewState = "pick" | "success";
@@ -70,6 +93,34 @@ export function shouldQueueOffline(error: unknown): boolean {
   if (status === null) return true;
   if (status === 408 || status === 429) return true;
   return status >= 500;
+}
+
+/**
+ * Lời "Mình cần gặp thầy cô" của lần bấm vừa rồi đang ở đâu?
+ *
+ * Ba giá trị, và ba giá trị này KHÔNG được gộp với trạng thái của ô tâm trạng dù hai
+ * thứ đi chung một lời gọi. Lý do là số phận của chúng khác nhau: tâm trạng nằm trong
+ * hàng đợi vẫn đúng lời hứa "Offline vẫn lưu — tự gửi sau", còn lời cần gặp nằm trong
+ * hàng đợi là một tín hiệu KHÔNG tới ai — nó chỉ rời máy khi em mở lại app lúc có
+ * mạng, mà QĐ-2 (01/08/2026) đòi nó phải tới cô ngay.
+ *
+ *  · `khong-bam`     — em không bấm nút cần gặp trong lần này. Màn không nói gì thêm.
+ *  · `da-toi-co`     — máy chủ đã nhận. Chỉ nói "đã tới", KHÔNG nói "cô đã đọc":
+ *                      máy không biết điều thứ hai (cùng luật với dải trạng thái ở
+ *                      help-request-view.tsx).
+ *  · `chua-gui-duoc` — còn nằm trên máy. Đây là nhánh mà màn ăn mừng bị cấm.
+ *
+ * `reachedServer` là "lời gọi này có tới máy chủ và trả về OK không" — không phải
+ * `navigator.onLine`: trình duyệt báo online mà mạng chập chờn là ca đã xảy ra thật
+ * (xem nhánh `shouldQueueOffline` trong `pick`).
+ *
+ * Thuần hàm để test được (tests/unit/checkin-view.test.ts).
+ */
+export type HelpSignalState = "khong-bam" | "da-toi-co" | "chua-gui-duoc";
+
+export function helpSignalState(args: { wantsHelp: boolean; reachedServer: boolean }): HelpSignalState {
+  if (!args.wantsHelp) return "khong-bam";
+  return args.reachedServer ? "da-toi-co" : "chua-gui-duoc";
 }
 
 /** Ba trạng thái của màn check-in. Xem `checkinStage` để biết vì sao có ba. */
@@ -137,6 +188,11 @@ export function CheckinView() {
   const [lastMood, setLastMood] = useState<MoodValue | null>(null);
   const [changedFrom, setChangedFrom] = useState<MoodValue | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  // Chụp lại `wantsHelp` của ĐÚNG lần bấm này. Không đọc thẳng state `wantsHelp` ở màn
+  // thành công: nó là công tắc còn bật sau khi gửi, nên nếu em quay lại bấm "Giữ nguyên"
+  // rồi tắt công tắc thì câu nói về lời cần gặp sẽ đổi theo — trong khi việc đã xảy ra
+  // rồi và không đổi được nữa.
+  const [helpAtSubmit, setHelpAtSubmit] = useState(false);
   const todayStatus = trpc.checkin.getTodayStatus.useQuery();
   const submitMood = trpc.checkin.submitMood.useMutation();
   const submitRef = useRef(submitMood.mutateAsync);
@@ -191,6 +247,7 @@ export function CheckinView() {
     // trị cũ biến mất, và câu "đổi từ … sang …" mất luôn vế đầu.
     const previous = moodToday;
     setLastMood(mood);
+    setHelpAtSubmit(wantsHelp);
     setFailure(null);
     if (!navigator.onLine) {
       const { replacedMood } = await enqueueCheckin({ mood, wantsHelp });
@@ -234,6 +291,9 @@ export function CheckinView() {
   // -------------------------------------------------------------------------
   if (state === "success") {
     const notice = lastMood !== null ? changeNotice(changedFrom, lastMood) : null;
+    // Một lần bấm, HAI việc, và chúng có thể có hai kết cục khác nhau. Xem `helpSignalState`.
+    const helpState = helpSignalState({ wantsHelp: helpAtSubmit, reachedServer: !queuedOffline });
+    const helpStuck = helpState === "chua-gui-duoc";
     return (
       <PageShell bg="bg-white">
         <div
@@ -241,11 +301,14 @@ export function CheckinView() {
           aria-live="polite"
           className="flex flex-1 flex-col items-center justify-center gap-4 px-8 py-16 text-center"
         >
-          <Mascot pose="celebrate" width={72} />
+          {/* Sư tử ăn mừng là một câu nói, không phải trang trí: nó nói "xong rồi, yên
+              tâm". Khi lời cần gặp còn kẹt trên máy thì câu đó sai, nên đổi tư thế —
+              không phải làm màn hình buồn đi, mà để hình và chữ nói cùng một điều. */}
+          <Mascot pose={helpStuck ? "think" : "celebrate"} width={72} />
           {/* tabIndex={-1}: <h2> không tự nhận được focus, thiếu nó thì .focus() ở trên
               không làm gì cả và lỗi im lặng y như cũ. */}
           <h2 ref={successHeadingRef} tabIndex={-1} className="text-[19px] font-black text-navy">
-            Đã ghi nhận, cảm ơn em!
+            {helpStuck ? "Lời con nhắn chưa gửi được" : "Đã ghi nhận, cảm ơn em!"}
           </h2>
           {lastMood !== null && (
             <p className="text-[14px] text-ink">
@@ -274,6 +337,47 @@ export function CheckinView() {
               <span aria-hidden className="msr text-[14px]">cloud_off</span>
               Đang offline — đã lưu máy, tự gửi khi có mạng.
             </p>
+          )}
+
+          {/* QĐ-2, chiều TỐT: máy chủ đã nhận. Nói "đã tới", KHÔNG nói "cô đã đọc" —
+              máy chỉ biết vế đầu, và bịa vế sau thì đứa trẻ lãnh. */}
+          {helpState === "da-toi-co" && (
+            <p className="flex max-w-[320px] items-center gap-1.5 rounded-[12px] bg-[#E3F8ED] px-3.5 py-2 text-[12px] font-bold leading-relaxed text-[#00693F]">
+              <span aria-hidden className="msr flex-none text-[16px]">waving_hand</span>
+              Lời “Mình cần gặp thầy cô” của con đã tới chỗ thầy cô rồi.
+            </p>
+          )}
+
+          {/* QĐ-2, chiều XẤU — khối quan trọng nhất của cả màn này.
+              Tâm trạng nằm hàng đợi thì không sao (lời hứa offline-first đã in sẵn), nhưng
+              lời cầu cứu nằm hàng đợi là một tín hiệu KHÔNG tới ai. Nói thẳng, và cho hai
+              đường đi thật: thử lại ngay, hoặc gặp người thật. */}
+          {helpStuck && (
+            <div className="flex w-full max-w-[340px] flex-col items-center gap-2 rounded-[14px] border-[1.6px] border-[#FFD5D6] bg-[#FFF5F5] p-3.5 text-center">
+              <p className="text-[12.5px] font-bold leading-relaxed text-[#8A4A4C]">
+                Thầy cô <b>chưa</b> biết con muốn gặp — máy chưa gửi được lời nhắn này đi.
+              </p>
+              <p className="text-[11.5px] leading-relaxed text-[#8A4A4C]">
+                Máy sẽ tự gửi khi có mạng lại. Nhưng nếu con cần gặp trong hôm nay, con tìm thầy cô
+                nói trực tiếp nhé — như vậy chắc chắn hơn.
+              </p>
+              {lastMood !== null && (
+                <button
+                  type="button"
+                  disabled={submitMood.isPending}
+                  onClick={() => void pick(lastMood)}
+                  className="min-h-[44px] rounded-full bg-navy px-5 py-2 text-[12.5px] font-black text-white disabled:opacity-50"
+                >
+                  {submitMood.isPending ? "Đang gửi…" : "Thử gửi lại"}
+                </button>
+              )}
+              <Link
+                href="/can-gap-thay-co"
+                className="text-[12px] font-black text-[#1D4E8F] underline underline-offset-2"
+              >
+                Viết rõ hơn cho thầy cô
+              </Link>
+            </div>
           )}
           {/* min-h-[44px] + inline-flex (01/08/2026): `py-2.5` cho ra ô cao ~33px — dưới mốc
               44px của §11/WCAG 2.5.5, và đây là đường ra DUY NHẤT của màn thành công trên
@@ -327,9 +431,12 @@ export function CheckinView() {
           {today?.checkedInAt && (
             <p className="mt-1 text-[12.5px] text-muted2">Lúc {today.checkedInAt}</p>
           )}
+          {/* Nhãn chuẩn DESIGN-GUIDELINES §9 (ADR-026). Không viết tay một câu khác ở đây:
+              hai chỗ in nhãn trong cùng file mà lệch nhau một chữ là hai lời hứa khác nhau
+              về cùng một ô nhập. */}
           <div className="mt-2 flex items-center justify-center gap-1">
             <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-            <span className="text-[12px] text-muted2">Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy</span>
+            <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
           </div>
 
           <button
@@ -372,7 +479,7 @@ export function CheckinView() {
           </div>
           <div className="mt-1.5 flex items-center justify-center gap-1">
             <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-            <span className="text-[12px] text-muted2">Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy</span>
+            <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
           </div>
         </div>
 

@@ -155,8 +155,12 @@ describe("màn 5 · hồ sơ một học sinh (care.getStudentDetail)", () => {
     const d = await gvcn().getStudentDetail({ studentId: TEST_STUDENT });
     expect(d.checkins).toHaveLength(1);
     expect(d.checkins[0]!.occurredOn).toBe(day);
-    expect(d.checkins[0]!.mood).toBe(4);
+    expect(d.checkins[0]!.status).toBe("present");
     expect(d.checkins[0]!.source).toBe("app");
+    // Dòng do EM tự bấm ⇒ có giờ thật, dạng HH:MM (không phải chuỗi timestamp thô).
+    expect(d.checkins[0]!.checkedInAt).toMatch(/^\d{2}:\d{2}$/);
+    // Cột tâm trạng đã rời khỏi hợp đồng của màn GVCN (ADR-026) — kiểm bằng hình dạng.
+    expect(Object.keys(d.checkins[0]!)).not.toContain("mood");
   });
 
   it("hồ sơ chăm sóc ĐANG MỞ vẫn hiện dù mở từ trước cửa sổ ngày", async ({ skip }) => {
@@ -323,7 +327,14 @@ describe("màn 6 · em tự xem trạng thái lời đã gửi (checkin.getMyHel
     await studentCheckin().requestHelp({ topic: "hoc", urgency: "this_week" });
     const day = await today();
 
-    await gvcn().acknowledgeHelpRequest({ studentId: FIXTURE.studentMinh, requestedOn: day });
+    // Gửi ID THẬT của dòng, không gửi ngày suy từ màn hình — xem `OpenHelpRequest`.
+    const pending = await gvcn().getStudentDetail({ studentId: FIXTURE.studentMinh });
+    const open = pending.helpRequests.find((h) => h.handledAt === null);
+    expect(open, "phải có đúng một yêu cầu đang treo để bấm").toBeDefined();
+    await gvcn().acknowledgeHelpRequest({
+      studentId: FIXTURE.studentMinh,
+      helpRequestIds: [open!.helpRequestId],
+    });
 
     const row = (await studentCheckin().getMyHelpRequests()).requests[0]!;
     expect(row.acknowledged).toBe(true);
