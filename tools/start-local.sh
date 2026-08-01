@@ -125,6 +125,43 @@ else
   }
 fi
 
+# ── 2b. Trang có BẤM ĐƯỢC không, không chỉ có mở được ────────────────────────
+#
+# Vì sao có bước này: "trả 200 ở /login" là một phép kiểm XANH GIẢ, và nó đã lừa
+# đúng hai lần trong ngày 01/08/2026. Next.js dựng trang ở máy chủ rồi gửi HTML
+# đi — nên trang vẫn 200 và vẫn hiện đủ chữ KỂ CẢ KHI toàn bộ phần chạy trên máy
+# người dùng không tải được. Lúc đó mọi nút trên màn là HTML chết: bấm không có
+# gì xảy ra, console không một dòng lỗi, curl vẫn báo 200.
+#
+# Lần thứ hai nó xảy ra, người phát hiện là chủ đầu tư, bằng điện thoại, với đúng
+# một câu "tôi không vào được". Đo lại thì `main-app.js` (điểm vào của React),
+# `app-pages-internals.js` và `not-found.js` đều 404 vì thư mục .next bị dọn
+# trong lúc máy chủ đang chạy. Chữa bằng cách tắt máy chủ, xoá .next, bật lại.
+#
+# Nên bước này KHÔNG hỏi "trang có mở không" mà hỏi "trang có sống không": lấy
+# đúng danh sách <script src> mà trình duyệt sẽ tải, rồi thử từng tệp một. Thiếu
+# một tệp là hỏng, dù trang trông vẫn bình thường.
+echo "── 2b. Hub có bấm được không (không chỉ mở được)"
+HTML_LOGIN="$(curl -sf -m 10 "$HUB_URL/login" 2>/dev/null || true)"
+CHUNKS="$(printf '%s' "$HTML_LOGIN" | grep -oE '/_next/[^"]+\.js[^"]*' | sort -u)"
+if [ -z "$CHUNKS" ]; then
+  fail "không tìm thấy tệp JS nào trong trang đăng nhập — trang này không thể bấm được"
+  fail "chữa: dừng Hub, xoá apps/hub/.next, chạy lại script này"
+  exit 1
+fi
+CHET=""
+for c in $CHUNKS; do
+  code="$(curl -s -o /dev/null -w '%{http_code}' -m 10 "$HUB_URL$c")"
+  [ "$code" = "200" ] || CHET="$CHET\n     $code  $c"
+done
+if [ -n "$CHET" ]; then
+  fail "trang mở được nhưng KHÔNG BẤM ĐƯỢC — thiếu tệp JS:"
+  printf "$CHET\n"
+  fail "chữa: dừng tiến trình nghe cổng 3000, xoá apps/hub/.next, chạy lại script này"
+  exit 1
+fi
+ok "$(printf '%s' "$CHUNKS" | grep -c .) tệp JS đều tải được — trang bấm được thật"
+
 echo "── 3. Đường hầm Cloudflare ($PUBLIC_URL)"
 if [ ! -f "$CF_CONFIG" ]; then
   warn "không có $CF_CONFIG — bỏ qua bước này (chỉ chạy được ở local)"
