@@ -35,6 +35,14 @@ begin;
 select plan(20);
 select test_support.seed_basic();
 
+-- 0047 (ADR-027 bản 2): học sinh chỉ GHI được `mood` khi nhà đã có phiếu đồng ý. Bài này
+-- canh AI ĐỌC ĐƯỢC mood, không canh cổng đồng ý — dựng sẵn phiếu cho Minh để assertion
+-- "học sinh vẫn ghi đè được mood trong ngày" còn kiểm đúng thứ nó định kiểm.
+insert into core.consent_records (user_id, student_id, terms_version_id, decision, content_hash)
+select '40000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000001',
+       tv.id, 'granted', tv.content_hash
+  from core.terms_versions tv where tv.version = 1;
+
 -- Minh (6A1, cơ sở Q7): cô Lan chủ nhiệm, cô Mai tâm lý cụm Q7, thầy Nam dạy bộ
 -- môn CHÍNH lớp 6A1, phụ huynh là 90000000-…-0004, Hùng là hiệu trưởng Q7 + admin.
 -- mood = 1 ("Buồn") cố ý: nếu nó lọt ra ngoài phạm vi thì lọt đúng thứ đau nhất.

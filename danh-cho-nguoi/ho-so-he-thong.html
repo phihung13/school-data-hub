@@ -1882,7 +1882,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="23">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="25">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -1897,11 +1897,11 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <div class="zoom-wrap">
           <div class="zoom-bar"><button type="button" class="zoom-btn" aria-expanded="false"><span class="zoom-icon">&#10530;</span> Phóng to</button></div>
           <div class="arch-canvas">
-          <svg class="arch-svg wide" viewBox="0 0 1120 820" role="img" aria-labelledby="erd-title erd-desc">
+          <svg class="arch-svg wide" viewBox="0 0 1120 950" role="img" aria-labelledby="erd-title erd-desc">
             <title id="erd-title">ERD logic của School Data Hub</title>
-            <desc id="erd-desc">Core chứa định danh người dùng, học sinh, trường, lớp và phân quyền. Tất cả bảng nghiệp vụ tham chiếu core.students bằng khóa ngoại.</desc>
+            <desc id="erd-desc">Core chứa định danh người dùng, học sinh, trường, lớp, phân quyền, và từ 01/08/2026 thêm hai bảng bản điều khoản với phiếu đồng ý của phụ huynh. Tất cả bảng nghiệp vụ tham chiếu core.students bằng khóa ngoại.</desc>
 
-            <rect class="zone" x="20" y="24" width="760" height="772" rx="20" />
+            <rect class="zone" x="20" y="24" width="760" height="902" rx="20" />
             <text class="zone-label" x="42" y="50">CORE SCHEMA · SINGLE SOURCE OF TRUTH</text>
             <rect class="box-core" x="48" y="78" width="210" height="112" rx="12" />
             <text class="label" x="66" y="103">core.school_networks</text>
@@ -1918,7 +1918,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
             <rect class="box-platform" x="48" y="254" width="210" height="146" rx="12" />
             <text class="label" x="66" y="279">core.users</text>
             <text class="body" x="66" y="303">PK id</text><text class="body" x="66" y="323">UQ auth_uid</text>
-            <text class="body" x="66" y="343">email · status</text><text class="tiny" x="66" y="378">không SELECT auth.users</text>
+            <text class="body" x="66" y="343">email · status</text><text class="tiny" x="66" y="361">status = danh tính, không theo phiếu đồng ý</text><text class="tiny" x="66" y="380">không SELECT auth.users</text>
             <rect class="box-core" x="298" y="254" width="210" height="146" rx="12" />
             <text class="label" x="316" y="279">core.students</text>
             <text class="body" x="316" y="303">PK id</text><text class="body" x="316" y="323">UQ student_code</text>
@@ -1957,7 +1957,24 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
             <text class="tiny" x="566" y="723">sổ đăng nhập — mọi tài khoản</text>
             <text class="tiny" x="566" y="740">giáo viên · phụ huynh · học sinh</text>
 
-            <rect class="zone" x="810" y="24" width="290" height="772" rx="20" />
+            <rect class="box-sensitive" x="48" y="790" width="210" height="126" rx="12" />
+            <text class="label" x="66" y="815">core.terms_versions</text>
+            <text class="body" x="66" y="839">version · title · body_md</text><text class="body" x="66" y="859">content_hash (generated)</text>
+            <text class="tiny" x="66" y="881">công bố rồi là bất biến</text>
+            <text class="tiny" x="66" y="898">không sửa · không xoá</text>
+            <rect class="box-sensitive" x="298" y="790" width="210" height="126" rx="12" />
+            <text class="label" x="316" y="815">core.consent_records</text>
+            <text class="body" x="316" y="839">FK user_id · FK student_id</text><text class="body" x="316" y="859">decision · superseded_at</text>
+            <text class="tiny" x="316" y="881">sổ CHỈ THÊM — rút lại là thêm dòng</text>
+            <text class="tiny" x="316" y="898">UQ(user, con) khi còn hiệu lực</text>
+            <rect class="note" x="548" y="790" width="204" height="126" rx="12" />
+            <text class="tiny" x="566" y="817">Chưa có phiếu: không ghi tâm trạng</text>
+            <text class="tiny" x="566" y="837">thì core.users.status của em</text>
+            <text class="tiny" x="566" y="857">là pending, và không phiên</text>
+            <text class="tiny" x="566" y="877">đăng nhập nào dựng được.</text>
+            <text class="tiny" x="566" y="901">Điểm danh và y tế KHÔNG bị chặn.</text>
+
+            <rect class="zone" x="810" y="24" width="290" height="902" rx="20" />
             <text class="zone-label" x="832" y="50">DOMAIN FACT TABLES</text>
             <rect class="box-domain" x="838" y="78" width="234" height="100" rx="12" />
             <text class="label" x="856" y="103">attendance.checkins</text><text class="body" x="856" y="127">PK id · FK student_id</text>
@@ -1988,6 +2005,9 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
             <path class="edge-blue" d="M508 695 H528 V327 H508" marker-end="url(#arch-arrow-blue)" />
             <path class="edge-green" d="M508 327 H790 V248 H838" marker-end="url(#arch-arrow-green)" />
             <path class="edge-green" d="M508 327 H790 V394 H838" marker-end="url(#arch-arrow-green)" />
+            <path class="edge-blue" d="M258 853 H298" marker-end="url(#arch-arrow-blue)" />
+            <path class="edge-red" d="M298 853 H278 V400" marker-end="url(#arch-arrow-red)" />
+            <path class="edge-blue" d="M508 853 H528 V420 H453 V400" marker-end="url(#arch-arrow-blue)" />
             <path class="edge-green" d="M508 327 H790 V540 H838" marker-end="url(#arch-arrow-green)" />
             <path class="edge-green" d="M508 327 H790 V674 H838" marker-end="url(#arch-arrow-green)" />
             <path class="edge-red" d="M508 347 H778 V704 H962" marker-end="url(#arch-arrow-red)" />
@@ -2056,13 +2076,13 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
 
         <h3>Bản đồ dữ liệu ở mức dev cần nhớ</h3>
         <div class="grid-3">
-          <div class="card blue"><h4><code>core</code> · nguồn sự thật</h4><p>Users, students, teachers, parents, schools, classes, roles, permissions, và <b>hai sổ đối chiếu</b>: <code>id_mappings</code> (mã học sinh ở hệ ngoài) + <code>identity_links</code> (tài khoản đăng nhập ở hệ ngoài). Thêm <code>parent_invite_codes</code> (28/07/2026) — mã mời 6 ký tự để phụ huynh tự tạo tài khoản lần đầu, giống hệt cách sổ đối chiếu khác: không ai đọc/ghi thẳng bảng này, chỉ một hàm riêng được chạm. <b>Sửa 29/07/2026:</b> khi dựng thử ứng dụng thật, phát hiện <code>parents</code>/<code>parent_students</code> trước đó không ai đọc được (thiếu quyền hoàn toàn, không phải chủ ý) — đã mở đúng phạm vi: phụ huynh tự tra được chính con mình, không hơn.</p></div>
+          <div class="card blue"><h4><code>core</code> · nguồn sự thật</h4><p>Users, students, teachers, parents, schools, classes, roles, permissions, và <b>hai sổ đối chiếu</b>: <code>id_mappings</code> (mã học sinh ở hệ ngoài) + <code>identity_links</code> (tài khoản đăng nhập ở hệ ngoài). Thêm <code>parent_invite_codes</code> (28/07/2026) — mã mời 6 ký tự để phụ huynh tự tạo tài khoản lần đầu, giống hệt cách sổ đối chiếu khác: không ai đọc/ghi thẳng bảng này, chỉ một hàm riêng được chạm. <b>Sửa 29/07/2026:</b> khi dựng thử ứng dụng thật, phát hiện <code>parents</code>/<code>parent_students</code> trước đó không ai đọc được (thiếu quyền hoàn toàn, không phải chủ ý) — đã mở đúng phạm vi: phụ huynh tự tra được chính con mình, không hơn. <b>Thêm 01/08/2026:</b> hai bảng mới cho việc đồng ý &mdash; <b>bản điều khoản</b> (công bố rồi là không sửa được, không xoá được) và <b>sổ phiếu đồng ý</b> của phụ huynh (chỉ ghi thêm, rút lại cũng là thêm một dòng chứ không xoá dòng cũ). Cái phiếu này gác <b>việc ghi tâm trạng hằng ngày</b> của con &mdash; không gác tài khoản của con, và tuyệt đối không gác nút &ldquo;Mình cần gặp thầy cô&rdquo;. Xem mục &quot;Tờ giấy bố mẹ ký&quot; bên dưới.</p></div>
           <div class="card"><h4><code>attendance</code></h4><p>Check-in, điểm danh, khung giờ, yêu cầu gặp thầy cô. <b>Thêm 30/07/2026:</b> yêu cầu gặp thầy cô giờ ghi thêm chủ đề + mức khẩn + lời nhắn (trước chỉ ghi "đã bấm nút") — vẫn là dữ liệu cảm xúc thường, không kho riêng. Tên GVCN hiển thị cho học sinh cũng được dọn lại (bỏ hậu tố "(GVCN 6A1)" chỉ dùng để phân biệt tài khoản thử ở màn đăng nhập). <b>Sửa 31/07/2026:</b> khoá lại danh sách người đọc được <b>lời nhắn</b> của em &mdash; nay chỉ còn chính em và giáo viên chủ nhiệm (thêm phòng tâm lý khi được chuyển tiếp). Xem thẻ &quot;Lời nhắn của con&quot; trong bảng rà soát ngay dưới đây. <b>Sửa tiếp 31/07/2026:</b> ô <b>tâm trạng</b> của mỗi buổi check-in cũng được tách riêng khỏi ô điểm danh &mdash; bố mẹ và Ban giám hiệu xem được con đi học hay nghỉ nhưng không xem được hôm nay con thấy thế nào. Xem thẻ &quot;Chỉ thầy cô chủ nhiệm thấy&quot; trong cùng bảng. <b>Siết tiếp 01/08/2026:</b> ô tâm trạng nay <b>chỉ chính em và thầy cô tâm lý</b> đọc được &mdash; giáo viên chủ nhiệm cũng không còn đọc. Bảng xu hướng cảm xúc theo tháng và hàm đếm &quot;số ngày vui&quot; được khoá theo cùng phạm vi, để không còn đường vòng nào hỏi ra tâm trạng của một ngày cụ thể. Xem thẻ &quot;Cô chủ nhiệm biết có chuyện, không đọc được chuyện gì&quot; ngay dưới.</p></div>
           <div class="card"><h4><code>care</code></h4><p>Cờ, hồ sơ, can thiệp, ngưỡng, leo thang, ghi chú tư vấn. <b>Thêm 31/07/2026:</b> một cuốn <b>sổ luật cảnh báo</b> tách riêng khỏi bảng ngưỡng. Trước đó mỗi luật cảnh báo chỉ được đặt đúng một con số cho cả sáu cơ sở &mdash; thiết kế có hứa &quot;mỗi cơ sở một ngưỡng riêng&quot; nhưng cấu trúc bảng không cho phép, nên lời hứa đó không bao giờ dùng được. Nay mỗi cơ sở đặt được ngưỡng riêng, và cơ sở nào chưa đặt thì dùng con số chung của trường.</p></div>
           <div class="card"><h4><code>evidence</code></h4><p>5 Giá trị, sự kiện, PDR, DEAR, rubric, fitness, khảo sát.</p></div>
           <div class="card"><h4><code>tutor</code></h4><p>Mastery snapshot, CEFR, quỹ đạo, milestone, tiến độ Moodle.</p></div>
           <div class="card"><h4><code>health</code></h4><p>Dữ liệu y tế thuộc vùng lõi và có RLS riêng. <b>Sửa 31/07/2026:</b> hồ sơ trước đây nói &quot;mọi lượt xem dữ liệu y tế đều được ghi nhật ký&quot;. Kiểm lại thì câu đó chưa đúng &mdash; nó được viết ra nhưng chưa từng được xây. Nay đã xây thật: <b>nội dung y tế</b> (uống thuốc gì, dị ứng gì) chỉ lấy được qua một cửa duy nhất, và mỗi lần mở cửa đó đều ghi lại ai xem, xem của em nào, lúc mấy giờ &mdash; <b>kể cả những lần bị từ chối</b>. Phần chưa xây, nói cho rõ để không hứa thừa lần nữa: nhật ký này phủ đường lấy dữ liệu, chưa phủ từng màn hình có hiển thị dữ liệu y tế.</p></div>
-          <div class="card"><h4><code>staging</code></h4><p>Phòng chờ cho dữ liệu ngoài; lỗi mapping nằm lại đây. <b>Sửa 31/07/2026:</b> trước đây một bản ghi hỏng từ app ngoài làm hỏng luôn cả lượt nhận &mdash; bản ghi không nằm lại phòng chờ, không ai biết nó tồn tại, còn app bên kia thì gửi lại vô hạn. Nay bản ghi hỏng luôn nằm lại đúng chỗ chờ người xử, và gửi lại bao nhiêu lần cũng chỉ sinh một dòng chờ.</p></div>
+          <div class="card"><h4><code>staging</code></h4><p>Phòng chờ cho dữ liệu ngoài; lỗi mapping nằm lại đây. <b>Sửa 31/07/2026:</b> trước đây một bản ghi hỏng từ app ngoài làm hỏng luôn cả lượt nhận &mdash; bản ghi không nằm lại phòng chờ, không ai biết nó tồn tại, còn app bên kia thì gửi lại vô hạn. Nay bản ghi hỏng luôn nằm lại đúng chỗ chờ người xử, và gửi lại bao nhiêu lần cũng chỉ sinh một dòng chờ. <b>Thêm 01/08/2026:</b> phòng chờ này nay có <b>cửa nhận danh sách học sinh của trường</b> và một bảng ghi mức chịu lỗi cho từng nguồn &mdash; quá mức thì dừng cả lô thay vì đổ tiếp rác vào kho chính. Đổi mức đó là sửa một dòng trong bảng, không phải sửa phần mềm.</p></div>
           <div class="card"><h4><code>ops</code></h4><p>Job runs, heartbeat, outbox; biết hệ có đang sống hay không. <b>Thêm 31/07/2026:</b> một bảng ghi rõ <b>những chỗ cố ý không khóa</b>, mỗi chỗ phải có tên và có lý do &mdash; thay cho cách cũ là một danh sách viết tay mà bảng sinh sau sẽ lọt ra ngoài không ai hay. Và một bảng theo dõi &quot;hai quyển sổ ghi tên giáo viên chủ nhiệm có đang lệch nhau không&quot;.</p></div>
           <div class="card"><h4><code>report</code></h4><p>View tổng hợp, xu hướng cơ sở, VAAR và báo cáo trưởng thành. <b>Thêm 31/07/2026:</b> một cuốn sổ duyệt báo cáo &mdash; giáo viên chủ nhiệm đọc lại Báo cáo Trưởng thành của từng em rồi bấm &quot;duyệt gửi phụ huynh&quot; hoặc &quot;trả lại kèm lý do&quot;. Sổ chỉ ghi <b>quyết định của cô</b>, không chép nội dung báo cáo: nội dung vẫn được dựng lại từ dữ liệu thật mỗi lần mở, nên không có bản sao nào để sai lệch. Mỗi em mỗi tuần đúng một dòng, bấm hai lần cũng vậy. Phụ huynh và học sinh không nhìn thấy cuốn sổ này &mdash; họ thấy bản báo cáo, không thấy phần trao đổi nội bộ.</p></div>
         </div>
@@ -2146,6 +2166,70 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <div class="callout good">
           <div class="callout-title"><span class="dot green"></span>Điểm lệch giữa hai nguồn đã chốt lại</div>
           <p><b>Bản FINAL 15/07</b> mô tả dữ liệu cảm xúc – tâm lý ở kho riêng và mã hóa. <b>Hợp đồng kỹ thuật ADR-002 ngày 19/07</b> chốt lưu như dữ liệu thường, không schema riêng và không mã hóa; chỉ giữ tường lửa không-xếp-loại và xóa chi tiết sau 12 tháng. <b>Tái xác nhận 23/07/2026: ADR-002 là quyết định cuối cùng</b> &mdash; không kho riêng, không mã hóa. Việc còn lại chỉ là văn bản: tu chính Hiến chương điều 3 cho khớp thực tế (sổ nợ kỹ thuật DEBT-01).</p>
+        </div>
+
+        <h3>Đợt 01/08/2026: cửa nhận danh sách của trường, tờ giấy bố mẹ ký, và ba khối để kiểm</h3>
+        <p class="lede">Ba việc làm cùng ngày, chung một chủ đề: hệ thống chuyển từ chỗ <b>chạy được trên dữ liệu do lập trình viên gõ vào</b> sang chỗ <b>nhận được dữ liệu thật của trường, và biết hỏi người lớn trước khi động vào một đứa trẻ</b>.</p>
+
+        <h4>1 &middot; Trường đưa danh sách học sinh vào hệ thống bằng một cửa chính thức</h4>
+        <p>Trước hôm nay, học sinh trong máy đều là học sinh do lập trình viên gõ vào để thử. Nghĩa là đến ngày khai giảng, nhà trường gửi file danh sách khối 6 thì <b>không có chỗ nào nhận nó</b>. Nay có: nhà trường xuất một file sáu cột &mdash; mã học sinh, họ tên, ngày sinh, mã cơ sở, mã lớp, khối &mdash; người phụ trách chạy một lệnh, cả khối vào hệ thống trong một lượt.</p>
+        <p><b>Nhưng điều đáng nói không phải là nó nạp được, mà là những gì nó TỪ CHỐI làm.</b> Cửa nạp này viết theo đúng một nguyên tắc: <i>máy không đoán hộ nhà trường</i>.</p>
+        <div class="grid-3">
+          <div class="card"><h4>Mã viết sai khuôn: ghi vào danh sách chờ, không tự sửa</h4><p>Một em có mã <code>VA-26-417</code> thay vì <code>VA-2026-00417</code> &mdash; máy hoàn toàn &ldquo;đoán được&rdquo; ý định. Nhưng đoán sai một lần là tạo ra một em học sinh không có thật trong sổ. Máy ghi lại đúng dòng số mấy trong file, tên em là gì, sai ở đâu, rồi đi tiếp với các dòng còn lại.</p></div>
+          <div class="card"><h4>Lớp chưa có trong hệ thống: không tự tạo</h4><p>Người gõ nhầm <code>6A11</code> thay <code>6A1</code> sẽ sinh ra một lớp ma mà không ai để ý. Muốn tạo lớp mới thì người phụ trách phải bật một công tắc riêng, và máy <b>in ra danh sách lớp nó sắp tạo trước khi tạo</b>, để người đọc bằng mắt.</p></div>
+          <div class="card"><h4>File xếp em sang lớp khác: dừng lại và hỏi</h4><p>Chuyển lớp giữa năm là quyết định của nhà trường, không phải hệ quả của một dòng trong file. Máy ghi rõ: em này, đang ở lớp cũ nào, file muốn xếp vào lớp nào &mdash; rồi để người duyệt. Nó <b>không tự đóng lớp cũ</b>.</p></div>
+        </div>
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Điều quan trọng nhất: em có trong sổ mà không có trong file mới thì máy TUYỆT ĐỐI không kết luận em đã nghỉ học</div>
+          <p>Hai chuyện rất khác nhau &mdash; <i>&ldquo;em chuyển trường thật&rdquo;</i> và <i>&ldquo;người xuất file lỡ lọc nhầm một lớp&rdquo;</i> &mdash; để lại <b>đúng cùng một dấu vết</b>: thiếu tên em trong file. Không có cách nào phân biệt. Nếu máy tự cho em nghỉ, thì cô chủ nhiệm mất luôn em khỏi màn hình của mình, đúng vào lúc không ai đang nhìn. Nên máy chỉ ghi ra một danh sách &ldquo;những em không thấy trong file lần này&rdquo; và chờ người xác nhận từng em. Nó không sửa một ô dữ liệu nào.</p>
+        </div>
+        <p><b>Chạy hai lần không hỏng gì.</b> Người phụ trách bấm nhầm hai lần, hay chạy lại sau khi nhà trường sửa vài dòng, đều an toàn: phần đã vào rồi thì máy bỏ qua, phần đang chờ người thì vẫn đúng một dòng chờ chứ không nhân lên. Đây không phải may mắn &mdash; có bài kiểm tra tự động chạy đúng lệnh đó hai lần và so từng con số trước/sau. <b>Nếu file hỏng ở mức cả lô thì máy dừng hẳn:</b> thiếu một cột bắt buộc, hoặc số dòng lỗi vượt mức cho phép (mặc định 500, và con số này nằm trong một bảng cấu hình để đổi được mà không phải sửa phần mềm). Cuối mỗi lần nạp, máy nói ra bằng số và <b>phân biệt ba tình huống chứ không phải hai</b>: xong sạch, xong nhưng có việc chờ người, và đã dừng vì hỏng. Gộp &ldquo;có việc chờ người&rdquo; vào &ldquo;xong&rdquo; là biến một hàng đợi đang có người đợi thành một màn hình xanh.</p>
+
+        <h4>2 &middot; Tờ giấy bố mẹ ký, và cái nút đó thật sự làm gì</h4>
+        <p>Trường có một trang ngắn để bố mẹ đọc rồi bấm đồng ý. Trang đó nói bằng tiếng Việt thường: trường ghi lại những gì về con, ai đọc được gì, và ba điều trường cam kết. Không có chữ chuyên môn nào trong đó.</p>
+
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Chúng tôi phải sửa lại một câu đã trình lên, và xin nói thẳng vì sao</div>
+          <p>Bản trình ngày 01/08/2026 viết đúng theo yêu cầu của nhà trường: <i>&ldquo;em nào chưa có phiếu thì không bật tài khoản&rdquo;</i>. Khi chạy thử đúng ca xấu nhất, chúng tôi phát hiện câu đó có một cái giá không ai muốn trả: <b>khoá tài khoản của một đứa trẻ là khoá luôn nút &ldquo;Mình cần gặp thầy cô&rdquo; của chính em.</b> Bố mẹ bấm rút lại đồng ý lúc 10 giờ thì từ 10 giờ em không còn cách nào tự nói với trường rằng em cần giúp &mdash; vì trong phần mềm, cái thẻ ra vào của em cũng chính là thứ mà nút kêu cứu bám vào.</p>
+          <p>Đó không phải một điều chỉnh nhỏ, nên chúng tôi không tự ý im lặng sửa. <b>Câu cũ đã được thay bằng câu đúng với thứ đang chạy:</b></p>
+          <p style="margin-left:1.2em"><b>&ldquo;Chưa bấm thì phần mềm chưa ghi tâm trạng của con &mdash; và đường con nhờ giúp đỡ thì không bao giờ khoá.&rdquo;</b></p>
+          <p>Câu mới <b>chặt hơn chứ không lỏng hơn</b>. Câu cũ nghe như bảo vệ đứa trẻ, nhưng thứ nó thật sự tắt là <i>đường của đứa trẻ</i>, còn dữ liệu thì trường vẫn ghi bình thường: cô vẫn điểm danh, y tế vẫn ghi, ghi chép chăm sóc vẫn chạy. Câu mới tắt đúng thứ bố mẹ muốn tắt &mdash; việc thu thập cảm xúc của con &mdash; và không tắt thứ không ai muốn tắt. Bản điều khoản cũ <b>không bị sửa lén</b>: nó là bằng chứng đã ký nên nằm nguyên đó, và trường <b>công bố một bản mới</b> nói lại cho đúng. Phiếu bố mẹ đã ký vẫn giữ nguyên hiệu lực, không ai phải bấm lại.</p>
+        </div>
+
+        <p>Vậy cái nút đó thật sự điều khiển cái gì? <b>Đúng một việc:</b> phần mềm có được ghi lại mức tâm trạng con chọn mỗi ngày hay không. Còn lại giữ nguyên hết:</p>
+        <ul class="plain-list">
+          <li><b>Nút &ldquo;Mình cần gặp thầy cô&rdquo; của con không bao giờ khoá.</b> Không khoá khi bố mẹ chưa trả lời, không khoá khi bố mẹ trả lời &ldquo;chưa đồng ý&rdquo;, không khoá sau khi bố mẹ rút lại. Đây là mệnh lệnh, không phải mục tiêu để cân đối: em nào bố mẹ chưa bấm nút thường đúng là em có người lớn ít để tâm nhất. Nếu con không muốn tự bấm thì thầy cô vẫn ghi giúp con được &mdash; nhưng đó là <i>thêm</i> một đường, không phải đường thay thế.</li>
+          <li>Thầy cô <b>vẫn điểm danh</b> cho con như thường, và con vẫn tự bấm có mặt được. Việc trường ghi nhận con có mặt là nghĩa vụ trông giữ trẻ &mdash; nó đứng trên một cơ sở khác và không được phép phụ thuộc vào cái nút của bố mẹ. Nhật ký y tế cũng vậy.</li>
+          <li>Bố mẹ <b>vẫn xem được chuyên cần và Báo cáo Trưởng thành của con.</b> Chúng tôi cố ý <i>không</i> giữ những thứ này lại để đổi lấy chữ ký. Luật Bảo vệ dữ liệu cá nhân đòi sự đồng ý phải <b>tự nguyện</b>; giữ lại thứ bố mẹ vốn có quyền biết về con mình để ép ký là biến tờ phiếu thành phí vào cửa, và một chữ ký mua bằng cách đó thì không còn giá trị pháp lý.</li>
+          <li>Tài khoản của con <b>vẫn đăng nhập được</b> như thường.</li>
+        </ul>
+
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Cái nút này khoá thật, không phải khoá bằng lời</div>
+          <p>Nếu chúng tôi chỉ giấu nút trên màn hình thì lời hứa với bố mẹ là rỗng: ai giữ được đường liên lạc cũ vẫn gửi dữ liệu vào bình thường. Nên khoá được đặt ở tầng sâu nhất &mdash; <b>ngay tại kho, ở đúng ô ghi tâm trạng</b>. Chưa có phiếu thì ô đó không nhận giá trị, kể cả khi ai đó biết đường đi vòng và hỏi thẳng cơ sở dữ liệu. <b>Chúng tôi đã thử đúng ca xấu nhất và đo kết quả:</b> bố mẹ bấm rút lại; ngay lượt bấm sau của em, lượt điểm danh vẫn vào sổ, ô tâm trạng trống, và màn hình của em <i>nói thật</i> rằng phần đó đang tạm tắt &mdash; không ăn mừng &ldquo;đã ghi nhận&rdquo; cho một thứ không có trong kho. Cùng lúc đó, em bấm nút &ldquo;Mình cần gặp thầy cô&rdquo; và lời nhắn vào sổ bình thường.</p>
+          <p>Và để chuyện cũ không lặp lại, chúng tôi đặt thêm một cái chốt ở tầng dữ liệu: <b>không thao tác nào &mdash; kể cả của người quản trị &mdash; đẩy được tài khoản một học sinh đang dùng về trạng thái chờ.</b> Muốn ngừng cho một tài khoản dùng hệ thì có đường riêng, đúng nghĩa và có tên khác.</p>
+        </div>
+
+        <p><b>Bản điều khoản không sửa lén được.</b> Một tờ giấy ký mà nội dung sửa được sau khi ký thì chữ ký không chứng minh điều gì. Nên mỗi bản điều khoản, sau khi công bố, là không sửa được và không xoá được &mdash; muốn thay thì phải công bố bản mới, và bản cũ vẫn nằm đó. Phiếu đồng ý của bố mẹ chép lại một &ldquo;mã kiểm tra&rdquo; của đúng bản họ đã đọc, nên nhiều năm sau vẫn đối chiếu được: bản tôi bấm có đúng là bản đang lưu không.</p>
+        <p><b>Rút lại lúc nào cũng được &mdash; nhưng hôm nay còn đi qua nhà trường.</b> Ở tầng dữ liệu, việc rút lại đã chạy đầy đủ: nó là ghi thêm một dòng mới (không xoá dòng cũ, để lịch sử còn nguyên), và phần mềm ngừng ghi tâm trạng của con <b>ngay trong cùng một lần bấm</b>. Cái còn nợ, nói thẳng: <b>chưa có nút tự rút lại trên ứng dụng.</b> Hôm nay bố mẹ gửi yêu cầu tới nhà trường (gặp giáo viên chủ nhiệm hoặc văn phòng) và trường ghi nhận giúp. Bản điều khoản viết đúng như vậy, không hứa một cái nút chưa có.</p>
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Hai điều còn nợ, nói ra bằng số chứ không để im</div>
+          <p><b>(1) Những mức tâm trạng đã ghi trước khi bố mẹ rút lại thì vẫn nằm trong kho.</b> Rút lại nghĩa là &ldquo;từ nay đừng ghi nữa&rdquo;; xoá phần đã ghi là một quyền <i>khác</i>, và trường không tự làm thay bố mẹ &mdash; xoá một chiều thì không có đường lùi. Hệ thống <b>đếm</b> đúng số dòng đó bằng một câu lệnh và gọi tên từng em, thay vì để im. Bố mẹ yêu cầu xoá sớm thì trường xoá; không thì chúng tự xoá theo hạn 12 tháng như đã cam kết.</p>
+          <p><b>(2) Ô nhập &ldquo;ghi hộ yêu cầu gặp thầy cô&rdquo; chưa có nút bấm trong màn hình giáo viên chủ nhiệm.</b> Đường này đã mở ở tầng dữ liệu và có bài kiểm chứng minh nó chạy. Nó không còn là điều kiện chặn như bản trình trước &mdash; vì sau lần sửa này, chính em vẫn tự bấm được &mdash; nhưng vẫn phải làm, cho những em không muốn tự bấm.</p>
+        </div>
+
+        <h4>3 &middot; Từ một khối lên ba khối &mdash; và vì sao đó là chuyện của KIỂM TRA, không phải của mở rộng</h4>
+        <p>Cho tới hôm qua, cơ sở dữ liệu thử nghiệm chỉ có <b>khối 6</b>. Nghe thì vô hại. Nhưng nó làm hỏng một thứ ít ai nghĩ tới &mdash; <b>khả năng chứng minh rằng hàng rào phân quyền có thật</b>. Hãy hình dung một bài kiểm tra tự động hỏi: <i>&ldquo;Cô giáo chủ nhiệm lớp 7 có nhìn thấy học sinh lớp 6 không?&rdquo;</i> Nếu trong máy chưa có lớp 7 nào, câu trả lời sẽ luôn là <b>&ldquo;không thấy em nào&rdquo;</b> &mdash; và bài kiểm tra sẽ luôn báo <b>đạt</b>. Nhưng nó đạt vì <i>không có gì để thấy</i>, chứ không phải vì cánh cửa đã khoá. Cánh cửa ấy có thể đã mở toang từ lâu mà không ai biết. Đây là kiểu sai nguy hiểm nhất trong cả hệ thống: nó không gây lỗi, nó chỉ tạo cảm giác đã kiểm.</p>
+        <p>Vì vậy hôm nay dựng thêm <b>khối 7 và khối 8</b> trong dữ liệu thử nghiệm: bốn lớp mới, 48 học sinh, năm thầy cô mới. Không một dòng nào trong thiết kế cơ sở dữ liệu bị đổi &mdash; chỉ là từ nay câu hỏi trên <b>hỏi được thật</b>.</p>
+        <div class="grid-3">
+          <div class="card"><h4>Thầy cô bộ môn dạy nhiều khối</h4><p>Thầy Sơn dạy Tiếng Anh cho lớp 6A5 <i>và</i> lớp 7A1. Chuyện bình thường ở mọi trường, nhưng là phép thử khó nhất cho phần mềm: nếu ai đó cài hàng rào theo kiểu <i>&ldquo;thầy thuộc khối nào thì thấy khối đó&rdquo;</i>, thầy sẽ vô tình nhìn thấy cả 60 em khối 6 và cả 24 em khối 7 &mdash; trong khi thầy chỉ dạy 24 em. Bài kiểm mới đếm chính xác từng con số và đỏ ngay nếu lệch. Nguyên tắc: <b>phạm vi của một thầy cô là danh sách lớp được phân công, không phải cái khối.</b></p></div>
+          <div class="card"><h4>&ldquo;Cụm&rdquo; của thầy cô tâm lý là gì</h4><p>Cô Mai phụ trách tâm lý của <b>cơ sở Quận 7</b>. Trước đây không cách nào chứng minh chữ &ldquo;cơ sở&rdquo; ấy có thật, vì tất cả lớp đều ở Quận 7 &mdash; dù hiểu đúng là &ldquo;cơ sở&rdquo; hay hiểu nhầm thành &ldquo;khối&rdquo; thì kết quả trên màn hình vẫn y hệt nhau. Nay cố tình đặt <b>hai lớp cùng khối 8 ở hai cơ sở khác nhau</b>: 8A1 ở Quận 7 và 8B1 ở Quận 2. Bài kiểm hỏi: cô Mai có thấy 8B1 không? Phải là <b>không</b> &mdash; và nếu một ngày nào đó thành <b>có</b>, thì đúng ngày ấy phần mềm đã âm thầm mở hồ sơ tâm lý của trẻ ở một cơ sở khác cho người không phụ trách.</p></div>
+          <div class="card"><h4>Biên của thầy hiệu trưởng</h4><p>Hiệu trưởng Quận 7 phải thấy <b>trọn vẹn</b> cơ sở của mình: đủ 96 em, trải cả ba khối, không sót khối nào. Và phải <b>không thấy một em nào</b> ở Quận 2 &mdash; kể cả em học cùng khối 8. Cả hai vế đều được kiểm, vì &ldquo;thấy đủ&rdquo; và &ldquo;không thấy thừa&rdquo; là hai lỗi khác nhau, và sửa vế này thường làm hỏng vế kia.</p></div>
+        </div>
+        <p><b>Điều nhà trường cần biết.</b> Không có gì đổi trong cách hệ thống hoạt động &mdash; đây là dữ liệu để thử, không phải học sinh thật, không phải tính năng mới. Danh sách khối lớp thật của trường vẫn do trường nhập. Điều đổi là <b>mức tin cậy của lời hứa</b>: câu <i>&ldquo;mỗi thầy cô chỉ thấy lớp của mình&rdquo;</i> từ hôm nay có <b>59 phép kiểm tự động</b> đứng sau (38 ở tầng cơ sở dữ liệu, 21 ở tầng ứng dụng), chạy mỗi lần có người sửa mã nguồn. Trước hôm nay câu đó đúng, nhưng đúng theo kiểu <i>chưa có ai thử phá</i>. Và một lời hứa nhỏ hơn dành riêng cho các bài kiểm này: chúng được viết sao cho <b>không bao giờ báo đạt vì thiếu dữ liệu</b> &mdash; nếu một ngày bộ dữ liệu thử nghiệm mất khối 7, bài kiểm sẽ báo đỏ và nói rõ &ldquo;mẫu số đang là 0&rdquo;. Việc này đã được thử thật trước khi bàn giao: cố ý xoá khối 7 đi, và hệ thống đã đỏ đúng như hứa.</p>
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Số kiểm chứng của cả đợt, đo lại lúc viết mục này chứ không chép lại</div>
+          <p>Dựng một cơ sở dữ liệu trống hoàn toàn, chạy lại toàn bộ 46 file lệnh đổi cấu trúc từ đầu, rồi chạy hết bộ kiểm tự động ở tầng dữ liệu: <b>731 phép kiểm đạt, 0 phép kiểm hỏng</b>, và số phép kiểm <b>thực sự chạy</b> khớp đúng số phép kiểm <b>đã khai trước</b>. Vế thứ hai mới là vế quan trọng: bộ kiểm này khi chết giữa chừng thì <b>không in ra chữ &ldquo;hỏng&rdquo;</b> nào cả &mdash; một bài chết ở phép kiểm thứ 3 trên 40 vẫn trông sạch nếu chỉ đếm số dòng báo hỏng. Nên chúng tôi luôn so hai con số, không so một.</p>
         </div>
 
         <details class="details deep">

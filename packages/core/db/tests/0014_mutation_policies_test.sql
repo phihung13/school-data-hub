@@ -5,6 +5,16 @@ begin;
 select plan(12);
 select test_support.seed_basic();
 
+-- 0047 (ADR-027 bản 2): ghi TÂM TRẠNG đòi phiếu đồng ý còn hiệu lực của người đại diện —
+-- `checkins_insert_self` nay là `is_me AND (mood is null OR core.has_student_consent(...))`.
+-- Bài này kiểm ĐƯỜNG GHI chứ không kiểm cổng đồng ý (cổng có bài riêng: 0046/0047), nên
+-- dựng sẵn phiếu cho Minh bằng vai chủ schema. KHÔNG bỏ cột mood khỏi các câu dưới: chính
+-- cặp "có mood / không mood" là thứ phân biệt hai lời hứa khác nhau ở đây.
+insert into core.consent_records (user_id, student_id, terms_version_id, decision, content_hash)
+select '40000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000001',
+       tv.id, 'granted', tv.content_hash
+  from core.terms_versions tv where tv.version = 1;
+
 -- ── attendance.checkins: chỉ tự check-in cho chính mình ─────────────────────
 select test_support.login_as('90000000-0000-0000-0000-000000000005'); -- Minh
 select lives_ok(

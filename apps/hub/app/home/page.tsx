@@ -3,10 +3,35 @@ import { getCurrentSession } from "@/lib/session";
 import { resolveIdentity } from "@hub/core/auth-adapter";
 import { HomeView } from "@/components/home-view";
 import { buildMiniApps } from "@/server/mini-apps";
+import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
+import { log, describeError } from "@/lib/logger";
 
 export default async function HomePage() {
   const session = await getCurrentSession();
   if (!session) redirect("/login");
+
+  // CỔNG ĐIỀU KHOẢN (0046, ADR-027) — đặt ở trang chủ vì đây là nơi phụ huynh LUÔN đi
+  // qua sau khi đăng nhập (`login-form.tsx` nạp lại cả trang về /home, /api/auth/invite
+  // cũng vậy). Chỉ đẩy khi câu hỏi CHƯA ĐƯỢC HỎI — phụ huynh đã trả lời "chưa đồng ý"
+  // thì không bị đưa về đây nữa, nếu không thì một quyết định biến thành cái bẫy không
+  // có đường ra (xem `chuaTraLoiBanBatBuoc`).
+  //
+  // Đây KHÔNG phải chốt chặn. Chốt chặn (từ 0047, ADR-027 bản 2) là RLS trên
+  // `attendance.checkins`: không có phiếu đồng ý thì cột `mood` không nhận giá trị, kể cả
+  // khi ai đó gọi thẳng /api/trpc mà không đi qua trang nào. Nó CỐ Ý không còn khoá tài
+  // khoản của em nữa — khoá tài khoản là cắt luôn nút "Mình cần gặp thầy cô" của chính em.
+  if (session.roles.includes("guardian")) {
+    try {
+      if (canHoiDieuKhoan(await readConsentChildren(session.authUid))) redirect("/dieu-khoan");
+    } catch (err) {
+      // `redirect()` của Next hoạt động bằng cách NÉM một lỗi đặc biệt — bắt nó ở đây
+      // rồi nuốt là biến chuyển hướng thành im lặng. Ném tiếp cho Next xử.
+      if (typeof (err as { digest?: unknown })?.digest === "string") throw err;
+      // CSDL trục trặc thì KHÔNG được biến thành cổng: chặn phụ huynh khỏi trang chủ vì
+      // một lỗi kết nối là phạt sai người. Ghi log rồi đi tiếp.
+      log("error", "consent.gate_read_failed", { authUid: session.authUid, ...describeError(err) });
+    }
+  }
 
   // Sidebar (Hub Desktop V2) hiện email — chỉ có qua resolveIdentity, không có
   // trong JWT phiên (session.ts chỉ mang sub/roles/displayName, cố tình gọn).

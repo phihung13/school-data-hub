@@ -11,6 +11,15 @@ begin;
 select plan(13);
 select test_support.seed_basic();
 
+-- 0047 (ADR-027 bản 2): học sinh chỉ đặt được giá trị `mood` khi nhà đã có phiếu đồng ý.
+-- Bài này kiểm quyền CỘT và trigger chống leo quyền, không kiểm cổng đồng ý — dựng sẵn
+-- phiếu cho Minh, nếu không thì assertion "vẫn sửa được mood của chính mình" sẽ đỏ vì một
+-- lý do không liên quan tới thứ bài này canh.
+insert into core.consent_records (user_id, student_id, terms_version_id, decision, content_hash)
+select '40000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000001',
+       tv.id, 'granted', tv.content_hash
+  from core.terms_versions tv where tv.version = 1;
+
 -- Dòng gửi muộn của Minh, đúng trạng thái mà buồng lái GVCN chờ xác nhận.
 insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
      values ('70000000-0000-0000-0000-000000000001', current_date, 'in', 2, 'queued_late', 'offline_queue');

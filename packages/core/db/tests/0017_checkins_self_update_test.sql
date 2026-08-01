@@ -5,6 +5,14 @@ begin;
 select plan(4);
 select test_support.seed_basic();
 
+-- 0047 (ADR-027 bản 2): đặt giá trị cho cột `mood` đòi phiếu đồng ý còn hiệu lực. Bài này
+-- kiểm nhánh ON CONFLICT DO UPDATE của submitMood, không kiểm cổng đồng ý — dựng sẵn phiếu
+-- cho Minh bằng vai chủ schema để thứ được kiểm ở đây vẫn là thứ tên bài nói.
+insert into core.consent_records (user_id, student_id, terms_version_id, decision, content_hash)
+select '40000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000001',
+       tv.id, 'granted', tv.content_hash
+  from core.terms_versions tv where tv.version = 1;
+
 insert into attendance.checkins (student_id, occurred_on, kind, mood, status)
      values ('70000000-0000-0000-0000-000000000001', current_date, 'in', 2, 'present');
 

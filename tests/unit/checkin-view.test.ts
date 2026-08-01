@@ -195,7 +195,21 @@ describe("quét mã nguồn: đường ghi của QĐ-2", () => {
     expect(source, "mascot ăn mừng vẫn vô điều kiện").not.toContain('<Mascot pose="celebrate" width={72} />');
     expect(source).toMatch(/helpStuck \? "think" : "celebrate"/);
     // Và tiêu đề phải đổi hẳn, không chỉ thêm một dòng chữ nhỏ phía dưới.
-    expect(source).toMatch(/helpStuck \? "Lời con nhắn chưa gửi được"/);
+    // (Từ 0047 tiêu đề có ba nhánh — thêm ca "chưa có phiếu đồng ý" — nên khớp qua nhiều
+    // dòng thay vì đòi hai chuỗi nằm cạnh nhau.)
+    expect(source).toMatch(/helpStuck\s*\n?\s*\?\s*"Lời con nhắn chưa gửi được"/);
+  });
+
+  it("KHÔNG in “Con đã ghi: …” khi máy chủ không nhận mức tâm trạng (0047)", () => {
+    // `submitMood` có thể trả 2xx mà `moodSaved: false` — nhà em chưa có phiếu đồng ý của
+    // bố mẹ nên RLS từ chối cột mood, còn lượt điểm danh vẫn ghi. Màn hình đọc thiếu cờ đó
+    // sẽ ăn mừng một giá trị không nằm trong kho, đúng con lỗi QĐ-2 vừa sửa ở nhánh bên.
+    const source = withoutComments(viewSource);
+    expect(source).toContain("result.moodSaved === false");
+    // Câu "Con đã ghi: X" phải đứng sau điều kiện, không đứng trần.
+    expect(source).toMatch(/lastMood !== null && !moodBlocked/);
+    // Và phải nói cả cái KHÔNG mất, nếu không em đọc ra "app hỏng rồi" và thôi mở app.
+    expect(source).toMatch(/Mình cần gặp thầy cô/);
   });
 
   it("nói “đã tới chỗ thầy cô”, KHÔNG nói “thầy cô đã đọc”", () => {

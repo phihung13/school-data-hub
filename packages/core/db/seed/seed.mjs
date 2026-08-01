@@ -15,10 +15,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // SONG SINH VỚI packages/core/db/fixtures/000_test_support.sql
 //
-// File kia định nghĩa ba hàm; file này gieo ĐÚNG cùng bộ dữ liệu đó, cùng UUID,
+// File kia định nghĩa bốn hàm; file này gieo ĐÚNG cùng bộ dữ liệu đó, cùng UUID,
 // cùng mã lớp, cùng mã học sinh:
 //     test_support.seed_basic()          ↔  phần "BỘ NỀN" bên dưới
 //     test_support.seed_khoi()           ↔  phần "CẢ KHỐI"
+//     test_support.seed_khoi_7_8()       ↔  phần "KHỐI 7 VÀ KHỐI 8"
 //     test_support.seed_khoi_activity()  ↔  phần "HOẠT ĐỘNG"
 //
 // Trước hôm nay hai bên LỆCH: fixture có Thầy Nam (giáo viên bộ môn) và em Cường ở
@@ -131,6 +132,71 @@ const studentId = (c, n) =>
 const studentCode = (c, n) => `VA-2026-1${c}${String(n).padStart(3, "0")}`;
 /** 6A1/6A2 bắt đầu từ số 2: Minh và Bình đã giữ chỗ số 1. */
 const firstSeat = (c) => (c <= 2 ? 2 : 1);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KHỐI 7 VÀ KHỐI 8 (01/08/2026) — vì sao phải có
+//
+// Cho tới hôm nay CSDL chỉ có khối 6: `select grade, count(*) from core.classes`
+// trả đúng một dòng `6|5`. Trong thế giới đó, MỌI khẳng định dạng "cô chủ nhiệm
+// khối 7 không thấy học sinh khối 6" đều xanh — nhưng xanh vì MẪU SỐ RỖNG, không
+// vì hàng rào làm việc: không có khối nào khác để mà thấy. Đúng loại xanh giả mà
+// chú thích của chính 000_test_support.sql đã cảnh báo khi nói về giáo viên bộ môn.
+//
+// Bốn lớp mới, cố ý trải trên HAI cơ sở:
+//   · 7A1, 7A2, 8A1 ở Quận 7 — cùng cơ sở với cả khối 6;
+//   · 8B1 ở Quận 2  — CÙNG KHỐI 8 với 8A1 nhưng KHÁC CƠ SỞ.
+// Cặp 8A1 / 8B1 là chỗ duy nhất trả lời được câu "cụm của tâm lý tính theo cơ sở
+// hay theo khối". Nếu cụm tính theo khối thì cô Mai (cụm Q7) sẽ thấy 8B1; nếu tính
+// theo cơ sở thì không. Trước khi có cặp này, hai giả thuyết cho ra CÙNG một kết
+// quả trên dữ liệu demo, nên không bài test nào phân biệt được chúng.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const USER_GVCN5 = "40000000-0000-0000-0000-00000000000b"; // Cô Thu — GVCN 7A1
+const USER_GVCN6 = "40000000-0000-0000-0000-00000000000c"; // Thầy Phúc — GVCN 7A2
+const USER_GVCN7 = "40000000-0000-0000-0000-00000000000d"; // Cô Yến — GVCN 8A1
+const USER_GVCN8 = "40000000-0000-0000-0000-00000000000e"; // Thầy Lộc — GVCN 8B1 (cơ sở Q2)
+const USER_GVBOMON3 = "40000000-0000-0000-0000-00000000000f"; // Thầy Sơn — bộ môn Tiếng Anh
+
+const TEACHER_GVCN5 = "50000000-0000-0000-0000-000000000007";
+const TEACHER_GVCN6 = "50000000-0000-0000-0000-000000000008";
+const TEACHER_GVCN7 = "50000000-0000-0000-0000-000000000009";
+const TEACHER_GVCN8 = "50000000-0000-0000-0000-00000000000a";
+const TEACHER_GVBOMON3 = "50000000-0000-0000-0000-00000000000b";
+
+/**
+ * Bốn lớp mới. `g` là khối, `j` là số thứ tự lớp TRONG khối — hai chữ số đó đi thẳng
+ * vào UUID và mã học sinh nên nhìn một id là biết em nào lớp nào, không phải tra bảng.
+ * `ho` là họ riêng của lớp, để 48 cái tên mới vẫn phân biệt được bằng mắt khi soi CSDL.
+ */
+const KHOI_78 = [
+  { code: "7A1", g: 7, j: 1, school: SCHOOL_Q7, ho: "Vũ" },
+  { code: "7A2", g: 7, j: 2, school: SCHOOL_Q7, ho: "Đặng" },
+  { code: "8A1", g: 8, j: 1, school: SCHOOL_Q7, ho: "Bùi" },
+  { code: "8B1", g: 8, j: 2, school: SCHOOL_Q2, ho: "Đỗ" },
+];
+
+const classId78 = (g, j) => `30000000-0000-0000-0000-000000000${g}0${j}`;
+const studentId78 = (g, j, n) =>
+  `70000000-0000-0000-0000-00000000${g}${j}${String(n).padStart(2, "0")}`;
+// CHECK `^VA-\d{4}-\d{5}$` trên core.students.student_code — 5 chữ số, không hơn không kém.
+// Khối 6 chiếm khuôn `1<lớp><3 số>`, khối 7/8 lấy khuôn `<khối><lớp><3 số>`: không đụng nhau.
+const studentCode78 = (g, j, n) => `VA-2026-${g}${j}${String(n).padStart(3, "0")}`;
+
+/**
+ * Phân công BỘ MÔN chéo khối của Thầy Sơn: 6A5 (khối 6) và 7A1 (khối 7).
+ *
+ * Hai điều kiện phải giữ cùng lúc, và verify() bên dưới chặn nếu mất một trong hai:
+ *   · dạy lớp ở NHIỀU khối  — nếu không thì "chéo khối" chỉ là chữ, phép giao rỗng;
+ *   · KHÔNG dạy hết         — nếu thầy dạy tất cả thì câu "thầy không thấy em ở lớp
+ *     mình không dạy" lại xanh vì mẫu số rỗng, đúng cái bẫy cũ ở mức khối.
+ * Khối 8 CỐ Ý không có lớp nào của thầy: nhờ vậy Cô Yến (GVCN 8A1) là một GVCN mà
+ * phép giao với thầy đúng bằng rỗng, còn Cô Thu (GVCN 7A1) thì khác rỗng — hai chiều
+ * đều có mẫu số thật.
+ */
+const SON_DAY = [
+  { classId: classId(5), ten: "6A5" },
+  { classId: classId78(7, 1), ten: "7A1" },
+];
 
 async function run() {
   const client = await pool.connect();
@@ -347,6 +413,118 @@ async function run() {
       }
     }
 
+    // ══ KHỐI 7 VÀ KHỐI 8 — song sinh với test_support.seed_khoi_7_8() ════════
+    //
+    // Xem chú thích ở đầu file (khối KHOI_78) để biết vì sao bộ này tồn tại.
+
+    await client.query(
+      `insert into core.classes (id, school_id, code, academic_year, grade)
+       select x.id, x.school, x.code, '2026-2027', x.grade
+         from unnest($1::uuid[], $2::uuid[], $3::text[], $4::int[]) as x(id, school, code, grade)
+       on conflict (id) do nothing`,
+      [
+        KHOI_78.map((k) => classId78(k.g, k.j)),
+        KHOI_78.map((k) => k.school),
+        KHOI_78.map((k) => k.code),
+        KHOI_78.map((k) => k.g),
+      ],
+    );
+
+    await client.query(
+      // `do update set full_name` giống bộ nền, và vì cùng lý do — xem chú thích ở đó.
+      `insert into core.users (id, auth_uid, email, full_name, status) values
+         ($1,'90000000-0000-0000-0000-00000000000b','gvcn5@va.edu.vn','Cô Thu (GVCN 7A1)','active'),
+         ($2,'90000000-0000-0000-0000-00000000000c','gvcn6@va.edu.vn','Thầy Phúc (GVCN 7A2)','active'),
+         ($3,'90000000-0000-0000-0000-00000000000d','gvcn7@va.edu.vn','Cô Yến (GVCN 8A1)','active'),
+         ($4,'90000000-0000-0000-0000-00000000000e','gvcn8@va.edu.vn','Thầy Lộc (GVCN 8B1, cơ sở Quận 2)','active'),
+         ($5,'90000000-0000-0000-0000-00000000000f','gvbomon3@va.edu.vn','Thầy Sơn (bộ môn Tiếng Anh)','active')
+       on conflict (id) do update set full_name = excluded.full_name`,
+      [USER_GVCN5, USER_GVCN6, USER_GVCN7, USER_GVCN8, USER_GVBOMON3],
+    );
+
+    // Thầy Lộc thuộc biên chế CƠ SỞ QUẬN 2 — không phải chi tiết trang trí: nếu để thầy
+    // ở Q7 thì "giáo viên cơ sở khác" và "giáo viên cùng cơ sở" lại là một, và mọi khẳng
+    // định về biên cơ sở đo trên thầy đều không nói lên điều gì.
+    await client.query(
+      `insert into core.teachers (id, user_id, employee_code, school_id)
+       select x.id, x.user_id, x.code, x.school
+         from unnest($1::uuid[], $2::uuid[], $3::text[], $4::uuid[]) as x(id, user_id, code, school)
+       on conflict (id) do nothing`,
+      [
+        [TEACHER_GVCN5, TEACHER_GVCN6, TEACHER_GVCN7, TEACHER_GVCN8, TEACHER_GVBOMON3],
+        [USER_GVCN5, USER_GVCN6, USER_GVCN7, USER_GVCN8, USER_GVBOMON3],
+        ["GV007", "GV008", "GV009", "GV010", "GV011"],
+        [SCHOOL_Q7, SCHOOL_Q7, SCHOOL_Q7, SCHOOL_Q2, SCHOOL_Q7],
+      ],
+    );
+
+    await client.query(
+      `insert into core.class_assignments (teacher_id, class_id, assignment_role, subject)
+       select x.teacher_id, x.class_id, 'homeroom', null
+         from unnest($1::uuid[], $2::uuid[]) as x(teacher_id, class_id)
+       on conflict do nothing`,
+      [
+        [TEACHER_GVCN5, TEACHER_GVCN6, TEACHER_GVCN7, TEACHER_GVCN8],
+        [classId78(7, 1), classId78(7, 2), classId78(8, 1), classId78(8, 2)],
+      ],
+    );
+
+    await client.query(
+      `insert into core.class_assignments (teacher_id, class_id, assignment_role, subject)
+       select $1, x.class_id, 'subject', 'Tiếng Anh'
+         from unnest($2::uuid[]) as x(class_id)
+       on conflict do nothing`,
+      [TEACHER_GVBOMON3, SON_DAY.map((s) => s.classId)],
+    );
+
+    // Bản sao vai trò (sổ B) — PHẢI đi SAU class_assignments: trigger
+    // core.guard_homeroom_scope (0023) từ chối dòng homeroom chưa có phân công gốc.
+    // Thầy Lộc mang school_id = Q2 vì lớp của thầy ở Q2; đặt nhầm Q7 vào đây là tự tay
+    // dựng một cửa mà bản gốc không hề mở.
+    await client.query(
+      `insert into core.user_role_scopes (user_id, role_code, school_id, class_id)
+       select x.user_id, x.role_code, x.school, x.class_id
+         from unnest($1::uuid[], $2::text[], $3::uuid[], $4::uuid[])
+              as x(user_id, role_code, school, class_id)
+       on conflict do nothing`,
+      [
+        [USER_GVCN5, USER_GVCN6, USER_GVCN7, USER_GVCN8, USER_GVBOMON3, USER_GVBOMON3],
+        ["homeroom", "homeroom", "homeroom", "homeroom", "teacher", "teacher"],
+        [SCHOOL_Q7, SCHOOL_Q7, SCHOOL_Q7, SCHOOL_Q2, SCHOOL_Q7, SCHOOL_Q7],
+        [
+          classId78(7, 1),
+          classId78(7, 2),
+          classId78(8, 1),
+          classId78(8, 2),
+          SON_DAY[0].classId,
+          SON_DAY[1].classId,
+        ],
+      ],
+    );
+
+    // 12 em mỗi lớp mới — cùng hằng PER_CLASS với khối 6, và vì cùng một lý do:
+    // dưới report.min_cohort() (= 10) thì màn Điều hành che sạch mọi ô của khối mới,
+    // và "che vì nhóm quá nhỏ" trông y hệt "màn hình hỏng".
+    for (const k of KHOI_78) {
+      for (let n = 1; n <= PER_CLASS; n += 1) {
+        await client.query(
+          `insert into core.students (id, student_code, school_id, full_name)
+           values ($1,$2,$3,$4) on conflict (id) do nothing`,
+          [studentId78(k.g, k.j, n), studentCode78(k.g, k.j, n), k.school, `${k.ho} ${TEN[n - 1]}`],
+        );
+        // `on conflict do nothing` KHÔNG có đích: core.enrollments không có ràng buộc
+        // duy nhất thường mà có EXCLUDE chống chồng kỳ (enrollments_no_overlap). Viết
+        // `on conflict (student_id, class_id)` ở đây sẽ NÉM LỖI — Postgres không cho một
+        // ràng buộc EXCLUDE làm đích. Dạng không đích thì bao được cả EXCLUDE, nên chạy
+        // seed lần thứ hai vẫn im lặng bỏ qua đúng như §9 đòi.
+        await client.query(
+          `insert into core.enrollments (student_id, class_id, valid_from)
+           values ($1,$2,'2026-09-05') on conflict do nothing`,
+          [studentId78(k.g, k.j, n), classId78(k.g, k.j)],
+        );
+      }
+    }
+
     // ══ HOẠT ĐỘNG — song sinh với test_support.seed_khoi_activity() ═══════════
     //
     // Ngưỡng care (0005 đã seed sẵn qua migration — không lặp lại ở đây).
@@ -402,6 +580,30 @@ async function run() {
              values ($1, current_date, 'out', null, 'queued_late', 'offline_queue')
              on conflict (student_id, occurred_on, kind) do nothing`,
             [studentId(c, n)],
+          );
+        }
+      }
+    }
+
+    // Khối 7 và khối 8: 5 ngày điểm danh ĐỦ, tâm trạng LÀNH, KHÔNG em nào mang chuỗi
+    // cảm xúc xấu và không em nào bấm "cần gặp thầy cô".
+    //
+    // Đây là lựa chọn có chủ ý, không phải làm cho xong. Bộ quét cờ đọc care.thresholds:
+    // A_ATTENDANCE chỉ dựng cờ cho em CÓ điểm danh mà tỉ lệ dưới min_rate, E_MOOD cần
+    // chuỗi ngày mood xấu. Cho khối mới một em "xấu" nào cũng là thêm cờ vào hub_dev, mà
+    // hàng loạt bài test đang chốt số cờ tuyệt đối trên bộ seed — đỏ ở đó sẽ là đỏ vì
+    // dữ liệu demo đổi, không vì mã hỏng, và đó là loại đỏ dạy người ta bỏ qua màu đỏ.
+    // Sân để dựng cờ vẫn là khối 6 (em số 7 của 6A3/6A4/6A5) và các lớp mà từng bài test
+    // tự dựng riêng.
+    for (const k of KHOI_78) {
+      for (let n = 1; n <= PER_CLASS; n += 1) {
+        for (let d = 0; d <= 4; d += 1) {
+          const mood = n % 3 === 0 ? 3 : 4; // Bình thường / Vui — không có 1, 2
+          await client.query(
+            `insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
+             values ($1, current_date - $2::int, 'in', $3, 'present', 'app')
+             on conflict (student_id, occurred_on, kind) do nothing`,
+            [studentId78(k.g, k.j, n), d, mood],
           );
         }
       }
@@ -503,9 +705,15 @@ async function verify(client) {
   if (!homerooms.some((h) => h.n === 2)) {
     problems.push("phải có một GVCN chủ nhiệm HAI lớp — không có ai");
   }
-  if (subjects.length !== 2 || subjects.some((s) => s.n < 2)) {
+  // Điều cần giữ là "có ÍT NHẤT hai giáo viên bộ môn dạy nhiều lớp trong khối 6", không
+  // phải "đúng hai người có mặt". Từ 01/08/2026 Thầy Sơn (bộ môn chéo khối) cũng dạy 6A5
+  // nên phép đếm cũ (`subjects.length !== 2`) báo hỏng — mà thứ nó bắt được lại là một
+  // thay đổi hợp lệ. Sửa thành đếm số người ĐẠT chuẩn ≥2 lớp: cái này vẫn đỏ đúng lúc
+  // ai đó bỏ phân công của Thầy Nam hay Cô Diệp, và không đỏ khi có thêm đồng nghiệp.
+  const bomonDayNhieu = subjects.filter((s) => s.n >= 2);
+  if (bomonDayNhieu.length < 2) {
     problems.push(
-      `phải có 2 giáo viên bộ môn, mỗi người dạy ≥2 lớp: ${
+      `phải có ≥2 giáo viên bộ môn dạy ≥2 lớp khối 6: ${
         subjects.map((s) => `${s.full_name}=${s.n}`).join(", ") || "(không có ai)"
       }`,
     );
@@ -513,13 +721,131 @@ async function verify(client) {
   // Sổ soi lệch (0030) phải rỗng: bản sao core.user_role_scopes khớp bản gốc.
   if (drift !== 0) problems.push(`ops.v_homeroom_drift có ${drift} dòng lệch, phải là 0`);
 
+  const khoi78 = await verifyKhoi78(client, problems);
+
   if (problems.length > 0) {
     throw new Error(`SEED KHÔNG ĐẠT — ${problems.join(" · ")}`);
   }
-  return { roster, homerooms, subjects };
+  return { roster, homerooms, subjects, khoi78 };
 }
 
-function report({ roster, homerooms, subjects }) {
+/**
+ * Kiểm phần khối 7 / khối 8, và kiểm chính CÁI LÀM CHO NÓ CÓ NGHĨA.
+ *
+ * Đếm đủ lớp, đủ sĩ số mới chỉ là điều kiện cần. Điều kiện đủ nằm ở ba tính chất dưới
+ * đây — mất bất kỳ tính chất nào thì tests/db/cheo-khoi.test.ts vẫn XANH nhưng xanh vì
+ * mẫu số rỗng, đúng thứ cả gói này sinh ra để đóng lại:
+ *   (1) phải có ≥ 3 khối phân biệt — một khối thì "không thấy khối khác" là câu hỏi
+ *       không đặt ra được;
+ *   (2) giáo viên bộ môn chéo khối phải dạy ≥ 2 khối và KHÔNG dạy hết;
+ *   (3) phải có ≥ 1 GVCN chủ nhiệm lớp thuộc khối mà giáo viên bộ môn đó KHÔNG dạy,
+ *       và phải có ≥ 1 lớp ở CƠ SỞ KHÁC — nếu không, "cụm theo cơ sở" và "cụm theo
+ *       khối" cho ra cùng một đáp số và không phép đo nào phân biệt được chúng.
+ */
+async function verifyKhoi78(client, problems) {
+  const ids = KHOI_78.map((k) => classId78(k.g, k.j));
+
+  const roster = (
+    await client.query(
+      `select c.code, c.grade, count(*)::int as n
+         from core.enrollments e
+         join core.classes c on c.id = e.class_id
+        where e.valid_to is null and c.id = any($1::uuid[])
+        group by c.code, c.grade order by c.code`,
+      [ids],
+    )
+  ).rows;
+  if (roster.length !== KHOI_78.length || roster.some((r) => r.n !== PER_CLASS)) {
+    problems.push(
+      `khối 7/8 phải có ${KHOI_78.length} lớp, mỗi lớp ${PER_CLASS} em: ${
+        roster.map((r) => `${r.code}=${r.n}`).join(", ") || "(không lớp nào)"
+      }`,
+    );
+  }
+
+  // (1) Đếm trên TOÀN BỘ lớp của bộ seed (khối 6 + khối 7/8), vì đây đúng là mẫu số mà
+  // bài test chéo khối sẽ dùng.
+  const allIds = [...KHOI.map((_, i) => classId(i + 1)), ...ids];
+  const { n: grades } = (
+    await client.query(
+      "select count(distinct grade)::int as n from core.classes where id = any($1::uuid[])",
+      [allIds],
+    )
+  ).rows[0];
+  if (grades < 3) {
+    problems.push(`phải có ≥3 khối phân biệt để hỏi được "không thấy khối khác", đang có ${grades}`);
+  }
+
+  // (2) Thầy Sơn: dạy mấy lớp, thuộc mấy khối, trên tổng bao nhiêu lớp.
+  const { day, khoiDay, tong } = (
+    await client.query(
+      `select (select count(*)::int from core.class_assignments ca
+                where ca.teacher_id = $1 and ca.assignment_role = 'subject') as day,
+              (select count(distinct c.grade)::int
+                 from core.class_assignments ca
+                 join core.classes c on c.id = ca.class_id
+                where ca.teacher_id = $1 and ca.assignment_role = 'subject') as "khoiDay",
+              (select count(*)::int from core.classes where id = any($2::uuid[])) as tong`,
+      [TEACHER_GVBOMON3, allIds],
+    )
+  ).rows[0];
+  if (khoiDay < 2) {
+    problems.push(`giáo viên bộ môn chéo khối phải dạy lớp ở ≥2 khối, đang có ${khoiDay}`);
+  }
+  if (day >= tong) {
+    problems.push(
+      `giáo viên bộ môn chéo khối KHÔNG được dạy hết (${day}/${tong} lớp) — dạy hết thì ` +
+        `khẳng định "không thấy lớp mình không dạy" lại rỗng mẫu số`,
+    );
+  }
+
+  // (3) GVCN ở khối nằm ngoài tầm dạy của thầy + lớp ở cơ sở khác.
+  const { n: gvcnNgoaiKhoi } = (
+    await client.query(
+      `select count(*)::int as n
+         from core.class_assignments ca
+         join core.classes c on c.id = ca.class_id
+        where ca.assignment_role = 'homeroom'
+          and c.id = any($2::uuid[])
+          and c.grade not in (
+            select c2.grade from core.class_assignments ca2
+              join core.classes c2 on c2.id = ca2.class_id
+             where ca2.teacher_id = $1 and ca2.assignment_role = 'subject')`,
+      [TEACHER_GVBOMON3, allIds],
+    )
+  ).rows[0];
+  if (gvcnNgoaiKhoi < 1) {
+    problems.push(
+      "phải có ≥1 GVCN chủ nhiệm lớp thuộc khối mà giáo viên bộ môn chéo khối KHÔNG dạy",
+    );
+  }
+
+  const { n: lopCoSoKhac } = (
+    await client.query(
+      "select count(*)::int as n from core.classes where id = any($1::uuid[]) and school_id <> $2",
+      [allIds, SCHOOL_Q7],
+    )
+  ).rows[0];
+  if (lopCoSoKhac < 1) {
+    problems.push(
+      'phải có ≥1 lớp ở cơ sở ngoài Quận 7 — không có thì "cụm theo cơ sở" và "cụm theo khối" cho cùng một đáp số',
+    );
+  }
+
+  const { n: drift } = (
+    await client.query(
+      "select count(*)::int as n from ops.v_homeroom_drift where class_id = any($1::uuid[])",
+      [ids],
+    )
+  ).rows[0];
+  if (drift !== 0) {
+    problems.push(`ops.v_homeroom_drift có ${drift} dòng lệch ở khối 7/8, phải là 0`);
+  }
+
+  return { roster, grades, day, khoiDay, tong };
+}
+
+function report({ roster, homerooms, subjects, khoi78 }) {
   console.log("OK — seed xong. Khối 6 cơ sở Quận 7:");
   console.log(`  ${roster.map((r) => `${r.code}: ${r.n} em`).join(" · ")}`);
   console.log(
@@ -528,10 +854,25 @@ function report({ roster, homerooms, subjects }) {
   console.log(
     `  Bộ môn: ${subjects.map((s) => `${s.full_name.replace(/\s*\(.*\)$/, "")} — ${s.subject}, ${s.n} lớp`).join(" · ")}`,
   );
-  console.log("Tài khoản dev có sẵn:");
-  console.log("  gvcn@va.edu.vn · gvcn2@va.edu.vn · gvcn3@va.edu.vn · gvcn4@va.edu.vn (chủ nhiệm)");
-  console.log("  gvbomon@va.edu.vn · gvbomon2@va.edu.vn (bộ môn)");
+  console.log(`Khối 7 và khối 8 (${khoi78.grades} khối phân biệt trong cả bộ):`);
+  console.log(
+    `  ${khoi78.roster.map((r) => `${r.code} (khối ${r.grade}): ${r.n} em`).join(" · ")}`,
+  );
+  console.log(
+    `  Bộ môn chéo khối: Thầy Sơn — Tiếng Anh, ${khoi78.day}/${khoi78.tong} lớp thuộc ${khoi78.khoiDay} khối`,
+  );
+  // Hai danh sách, KHÔNG gộp làm một. Chỗ này từng in một dòng "Tài khoản dev có sẵn"
+  // duy nhất, và nếu cứ thế thêm năm cái email mới vào đó thì màn hình sẽ hứa một điều
+  // hệ thống không giữ: các tài khoản khối 7/8 CÓ trong CSDL nhưng CHƯA có trong
+  // DEV_ACCOUNTS của packages/core/auth-adapter/dev-provider.ts, nên `/api/auth/dev-login`
+  // từ chối chúng. Người đọc sẽ mất mười lăm phút tưởng mình gõ sai mật khẩu.
+  console.log("Đăng nhập dev được ngay (có trong DEV_ACCOUNTS):");
+  console.log("  gvcn@va.edu.vn · gvcn2@va.edu.vn · gvcn3@va.edu.vn · gvcn4@va.edu.vn (chủ nhiệm khối 6)");
+  console.log("  gvbomon@va.edu.vn · gvbomon2@va.edu.vn (bộ môn khối 6)");
   console.log("  tamly@va.edu.vn · admin.hung@va.edu.vn · minh@va.edu.vn");
+  console.log("CÓ trong CSDL nhưng CHƯA đăng nhập dev được — cần thêm vào DEV_ACCOUNTS:");
+  console.log("  gvcn5@va.edu.vn (7A1) · gvcn6@va.edu.vn (7A2) · gvcn7@va.edu.vn (8A1)");
+  console.log("  gvcn8@va.edu.vn (8B1, cơ sở Quận 2) · gvbomon3@va.edu.vn (bộ môn dạy chéo khối)");
   console.log("  Mã mời phụ huynh cho Bình (chưa có tài khoản): DEV001");
 }
 

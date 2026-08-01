@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 23
+sync-version: 25
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -13,7 +13,7 @@ Dữ liệu lõi (người dùng, học sinh, giáo viên, phụ huynh, cơ sở
 
 | Schema | Loại | Bảng chính |
 |---|---|---|
-| `core` | **Nền tảng — SSOT** | `users`, `students`, `teachers`, `parents`, `schools` (cơ sở), `classes`, `class_assignments`, `enrollments`, `roles`, `permissions`, `id_mappings`, `identity_links`, `school_networks`, `parent_invite_codes` |
+| `core` | **Nền tảng — SSOT** | `users`, `students`, `teachers`, `parents`, `schools` (cơ sở), `classes`, `class_assignments`, `enrollments`, `roles`, `permissions`, `id_mappings`, `identity_links`, `school_networks`, `parent_invite_codes`, `terms_versions` + `consent_records` (bản điều khoản + sổ đồng ý của phụ huynh, ADR-027/`0046` — sổ chỉ thêm, đường ghi duy nhất là hàm) |
 | `attendance` | Mini App | `checkins` (mood + điểm danh — dữ liệu cảm xúc lưu như dữ liệu thường, ADR-002), `checkin_rules` (khung giờ + dải IP theo cơ sở), `help_requests`, `mood_trends` (xu hướng tổng hợp giữ lại sau khi xóa chi tiết 12 tháng) |
 | `care` | Mini App (lõi) | `rules` (sổ đăng ký mã luật cờ), `flags`, `care_cases`, `care_case_flags`, `interventions`, `thresholds`, `escalations`, `counselor_notes` |
 | `health` | Mini App (lõi) | `logs` (y tế bán trú — ADR-009), `meal_sleep_logs` |
@@ -22,7 +22,7 @@ Dữ liệu lõi (người dùng, học sinh, giáo viên, phụ huynh, cơ sở
 | `finance` | Mini App (đặt chỗ) | `invoices`, `payments` — chưa xây, chỉ giữ tên miền dữ liệu |
 | `social` | Mini App (đặt chỗ) | `posts`, `comments` — chưa xây |
 | `ai` | Mini App (đặt chỗ) | `conversations`, `prompts` — chưa xây; mọi lời gọi model vẫn qua pii-stripper (§7) |
-| `staging` | Nền tảng | `raw_tutor_events`, `raw_moodle`, `raw_cor_imports`, `raw_embedded_events` (webhook từ Mini App nhúng ngoài, ADR-015), `import_errors` |
+| `staging` | Nền tảng | `raw_tutor_events`, `raw_moodle`, `raw_cor_imports`, `raw_embedded_events` (webhook từ Mini App nhúng ngoài, ADR-015), `import_errors`, `import_limits` (ngưỡng dừng lô theo nguồn, mệnh lệnh 7 — `0045`) |
 | `ops` | Nền tảng | `job_runs`, `heartbeats`, `outbox_messages`, `source_freshness`, `audit_log`, `embedded_app_events` (cổng nhận sự kiện rổ Xanh từ app nhúng — **không FK `core.students`**, RLS deny-by-default), `rls_exemptions` (danh sách bảng cố ý không có RLS, có tên và có lý do) |
 | `report` | Nền tảng | `v_campus_trends`, `v_vaar_indicators` (đã có), `growth_report_approvals` (sổ duyệt Báo cáo Trưởng thành, 0032). **Chưa xây:** `v_cohort_mastery`, `mv_growth_reports` — hai tên này từng nằm ở đây như thể đã có; giữ lại chỉ để đặt chỗ tên miền dữ liệu, không có migration nào tạo chúng. |
 
@@ -287,6 +287,169 @@ Bộ quét `0039` khai rất tử tế mọi luật nó bỏ qua kèm lý do (`c
 **Quyết định đi kèm, ghi ở đây để khỏi bàn lại:** KHÔNG dựng `care.v_signal_cefr` và KHÔNG khai `ops.source_freshness('tutor_cefr')` lúc này. Đo bằng transaction rồi rollback trên hub_dev: khai nguồn không đổi được một chữ trong `rules_skipped` (nhánh `c_implemented` của `0039` chặn trước), chỉ thêm một dòng `degraded_sources` vĩnh viễn; còn dựng view trên hai bảng `tutor.cefr_*` đang rỗng tuyệt đối (0 dòng, không bộ ghi nào trong repo) thì 0 dòng đọc y hệt "không em nào lệch lộ trình" — hỏng im lặng, ADR-016 cấm. Chi tiết + ba câu hỏi thiết kế còn treo: `DEBT.md` #35.
 
 Kiểm chứng đã chạy (01/08/2026): `0043_rule_health_test.sql` **37/37 assertion pgTAP xanh** trên database dựng lại từ đầu (`plan(37)` khớp đúng 37 dòng `ok`), gồm cả hai chiều của cái đèn — luật ngủ vì nợ thì đèn tắt, nguồn hết tươi thì đúng ba luật ăn nguồn đó cùng kêu. Toàn bộ bộ pgTAP sau khi thêm: **564 assertion xanh, 0 not-ok**, tổng `plan(N)` cũng đúng 564.
+
+## Đợt E (01/08/2026) — cửa nạp danh sách thật, phiếu đồng ý của phụ huynh, và một bộ dữ liệu mẫu đủ để hỏi
+
+Ba gói hạ cánh cùng ngày, chung một chủ đề: **hệ chuyển từ "chạy được trên dữ liệu do dev gõ" sang "nhận được dữ liệu của trường và hỏi được người lớn trước khi động vào đứa trẻ"**. Hai migration (`0045`, `0046`) và một gói không đổi một dòng lược đồ nào.
+
+Ba gói viết tài liệu vào `danh-cho-may/.wip/` rồi một lượt gộp duy nhất đưa vào file này — lý do là cơ học chứ không phải quy trình mới: `02-database.md` và `ho-so-he-thong.html` mỗi bên chỉ có MỘT bản, ba agent cùng sửa là xung đột chắc chắn. `sync-version` vì thế tăng **một lần cho cả ba gói** (23 → 24). Người gộp đọc thẳng hai file migration để tự kiểm chứ không chép niềm tin từ bản nháp.
+
+### `0045_nap_danh_sach.sql` — cửa nạp danh sách cả khối, và những gì nó TỪ CHỐI làm
+
+Trước file này hệ **không có cửa nào** nhận danh sách học sinh: `core.students` chỉ có người do `seed.mjs` gõ vào. Nghĩa là đến ngày khai giảng, nhà trường gửi file khối 6 thì không có chỗ nhận.
+
+| Đối tượng | Migration | Ghi chú |
+|---|---|---|
+| `staging.raw_cor_imports.failed_at timestamptz` | `0045_nap_danh_sach.sql` | Chép nguyên quy ước `0028` đã dựng cho `raw_embedded_events`: "đã gọi promote() và hỏng vĩnh viễn". Tách khỏi `promoted_at` để mọi báo cáo "bao nhiêu dòng đã vào kho" không nói dối. Không có cột này thì `promote()` diễn lại toàn bộ phần ánh xạ mỗi lần gọi và mất hẳn nhánh `already_failed` (§9 cho nhánh LỖI). Người xử lỗi xong thì `set failed_at = null` để nạp lại. Hai bảng thô còn lại (`raw_moodle`, `raw_tutor_events`) **cố ý chưa vá** — chưa có bộ đọc nào, vá trước là thêm cột chết. |
+| `staging.import_limits(source, max_errors, note, updated_at)` | `0045_nap_danh_sach.sql` | Mệnh lệnh 7 — ngưỡng dừng cả lô cho từng nguồn nạp. Seed đúng **một** dòng: `('cor', 500)` theo RB-09 (`07-operations.md`). Đổi ngưỡng là một câu `UPDATE`, không phải một lần deploy. **Không dùng lại `care.thresholds`** có chủ ý: bảng đó gắn `care.rules` (mã luật, phạm vi theo cơ sở, `resolve_threshold`) và do BGH đổi; ngưỡng nạp do người vận hành đổi — hai vòng đời khác nhau, một bảng nhỏ riêng rẻ hơn một lần dùng nhầm. |
+| `staging.nguong_loi_nap(text) → integer` | `0045_nap_danh_sach.sql` | Đọc ngưỡng của một nguồn. Nguồn chưa khai thì **NÉM LỖI**, không trả `NULL`: thiếu ngưỡng phải nổ lúc khởi động chứ không im lặng thành "chạy vô hạn" tới dòng cuối của một file rác. |
+| `staging.ingest_cor_row(text, jsonb) → bigint` | `0045_nap_danh_sach.sql` | Cửa vào duy nhất cho danh sách học sinh, nguyên khuôn `staging.ingest_embedded_event` (`0028`). Upsert theo `(source, external_id)`, trả `raw_id` cũ khi đã nhận rồi và **không ghi đè payload** — bản đầu tiên là bản có thẩm quyền. `external_id = '<ma_lo>:<student_code>'`, xem "hai tầng chống trùng" bên dưới. |
+| `staging.ghi_loi_nap(text, text, jsonb) → bigint` | `0045_nap_danh_sach.sql` | Ghi một dòng lỗi **cấp FILE** — thứ chưa gắn được vào một bản ghi thô nào, ví dụ "trùng mã học sinh trong cùng một file". `promote()` nhìn từng dòng một nên không bao giờ thấy được thuộc tính của cả file. Idempotent qua `import_errors_dedup_uq` (`0028`). |
+| `core.record_cor_import_error(staging.raw_cor_imports, text, jsonb) → text` | `0045_nap_danh_sach.sql` | Một chỗ duy nhất ghi sổ lỗi của nguồn `cor`, khuôn `core.record_import_error` (`0028`). Khác đúng một điểm: tham số `jsonb` để nhét ngữ cảnh riêng từng ca (lớp cũ, lớp mới, cơ sở đang thuộc). Không có nó thì câu "em đang học lớp khác" không dùng được — người xử phải tự đi tra lớp cũ là lớp nào. |
+| `core.promote_cor_row(bigint, boolean default false) → text` | `0045_nap_danh_sach.sql` | Đưa MỘT dòng thô vào `core.students`/`core.classes`/`core.enrollments`, hoặc vào `staging.import_errors`. Hợp đồng chép từ `0028`: **không bao giờ ném lỗi vì dữ liệu xấu**; trả một trong `raw_not_found` \| `already_promoted` \| `already_failed` \| `import_error` \| `promoted`. Tham số thứ hai (`p_tao_lop_moi`) mặc định `false` có chủ ý — xem "bốn ca không tự động". |
+| `core.doi_soat_vang_mat(text) → integer` | `0045_nap_danh_sach.sql` | Đối soát em có kỳ học mở trong các lớp mà lô vừa nạp có nhắc tới, nhưng không xuất hiện trong lô. **CHỈ GHI DANH SÁCH CHỜ NGƯỜI** — không `update students.status`, không đóng `enrollments`, không xoá gì. Chạy lại trả `0` (§9, nhờ `import_errors_dedup_uq`). Phạm vi cố tình HẸP (chỉ lớp trong lô): so cả trường sẽ báo "vắng mặt" cho học sinh của mọi khối không nằm trong file, và một hàng đợi vài nghìn dòng vô nghĩa là một hàng đợi không ai đọc. |
+| `staging.v_loi_nap_danh_sach` (view) | `0045_nap_danh_sach.sql` | Hàng đợi người-xử đọc được bằng mắt: `dong_trong_file` · `ma_hoc_sinh` · `ho_ten` · `ma_lop` · `ly_do` (tiếng Việt). **Không cấp cho `authenticated`** — nó trả họ tên học sinh chưa qua bất kỳ cổng RLS nào. |
+
+Cả 6 hàm đều `revoke execute from public` (PostgreSQL mặc định cấp `EXECUTE` cho `PUBLIC`; ba trong số đó là `SECURITY DEFINER` **ghi thẳng vào `core.students`/`classes`/`enrollments`**, tức chạy vượt mọi RLS). **Cố ý không cấp gì cho vai `connector`**, khác `0028`: nguồn embed là một app ngoài tự đẩy webhook nên nó cần một vai hẹp; nạp danh sách là người vận hành chạy một lệnh trên máy chủ với một file trong tay. Đã đối chiếu với file migration khi gộp: không một câu `grant` nào trong `0045`.
+
+**Hai tầng chống trùng, khác nhau, không được lẫn (§9).** `staging` chống trùng **FILE**: `raw_cor_imports` UNIQUE `(source, external_id)` với `external_id = '<ma_lo>:<student_code>'`, `ma_lo` là băm sha256 của *nội dung file + `--nam-hoc` + `--hieu-luc-tu`* — nạp lại cùng một file thì bị chặn ngay ở cửa. Bảng đích chống trùng **DỮ LIỆU**: file mới (tháng 12, lớp đã đổi) cho `ma_lo` mới ⇒ `external_id` mới ⇒ `promote()` chạy lại, và lúc đó tính idempotent do `core.students.student_code` UNIQUE và `core.classes` UNIQUE `(school_id, code, academic_year)` gánh. Lẫn một cái là mất một cái: lấy thẳng `student_code` làm `external_id` thì file tháng 12 bị chặn ở cửa staging, `promote()` không bao giờ thấy em đã đổi lớp, và báo cáo nói *"đã nạp, 0 lỗi"*.
+
+**BẪY ĐO ĐƯỢC — `on conflict` trên `core.enrollments` NUỐT IM LẶNG.** Bảng này không có ràng buộc duy nhất thường mà có **EXCLUDE** `enrollments_no_overlap` (gist trên `student_id` + `daterange(valid_from, valid_to, '[]')`). Bốn dạng đã dựng lại trên một database riêng và đo ngày 01/08/2026:
+
+| Viết thế nào | Kết quả THẬT |
+|---|---|
+| `on conflict do nothing`, không target, trùng đúng kỳ cũ | `INSERT 0 0` — **im**, không lỗi |
+| `on conflict do nothing`, không target, **LỚP KHÁC** nhưng kỳ chồng lấn | **`INSERT 0 0` — im.** Dòng chuyển lớp biến mất không dấu vết |
+| `on conflict (student_id, class_id, valid_from) do nothing` | `ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification` |
+| không có `on conflict` | `ERROR 23P01 conflicting key value violates exclusion constraint` |
+
+Chỉ dạng có target mới ném lỗi; **dạng nguy hiểm nhất là dạng im**. `core.enrollments` chính là bảng quyết định *"cô có được xem em này không"* (`0002`), nên nuốt một dòng chuyển lớp nghĩa là cô mới không thấy em, cô cũ vẫn thấy, và job báo `success` 0 lỗi. `core.promote_cor_row()` vì thế **cấm `ON CONFLICT` ở bảng này, dù có target hay không**: nó đọc kỳ đang mở rồi quyết — trùng `class_id` ⇒ bỏ qua (idempotent thật); khác `class_id` ⇒ ghi `staging.import_errors` kèm cả lớp cũ lẫn lớp mới, **không tự đóng kỳ cũ**; chưa có kỳ nào ⇒ `insert` trần, để `23P01` nổ nếu còn chồng lấn ngoài dự kiến — nổ to hơn là nuốt. *(`seed.mjs` và `fixtures/000_test_support.sql` vẫn dùng dạng không-target một cách hợp lệ: mỗi em một lớp, không có ca chuyển lớp. Đừng chép câu đó sang job nạp.)*
+
+> **Biên `daterange`:** dùng `'[]'` **hai đầu đóng**, nên người xử đóng kỳ cũ phải đặt `valid_to` = ngày mở mới **trừ 1 ngày**. Đặt bằng chính ngày mở mới là vẫn chồng và vẫn bị `enrollments_no_overlap` chặn.
+
+**Bốn ca không tự động, một ca tuyệt đối không.** Nguyên tắc có sẵn ở hai chỗ, không phải chọn bừa: comment `staging.import_errors` (`0008`) — *"không map được thì nằm ở đây chờ NGƯỜI xử, tuyệt đối không tự đoán; một dòng lỗi không chặn dòng sạch"* — và RB-09 (`07-operations.md`). Mặc định là **ghi sổ rồi đi tiếp**; chỉ dừng khi hỏng ở mức cả lô.
+
+1. **Mã sai khuôn** (`core.students.student_code` CHECK `^VA-\d{4}-\d{5}$`) — ghi sổ, đi tiếp, **tuyệt đối không nắn**. Thêm số 0, đổi `VA-26` thành `VA-2026`: mỗi phép nắn là một lần bịa ra một em có thật.
+2. **Trùng mã, khác tên trong cùng file** — ghi sổ **cả hai dòng**, bỏ qua cả hai. Giữ lại một dòng là tự chọn hộ nhà trường xem em nào mới là em thật. (Trùng **tên** khác mã **không phải lỗi**: mã mới là khoá.)
+3. **Lớp chưa tồn tại** — ghi sổ, **không tự tạo**. `core.classes` cần `grade` và `academic_year` mà file có thể không có, và một lỗi gõ `6A11` thay `6A1` phải kêu lên chứ không được đẻ ra một lớp ma. Muốn tạo thì phải có cờ tường minh `--tao-lop-moi`, và job **in danh sách lớp sẽ tạo TRƯỚC khi tạo**. Kể cả có cờ, **không suy khối từ mã lớp** (`6A1` → 6): đúng gần hết và **sai im lặng** ở lớp đặt tên khác quy ước.
+4. **Học sinh biến mất khỏi file mới** — **KHÔNG chạm dữ liệu**, chỉ ghi một dòng chờ người. *"Trường xuất nhầm bộ lọc"* và *"em chuyển trường thật"* cho ra **cùng một dấu hiệu**; hệ không có phép đo nào phân biệt. Tự đặt `status='left'` hay tự đóng `enrollments` là kết luận không có căn cứ, và nó cắt em khỏi tầm nhìn của cô đúng lúc không ai đang nhìn.
+5. **Dừng cả job chỉ ở ba ca**, đều là hỏng ở mức cả lô: file không đọc được / thiếu cột bắt buộc · `--nam-hoc` hoặc `--hieu-luc-tu` không hợp lệ · số dòng lỗi vượt `staging.import_limits`.
+
+**Vì sao KHÔNG có dòng nào thêm vào `ops.job_schedule`.** Nạp danh sách là việc **chạy tay theo yêu cầu**: cần một file do nhà trường gửi, hai tham số người vận hành gõ, và một người đọc sổ lỗi sau đó. Khai nó vào `ops.job_schedule` sẽ làm đúng cái hỏng mà `0041` vừa dựng đèn để chống — `ops.v_job_health` hiện `chua_chay` rồi `qua_han` **vĩnh viễn** giữa hai đợt tuyển sinh, `needs_attention` bật mãi, và một cảnh báo lúc nào cũng sáng là một cảnh báo đã chết (bài học `0011`/ADR-016). Nhưng job **vẫn ghi sổ**: `tools/jobs/run-nap-danh-sach.mjs` gọi `ops.start_job_run('nap_danh_sach')` / `ops.finish_job_run()` như mọi job khác. Có sổ mà không có lịch — đúng hình dạng của `run-anonymize-user.mjs` (`0033`). Lý do viết thành comment trong migration và có một assertion pgTAP khẳng định bảng lịch **không** có dòng đó.
+
+### `0046_dieu_khoan_dong_y.sql` (ADR-027) — phiếu đồng ý của phụ huynh, và chốt chặn thật
+
+Trước file này hệ thống **không có gì** về việc đồng ý. Đo trên hub_dev 01/08/2026: truy vấn `information_schema.columns` tìm tên cột khớp `consent|agree|dong_y|terms|policy|version` trên cả 14 schema trả về đúng một dòng, và là dòng lạc đề (`ops.job_runs.rule_version`). Yêu cầu tồn tại duy nhất ở phía giấy (`lo-trinh-go-live.html`).
+
+| Đối tượng | Loại | Migration | Ghi chú thiết kế |
+|---|---|---|---|
+| `core.terms_versions` | bảng | `0046_dieu_khoan_dong_y.sql` | Bản điều khoản có số phiên bản. `content_hash` là cột **GENERATED** từ `body_md` nên không đặt tay được. `bat_dong_y_lai boolean not null` **KHÔNG có DEFAULT** (ADR-027 (c)): người tạo bản mới buộc phải trả lời câu "bản này có bắt phụ huynh bấm lại không". |
+| `core.consent_records` | bảng | `0046_dieu_khoan_dong_y.sql` | Sổ **chỉ thêm**. Trạng thái hiện tại = dòng có `superseded_at IS NULL`. `decision in ('granted','declined','withdrawn')` — ba giá trị chứ không phải hai: gộp "chưa bao giờ đồng ý" với "đã đồng ý rồi rút" là mất hai câu chuyện pháp lý khác nhau. |
+| `consent_records_current_uq` | chỉ mục duy nhất riêng phần | `0046_dieu_khoan_dong_y.sql` | **Khoá idempotent §9**: `(user_id, student_id) where superseded_at is null` — một quyết định đang hiệu lực cho mỗi cặp (người bấm, đứa con). |
+| `consent_records_student_live_idx` | chỉ mục riêng phần | `0046_dieu_khoan_dong_y.sql` | `(student_id) where superseded_at is null` — đường đọc của `core.has_student_consent`. |
+| `core.tg_terms_version_immutable()` | trigger fn | `0046_dieu_khoan_dong_y.sql` | Chặn sửa/xoá bản đã công bố (`restrict_violation`). **Không có cửa thoát hiểm** — khác `0033`, và khác có chủ ý: một tờ giấy ký mà nội dung sửa được sau khi ký thì chữ ký không chứng minh điều gì. |
+| `core.tg_consent_append_only()` | trigger fn | `0046_dieu_khoan_dong_y.sql` | Chặn DELETE, chặn mọi UPDATE trừ đặt `superseded_at` một lần từ NULL. |
+| `core.required_terms_version()` | hàm (stable, definer) | `0046_dieu_khoan_dong_y.sql` | `max(version)` trong các bản đã công bố có `bat_dong_y_lai`. Trả `0` khi chưa công bố bản nào ⇒ không ai bị chặn vì một bảng rỗng. |
+| `core.has_student_consent(uuid)` | hàm (stable, definer) | `0046_dieu_khoan_dong_y.sql` | Em này đã có phiếu còn hiệu lực chưa, của **bất kỳ** người đại diện nào. |
+| `core.sync_student_account_status(uuid)` | hàm (definer) | `0046_dieu_khoan_dong_y.sql` | Đưa `core.users.status` của em về `active`/`pending`. **Không chạm `disabled`** — một cú bấm đồng ý không được hồi sinh tài khoản đã ẩn danh hoá (`0033`). Không GRANT cho `authenticated`. |
+| `core.record_consent(uuid,uuid,text,text,text)` | hàm (definer) | `0046_dieu_khoan_dong_y.sql` | **Đường ghi duy nhất** vào sổ. Ghi phiếu VÀ bật/tắt tài khoản trong **cùng một giao dịch**, không job chạy sau. Từ chối: `28000` chưa đăng nhập · `22023` quyết định lạ / bản sai hoặc chưa công bố · `42501` không phải người đại diện của em này. |
+| `core.my_consent_status()` | hàm (stable, definer) | `0046_dieu_khoan_dong_y.sql` | Một dòng cho mỗi đứa con của người đang đăng nhập. Là **hàm chứ không phải view** vì nó phải đọc `core.users.status` của đứa con, mà `users_self` (`0009`) chỉ cho mỗi người đọc dòng của chính mình. |
+| `core.v_consent_gap` | view | `0046_dieu_khoan_dong_y.sql` | Học sinh **có tài khoản đang bật mà chưa có phiếu**. Cố ý không GRANT cho `authenticated` — danh sách vận hành, không phải màn hình. Đo 01/08/2026: **1 dòng** (Minh). Điều kiện đóng: `DEBT.md` #42. |
+| `attendance.help_requests.source` + `.created_by` | cột | `0046_dieu_khoan_dong_y.sql` | `'self'` (mặc định) / `'staff'`; `created_by` là NGƯỜI THAO TÁC (ADR-021), `on delete set null`. |
+| `help_requests_insert_by_care` | policy | `0046_dieu_khoan_dong_y.sql` | `WITH CHECK (core.can_see_care(student_id) AND source = 'staff')` — GVCN/tâm lý cụm ghi hộ. |
+| `help_requests_insert_self` | policy (siết lại) | `0046_dieu_khoan_dong_y.sql` | Thêm `AND source = 'self'`: học sinh không tự khai lời mình là lời thầy cô. |
+| `terms_versions_read_published` | policy | `0046_dieu_khoan_dong_y.sql` | Ai đăng nhập cũng đọc được bản **đã công bố**; bản nháp không lọt ra ngoài. |
+| `consent_records_self` | policy | `0046_dieu_khoan_dong_y.sql` | Chỉ SELECT, `user_id = core.current_user_id()`. **Không** policy INSERT/UPDATE/DELETE — đường ghi duy nhất là hàm. |
+
+**Chốt chặn nằm ở TẦNG DANH TÍNH, không ở giao diện và không ở RLS.** Nó dùng đúng cơ chế đã có sẵn và đang chạy: (1) `core.users.status = 'pending'` — giá trị đã nằm trong CHECK `users_status_chk` từ `0002` và cho tới `0046` **chưa được dùng ở đâu**; (2) `resolveIdentity` trả `null` khi status khác `'active'` ⇒ không dựng được phiên, và mọi cửa đăng nhập đều qua đây; (3) `core.begin_user_context` (`0029`) và `core.resolve_user_id_uncached` (`0001`) đều lọc `status='active'` ⇒ một cookie **còn hạn** cũng không có `user_id` để RLS bám vào; (4) `/api/auth/refresh` gọi lại `resolveIdentity` khi token còn dưới 5 phút (token 15 phút, ADR-016) ⇒ đổi status là cắt quyền trong **≤15 phút**, không đợi hết phiên.
+
+Ba chỗ chặn đã loại trừ, kèm lý do đo được: **giao diện** — không policy RLS nào và không procedure tRPC nào biết tới việc đồng ý trước `0046`, ai giữ cookie gọi thẳng `POST /api/trpc` là qua; **`core.is_me()` / `core.can_see_student()`** — sai tầng, và sửa `is_me()` làm câm cùng lúc sáu policy đang dựa vào nó theo kiểu tệ nhất (không lỗi, chỉ trả 0 dòng); **job chạy sau** — có một khoảng thời gian lời hứa nói sai.
+
+Đo được trên bản chạy thật (01/08/2026, HTTP thật): `consent.decide` (granted) lần 1 `created=true, accountStatus=active`, lần 2 `created=false` cùng `consentId`, `core.consent_records` đúng **1 dòng** (§9) · `GET /home` phiên phụ huynh chưa bấm → `307 → /dieu-khoan`, sau khi bấm → `200` · `checkin.getAttendanceOverview` phiên em → `200 có dữ liệu`, sau khi phụ huynh bấm `withdrawn` thì **cùng cookie còn hạn** → `403 FORBIDDEN`.
+
+**Bẫy đã gặp, ghi lại để lần sau không ai phải vấp:**
+
+- **Cột GENERATED và tính bất biến của hàm.** `encode(sha256(convert_to(body_md,'UTF8')),'hex')` bị Postgres từ chối thẳng: `generation expression is not immutable` — `convert_to` chỉ STABLE (phụ thuộc encoding của server). Phải dùng `public.digest(body_md,'sha256')` của pgcrypto (`0001` đã bật), và **ghi rõ schema `public.`** vì cột generated giải tên hàm một lần lúc tạo bảng, không theo `search_path` của người ghi sau này.
+- **Khoá idempotent suýt sai.** Đề xuất ban đầu là `unique (user_id, student_id, terms_version_id, decision)`. Nó **gãy** ở chuỗi đồng ý → rút lại → đồng ý lại: lần đồng ý thứ hai đụng đúng dòng cũ, `on conflict do nothing` bỏ qua, trạng thái tính theo dòng mới nhất vẫn là `withdrawn` — phụ huynh bấm đồng ý mà hệ thống coi là đã rút, **không một dòng lỗi nào**.
+- **`create table if not exists` không sửa ràng buộc của bảng đã tồn tại.** Thêm giá trị thứ ba (`declined`) vào CHECK phải khai lại tường minh bằng `drop constraint if exists … add constraint …`, nếu không file chạy qua sạch trên CSDL đã có bảng mà giá trị mới vẫn bị chặn.
+- **Bảng tạm trong pgTAP + `login_as`.** `create temporary table` do vai chủ schema tạo, còn lời gọi chạy bằng vai `authenticated` ⇒ `permission denied for table`. Cần `grant insert, select on <bảng tạm> to public`.
+- **Trang gác không được là nhánh loading trắng.** tRPC không prefetch phía máy chủ, nên `if (isLoading) return <LoadingState/>` ở đầu component làm HTML lần đầu **không có `<h1>`, không có landmark `<main>`** — người dùng trình đọc màn hình nghe đúng hai chữ "Đang tải" ở một trang pháp lý. Khung trang phải là chữ tĩnh; chỉ phần dữ liệu mới chờ.
+
+**Cái file này CỐ Ý không làm:** `0046` **không** chuyển các tài khoản học sinh đang `active` về `pending`. Lý do và điều kiện trả: `DEBT.md` #42 (phụ thuộc Zalo OAuth) và #43 (đường ghi hộ phải có nút bấm trước). Khoảng hở được gọi tên bằng `core.v_consent_gap`, không để im lặng.
+
+### `0047_duong_keu_cuu_khong_khoa.sql` (ADR-027 **bản 2**) — phiếu đồng ý thôi gác danh tính của đứa trẻ
+
+**Đây là bản vá một LỖI CHẶN, không phải một cải tiến.** Chuỗi năm bước, đo đầu-cuối trên bản chạy thật 01/08/2026: phụ huynh bấm "rút lại đồng ý" → `core.record_consent` gọi `core.sync_student_account_status` → hàm này đặt `core.users.status='pending'` → `core.resolve_user_id_uncached` (`0029`) chỉ trả `id` khi `status='active'` nên `core.current_user_id()` trả NULL → `core.is_me()` false ⇒ **`help_requests_insert_self` câm, tức chính em không bấm được "Mình cần gặp thầy cô" nữa.** Một thao tác hành chính của người lớn cắt đường kêu cứu của một đứa trẻ, và nó cắt đúng em có phụ huynh ít để tâm nhất.
+
+`0046` biết rủi ro này (nó mở đường ghi hộ `help_requests_insert_by_care`) nhưng bù chưa đủ: ghi hộ là đường của **người khác**, nó đòi đứa trẻ mở lời trực tiếp với một người lớn trước — mà cái nút trong máy tồn tại chính vì có những đứa trẻ không làm được điều đó.
+
+**Chỗ sai gốc là một cột gánh hai khái niệm.** `core.users.status` trả lời "người này còn là người dùng của hệ không" (nghỉ học, thôi việc, đã ẩn danh hoá — `0033`). Phiếu đồng ý trả lời "trường được xử lý dữ liệu nào của đứa trẻ này". Mượn cột danh tính làm công tắc đồng ý thì tắt cái sau là tắt luôn cái trước, và danh tính là thứ **mọi** quyền bám vào.
+
+| Đối tượng | Loại | Migration | Ghi chú thiết kế |
+|---|---|---|---|
+| `core.sync_student_account_status(uuid)` | **BỎ HẲN** | `0047_duong_keu_cuu_khong_khoa.sql` | `drop function`. Không để lại thân rỗng: một hàm tên "sync" mà không sync gì là cái bẫy đọc — người sau gọi nó rồi tin trạng thái đã đồng bộ. Bỏ hẳn thì lời gọi sót lại ném lỗi ồn ào lúc chạy. |
+| `core.record_consent(uuid,uuid,text,text,text)` | hàm (thay thân) | `0047_duong_keu_cuu_khong_khoa.sql` | Giữ NGUYÊN chữ ký và toàn bộ hàng rào của `0046` (quan hệ cha-con, khoá dòng đang hiệu lực, §9). Bỏ đúng một dòng: lời gọi ghi vào `core.users`. Trả thêm `moodEnabled` — **hậu quả thật** của cú bấm. |
+| `core.my_consent_status()` | hàm (thêm cột) | `0047_duong_keu_cuu_khong_khoa.sql` | Thêm `mood_enabled` = `core.has_student_consent(s.id)`. Hỏi theo **đứa trẻ**, không suy từ `needs_action`: nhà hai người đại diện mà người kia đã bấm thì phần này đang bật thật. Phải `drop` trước vì Postgres không cho `create or replace` đổi kiểu trả về. |
+| `core.tg_users_no_pending_downgrade()` + trigger `users_no_pending_downgrade` | trigger fn | `0047_duong_keu_cuu_khong_khoa.sql` | **Khoá cấu trúc.** Chặn mọi UPDATE đưa `core.users.status` về `'pending'`. INSERT không chặn (tài khoản mới lập chưa ai dựa vào). **Cố ý không có cửa thoát hiểm** `hub.allow_*` như `0033`/`0046`: hai chỗ đó bảo vệ một dòng dữ liệu và cần đường dọn rác test; chỗ này bảo vệ đường kêu cứu của một đứa trẻ. Ngừng cho dùng thì đặt `'disabled'`. |
+| `checkins_insert_self` | policy (siết) | `0047_duong_keu_cuu_khong_khoa.sql` | `core.is_me(student_id) AND (mood is null OR core.has_student_consent(student_id))`. **Gác theo CỘT, không theo DÒNG**: mood và điểm danh nằm chung một dòng `attendance.checkins`, gác theo dòng là lấy mất điểm danh theo. |
+| `checkins_update_self` | policy (siết) | `0047_duong_keu_cuu_khong_khoa.sql` | Cùng điều kiện ở `WITH CHECK`. `USING` giữ nguyên `is_me` — **xoá mood về NULL vẫn đi được**, vì rút lại đồng ý phải luôn đi được theo chiều tắt. |
+| `core.v_consent_gap` | view (đổi nghĩa) | `0047_duong_keu_cuu_khong_khoa.sql` | Nay là "em có tài khoản mà nhà chưa có phiếu" — **danh sách phải đi xin phiếu**, không phải danh sách lỗi. Điều kiện `u.status <> 'disabled'`. |
+| `core.v_mood_khong_phieu` | view (mới) | `0047_duong_keu_cuu_khong_khoa.sql` | **Khoảng hở THẬT sau `0047`**, đếm được bằng một câu SELECT: số dòng tâm trạng đang lưu của những em không còn phiếu (thu trước khi có cổng, hoặc thu hợp lệ rồi phụ huynh rút lại). Không tự xoá — rút lại là "ngừng xử lý từ nay", xoá dữ liệu đã thu là quyền **riêng** phải do người ta yêu cầu (`DEBT.md` #48). Không GRANT cho `authenticated`. |
+| `core.terms_versions` bản **2** | dữ liệu | `0047_duong_keu_cuu_khong_khoa.sql` | `bat_dong_y_lai = false`. Bản 1 bất biến (trigger, không có cửa thoát hiểm) nên đường duy nhất để nói lại cho đúng là **công bố bản mới**. Đánh dấu `true` sẽ đẩy `required_terms_version()` lên 2 ⇒ mọi phiếu bản 1 hết hiệu lực cùng lúc ⇒ tắt tâm trạng của toàn bộ học sinh đang dùng vì một lần sửa câu chữ (đúng phương án A mà ADR-027 (c) đã loại). |
+
+**Ranh giới mới, từng đường một** (ADR-027 bản 2 — không nói chung chung, vì "nói chung chung" là cách con lỗi này lọt qua lần đầu):
+
+| Đường | Khoá theo phiếu đồng ý? | Vì sao |
+|---|---|---|
+| **"Mình cần gặp thầy cô" (chính em bấm)** | **KHÔNG BAO GIỜ** | An toàn của một đứa trẻ không phải tính năng để cân đối. Sau `0047` không trạng thái hành chính nào của người lớn tắt được nó — đồng ý không còn chạm tới danh tính. |
+| **Ghi tâm trạng hằng ngày** | **CÓ** | Đúng thứ phiếu đồng ý nói tới: dữ liệu cảm xúc của trẻ, do chính em khai, **không có cơ sở pháp lý nào khác** ngoài sự đồng ý của người đại diện. Cổng không gác cái này thì nó không gác gì cả. |
+| **Điểm danh** (cô ghi **và** em tự bấm có mặt) | KHÔNG | Nghĩa vụ trông giữ trẻ, đứng trên cơ sở pháp lý khác. Trường không điểm danh được là trường không giữ được trẻ. |
+| **Đọc Báo cáo Trưởng thành** (phụ huynh đọc về con) | KHÔNG | (1) Luật 91/2025 đòi đồng ý **tự nguyện** — giữ lại thứ phụ huynh vốn có quyền biết về con mình để đổi lấy chữ ký là biến phiếu thành phí vào cửa, và một sự đồng ý mua bằng cách đó không còn giá trị pháp lý. (2) Không thêm lớp bảo vệ nào: dữ liệu vào báo cáo đã bị gác từ đầu nguồn. |
+
+**MỘT CÂU HỨA CŨ KHÔNG CÒN ĐÚNG NGUYÊN VĂN.** Yêu cầu chủ đầu tư ghi trong `lo-trinh-go-live.html` là *"em nào chưa có phiếu thì không bật tài khoản"*. Sau `0047` câu đó **sai** — tài khoản của em vẫn bật. Câu thay thế, đúng với thứ đang chạy:
+
+> **"Chưa bấm thì phần mềm chưa ghi tâm trạng của con — và đường con nhờ giúp đỡ thì không bao giờ khoá."**
+
+Câu mới **chặt hơn chứ không lỏng hơn**: câu cũ nghe như bảo vệ đứa trẻ nhưng thứ nó thật sự tắt là **đường của đứa trẻ**, còn dữ liệu thì trường vẫn ghi bình thường (cô vẫn điểm danh, y tế vẫn ghi, ghi chép chăm sóc vẫn chạy). Câu mới tắt đúng thứ phụ huynh muốn tắt.
+
+Đo được sau khi vá (cùng CSDL, cùng thao tác đã tái hiện lỗi): phụ huynh `withdrawn` → `studentAccountStatus='active'`, `moodEnabled=false` · `core.users.status` **không đổi** · em gọi `checkin.requestHelp` ngay sau đó → `delivered=true`, dòng vào sổ với `source='self'` · em gọi `checkin.submitMood` → **không lỗi**, `moodSaved=false`, `moodBlockedReason='chua_co_phieu_dong_y'`, lượt điểm danh vẫn ghi, cột `mood` NULL · `update core.users set status='pending'` → `23001` ngay cả với vai chủ schema.
+
+**Hệ quả tới bộ test đang xanh, nói ra chứ không giấu:** năm bài pgTAP (`0014`, `0017`, `0025`, `0038`, `0044`) và hai bài vitest (`idempotency`, `mood-rieng-tu`) ghi `mood` dưới vai học sinh mà không có phiếu — chúng **phải** đỏ sau `0047`, vì chúng mã hoá luật cũ. Cách sửa là dựng sẵn một phiếu ở phần chuẩn bị (`tests/helpers/db.ts` có `capPhieuDongY`/`goPhieuDongY`), **không** phải nới policy. `seed.mjs` cố ý vẫn **không** tạo phiếu cho ai: hôm nay trường chưa gửi phiếu tới phụ huynh nào, và giấu sự thật đó trong seed là làm mọi phép đo về cổng đồng ý mất mẫu số.
+
+### Bộ dữ liệu mẫu nhiều khối — không đổi một dòng lược đồ, nhưng đóng lại một mẫu số rỗng
+
+Gói thứ ba **không có migration**. Thứ thiếu không phải là bảng mới mà là *dữ liệu đủ đa dạng để câu hỏi đặt ra được*. Đo trên `hub_dev` sáng 01/08/2026: `select grade, count(*) from core.classes` trả về đúng một dòng, `6 | 5`. Một khối. Nghĩa là mọi khẳng định dạng *"cô chủ nhiệm khối 7 không thấy học sinh khối 6"* đều trả 0 dòng — **0 vì không có khối khác để mà thấy, không vì hàng rào chặn**. Loại xanh này không hỏng khi policy hỏng, nên nó không bảo vệ gì cả.
+
+Gieo bởi `packages/core/db/seed/seed.mjs` (cho `hub_dev` và lớp test TypeScript) và `test_support.seed_khoi_7_8()` trong `packages/core/db/fixtures/000_test_support.sql` (cho pgTAP). **Hai file là song sinh**: cùng UUID, cùng mã lớp, cùng mã học sinh. Sửa một bên mà quên bên kia thì bài pgTAP và bài TypeScript chạy trên hai thế giới khác nhau, và cả hai cùng báo xanh.
+
+| Đối tượng dữ liệu mẫu | Ghi chú |
+|---|---|
+| `core.classes` — `7A1`, `7A2`, `8A1` (Quận 7), `8B1` (**Quận 2**) | Bốn lớp, hai khối, **hai cơ sở**. Cặp `8A1`/`8B1` **cùng khối 8, khác cơ sở** là chỗ duy nhất tách được hai giả thuyết "cụm của tâm lý = CƠ SỞ" và "cụm = khối": trên dữ liệu một-khối chúng cho **cùng một đáp số**, nên không phép đo nào phân biệt được. |
+| 5 người lớn mới (4 GVCN + Thầy Sơn, bộ môn Tiếng Anh) | **Thầy Lộc mang `core.teachers.school_id = Quận 2`** — không phải chi tiết trang trí: để thầy ở Q7 thì "giáo viên cơ sở khác" và "giáo viên cùng cơ sở" là một người, và mọi khẳng định về biên cơ sở đo trên thầy đều không nói lên điều gì. |
+| `core.class_assignments` — 4 dòng `homeroom` + 2 dòng `subject` của Thầy Sơn (`6A5`, `7A1`) | **Thầy Sơn dạy chéo khối**: 2 lớp thuộc 2 khối, trên tổng 9 lớp. Dạy một khối thì "chéo khối" chỉ là chữ; dạy hết thì câu *"thầy không thấy em ở lớp mình không dạy"* lại rỗng mẫu số — đúng cái bẫy cũ dời lên một tầng. **Khối 8 cố ý không có lớp nào của thầy**, nhờ vậy Cô Yến (GVCN `8A1`) là một GVCN có phép giao với thầy **rỗng thật**, còn Cô Thu (`7A1`) thì khác rỗng. |
+| `core.user_role_scopes` — 4 `homeroom` + 2 `teacher` | Bản sao (sổ B) **phải ghi SAU** `class_assignments`: trigger `core.guard_homeroom_scope` (`0023`) từ chối dòng `homeroom` chưa có phân công gốc. Dòng của Thầy Lộc mang `school_id = Q2`; ghi nhầm Q7 vào đây là tự tay mở một cửa mà bản gốc không hề mở, và `ops.v_homeroom_drift` **không bắt được** vì nó soi theo lớp chứ không theo cơ sở. |
+| `core.students` + `core.enrollments` — 48 em (12 em × 4 lớp) | Sĩ số 12 giữ hằng `PER_CLASS` của khối 6 và vì cùng lý do: dưới `report.min_cohort()` (= 10) thì màn Điều hành che sạch mọi ô của khối mới, mà **"che vì nhóm quá nhỏ" trông y hệt "màn hình hỏng"**. Mã `VA-2026-<khối><lớp><3 số>` — 5 chữ số, khớp CHECK, không đụng khuôn của khối 6. |
+| `attendance.checkins` — 5 ngày, tất cả `present`, `mood` ∈ {3, 4} | **Cố ý không có em nào "xấu" ở khối mới.** Cho khối mới một em xấu là thêm cờ vào mọi phép đếm cờ tuyệt đối đang xanh — và đỏ vì dữ liệu demo đổi là loại đỏ dạy người ta bỏ qua màu đỏ. Sân dựng cờ vẫn là khối 6. |
+
+Tổng sau khi gieo: **9 lớp / 3 khối / 2 cơ sở**, 109 học sinh, 108 kỳ ghi danh đang mở — **96 em ở Quận 7, 12 em ở Quận 2, và ĐÚNG MỘT em chưa xếp lớp** (Lê Văn Cường, `VA-2026-00419`: không có dòng `core.enrollments` nào, cả đang mở lẫn đã đóng). Con số cuối cùng đó cố ý giữ trong bộ mẫu chứ không phải sót: em không lớp là ca mà mọi truy vấn đi qua `join core.enrollments` sẽ **âm thầm bỏ rơi**, nên phải có một em như vậy nằm sẵn trong dữ liệu để bài test nào cộng nhầm 96+12 thành 109 sẽ lộ ra. Nghiệm thu 01/08/2026 bắt đúng lỗi đó trong chính dòng này: bản gộp đầu tiên viết "13 ở Quận 2" — cộng cho tròn 109 bằng cách gán em chưa xếp lớp vào một cơ sở em chưa từng thuộc về. Đếm lại bằng `group by` trên `core.schools`: Quận 2 là **12**, dưới mọi định nghĩa. `verify()` của `seed.mjs` được mở rộng để **chặn seed** nếu <3 khối phân biệt, nếu GV bộ môn chéo khối dạy <2 khối hoặc dạy HẾT, nếu không có GVCN ở khối thầy không dạy, nếu không có lớp ngoài Q7, hoặc nếu `ops.v_homeroom_drift` lệch ở khối mới.
+
+**Luật tự áp cho hai bài kiểm mới:** mọi khẳng định phủ định (*"X không thấy Y"*) phải có một phép đo mẫu số đứng trước, và mẫu số đó phải khác 0. Đã đo rằng hai bài **thật sự cắn**: đổi `grade` của `7A1`/`7A2` thành 6 (mô phỏng bộ seed mất khối 7) → 6 ca đỏ kèm câu `MẪU SỐ RỖNG — sĩ số khối 7 đang là 0`; thêm một dòng `class_assignments` cho Thầy Sơn ở `8A1` (mô phỏng rò chéo khối) → ca *"KHÔNG thấy em nào ở khối mình không có lớp nào"* đỏ với `expected 12 to be +0`.
+
+**Nợ có tên do gói này để lại:** `packages/core/auth-adapter/dev-provider.ts` giữ danh sách `DEV_ACCOUNTS` cố định, và `/api/auth/dev-login` từ chối `authUid` không nằm trong đó. Năm người mới **có** trong CSDL và **được** kiểm đầy đủ ở tầng máy chủ (RLS + `careRouter`), nhưng **một người thật chưa mở được màn hình của họ trên trình duyệt**. `seed.mjs` vì thế in **hai danh sách tách rời** — "đăng nhập dev được ngay" và "có trong CSDL nhưng chưa đăng nhập dev được" — vì gộp làm một là in lên màn hình một lời hứa hệ thống không giữ.
+
+### Kiểm chứng của cả đợt E
+
+| Bài | Chạy ở đâu | Số |
+|---|---|---|
+| `packages/core/db/tests/0045_nap_danh_sach_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(52)`, 52 `ok`, 0 `not ok` |
+| `packages/core/db/tests/0046_cheo_khoi_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(38)`, 38 `ok` — 11 phần, **phần 0 đo MẪU SỐ trước khi đăng nhập bất kỳ ai** |
+| `packages/core/db/tests/0046_dieu_khoan_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(45)`, 45 `ok` — **bốn assertion của bản đầu đã bị LẬT** ở `0047`, không xoá: chúng nay khẳng định điều ngược lại nên ai khôi phục lối cũ sẽ làm chúng đỏ |
+| `packages/core/db/tests/0047_duong_keu_cuu_test.sql` | pgTAP, DB dựng lại từ đầu | `plan(25)`, 25 `ok` — bài KHOÁ CHẶT: chưa có phiếu và sau khi RÚT LẠI, chính em vẫn ghi được `help_requests` |
+| `tests/db/nap-danh-sach.test.ts` · `cheo-khoi.test.ts` · `dieu-khoan.test.ts` | vitest, Postgres thật | 8 · 21 · 8 ca |
+
+**Đo lại lúc gộp tài liệu (01/08/2026), không chép số từ bản nháp:** dựng một database sạch, chạy toàn bộ migration + fixtures rồi chạy hết `packages/core/db/tests/*.sql` — **731 assertion `ok`, 0 dòng `not ok`, và tổng `select plan(N)` cũng đúng 731**. *(Sau `0047`, đo lại trên database dựng lại từ đầu: **796 assertion / 47 file**, mọi file khớp `plan(N)`.)* Phép so `plan` với số dòng `ok` là bắt buộc chứ không thừa: pgTAP dừng dở giữa chừng **không in `not ok`** nào, nên một bài chết ở assertion thứ 3/40 vẫn trông như một bài sạch nếu chỉ đếm `not ok`.
+
+*Hai số cũ trong file này (`564` ở mục `0043`, `601` ở mục `0044`) là số của đúng thời điểm đó và cố ý giữ nguyên — chúng là hồ sơ của một lần đo, không phải một con số phải cập nhật.*
 
 ## Quy tắc migration (§2)
 

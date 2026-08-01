@@ -146,6 +146,21 @@ export const checkinRouter = router({
     return ctx.runWithDb(async (client) => {
       const studentId = await getMyStudentId(client);
 
+      // CỔNG ĐỒNG Ý (0047, ADR-027 bản 2) — hỏi TRƯỚC khi ghi, và hỏi để NÓI CHO EM BIẾT,
+      // không phải để chặn: hàng rào thật là `checkins_insert_self`/`checkins_update_self`
+      // ở tầng RLS, nơi không sửa được bằng một dòng TypeScript. Nếu bỏ câu hỏi này thì
+      // Postgres vẫn từ chối — nhưng em nhận một lỗi 500 đỏ và tin rằng mình vừa làm hỏng
+      // cái gì đó, trong khi chuyện xảy ra hoàn toàn nằm ở phía người lớn.
+      //
+      // Vì sao chỉ bỏ MOOD chứ không bỏ cả lượt check-in: điểm danh là nghĩa vụ trông giữ
+      // trẻ của trường, đứng trên cơ sở pháp lý khác cái nút của bố mẹ. Em bấm thì em vẫn
+      // được tính có mặt; ô tâm trạng để trống.
+      const consent = await client.query<{ ok: boolean }>(
+        "select core.has_student_consent($1) as ok",
+        [studentId],
+      );
+      const moodSaved = consent.rows[0]?.ok === true;
+
       // ADR-007 (migration 0027): ngày/trạng thái/nguồn KHÔNG còn viết cứng ở đây.
       // Trước 31/07/2026 dòng này ghi thẳng `'present', 'app'` cho mọi lần bấm, nên
       // em bấm lúc 11 giờ trưa từ nhà vẫn được ghi "có mặt đúng giờ", và hai thẻ
@@ -187,7 +202,16 @@ export const checkinRouter = router({
          on conflict (student_id, occurred_on, kind)
          do update set mood = $3
          returning id, status`,
-        [studentId, rule.occurred_on, input.mood, rule.status, rule.source],
+        // `null` khi chưa có phiếu: cùng một câu lệnh cho cả hai ca, nên đường ghi điểm
+        // danh của em không rẽ nhánh và không có nhánh nào ít được chạy hơn nhánh kia.
+        //
+        // HỆ QUẢ NÓI RA CHỨ KHÔNG GIẤU: nếu hôm nay em đã ghi tâm trạng lúc còn phiếu, rồi
+        // bố mẹ rút lại, rồi em bấm lần nữa — mức cũ của hôm đó bị xoá về trống. Đó là
+        // đúng chiều của việc rút lại ("phần mềm thôi giữ tâm trạng của con"), và cũng là
+        // cách DUY NHẤT còn lại: `do update set mood = coalesce($3, ...mood)` đòi quyền
+        // ĐỌC cột mood mà 0038 đã rút khỏi vai `authenticated` — câu đó ném 42501 ngay ở
+        // lần bấm thứ hai của mọi em, không chỉ em chưa có phiếu.
+        [studentId, rule.occurred_on, moodSaved ? input.mood : null, rule.status, rule.source],
       );
       const row = rows[0];
       if (!row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -215,6 +239,8 @@ export const checkinRouter = router({
         checkinId: row.id,
         status: row.status,
         streakDays,
+        moodSaved,
+        moodBlockedReason: moodSaved ? null : "chua_co_phieu_dong_y",
       });
     });
   }),

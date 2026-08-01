@@ -6,14 +6,18 @@
 // đường mà router thật đi.
 //
 // Cách kiểm: chạy đúng câu lệnh của router, hai lần, rồi đếm dòng. Không mock.
-import { describe, it, expect, beforeAll } from "vitest";
-import { asUser, asSystem, databaseAvailable, seedPresent, DEV, FIXTURE } from "../helpers/db";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { asUser, asSystem, capPhieuDongY, goPhieuDongY, databaseAvailable, seedPresent, DEV, FIXTURE } from "../helpers/db";
 
 let ready = false;
 
 beforeAll(async () => {
   ready = (await databaseAvailable()) && (await seedPresent());
   if (ready) {
+    // 0047 (ADR-027 bản 2): học sinh chỉ ghi được cột `mood` khi nhà đã có phiếu đồng ý.
+    // Bài này kiểm §9 (bấm hai lần không sinh dòng đôi) chứ không kiểm cổng đồng ý — thiếu
+    // dòng này thì nó đỏ vì một lý do khác hẳn thứ nó canh.
+    await capPhieuDongY(FIXTURE.studentMinh);
     // Dọn dấu vết của lần chạy trước để test lặp lại được (chính nó cũng phải idempotent).
     await asSystem(async (c) => {
       await c.query("delete from attendance.help_requests where student_id = $1", [FIXTURE.studentMinh]);
@@ -169,4 +173,10 @@ describe("§9 · mutation gọi hai lần không sinh dòng đôi", () => {
       c.query("delete from staging.raw_embedded_events where external_id = $1", [externalId]),
     );
   });
+});
+
+// Trả hub_dev về đúng trạng thái trước bài: seed KHÔNG có phiếu đồng ý nào (trường chưa gửi
+// phiếu tới phụ huynh nào), nên để lại một phiếu là làm lệch mẫu số của bài chạy sau.
+afterAll(async () => {
+  if (ready) await goPhieuDongY(FIXTURE.studentMinh);
 });

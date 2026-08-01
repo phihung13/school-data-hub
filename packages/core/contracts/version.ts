@@ -530,7 +530,9 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     "SubmitMoodOutput": [
 //       "checkinId",
 //       "status",
-//       "streakDays"
+//       "streakDays",
+//       "moodSaved",
+//       "moodBlockedReason"
 //     ],
 //     "QueuedCheckinInput": [
 //       "#extends#SubmitMoodInput",
@@ -571,6 +573,60 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "urgent",
 //       "today",
 //       "this_week"
+//     ],
+//     "ConsentDecision": [
+//       "#enum#granted",
+//       "#enum#declined",
+//       "#enum#withdrawn"
+//     ],
+//     "StudentAccountStatus": [
+//       "#enum#no_account",
+//       "#enum#pending",
+//       "#enum#active",
+//       "#enum#disabled"
+//     ],
+//     "TermsVersionOutput": [
+//       "id",
+//       "version",
+//       "title",
+//       "bodyMd",
+//       "contentHash",
+//       "requiresReconsent",
+//       "publishedAt"
+//     ],
+//     "ConsentChildStatus": [
+//       "studentId",
+//       "studentCode",
+//       "studentName",
+//       "decision",
+//       "decidedAt",
+//       "termsVersion",
+//       "requiredVersion",
+//       "needsAction",
+//       "accountStatus",
+//       "moodEnabled"
+//     ],
+//     "ConsentGateOutput": [
+//       "terms",
+//       "children",
+//       "needsAction"
+//     ],
+//     "RecordConsentInput": [
+//       "studentIds",
+//       "termsVersionId",
+//       "decision",
+//       "userAgent"
+//     ],
+//     "RecordConsentResult": [
+//       "studentId",
+//       "consentId",
+//       "created",
+//       "accountStatus",
+//       "moodEnabled"
+//     ],
+//     "RecordConsentOutput": [
+//       "results",
+//       "needsAction"
 //     ],
 //     "IsoDateString": [
 //       "#expr#z .string() .regex(/^\\d{4}-\\d{2}-\\d{2}$/, \"Ngày phải có dạng YYYY-MM-DD\") .refine(isRealCalendarDate, \"Ngày không có thật trên lịch\")"

@@ -3,6 +3,7 @@
 // `@hub/core/contracts` sẽ không thấy nó tồn tại — `tools/contracts-lint.mjs` kiểm điều đó.
 export * from "./auth.ts";
 export * from "./checkin.ts";
+export * from "./consent.ts";
 export * from "./care.ts";
 export * from "./report.ts";
 

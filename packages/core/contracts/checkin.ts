@@ -31,6 +31,21 @@ export const SubmitMoodOutput = z.object({
   checkinId: z.string().uuid(),
   status: z.enum(["present", "late", "queued_late"]),
   streakDays: z.number().int().nonnegative(),
+  /**
+   * Mức tâm trạng của lần bấm NÀY có vào kho không (0047, ADR-027 bản 2).
+   *
+   * `false` khi nhà em chưa có phiếu đồng ý còn hiệu lực: lượt check-in vẫn ghi (em vẫn
+   * được tính có mặt), riêng ô tâm trạng để trống vì đó là thứ phiếu đồng ý gác. Màn hình
+   * KHÔNG được hiện "Con đã ghi: Vui" trong ca này — nói "đã ghi" một thứ không có trong
+   * kho là đúng loại im lặng vui vẻ mà `checkin.requestHelp` đã phải sửa một lần rồi.
+   */
+  moodSaved: z.boolean(),
+  /**
+   * Vì sao không ghi được. Dạng chuỗi có tên chứ không phải chỉ một `false`: thêm nhánh
+   * sau này (ví dụ khoá theo cơ sở) mà màn hình chỉ có `moodSaved: false` thì nó lại phải
+   * đoán, và đoán sai thì phụ huynh bị đổ oan hoặc em bị đổ oan.
+   */
+  moodBlockedReason: z.enum(["chua_co_phieu_dong_y"]).nullable(),
 });
 export type SubmitMoodOutput = z.infer<typeof SubmitMoodOutput>;
 

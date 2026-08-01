@@ -113,3 +113,48 @@ export async function requireDb(): Promise<boolean> {
   if (!(await databaseAvailable())) return false;
   return seedPresent();
 }
+
+/**
+ * Dựng sẵn một phiếu đồng ý còn hiệu lực cho em, bằng vai chủ schema.
+ *
+ * Vì sao cần (0047, ADR-027 bản 2): từ `0047` học sinh chỉ GHI được cột `mood` khi nhà đã
+ * có phiếu đồng ý của người đại diện — `checkins_insert_self` và `checkins_update_self` đòi
+ * `mood is null or core.has_student_consent(student_id)`. Bài nào kiểm ĐƯỜNG GHI tâm trạng
+ * (§9 idempotent, phạm vi đọc mood) mà không dựng phiếu trước thì sẽ đỏ vì một lý do KHÁC
+ * với thứ nó định kiểm — và đỏ kiểu đó là loại đỏ dạy người ta xoá assertion.
+ *
+ * Ghi thẳng vào bảng chứ không gọi `core.record_consent()`: hàm đó đòi phiên của đúng người
+ * đại diện, còn ở đây ta chỉ cần một tiền đề, không cần diễn lại cảnh phụ huynh bấm nút
+ * (cảnh đó có bài riêng: `tests/db/dieu-khoan.test.ts`). `on conflict do nothing` để gọi
+ * nhiều lần trong một lượt chạy vẫn im lặng đúng nghĩa §9.
+ *
+ * `seed.mjs` KHÔNG tạo phiếu cho ai — đó là sự thật của trường hôm nay (chưa gửi phiếu tới
+ * phụ huynh nào), nên nó không được giấu bằng cách nhét consent vào seed.
+ */
+export async function capPhieuDongY(studentId: string): Promise<void> {
+  await withSystemContext(async (c) => {
+    await c.query(
+      `insert into core.consent_records (user_id, student_id, terms_version_id, decision, content_hash)
+       select p.user_id, $1::uuid, tv.id, 'granted', tv.content_hash
+         from core.parent_students ps
+         join core.parents p on p.id = ps.parent_id
+        cross join (select id, content_hash from core.terms_versions
+                     where published_at is not null
+                     order by version desc limit 1) tv
+        where ps.student_id = $1::uuid
+        limit 1
+       on conflict do nothing`,
+      [studentId],
+    );
+  });
+}
+
+/** Gỡ phiếu đồng ý của em — dọn đúng thứ `capPhieuDongY` đã dựng, không hơn. */
+export async function goPhieuDongY(studentId: string): Promise<void> {
+  await withSystemContext(async (c) => {
+    // Sổ đồng ý chặn DELETE bằng trigger (0046) — dùng đúng cửa thoát hiểm đã khai báo
+    // tường minh cho dữ liệu RÁC do test sinh ra.
+    await c.query("set local hub.allow_consent_rewrite = 'on'");
+    await c.query("delete from core.consent_records where student_id = $1", [studentId]);
+  });
+}

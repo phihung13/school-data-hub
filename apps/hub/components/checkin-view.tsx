@@ -193,6 +193,8 @@ export function CheckinView() {
   // rồi tắt công tắc thì câu nói về lời cần gặp sẽ đổi theo — trong khi việc đã xảy ra
   // rồi và không đổi được nữa.
   const [helpAtSubmit, setHelpAtSubmit] = useState(false);
+  /** 0047 — máy chủ nhận lượt check-in nhưng KHÔNG nhận mức tâm trạng (chưa có phiếu đồng ý). */
+  const [moodBlocked, setMoodBlocked] = useState(false);
   const todayStatus = trpc.checkin.getTodayStatus.useQuery();
   const submitMood = trpc.checkin.submitMood.useMutation();
   const submitRef = useRef(submitMood.mutateAsync);
@@ -249,6 +251,7 @@ export function CheckinView() {
     setLastMood(mood);
     setHelpAtSubmit(wantsHelp);
     setFailure(null);
+    setMoodBlocked(false);
     if (!navigator.onLine) {
       const { replacedMood } = await enqueueCheckin({ mood, wantsHelp });
       // Máy chủ chưa biết gì, nên vế "từ …" chỉ có thể đến từ trạng thái đã tải
@@ -261,6 +264,11 @@ export function CheckinView() {
     }
     try {
       const result = await submitMood.mutateAsync({ mood, wantsHelp });
+      // 0047 — máy chủ có thể nhận lượt check-in mà KHÔNG nhận mức tâm trạng (nhà em chưa
+      // có phiếu đồng ý của bố mẹ). Không đọc cờ này là in "Con đã ghi: Vui" cho một thứ
+      // không nằm trong kho — đúng con lỗi "câu ĐÃ GỬI in ra khi không ghi được gì" mà
+      // `checkin.requestHelp` đã phải sửa một lần rồi, chỉ khác chỗ đứng.
+      setMoodBlocked(result.moodSaved === false);
       setStreakDays(result.streakDays);
       setChangedFrom(previous);
       setQueuedOffline(false);
@@ -308,12 +316,35 @@ export function CheckinView() {
           {/* tabIndex={-1}: <h2> không tự nhận được focus, thiếu nó thì .focus() ở trên
               không làm gì cả và lỗi im lặng y như cũ. */}
           <h2 ref={successHeadingRef} tabIndex={-1} className="text-[19px] font-black text-navy">
-            {helpStuck ? "Lời con nhắn chưa gửi được" : "Đã ghi nhận, cảm ơn em!"}
+            {helpStuck
+              ? "Lời con nhắn chưa gửi được"
+              : moodBlocked
+                ? "Trường chưa ghi tâm trạng của con"
+                : "Đã ghi nhận, cảm ơn em!"}
           </h2>
-          {lastMood !== null && (
+          {lastMood !== null && !moodBlocked && (
             <p className="text-[14px] text-ink">
               Con đã ghi: <b className="font-black text-navy">{MOOD_LABEL[lastMood]}</b>
             </p>
+          )}
+          {/* 0047 — CHƯA CÓ PHIẾU ĐỒNG Ý CỦA BỐ MẸ.
+              Ba luật cho khối này, và cả ba đều là để em không nghĩ mình vừa làm sai:
+                1. Nói rõ chuyện nằm ở phía người lớn, không ở phía em.
+                2. Nói ngay cái KHÔNG mất — em vẫn được điểm danh, và nút cần gặp thầy cô
+                   vẫn dùng được. Không nói vế này thì "chưa ghi được" đọc ra thành "app
+                   của mình hỏng rồi", và đứa trẻ thôi mở app.
+                3. KHÔNG trách bố mẹ em, không dùng chữ nào để em mang về nhà chất vấn. */}
+          {moodBlocked && (
+            <div className="flex w-full max-w-[340px] flex-col items-center gap-1.5 rounded-[14px] border-[1.6px] border-[#DDE6F2] bg-[#F4F8FD] p-3.5 text-center">
+              <p className="text-[12.5px] font-bold leading-relaxed text-ink">
+                Phần “Hôm nay con thấy thế nào” đang tạm tắt vì trường chưa nhận được phiếu đồng ý
+                của bố mẹ. Đây không phải lỗi của con.
+              </p>
+              <p className="text-[11.5px] leading-relaxed text-muted">
+                Lượt điểm danh hôm nay của con <b className="font-black">vẫn được ghi</b>, và nút
+                “Mình cần gặp thầy cô” của con <b className="font-black">vẫn dùng được như thường</b>.
+              </p>
+            </div>
           )}
           {savedAt !== null && (
             <p className="text-[12px] text-muted2">

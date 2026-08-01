@@ -45,7 +45,7 @@
 // Luật mà file này cưỡng chế: LỜI HỨA IN TRÊN MÀN HÌNH LÀ RÀNG BUỘC KỸ THUẬT. Chỗ
 // duy nhất chứng minh được nó là Postgres thật, dưới đúng danh tính từng vai.
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { asSystem, asUser, requireDb, DEV, FIXTURE } from "../helpers/db";
+import { asSystem, asUser, capPhieuDongY, goPhieuDongY, requireDb, DEV, FIXTURE } from "../helpers/db";
 
 let ready = false;
 
@@ -89,6 +89,10 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
   beforeAll(async () => {
     ready = await requireDb();
     if (!ready) return;
+    // 0047 (ADR-027 bản 2): chính em chỉ GHI được cột `mood` khi nhà đã có phiếu đồng ý.
+    // Bài này canh AI ĐỌC ĐƯỢC mood, không canh cổng đồng ý — thiếu phiếu thì ca "học sinh
+    // vẫn ghi đè được mood trong ngày" đỏ vì một chuyện khác hẳn.
+    await capPhieuDongY(FIXTURE.studentMinh);
     await asSystem((c) =>
       c.query(
         `insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
@@ -114,6 +118,9 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
         [FIXTURE.studentMinh, NGAY_DO],
       );
     });
+    // Seed KHÔNG có phiếu đồng ý nào — đó là sự thật của trường hôm nay, và để lại một
+    // phiếu là làm lệch mẫu số của bài chạy sau.
+    await goPhieuDongY(FIXTURE.studentMinh);
   });
 
   // ═══ CHIỀU TỪ CHỐI — đây là lỗi đang vá ═══════════════════════════════════

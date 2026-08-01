@@ -17,6 +17,45 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ## [Unreleased]
 
+### Added
+
+- **`SubmitMoodOutput.moodSaved` + `SubmitMoodOutput.moodBlockedReason`** (migration `0047`,
+  ADR-027 bản 2) — máy chủ nay có thể nhận một lượt check-in mà **không** nhận mức tâm trạng:
+  nhà em chưa có phiếu đồng ý của người đại diện thì RLS của `attendance.checkins` từ chối giá
+  trị `mood`, còn lượt điểm danh vẫn ghi bình thường.
+
+  **Đọc kỹ, đây là chỗ client cũ nói dối mà không lỗi:** procedure vẫn trả `2xx` và vẫn có
+  `checkinId`. Màn hình nào không đọc `moodSaved` sẽ in "Con đã ghi: Vui" cho một giá trị không
+  nằm trong kho — đúng con lỗi "câu ĐÃ GỬI in ra khi không ghi được gì" mà `checkin.requestHelp`
+  đã phải sửa một lần. `moodBlockedReason` là chuỗi có tên (`"chua_co_phieu_dong_y"`) chứ không
+  phải một `false` trơn, để lần sau thêm nhánh thì màn hình không phải đoán.
+
+- **`ConsentChildStatus.moodEnabled` + `RecordConsentResult.moodEnabled`** (`0047`) — thứ cú bấm
+  của phụ huynh THẬT SỰ điều khiển. Trước `0047` màn hình đọc `accountStatus` để suy ra hậu quả;
+  cách đó nay SAI: `accountStatus` là trạng thái **danh tính**, và phiếu đồng ý không còn chạm
+  vào nó (khoá tài khoản của một đứa trẻ là khoá luôn nút "Mình cần gặp thầy cô" của chính em —
+  đo đầu-cuối 01/08/2026). `moodEnabled` hỏi theo ĐỨA TRẺ (`core.has_student_consent`), nên nhà
+  có hai người đại diện mà người kia đã bấm thì nó `true` dù `needsAction` vẫn `true`.
+
+- **`contracts/consent.ts`** — bề mặt của router `consent` (màn điều khoản kèm nút đồng ý,
+  migration `0046`, ADR-027): `ConsentDecision`, `StudentAccountStatus`, `TermsVersionOutput`,
+  `ConsentChildStatus`, `ConsentGateOutput`, `RecordConsentInput`, `RecordConsentResult`,
+  `RecordConsentOutput`.
+
+  Thuần THÊM, không field nào của bản 0.2.0 đổi hình dạng — nên không tăng `CONTRACTS_VERSION`
+  ở đây mà ghi vào `Unreleased`: bản 0.2.0 vừa phát hành hôm nay và ba gói việc đang chạy song
+  song cùng chạm thư mục này; ai tăng số trước cũng ép hai gói kia phải sửa theo, mà không gói
+  nào thật sự phá tương thích.
+
+  Hai chỗ vibe team dễ đọc nhầm, nói trước:
+
+  - **`ConsentChildStatus.decision = null` KHÁC `"withdrawn"`.** `null` là "chưa từng bấm gì
+    cho em này"; `"withdrawn"` là "đã bấm rồi rút lại". Gộp hai thứ đó trên màn hình là nói với
+    một phụ huynh vừa rút lại rằng họ chưa làm gì.
+  - **`StudentAccountStatus` có `no_account`**, và đó là trạng thái PHỔ BIẾN chứ không phải ca
+    hiếm: đo trên hub_dev ngày 01/08/2026, 63/64 học sinh chưa có tài khoản đăng nhập. Hiện nó
+    thành "tài khoản đang chờ" là nói sai — em không có tài khoản nào để chờ cả.
+
 ## [0.2.0] - 2026-08-01
 
 Ba quyết định của chủ đầu tư ngày 01/08/2026 chạm tới bề mặt hợp đồng. Đây là bản **PHÁ

@@ -2,6 +2,17 @@
 -- Dữ liệu mẫu dùng chung cho pgTAP. Nạp SAU migrations, TRƯỚC khi chạy test.
 -- Mỗi bài test gọi test_support.seed_basic() trong transaction rồi rollback,
 -- nên các bài không giẫm lên nhau.
+--
+-- Bốn lớp dữ liệu, chồng lên nhau, gọi thêm lớp nào thì có lớp đó:
+--   seed_basic()       2 lớp khối 6 · đủ 7 vai của ma trận phân quyền
+--   seed_khoi()      + cả khối 6 (5 lớp, 12 em/lớp, một cô chủ nhiệm hai lớp)
+--   seed_khoi_7_8()  + khối 7 và khối 8 trên hai cơ sở, một GV bộ môn dạy chéo khối
+--   seed_khoi_activity()  + điểm danh và cảm xúc 5 ngày gần nhất cho những gì đã có
+--
+-- SONG SINH với packages/core/db/seed/seed.mjs — file đó gieo ĐÚNG cùng bộ dữ liệu này
+-- (cùng UUID, cùng mã lớp, cùng mã học sinh) vào hub_dev cho lớp test TypeScript. Sửa
+-- một bên mà quên bên kia là mở lại một lỗ kiểm chứng: bài pgTAP và bài TypeScript sẽ
+-- chạy trên hai thế giới khác nhau mà cả hai cùng báo xanh.
 
 create schema if not exists test_support;
 
@@ -234,6 +245,157 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Bộ KHỐI 7 + KHỐI 8: bốn lớp trên HAI cơ sở · 4 GVCN mới · 1 giáo viên bộ môn
+--                     dạy CHÉO KHỐI · 12 học sinh mỗi lớp.
+--
+-- VÌ SAO PHẢI CÓ. Cho tới 01/08/2026 cả kho fixture chỉ dựng khối 6 — đo trên hub_dev:
+-- `select grade, count(*) from core.classes` trả đúng một dòng `6|5`. Trong thế giới
+-- một-khối, mọi khẳng định dạng "GVCN khối 7 KHÔNG thấy học sinh khối 6" đều xanh, và
+-- xanh vì MẪU SỐ RỖNG: không có khối khác để mà thấy. Đây đúng loại xanh giả mà chú
+-- thích của seed_khoi() ở trên đã cảnh báo cho giáo viên bộ môn, chỉ là ở mức KHỐI.
+--
+-- BỐ CỤC CÓ CHỦ Ý — từng mẩu đều là mẫu số của một câu hỏi cụ thể:
+--   · 7A1, 7A2, 8A1 ở Quận 7; 8B1 ở Quận 2. Cặp 8A1/8B1 CÙNG KHỐI khác cơ sở là chỗ
+--     duy nhất phân biệt được "cụm của tâm lý tính theo CƠ SỞ" với "tính theo khối":
+--     trước khi có nó, hai giả thuyết cho ra cùng một đáp số trên mọi dữ liệu demo.
+--   · Thầy Sơn (Tiếng Anh) dạy 6A5 và 7A1 — hai KHỐI khác nhau, nhưng chỉ 2 trong 9
+--     lớp. Dạy một khối thì "chéo khối" là chữ suông; dạy hết thì câu "thầy không thấy
+--     em ở lớp mình không dạy" lại rỗng mẫu số.
+--   · Cô Yến chủ nhiệm 8A1 — khối 8, khối mà Thầy Sơn KHÔNG dạy. Nhờ vậy phép giao
+--     "lớp của GVCN này ∩ lớp thầy dạy" bằng rỗng một cách THẬT, còn với Cô Thu (7A1)
+--     thì khác rỗng. Hai chiều đều đo được.
+--
+-- VÌ SAO LÀ HÀM RIÊNG, không nhét vào seed_khoi(): cùng lý do seed_khoi() không nhét
+-- vào seed_basic() — hàng chục file pgTAP đang chốt số đếm tuyệt đối trên thế giới cũ.
+-- Bài nào cần nhiều khối thì gọi thêm hàm này; bài không gọi thì thế giới của nó không
+-- đổi một dòng nào.
+--
+-- Idempotent (§9): mọi INSERT đều `on conflict do nothing`. Riêng core.enrollments phải
+-- dùng dạng KHÔNG CÓ ĐÍCH: bảng đó không có ràng buộc duy nhất thường mà có EXCLUDE
+-- chống chồng kỳ (enrollments_no_overlap), và Postgres không cho ON CONFLICT bám vào
+-- một ràng buộc EXCLUDE — viết `on conflict (student_id, class_id)` ở đây là NÉM LỖI
+-- chứ không phải im lặng bỏ qua.
+--
+-- SONG SINH: packages/core/db/seed/seed.mjs gieo ĐÚNG bộ này (cùng UUID, cùng mã lớp,
+-- cùng mã học sinh) cho hub_dev. Sửa một bên mà quên bên kia là mở lại đúng lỗ kiểm
+-- chứng mà cả hai file này sinh ra để bịt.
+-- ---------------------------------------------------------------------------
+create or replace function test_support.seed_khoi_7_8()
+returns void
+language plpgsql
+as $$
+declare
+  v_q7 constant uuid := '20000000-0000-0000-0000-000000000001';
+  v_q2 constant uuid := '20000000-0000-0000-0000-000000000002';
+  -- (khối, số thứ tự lớp trong khối) đi thẳng vào UUID lớp và UUID học sinh:
+  --   lớp     30000000-…-000000000<khối>0<lớp>      (7A1 → …000000000701)
+  --   học sinh 70000000-…-00000000<khối><lớp><số>   (7A1 em 3 → …000000007103)
+  --   mã HS    VA-2026-<khối><lớp><3 số>            (7A1 em 3 → VA-2026-71003)
+  -- Khuôn mã HS phải khớp CHECK `^VA-\d{4}-\d{5}$` trên core.students.student_code —
+  -- đúng 5 chữ số. Khối 6 giữ khuôn cũ `1<lớp><3 số>` nên hai bộ không đụng nhau.
+  v_khoi constant int[]  := array[7, 7, 8, 8];
+  v_lop  constant int[]  := array[1, 2, 1, 2];
+  v_ma   constant text[] := array['7A1', '7A2', '8A1', '8B1'];
+  v_ho   constant text[] := array['Vũ', 'Đặng', 'Bùi', 'Đỗ'];
+  -- 8B1 ở Quận 2 — xem phần "BỐ CỤC CÓ CHỦ Ý" ở trên.
+  v_truong constant uuid[] := array[v_q7, v_q7, v_q7, v_q2];
+  v_ten constant text[] := array['Minh An', 'Gia Bảo', 'Ngọc Chi', 'Tiến Dũng',
+                                 'Hương Giang', 'Thu Hà', 'Đăng Khôi', 'Khánh Linh',
+                                 'Hải My', 'Bảo Nam', 'Anh Phương', 'Diễm Quỳnh'];
+  k int;
+  n int;
+  v_class uuid;
+  v_student uuid;
+begin
+  -- Gọi được độc lập: bài test chỉ cần nhiều khối không phải nhớ gọi ba hàm đúng thứ tự.
+  -- Điều kiện là 6A5 — lớp mà Thầy Sơn dạy — chứ không phải cơ sở Q7: thiếu 6A5 thì
+  -- phân công chéo khối bên dưới sẽ vi phạm khoá ngoại, và bài test nhận một lỗi
+  -- 23503 khó hiểu thay vì một thế giới đầy đủ.
+  if not exists (select 1 from core.classes where id = '30000000-0000-0000-0000-000000000005') then
+    perform test_support.seed_khoi();
+  end if;
+
+  for k in 1..4 loop
+    insert into core.classes (id, school_id, code, academic_year, grade)
+    values (('30000000-0000-0000-0000-000000000' || v_khoi[k]::text || '0' || v_lop[k]::text)::uuid,
+            v_truong[k], v_ma[k], '2026-2027', v_khoi[k])
+    on conflict do nothing;
+  end loop;
+
+  -- ── Năm người lớn mới ─────────────────────────────────────────────────────
+  insert into core.users (id, auth_uid, email, full_name, status) values
+    ('40000000-0000-0000-0000-00000000000b', '90000000-0000-0000-0000-00000000000b',
+     'gvcn5@va.edu.vn',    'Cô Thu (GVCN 7A1)',                 'active'),
+    ('40000000-0000-0000-0000-00000000000c', '90000000-0000-0000-0000-00000000000c',
+     'gvcn6@va.edu.vn',    'Thầy Phúc (GVCN 7A2)',              'active'),
+    ('40000000-0000-0000-0000-00000000000d', '90000000-0000-0000-0000-00000000000d',
+     'gvcn7@va.edu.vn',    'Cô Yến (GVCN 8A1)',                 'active'),
+    ('40000000-0000-0000-0000-00000000000e', '90000000-0000-0000-0000-00000000000e',
+     'gvcn8@va.edu.vn',    'Thầy Lộc (GVCN 8B1, cơ sở Quận 2)', 'active'),
+    ('40000000-0000-0000-0000-00000000000f', '90000000-0000-0000-0000-00000000000f',
+     'gvbomon3@va.edu.vn', 'Thầy Sơn (bộ môn Tiếng Anh)',       'active')
+  on conflict do nothing;
+
+  -- Thầy Lộc thuộc biên chế CƠ SỞ QUẬN 2. Không phải chi tiết trang trí: để thầy ở Q7
+  -- thì "giáo viên cơ sở khác" và "giáo viên cùng cơ sở" là một người, và mọi khẳng
+  -- định về biên cơ sở đo trên thầy đều không nói lên điều gì.
+  insert into core.teachers (id, user_id, employee_code, school_id) values
+    ('50000000-0000-0000-0000-000000000007', '40000000-0000-0000-0000-00000000000b', 'GV007', v_q7),
+    ('50000000-0000-0000-0000-000000000008', '40000000-0000-0000-0000-00000000000c', 'GV008', v_q7),
+    ('50000000-0000-0000-0000-000000000009', '40000000-0000-0000-0000-00000000000d', 'GV009', v_q7),
+    ('50000000-0000-0000-0000-00000000000a', '40000000-0000-0000-0000-00000000000e', 'GV010', v_q2),
+    ('50000000-0000-0000-0000-00000000000b', '40000000-0000-0000-0000-00000000000f', 'GV011', v_q7)
+  on conflict do nothing;
+
+  -- ── Phân công (NGUỒN SỰ THẬT của quan hệ GVCN ↔ lớp — 0030) ───────────────
+  insert into core.class_assignments (teacher_id, class_id, assignment_role, subject) values
+    ('50000000-0000-0000-0000-000000000007', '30000000-0000-0000-0000-000000000701', 'homeroom', null),
+    ('50000000-0000-0000-0000-000000000008', '30000000-0000-0000-0000-000000000702', 'homeroom', null),
+    ('50000000-0000-0000-0000-000000000009', '30000000-0000-0000-0000-000000000801', 'homeroom', null),
+    ('50000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-000000000802', 'homeroom', null),
+    -- Chéo khối: 6A5 (khối 6) + 7A1 (khối 7). Khối 8 CỐ Ý bỏ trống.
+    ('50000000-0000-0000-0000-00000000000b', '30000000-0000-0000-0000-000000000005', 'subject', 'Tiếng Anh'),
+    ('50000000-0000-0000-0000-00000000000b', '30000000-0000-0000-0000-000000000701', 'subject', 'Tiếng Anh')
+  on conflict do nothing;
+
+  -- ── Bản sao vai trò (sổ B). PHẢI đi SAU class_assignments: trigger
+  -- core.guard_homeroom_scope (0023) từ chối dòng homeroom chưa có phân công gốc.
+  -- Thầy Lộc mang school_id = Q2 vì lớp của thầy ở Q2; ghi Q7 vào đây là tự tay mở một
+  -- cửa mà bản gốc không hề mở, và ops.v_homeroom_drift sẽ không bắt được vì nó soi lớp.
+  insert into core.user_role_scopes (user_id, role_code, school_id, class_id) values
+    ('40000000-0000-0000-0000-00000000000b', 'homeroom', v_q7, '30000000-0000-0000-0000-000000000701'),
+    ('40000000-0000-0000-0000-00000000000c', 'homeroom', v_q7, '30000000-0000-0000-0000-000000000702'),
+    ('40000000-0000-0000-0000-00000000000d', 'homeroom', v_q7, '30000000-0000-0000-0000-000000000801'),
+    ('40000000-0000-0000-0000-00000000000e', 'homeroom', v_q2, '30000000-0000-0000-0000-000000000802'),
+    ('40000000-0000-0000-0000-00000000000f', 'teacher',  v_q7, '30000000-0000-0000-0000-000000000005'),
+    ('40000000-0000-0000-0000-00000000000f', 'teacher',  v_q7, '30000000-0000-0000-0000-000000000701')
+  on conflict do nothing;
+
+  -- ── 12 học sinh mỗi lớp ───────────────────────────────────────────────────
+  -- Cùng con số PER_CLASS với khối 6 và vì cùng lý do: dưới report.min_cohort() (= 10)
+  -- thì màn Điều hành che sạch mọi ô của khối mới, và "che vì nhóm quá nhỏ" trông y hệt
+  -- "màn hình hỏng".
+  for k in 1..4 loop
+    v_class := ('30000000-0000-0000-0000-000000000' || v_khoi[k]::text || '0' || v_lop[k]::text)::uuid;
+    for n in 1..12 loop
+      v_student := ('70000000-0000-0000-0000-00000000' || v_khoi[k]::text || v_lop[k]::text
+                    || lpad(n::text, 2, '0'))::uuid;
+
+      insert into core.students (id, student_code, school_id, full_name)
+      values (v_student,
+              'VA-2026-' || v_khoi[k]::text || v_lop[k]::text || lpad(n::text, 3, '0'),
+              v_truong[k], v_ho[k] || ' ' || v_ten[n])
+      on conflict do nothing;
+
+      insert into core.enrollments (student_id, class_id, valid_from)
+      values (v_student, v_class, '2026-09-05')
+      on conflict do nothing;
+    end loop;
+  end loop;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Lớp HOẠT ĐỘNG của bộ cả khối — check-in, cảm xúc, "cần gặp thầy cô".
 --
 -- Tách khỏi seed_khoi() vì nó phụ thuộc current_date. seed_khoi() cố ý không phụ
@@ -243,6 +405,15 @@ $$;
 -- Gieo 5 ngày gần nhất. Em số 7 của 6A3/6A4/6A5 mang chuỗi cảm xúc xấu liên tiếp —
 -- đủ để bộ quét dựng cờ. CỐ Ý không đặt em nào như vậy ở 6A1/6A2: hai lớp đó là sân
 -- của loạt bài test hiện có, thêm cờ vào đó là đổi kết quả của bài không liên quan.
+--
+-- Khối 7/8 (01/08/2026): CHỈ điểm danh đủ và tâm trạng LÀNH — không một em nào mang
+-- chuỗi cảm xúc xấu, không một lượt "cần gặp thầy cô". Lý do là kỹ thuật chứ không
+-- phải lười: A_ATTENDANCE chỉ dựng cờ cho em CÓ điểm danh mà tỉ lệ dưới min_rate,
+-- E_MOOD cần chuỗi ngày mood xấu — cho khối mới một em "xấu" là thêm cờ vào mọi phép
+-- đếm cờ tuyệt đối đang xanh, và đỏ vì dữ liệu demo đổi là loại đỏ dạy người ta bỏ qua
+-- màu đỏ. Sân để dựng cờ vẫn là khối 6 và các lớp mà từng bài test tự dựng riêng.
+-- Phần khối 7/8 tự bỏ qua nếu lớp chưa tồn tại, nên bài nào chỉ gọi seed_khoi() thì
+-- thế giới của nó không đổi một dòng nào.
 -- ---------------------------------------------------------------------------
 create or replace function test_support.seed_khoi_activity()
 returns void
@@ -252,6 +423,9 @@ declare
   c int;
   n int;
   d int;
+  k int;
+  v_khoi constant int[] := array[7, 7, 8, 8];
+  v_lop  constant int[] := array[1, 2, 1, 2];
   v_student uuid;
   v_mood smallint;
 begin
@@ -287,6 +461,24 @@ begin
         values (v_student, current_date, 'out', null, 'queued_late', 'offline_queue')
         on conflict (student_id, occurred_on, kind) do nothing;
       end if;
+    end loop;
+  end loop;
+
+  -- ── Khối 7 và khối 8: điểm danh đủ, tâm trạng lành (xem chú thích ở trên) ──
+  for k in 1..4 loop
+    for n in 1..12 loop
+      v_student := ('70000000-0000-0000-0000-00000000' || v_khoi[k]::text || v_lop[k]::text
+                    || lpad(n::text, 2, '0'))::uuid;
+      if not exists (select 1 from core.students where id = v_student) then
+        continue;
+      end if;
+
+      for d in 0..4 loop
+        v_mood := case when n % 3 = 0 then 3 else 4 end;   -- Bình thường / Vui
+        insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
+        values (v_student, current_date - d, 'in', v_mood, 'present', 'app')
+        on conflict (student_id, occurred_on, kind) do nothing;
+      end loop;
     end loop;
   end loop;
 end;
