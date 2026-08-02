@@ -124,22 +124,22 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
   });
 
   // ═══ CHIỀU TỪ CHỐI — đây là lỗi đang vá ═══════════════════════════════════
-  it("phụ huynh KHÔNG đọc được cột mood — Postgres từ chối, không trả về số 0 im lặng", async () => {
-    if (!ready) return;
+  it("phụ huynh KHÔNG đọc được cột mood — Postgres từ chối, không trả về số 0 im lặng", async ({ skip }) => {
+    if (!ready) return skip();
     // Trước 0038 câu này trả về 7. Con số ấy là bảy ngày một đứa trẻ nói
     // "hôm nay con buồn" cho một người mà em được hứa là sẽ không thấy.
     expect(await docMoodTrucTiep(DEV.guardian)).toBe(TU_CHOI_QUYEN);
     expect(await docMoodQuaVienChamSoc(DEV.guardian)).toBe(0);
   });
 
-  it("hiệu trưởng/quản trị KHÔNG đọc được cột mood (§9: BGH chỉ xem tổng hợp theo lô)", async () => {
-    if (!ready) return;
+  it("hiệu trưởng/quản trị KHÔNG đọc được cột mood (§9: BGH chỉ xem tổng hợp theo lô)", async ({ skip }) => {
+    if (!ready) return skip();
     expect(await docMoodTrucTiep(DEV.admin)).toBe(TU_CHOI_QUYEN);
     expect(await docMoodQuaVienChamSoc(DEV.admin)).toBe(0);
   });
 
-  it("GVCN lớp khác KHÔNG đọc được — sau ADR-026 mọi GVCN đều không đọc được", async () => {
-    if (!ready) return;
+  it("GVCN lớp khác KHÔNG đọc được — sau ADR-026 mọi GVCN đều không đọc được", async ({ skip }) => {
+    if (!ready) return skip();
     expect(await docMoodTrucTiep(DEV.gvcn2)).toBe(TU_CHOI_QUYEN);
     expect(await docMoodQuaVienChamSoc(DEV.gvcn2)).toBe(0);
   });
@@ -148,8 +148,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
   // được ĐÚNG GIÁ TRỊ mood — lời hứa nói 'chỉ cô thấy', nghĩa là cô PHẢI thấy",
   // và nó đúng cho tới hết ngày 31/07. Không xoá, LẬT: chỗ này vẫn phải có người
   // canh, và người đọc sau còn thấy hệ đã từng hứa điều gì.
-  it("GVCN của em đọc ra 0 dòng ở checkins_care VÀ bị từ chối khi hỏi thẳng cột mood (ADR-026)", async () => {
-    if (!ready) return;
+  it("GVCN của em đọc ra 0 dòng ở checkins_care VÀ bị từ chối khi hỏi thẳng cột mood (ADR-026)", async ({ skip }) => {
+    if (!ready) return skip();
     // 0 dòng ở đường hợp lệ: màn hình của cô phải hiện "không có", không hiện "hỏng".
     expect(await docMoodQuaVienChamSoc(DEV.gvcn)).toBe(0);
     const { rows } = await asUser(DEV.gvcn, (c) =>
@@ -167,8 +167,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
   // Vế còn lại của cùng một quyết định. Thiếu ca này thì "cắt xong là hết việc"
   // trông giống thành công, trong khi cô đã mất luôn khả năng biết CÓ CHUYỆN —
   // và mất trong im lặng, vì không lỗi nào được ném.
-  it("GVCN VẪN đọc được cờ E_MOOD trong care.flags — 'cô biết CÓ CHUYỆN, không đọc CHUYỆN GÌ'", async () => {
-    if (!ready) return;
+  it("GVCN VẪN đọc được cờ E_MOOD trong care.flags — 'cô biết CÓ CHUYỆN, không đọc CHUYỆN GÌ'", async ({ skip }) => {
+    if (!ready) return skip();
     await asSystem((c) =>
       c.query(
         `insert into care.flags (student_id, rule_code, as_of_date, detail, origin)
@@ -210,8 +210,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     ).rejects.toMatchObject({ code: "42501" });
   });
 
-  it("GVCN VẪN đọc được cột điểm danh của em — 0044 cắt CỘT mood, không chặn DÒNG (nền của QĐ-3)", async () => {
-    if (!ready) return;
+  it("GVCN VẪN đọc được cột điểm danh của em — 0044 cắt CỘT mood, không chặn DÒNG (nền của QĐ-3)", async ({ skip }) => {
+    if (!ready) return skip();
     const { rows } = await asUser(DEV.gvcn, (c) =>
       c.query<{ n: string; trang_thai: string | null }>(
         `select count(*)::text as n, string_agg(distinct status, ',') as trang_thai
@@ -223,8 +223,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     expect(rows[0]?.trang_thai).toBeTruthy();
   });
 
-  it("GVCN KHÔNG lách được qua happy_days: cả tuần trả NULL, hỏi một ngày thì NỔ (22023)", async () => {
-    if (!ready) return;
+  it("GVCN KHÔNG lách được qua happy_days: cả tuần trả NULL, hỏi một ngày thì NỔ (22023)", async ({ skip }) => {
+    if (!ready) return skip();
     // Đo thật trên hub_dev TRƯỚC khi vá: cô Lan hỏi happy_days từng ngày một cho
     // 25/07 → 01/08 nhận đúng chuỗi 1/0/1/1/0/0/0/0 — tức là đọc lại được nguyên
     // nhật ký "hôm nay em có Vui không", chỉ khác cách gõ.
@@ -251,21 +251,21 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     expect(ma).toBe("22023");
   });
 
-  it("tâm lý cụm đọc được mood — vai DUY NHẤT ngoài chính em sau ADR-026", async () => {
-    if (!ready) return;
+  it("tâm lý cụm đọc được mood — vai DUY NHẤT ngoài chính em sau ADR-026", async ({ skip }) => {
+    if (!ready) return skip();
     expect(await docMoodQuaVienChamSoc(DEV.counselor)).toBeGreaterThan(0);
   });
 
-  it("chính em đọc lại được tâm trạng mình đã ghi — màn /checkin hiện 'Con đã ghi: …'", async () => {
-    if (!ready) return;
+  it("chính em đọc lại được tâm trạng mình đã ghi — màn /checkin hiện 'Con đã ghi: …'", async ({ skip }) => {
+    if (!ready) return skip();
     expect(await docMoodQuaVienChamSoc(DEV.student)).toBeGreaterThan(0);
   });
 
   // ═══ KHÔNG SIẾT NHẦM ══════════════════════════════════════════════════════
   // Thiếu nhóm này thì một lần siết tay quá đà vẫn xanh, mà phụ huynh mất đường
   // xem con đi học có đủ không, và học sinh mất luôn nút check-in.
-  it("phụ huynh VẪN đọc được DÒNG điểm danh của con — 0038 che CỘT, không chặn dòng", async () => {
-    if (!ready) return;
+  it("phụ huynh VẪN đọc được DÒNG điểm danh của con — 0038 che CỘT, không chặn dòng", async ({ skip }) => {
+    if (!ready) return skip();
     const { rows } = await asUser(DEV.guardian, (c) =>
       c.query<{ n: string; trang_thai: string | null }>(
         `select count(*)::text as n, string_agg(distinct status, ',') as trang_thai
@@ -277,8 +277,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     expect(rows[0]?.trang_thai).toBeTruthy();
   });
 
-  it("phụ huynh VẪN lấy được số tổng hợp 'ngày Vui' — Báo cáo Trưởng thành không mất mục Glow", async () => {
-    if (!ready) return;
+  it("phụ huynh VẪN lấy được số tổng hợp 'ngày Vui' — Báo cáo Trưởng thành không mất mục Glow", async ({ skip }) => {
+    if (!ready) return skip();
     const { rows } = await asUser(DEV.guardian, (c) =>
       c.query<{ n: number | null }>("select attendance.happy_days($1, $2::date, $3::date) as n", [
         FIXTURE.studentMinh,
@@ -291,8 +291,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     expect(typeof rows[0]?.n).toBe("number");
   });
 
-  it("happy_days trả NULL cho người không được xem em này — 'không được phép biết' khác 'không có ngày vui nào'", async () => {
-    if (!ready) return;
+  it("happy_days trả NULL cho người không được xem em này — 'không được phép biết' khác 'không có ngày vui nào'", async ({ skip }) => {
+    if (!ready) return skip();
     const { rows } = await asUser(DEV.gvcn2, (c) =>
       c.query<{ n: number | null }>("select attendance.happy_days($1, $2::date, $3::date) as n", [
         FIXTURE.studentMinh,
@@ -303,8 +303,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     expect(rows[0]?.n).toBeNull();
   });
 
-  it("học sinh VẪN ghi đè được mood trong ngày (§9 idempotent) — đường check-in hằng ngày không gãy", async () => {
-    if (!ready) return;
+  it("học sinh VẪN ghi đè được mood trong ngày (§9 idempotent) — đường check-in hằng ngày không gãy", async ({ skip }) => {
+    if (!ready) return skip();
     // Đúng câu mà `checkin.submitMood` chạy, SAU khi đổi `excluded.mood` → tham số
     // (xem khối "VIỆC PHẢI LÀM Ở TẦNG ỨNG DỤNG" cuối migration 0038): `excluded.mood`
     // bị Postgres tính là ĐỌC cột mood của bảng đích nên đòi quyền SELECT.
@@ -322,8 +322,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
   });
 
   // ═══ KHOÁ HÌNH DẠNG ═══════════════════════════════════════════════════════
-  it("cột mood nằm NGOÀI grant SELECT của authenticated, mọi cột khác nằm TRONG", async () => {
-    if (!ready) return;
+  it("cột mood nằm NGOÀI grant SELECT của authenticated, mọi cột khác nằm TRONG", async ({ skip }) => {
+    if (!ready) return skip();
     const { rows } = await asSystem((c) =>
       c.query<{ ten_cot: string; doc_duoc: boolean }>(
         `select a.attname as ten_cot,

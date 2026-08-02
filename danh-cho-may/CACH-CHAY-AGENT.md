@@ -243,6 +243,22 @@ bash tools/start-local.sh
 
 ## 6. Bảy cái bẫy đã sập thật — đừng sập lại
 
+> **Cập nhật 02/08/2026 — hai bẫy nay có CỔNG, không còn chỉ có lời dặn.**
+> Bẫy 6.1 và 6.2 đều sập THÊM một lần nữa sau khi mục này được viết, bởi chính người viết
+> ra nó. Một lời dặn mà tác giả của nó còn đi vào thì nó không phải hàng rào — nó là một
+> mẩu giấy dán trên tường. Nay:
+>
+> · **6.1** → `tools/canh-build.mjs`, chạy tự động ở `prebuild` của `apps/hub`. Nó KHÔNG
+>   hỏi "có ai nghe cổng không" (chặn cả ca vô hại) mà hỏi "cái đang nghe có phải đang
+>   phục vụ CHÍNH bản dựng tôi sắp ghi đè không" — so `BUILD_ID` trên đĩa với `BUILD_ID`
+>   trong HTML máy chủ trả về. Bốn ca cho qua, mỗi ca một phép kiểm riêng trong
+>   `tests/unit/canh-build.test.ts`.
+> · **6.2** → `tests/unit/test-khong-duoc-xanh-rong.test.ts`, một bài test canh chính bộ
+>   test: cấm `if (!ready) return;` trong `it()` (bài sẽ được đếm là ĐẠT dù không chạy gì)
+>   và cấm `describe.skipIf` trên cờ chỉ biết được sau `beforeAll`.
+>
+> Ba cái bẫy còn lại vẫn chỉ có lời dặn. Đọc kỹ chúng.
+
 ### 6.1 `next build` giết máy chủ đang chạy
 
 Đã sập **hai lần**, lần thứ hai chủ đầu tư phát hiện bằng điện thoại. Triệu chứng:

@@ -133,8 +133,8 @@ afterAll(async () => {
 });
 
 describe("kênh báo động — bộ gửi thật, không phải bộ gửi giả", () => {
-  it("gửi được một tin và ghi ra tệp nhật ký đọc được bằng mắt người", async () => {
-    if (!ready) return;
+  it("gửi được một tin và ghi ra tệp nhật ký đọc được bằng mắt người", async ({ skip }) => {
+    if (!ready) return skip();
     const thuMuc = join(goc, "gui-duoc");
     const key = `${TIEN_TO}gui-duoc`;
     await themTin(key, "nguoi_truc", "Bộ quét cờ đêm QUÁ HẠN");
@@ -153,8 +153,8 @@ describe("kênh báo động — bộ gửi thật, không phải bộ gửi gi�
     expect(demKhoi(noiDung, key)).toBe(1);
   });
 
-  it("§9 — chạy lượt thứ hai KHÔNG ghi thêm dòng nào vào tệp và không ghi thêm bản gửi", async () => {
-    if (!ready) return;
+  it("§9 — chạy lượt thứ hai KHÔNG ghi thêm dòng nào vào tệp và không ghi thêm bản gửi", async ({ skip }) => {
+    if (!ready) return skip();
     const thuMuc = join(goc, "gui-duoc"); // cùng thư mục với bài trên, cố ý
     const key = `${TIEN_TO}gui-duoc`;
 
@@ -175,8 +175,8 @@ describe("kênh báo động — bộ gửi thật, không phải bộ gửi gi�
     expect(soBanGui).toBe(1);
   });
 
-  it("bộ gửi HỎNG thì tin KHÔNG được đánh dấu đã gửi, và lý do được ghi nguyên văn", async () => {
-    if (!ready) return;
+  it("bộ gửi HỎNG thì tin KHÔNG được đánh dấu đã gửi, và lý do được ghi nguyên văn", async ({ skip }) => {
+    if (!ready) return skip();
     // Phá thật: đặt MỘT TỆP đúng chỗ adapter cần tạo thư mục ⇒ mkdir ném ENOTDIR.
     // (Lượt thử ngược đầu tiên dùng một đường dẫn POSIX trên Windows và Node tạo
     //  được thư mục đó thật — bài thử báo xanh trong khi không phá được gì.)
@@ -203,8 +203,8 @@ describe("kênh báo động — bộ gửi thật, không phải bộ gửi gi�
     expect(tin?.last_error ?? "").toMatch(/ENOTDIR|not a directory/i);
   });
 
-  it("không còn kênh nào đang bật ⇒ khong_co_kenh, TUYỆT ĐỐI không phải đã gửi", async () => {
-    if (!ready) return;
+  it("không còn kênh nào đang bật ⇒ khong_co_kenh, TUYỆT ĐỐI không phải đã gửi", async ({ skip }) => {
+    if (!ready) return skip();
     await asSystem((c) =>
       c.query("update ops.alert_channels set enabled = false where channel_id = 'tep_nhat_ky'"),
     );
@@ -237,8 +237,8 @@ describe("kênh báo động — bộ gửi thật, không phải bộ gửi gi�
     );
   });
 
-  it("hết lượt thử ⇒ het_luot, NỔI LÊN ở sổ tồn và ở findings của job", async () => {
-    if (!ready) return;
+  it("hết lượt thử ⇒ het_luot, NỔI LÊN ở sổ tồn và ở findings của job", async ({ skip }) => {
+    if (!ready) return skip();
     const chan = join(goc, "chan-duong-2");
     writeFileSync(chan, "tệp chặn đường ghi", "utf8");
     const thuMuc = join(chan, "ben-trong");
@@ -284,8 +284,8 @@ describe("kênh báo động — bộ gửi thật, không phải bộ gửi gi�
     expect(sucKhoe?.needs_attention).toBe(true);
   });
 
-  it("sinh tin từ sức khoẻ job: job vừa khai thì IM, job quá hạn thật thì KÊU", async () => {
-    if (!ready) return;
+  it("sinh tin từ sức khoẻ job: job vừa khai thì IM, job quá hạn thật thì KÊU", async ({ skip }) => {
+    if (!ready) return skip();
 
     // Dựng MỘT dòng lịch của riêng bài này thay vì mượn tình trạng của job thật.
     // Lượt đo 02/08/2026 dạy đúng chỗ này: bài cũ khẳng định `flag_engine` phải có
@@ -354,8 +354,8 @@ describe("kênh báo động — bộ gửi thật, không phải bộ gửi gi�
     }
   });
 
-  it("mức KHẨN dành riêng cho bộ quét cờ đêm (ADR-026)", async () => {
-    if (!ready) return;
+  it("mức KHẨN dành riêng cho bộ quét cờ đêm (ADR-026)", async ({ skip }) => {
+    if (!ready) return skip();
 
     // Tắt flag_engine ⇒ state 'tat' ⇒ needs_attention (0041 cố ý coi "tắt một thứ
     // đang bảo vệ trẻ con" là chuyện phải kêu). Cách này không phụ thuộc lịch sử chạy

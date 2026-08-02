@@ -151,8 +151,8 @@ afterAll(async () => {
 }, 60_000);
 
 describe("nạp danh sách cả khối — tầng tiến trình", () => {
-  it("lần nạp đầu: hai em vào kho, và mã thoát 2 vì lớp còn em chưa có trong file", async () => {
-    if (!ready) return;
+  it("lần nạp đầu: hai em vào kho, và mã thoát 2 vì lớp còn em chưa có trong file", async ({ skip }) => {
+    if (!ready) return skip();
     const truoc = await anhChup();
 
     const kq = await chayNap([
@@ -175,8 +175,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(sau.so_ky_mo_6a1).toBe(truoc.so_ky_mo_6a1 + 2);
   }, 60_000);
 
-  it("ghi ra danh sách chờ người cho từng em vắng mặt, KHÔNG đổi status của em nào", async () => {
-    if (!ready) return;
+  it("ghi ra danh sách chờ người cho từng em vắng mặt, KHÔNG đổi status của em nào", async ({ skip }) => {
+    if (!ready) return skip();
     const { vang, khongActive } = await asSystem(async (c) => {
       const a = await c.query<{ n: string }>(
         `select count(*) as n from staging.import_errors
@@ -196,8 +196,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(khongActive).toBe(0);
   }, 60_000);
 
-  it("đọc đúng cột dù họ tên có dấu phẩy trong ngoặc kép", async () => {
-    if (!ready) return;
+  it("đọc đúng cột dù họ tên có dấu phẩy trong ngoặc kép", async ({ skip }) => {
+    if (!ready) return skip();
     const row = await asSystem(async (c) => {
       const { rows } = await c.query<{ full_name: string; lop: string }>(
         `select s.full_name, cl.code as lop
@@ -215,8 +215,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(row?.lop).toBe(LOP);
   }, 60_000);
 
-  it("§9 — chạy LẠI đúng lệnh đó cho đúng trạng thái kho, không đẻ thêm dòng nào", async () => {
-    if (!ready) return;
+  it("§9 — chạy LẠI đúng lệnh đó cho đúng trạng thái kho, không đẻ thêm dòng nào", async ({ skip }) => {
+    if (!ready) return skip();
     const truoc = await anhChup();
 
     const kq = await chayNap([
@@ -237,8 +237,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(sau.so_dong_tho).toBe(truoc.so_dong_tho);
   }, 60_000);
 
-  it("mỗi lần nạp để lại một dòng ops.job_runs, dù job này KHÔNG có trong ops.job_schedule", async () => {
-    if (!ready) return;
+  it("mỗi lần nạp để lại một dòng ops.job_runs, dù job này KHÔNG có trong ops.job_schedule", async ({ skip }) => {
+    if (!ready) return skip();
     const { soDong, coLich } = await asSystem(async (c) => {
       const a = await c.query<{ n: string }>(
         "select count(*) as n from ops.job_runs where job_name = 'nap_danh_sach' and status = 'success'",
@@ -254,8 +254,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(coLich).toBe(0);
   }, 60_000);
 
-  it("--dry-run không để lại dấu vết nào, kể cả trong sổ chạy job", async () => {
-    if (!ready) return;
+  it("--dry-run không để lại dấu vết nào, kể cả trong sổ chạy job", async ({ skip }) => {
+    if (!ready) return skip();
     const fileMoi = join(thuMuc, "them-mot-em.csv");
     writeFileSync(
       fileMoi,
@@ -287,8 +287,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(soDong).toBe(2); // vẫn đúng hai dòng của hai lần chạy thật ở trên
   }, 60_000);
 
-  it("thiếu cột bắt buộc thì DỪNG CẢ JOB, không nạp một dòng nào", async () => {
-    if (!ready) return;
+  it("thiếu cột bắt buộc thì DỪNG CẢ JOB, không nạp một dòng nào", async ({ skip }) => {
+    if (!ready) return skip();
     const fileHong = join(thuMuc, "thieu-cot.csv");
     writeFileSync(
       fileHong,
@@ -311,8 +311,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(sau).toEqual(truoc);
   }, 60_000);
 
-  it("dòng bị TỪ CHỐI không đổi một cột nào — 'Đã vào kho: 0' phải là sự thật", async () => {
-    if (!ready) return;
+  it("dòng bị TỪ CHỐI không đổi một cột nào — 'Đã vào kho: 0' phải là sự thật", async ({ skip }) => {
+    if (!ready) return skip();
 
     // Dựng đúng cảnh đo được: em có thật, có họ tên VÀ ngày sinh sẵn trong sổ, đang
     // học 6A1. Chỉ khi em ĐÃ CÓ hai cột đó thì việc ghi đè mới quan sát được.
@@ -417,8 +417,8 @@ describe("nạp danh sách cả khối — tầng tiến trình", () => {
     expect(sauLanHai).toBe("Bùi Thị Lan, Jr");
   }, 120_000);
 
-  it("tham số ngày/năm học sai thì dừng TRƯỚC khi chạm database", async () => {
-    if (!ready) return;
+  it("tham số ngày/năm học sai thì dừng TRƯỚC khi chạm database", async ({ skip }) => {
+    if (!ready) return skip();
     const truoc = await anhChup();
 
     const namLech = await chayNap([

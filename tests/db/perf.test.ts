@@ -19,7 +19,7 @@ beforeAll(async () => {
 
 describe("ngữ cảnh phiên có bộ đệm (0029)", () => {
   it("withUserContext dựng đúng danh tính — đệm khớp với bảng", async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     const { rows } = await asUser(DEV.gvcn, (c) =>
       c.query<{ uid: string; cached: string; claim: string }>(
@@ -39,7 +39,7 @@ describe("ngữ cảnh phiên có bộ đệm (0029)", () => {
   });
 
   it("đệm KHÔNG rò sang transaction sau trên cùng kết nối pool", async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     // Đây là ca hỏng đáng sợ nhất của mọi thiết kế "nhớ sẵn ai đang đăng nhập": pool
     // dùng lại đúng socket đó cho người tiếp theo. GUC đặt bằng set_config(..., true)
@@ -58,7 +58,7 @@ describe("ngữ cảnh phiên có bộ đệm (0029)", () => {
   });
 
   it("hai người dùng liên tiếp KHÔNG nhìn thấy uid của nhau", async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     const readUid = (authUid: string) =>
       asUser(authUid, (c) =>
@@ -76,7 +76,7 @@ describe("ngữ cảnh phiên có bộ đệm (0029)", () => {
   });
 
   it("RLS vẫn lọc đúng qua đường có đệm: GVCN 6A2 không thấy học sinh 6A1", async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     const seen = (authUid: string) =>
       asUser(authUid, (c) =>
@@ -90,7 +90,7 @@ describe("ngữ cảnh phiên có bộ đệm (0029)", () => {
   });
 
   it("RLS quét thêm bao nhiêu dòng cũng KHÔNG sinh thêm lượt tra core.users", async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     // Đây là chính con số đã bắt được vấn đề: trước 0029, mỗi dòng bị RLS quét kéo
     // theo tới 6 lượt tra core.users (đo trên bộ 3.600 học sinh: 2.241 lượt cho MỘT
@@ -121,7 +121,7 @@ describe("ngữ cảnh phiên có bộ đệm (0029)", () => {
   });
 
   it("authUid không phải UUID bị từ chối trước khi chạm SQL", async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     // withUserContext ghép authUid vào câu lệnh gộp (begin + set role + dựng ngữ cảnh)
     // để tiết kiệm lượt đi-về, nên hàng rào UUID là thứ duy nhất đứng giữa chuỗi ngoài
@@ -134,7 +134,7 @@ describe("ngữ cảnh phiên có bộ đệm (0029)", () => {
 
 describe("index đường nóng (0029)", () => {
   it('"Quét đêm qua" đọc job_runs bằng index, không quét cả bảng', async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     const { rows } = await asSystem((c) =>
       c.query<{ "QUERY PLAN": string }>(
@@ -148,7 +148,7 @@ describe("index đường nóng (0029)", () => {
   });
 
   it("bốn index còn lại tồn tại đúng tên", async ({ skip }) => {
-    if (!ready) skip();
+    if (!ready) return skip();
 
     const { rows } = await asSystem((c) =>
       c.query<{ indexname: string }>(
