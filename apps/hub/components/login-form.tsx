@@ -39,7 +39,19 @@ export function LoginForm({
    * `unknown` là lúc chưa hỏi xong máy chủ: vẽ khung xám thay vì vẽ danh sách tài khoản
    * rồi giật đi, và cũng đừng vẽ ô nhập mã cho một người có thể không cần nhập gì cả.
    */
-  const [gate, setGate] = useState<"unknown" | "absent" | "misconfigured" | "locked" | "open">("unknown");
+  // Trạng thái ban đầu SUY TỪ THỨ MÁY CHỦ ĐÃ GỬI, không phải luôn "unknown".
+  //
+  // app/login/page.tsx chỉ đính kèm danh sách tài khoản khi cửa đang mở (nếu không thì
+  // gửi mảng rỗng — xem chú thích chống rò ở đó). Nên "có tài khoản trong tay" ĐÃ LÀ
+  // câu trả lời của máy chủ cho câu hỏi cửa mở hay chưa; hỏi lại qua mạng rồi mới tin
+  // là để trang nói dối trong khoảnh khắc đầu tiên.
+  //
+  // Cụ thể cái hỏng đo được 02/08/2026: danh sách 9 tài khoản hiện NGAY trong HTML đầu,
+  // còn dòng cảnh báo "cửa đang mở, đừng nạp dữ liệu thật" thì phải chờ một vòng mạng —
+  // tức là người dùng nhìn thấy thứ nguy hiểm trước khi nhìn thấy lời cảnh báo về nó.
+  const [gate, setGate] = useState<"unknown" | "absent" | "misconfigured" | "locked" | "open">(
+    devAccounts.length > 0 ? "open" : "unknown",
+  );
   const [secret, setSecret] = useState("");
   /**
    * Tài khoản người dùng đã bấm TRƯỚC khi cửa hiện ra. Giữ lại để mở khoá xong là vào
@@ -212,7 +224,33 @@ export function LoginForm({
             <UnlockPanel secret={secret} setSecret={setSecret} loading={loading} onSubmit={unlockGate} />
           )}
           {gate === "misconfigured" && <GateClosedNotice />}
-          {gate === "open" && <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />}
+          {gate === "open" && (
+            <>
+              {/* CẢNH BÁO KHI CỬA ĐANG MỞ KHÔNG MẬT KHẨU (02/08/2026).
+
+                  Chủ đầu tư bỏ mật khẩu vì nó đã rò hai lần trong một ngày, cả hai đều
+                  do công cụ tự in ra. Quyết định đó chính đáng — nhưng rủi ro còn lại
+                  thì không được biến mất theo, nó chỉ được chuyển từ "một mật khẩu ai
+                  cũng biết" sang "một dòng chữ ai cũng thấy".
+
+                  Câu này CỐ Ý đứng trên danh sách tài khoản, không nhét xuống chân
+                  trang: thứ nó cảnh báo là điều người ta sắp làm ngay bên dưới. */}
+              <div
+                role="note"
+                className="flex items-start gap-2.5 rounded-2xl border border-[#F3D9A6] bg-[#FFF9EC] p-[11px_13px]"
+              >
+                <span aria-hidden className="msr flex-none text-[19px] text-[#8A5A00]">
+                  info
+                </span>
+                <span className="text-[12px] font-semibold leading-[1.5] text-[#8A5A00]">
+                  Bản đang thử, mở không cần mật khẩu — ai có địa chỉ này đều vào được
+                  bằng một vai bất kỳ. Sau cửa này hiện chỉ có dữ liệu mẫu.{" "}
+                  <b>Đừng nạp danh sách học sinh thật khi cửa còn mở.</b>
+                </span>
+              </div>
+              <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />
+            </>
+          )}
 
           <div className="flex items-center gap-2.5">
             <span className="h-px flex-1 bg-[#EFE9DC]" />

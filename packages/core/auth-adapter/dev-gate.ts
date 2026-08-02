@@ -208,7 +208,28 @@ export function evaluateDevGate(
   if (!devLoginRouteExists(env)) return "absent";
 
   const secret = readDevLoginSecret(env);
-  if (!secret) return "misconfigured";
+
+  // KHÔNG KHAI BÍ MẬT = CỬA MỞ (đổi 02/08/2026, quyết định của chủ đầu tư).
+  //
+  // Bản trước trả `misconfigured` ở đây — mặc định đóng, phải khai bí mật mới dùng được.
+  // Chủ đầu tư bỏ yêu cầu đó: "không cần dev login secret đâu". Lý do thực tế đứng sau,
+  // và nó chính đáng: mật khẩu dùng chung này đã rò HAI LẦN trong một ngày, cả hai lần
+  // đều do công cụ tự in nó ra chứ không do ai làm lộ. Một bí mật mà quy trình bình
+  // thường tự phát tán thì nó không bảo vệ ai, chỉ làm phiền đúng người có quyền.
+  //
+  // ĐIỀU GÌ VẪN GIỮ, và vì sao nó đủ: hàng rào thật KHÔNG PHẢI mật khẩu mà là
+  // `devLoginRouteExists` ở trên. Ở `NODE_ENV=production` cửa chỉ tồn tại khi có
+  // `DEV_LOGIN_CHO_PHEP_O_BAN_THAT=1`, mà biến đó nằm trong `apps/hub/.env.local` —
+  // file KHÔNG lên GitHub và KHÔNG đi theo lên máy chủ. Nên trên máy chủ thật của
+  // trường, cửa này không tồn tại dù có ai muốn hay không, và không ai phải nhớ gì.
+  //
+  // RỦI RO CÒN LẠI, nói thẳng: trong lúc máy dev còn mở ra Internet qua đường hầm, ai
+  // biết địa chỉ đều vào được bằng một vai bất kỳ. Hôm nay sau cửa đó chỉ có 109 học
+  // sinh bịa tên. Ngày nạp danh sách thật mà cửa còn mở là ngày lỗ hổng thành thật —
+  // vì vậy màn đăng nhập in một dòng cảnh báo khi cửa mở, và `DEBT.md` #19 vẫn đứng.
+  // Muốn khoá lại: thêm một dòng `DEV_LOGIN_SECRET=...` vào `.env.local`, cửa tự đòi mã
+  // trở lại mà không phải sửa một dòng mã nào.
+  if (!secret) return "open";
 
   if (credentials.header && verifyDevSecret(credentials.header, secret)) return "open";
   if (credentials.cookie && verifyDevGateToken(credentials.cookie, secret, now)) return "open";

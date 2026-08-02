@@ -58,10 +58,11 @@ describe("(d) NODE_ENV=production: route không tồn tại, bất kể bí mậ
   // tư mất đường vào — trong khi Google/Zalo chưa nối nên không còn cửa nào khác.
   //
   // Ba tính chất phải giữ, và ba bài dưới đây ghim đúng ba tính chất đó.
-  it("bật cờ vẫn CHƯA đủ — không có bí mật thì vẫn không vào được", () => {
+  it("bật cờ là đủ để cửa tồn tại và mở (không khai bí mật)", () => {
     const env = { NODE_ENV: "production", DEV_LOGIN_CHO_PHEP_O_BAN_THAT: "1" };
     expect(devLoginRouteExists(env)).toBe(true); // route có tồn tại
-    expect(evaluateDevGate({}, env)).toBe("misconfigured"); // nhưng chưa cấu hình bí mật
+    // Từ 02/08: không khai bí mật = mở. Cờ môi trường mới là hàng rào, không phải mã.
+    expect(evaluateDevGate({}, env)).toBe("open");
   });
 
   it("bật cờ + có bí mật đúng thì mới qua được", () => {
@@ -101,20 +102,39 @@ describe("(d) NODE_ENV=production: route không tồn tại, bất kể bí mậ
 // 2. Lời hứa (c): thiếu cấu hình thì ĐÓNG, không mở
 // ---------------------------------------------------------------------------
 
-describe("(c) biến môi trường trống ⇒ từ chối hẳn, mặc định là đóng", () => {
-  it("không đặt DEV_LOGIN_SECRET ⇒ `misconfigured`, không phải `open`", () => {
-    expect(evaluateDevGate({}, { NODE_ENV: "development" })).toBe("misconfigured");
-    expect(evaluateDevGate({ header: "bất kỳ" }, { NODE_ENV: "development" })).toBe("misconfigured");
-    // Chuỗi rỗng và chuỗi toàn khoảng trắng cũng vậy — "đặt cho có" không phải là đặt.
-    expect(evaluateDevGate({}, { NODE_ENV: "development", DEV_LOGIN_SECRET: "" })).toBe("misconfigured");
-    expect(evaluateDevGate({}, { NODE_ENV: "development", DEV_LOGIN_SECRET: "   " })).toBe("misconfigured");
+describe("(c) không khai bí mật ⇒ CỬA MỞ (lật chiều 02/08/2026)", () => {
+  // LẬT, KHÔNG XOÁ. Bản trước khẳng định "không khai bí mật ⇒ misconfigured, mặc định
+  // đóng". Chủ đầu tư bỏ yêu cầu mật khẩu ("không cần dev login secret đâu"), và lý do
+  // đứng sau chính đáng: mật khẩu dùng chung đó đã RÒ HAI LẦN trong một ngày, cả hai
+  // đều do chính công cụ in nó ra chứ không do ai làm lộ.
+  //
+  // Hàng rào thật chuyển sang `devLoginRouteExists`: ở bản chạy thật, cửa chỉ tồn tại
+  // khi có DEV_LOGIN_CHO_PHEP_O_BAN_THAT=1, mà biến đó nằm trong .env.local — file
+  // không lên GitHub và không đi theo lên máy chủ. Nghĩa là trên máy chủ thật của
+  // trường, cửa không tồn tại mà KHÔNG ai phải nhớ gì. Đó là hàng rào tốt hơn một mật
+  // khẩu mà người có quyền phải tra file mới biết.
+  it("không đặt DEV_LOGIN_SECRET ⇒ `open`, không đòi mã", () => {
+    expect(evaluateDevGate({}, { NODE_ENV: "development" })).toBe("open");
+    expect(evaluateDevGate({ header: "bất kỳ" }, { NODE_ENV: "development" })).toBe("open");
+    // Chuỗi rỗng và chuỗi toàn khoảng trắng = chưa đặt, nên cũng mở.
+    expect(evaluateDevGate({}, { NODE_ENV: "development", DEV_LOGIN_SECRET: "" })).toBe("open");
+    expect(evaluateDevGate({}, { NODE_ENV: "development", DEV_LOGIN_SECRET: "   " })).toBe("open");
+  });
+
+  it("KHAI bí mật thì cửa đòi mã trở lại — đường khoá vẫn còn, không phải bị gỡ", () => {
+    // Quan trọng: chủ đầu tư đổi ý thì chỉ cần thêm một dòng vào .env.local, không phải
+    // sửa một dòng mã nào. Bài này giữ cho đường đó không mục đi vì lâu không ai đi.
+    expect(evaluateDevGate({}, ENV_OK)).toBe("locked");
+    expect(evaluateDevGate({ header: SECRET }, ENV_OK)).toBe("open");
   });
 
   it("bí mật ngắn hơn ngưỡng bị coi như CHƯA ĐẶT (chốt giấy còn tệ hơn không có chốt)", () => {
     const ngan = "a".repeat(DEV_SECRET_MIN_LENGTH - 1);
     expect(readDevLoginSecret({ DEV_LOGIN_SECRET: ngan })).toBeNull();
+    // Bí mật quá ngắn = coi như CHƯA ĐẶT, và từ 02/08 "chưa đặt" nghĩa là mở. Điểm quan
+    // trọng giữ nguyên: một chốt giấy KHÔNG được coi là một cái chốt.
     expect(evaluateDevGate({ header: ngan }, { NODE_ENV: "development", DEV_LOGIN_SECRET: ngan })).toBe(
-      "misconfigured",
+      "open",
     );
     // Chiều ngược lại: đúng ngưỡng thì cửa bật.
     const dungNguong = "a".repeat(DEV_SECRET_MIN_LENGTH);

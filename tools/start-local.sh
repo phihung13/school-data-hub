@@ -229,16 +229,24 @@ go_cua() { # $1 = địa chỉ gốc, $2 = mã (rỗng = không cầm mã)
   fi
 }
 
+# ĐỔI 02/08/2026 — chủ đầu tư bỏ mật khẩu cửa thử ("không cần dev login secret đâu").
+# Lý do chính đáng: mật khẩu dùng chung đó đã RÒ HAI LẦN trong một ngày, cả hai đều do
+# chính công cụ tự in nó ra. Một bí mật mà quy trình bình thường tự phát tán thì nó
+# không bảo vệ ai, chỉ làm phiền đúng người có quyền.
+#
+# Vì vậy bước này THÔI coi "cửa mở" là lỗi chặn. Nhưng nó vẫn phải NÓI RA mỗi lượt chạy:
+# rủi ro không biến mất theo một quyết định, nó chỉ chuyển từ "một mật khẩu ai cũng
+# biết" sang "một câu ai cũng thấy". Hàng rào thật nay là biến DEV_LOGIN_CHO_PHEP_O_BAN_THAT
+# nằm trong .env.local — không lên GitHub, không đi theo lên máy chủ, nên trên máy chủ
+# thật của trường cửa không tồn tại mà KHÔNG ai phải nhớ gì.
 MA_KHONG="$(go_cua "$HUB_URL" "")"
 if [ "$MA_KHONG" = "200" ]; then
-  fail "CỬA ĐANG MỞ TOANG: gõ cửa không cầm mã vẫn nhận được phiên (HTTP 200)."
-  fail "Ai biết địa chỉ đều tự cấp cho mình vai hiệu trưởng. KHÔNG được nạp dữ liệu thật."
-  fail "chữa: xem apps/hub/app/api/auth/dev-login/route.ts và nợ #19 trong danh-cho-may/DEBT.md"
-  exit 1
-fi
-if [ "$MA_KHONG" = "503" ]; then
-  warn "cửa đóng với TẤT CẢ: chưa đặt DEV_LOGIN_SECRET trong $DEV_ENV_FILE"
-  warn "thêm một dòng DEV_LOGIN_SECRET=<ít nhất 12 ký tự> rồi khởi động lại Hub"
+  warn "CỬA THỬ ĐANG MỞ, KHÔNG CẦN MÃ — ai biết địa chỉ đều vào được bằng vai bất kỳ."
+  warn "Hôm nay sau cửa chỉ có dữ liệu mẫu. ĐỪNG NẠP DANH SÁCH HỌC SINH THẬT khi cửa còn mở."
+  warn "Muốn khoá lại: thêm dòng DEV_LOGIN_SECRET=<ít nhất 12 ký tự> vào $DEV_ENV_FILE rồi"
+  warn "khởi động lại Hub — cửa tự đòi mã trở lại, không phải sửa một dòng mã nào."
+elif [ "$MA_KHONG" = "503" ]; then
+  warn "cửa đóng với TẤT CẢ: máy chủ báo chưa cấu hình được — xem $ROOT/.hub.log"
 elif [ "$MA_KHONG" = "401" ]; then
   ok "không cầm mã thì bị từ chối (401) — đúng"
   if [ -z "$DEV_SECRET" ]; then
@@ -277,10 +285,13 @@ else
   if curl -sf -m 8 "$PUBLIC_URL/login" >/dev/null 2>&1; then
     NGOAI="$(go_cua "$PUBLIC_URL" "")"
     if [ "$NGOAI" = "200" ]; then
-      fail "CỬA MỞ TOANG TỪ INTERNET: POST $PUBLIC_URL/api/auth/dev-login không cần mã trả 200"
-      exit 1
+      # Không còn là lỗi chặn (xem chú thích bước 2c), nhưng nhắc lại ở ĐÂY là cần: bước
+      # 2c hỏi qua localhost, bước này hỏi qua đúng con đường mà người lạ sẽ đi.
+      warn "TỪ INTERNET cũng vào được không cần mã — đúng cấu hình hiện tại, không phải lỗi."
+      warn "Bất kỳ ai gõ $PUBLIC_URL đều làm được điều này. Nhớ trước khi nạp dữ liệu thật."
+    else
+      ok "từ Internet gõ cửa không cầm mã cũng bị từ chối (HTTP $NGOAI)"
     fi
-    ok "từ Internet gõ cửa không cầm mã cũng bị từ chối (HTTP $NGOAI)"
   fi
 fi
 
