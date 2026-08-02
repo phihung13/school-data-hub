@@ -205,7 +205,7 @@ describe("tab bar và sidebar nói cùng một điều", () => {
     // Trước 31/07/2026 mục "Trang chủ" trỏ /gvcn — GVCN vào buồng lái là không còn
     // đường nào quay về trang chủ chung, kể cả trên máy tính.
     expect(TEACHER_ITEMS.find((i) => i.key === "home")?.href).toBe(HOME_HREF);
-    expect(TEACHER_ITEMS.find((i) => i.href === "/gvcn")?.label).toBe("Buồng lái");
+    expect(TEACHER_ITEMS.find((i) => i.href === "/gvcn")?.label).toBe("Bảng điều khiển");
     expect(TEACHER_ITEMS.map((i) => i.href)).toContain(LOGOUT_HREF);
   });
 });

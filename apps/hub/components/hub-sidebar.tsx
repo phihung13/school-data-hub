@@ -60,7 +60,7 @@ export const TEACHER_ITEMS: NavItem[] = [
   // §1.1 "một cửa vào chung". Nay hai việc là hai mục: /home là trang chủ của mọi
   // vai, /gvcn là buồng lái — và tên mục nói đúng nơi nó dẫn tới.
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
-  { key: "cockpit", label: "Buồng lái", icon: "space_dashboard", href: "/gvcn" },
+  { key: "cockpit", label: "Bảng điều khiển", icon: "space_dashboard", href: "/gvcn" },
   // Bốn mục dưới đây quay lại thành <Link> ngày 31/07/2026 (gói "gvcn-man-hinh"): bốn
   // trang tương ứng đã tồn tại thật, có procedure thật ở router `care` và có cả ba
   // trạng thái tải/lỗi/rỗng. Chúng từng nằm ở TEACHER_SOON vì trỏ vào trang 404.

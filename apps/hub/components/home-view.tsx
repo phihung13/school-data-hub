@@ -249,7 +249,7 @@ function MobileHome({ data }: { data: HomeData }) {
 
         {data.isHomeroom && !data.isStudent && (
           <p className="mt-4 text-center text-[12px] text-muted">
-            Mở <b>Buồng lái</b> ở lưới mini app phía trên để xem lớp sáng nay.
+            Mở <b>Bảng điều khiển</b> ở lưới mini app phía trên để xem lớp sáng nay.
           </p>
         )}
       </div>
@@ -432,7 +432,7 @@ function DesktopHome({ data }: { data: HomeData }) {
               <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
                 <div className="text-[16px] font-black text-navy">Buồng lái đang chờ</div>
                 <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-                  Mở <b>Buồng lái</b> ở lưới mini app bên trái để xem lớp sáng nay: cờ ưu tiên, xác nhận gửi muộn, mood lớp.
+                  Mở <b>Bảng điều khiển</b> ở lưới mini app bên trái để xem lớp sáng nay: cờ ưu tiên, xác nhận gửi muộn, mood lớp.
                 </p>
               </div>
             )}

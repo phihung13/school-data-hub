@@ -76,7 +76,7 @@ export function GvcnShell({
               <span className="msr text-[20px] text-navy" aria-hidden>
                 arrow_back
               </span>
-              <span className="text-[12.5px] font-extrabold text-navy">Buồng lái</span>
+              <span className="text-[12.5px] font-extrabold text-navy">Bảng điều khiển</span>
             </Link>
           </div>
 

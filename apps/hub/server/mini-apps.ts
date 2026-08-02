@@ -68,7 +68,7 @@ export function buildMiniApps(roles: HubRole[]): MiniAppTile[] {
     );
   }
   if (isHomeroom) {
-    tiles.push({ key: "cockpit", label: "Buồng lái", icon: "space_dashboard", href: "/gvcn", available: true });
+    tiles.push({ key: "cockpit", label: "Bảng điều khiển", icon: "space_dashboard", href: "/gvcn", available: true });
   }
   if (isCounselor) {
     tiles.push({ key: "counselor", label: "Tâm lý cụm", icon: "psychology", href: "/tam-ly", available: true });

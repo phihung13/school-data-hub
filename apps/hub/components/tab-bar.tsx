@@ -123,7 +123,7 @@ export const STUDENT_TABBAR_ITEMS: TabItem[] = [
  */
 export const TEACHER_TABBAR_ITEMS: TabItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-  { key: "cockpit", label: "Buồng lái", icon: "space_dashboard", href: "/gvcn" },
+  { key: "cockpit", label: "Bảng điều khiển", icon: "space_dashboard", href: "/gvcn" },
   { key: "attendance", label: "Điểm danh", icon: "fact_check", href: "/gvcn/diem-danh" },
   { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
 ];
