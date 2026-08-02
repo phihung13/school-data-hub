@@ -45,8 +45,15 @@ Repo không có PM, BA, QA, tester chuyên trách — Claude đóng vai qua các
 
 ## Bản đồ tài liệu
 
+> **Phiên Claude mới, định chạy nhiều agent: đọc `danh-cho-may/CACH-CHAY-AGENT.md` trước.**
+> Đó là bản ghi bảy cái bẫy đã sập thật (build giết máy chủ đang chạy · 245 bài test bỏ
+> qua trong im lặng · pgTAP dừng dở không in `not ok` · bộ test bịa được lịch sử chạy
+> máy · giấu trên màn không phải là không gửi …), cách chia agent theo quyền sở hữu file,
+> và khung nghiệm thu đã bác bỏ hơn nửa số gói tự khai "xong".
+
 | Máy (`danh-cho-may/`) | Người (phần trong `ho-so-he-thong.html`) | Nội dung |
 |---|---|---|
+| `CACH-CHAY-AGENT.md` | *(none)* | Cách gọi agent, chia việc, nghiệm thu, và bảy cái bẫy đã gặp — chỉ máy |
 | `RULES.md` | Mục "Hợp đồng 10 điều" | 10 điều luật cứng ↔ bản cam kết để ký |
 | `01-architecture.md` | Mục "Kiến trúc tổng thể" | Kiến trúc chi tiết ↔ sơ đồ khối + đọc bằng lời |
 | `02-database.md` | Mục "Dữ liệu & ERD" | Schema + RLS ↔ sơ đồ sổ gốc + "ai thấy gì" |
