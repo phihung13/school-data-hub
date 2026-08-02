@@ -6,6 +6,8 @@
 // DESIGN-GUIDELINES §1: "phân quyền ở mini app, không ở trang chủ" — chỉ trả về danh sách
 // tile hiện/mờ theo vai trò, KHÔNG tự kiểm tra quyền nghiệp vụ.
 import type { HubRole, MiniAppTile } from "@hub/core/contracts";
+import { napApps } from "./embed/registry-db";
+import { canOpenEmbedApp } from "./embed/registry";
 
 /**
  * Vai nhân viên — liệt kê TƯỜNG MINH, không suy bằng phép phủ định.
@@ -81,16 +83,43 @@ export function buildMiniApps(roles: HubRole[]): MiniAppTile[] {
   if (roles.includes("principal") || roles.includes("board")) {
     tiles.push({ key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh", available: true });
   }
-  if (isStaff) {
-    // Tier 2 — Embed Bridge (08-embedded-apps.md mục 3), app ngoài factory.vietanh.org.
-    // Logo thật, tự host tại public/factory-icon.svg (tải về từ factory.vietanh.org/icon.svg
-    // 29/07/2026) — không trỏ thẳng domain ngoài để không phụ thuộc Factory còn sống hay không.
+  void isStaff; // giữ biến: các nhánh trên đọc nó, và app ngoài nay tự khai vai của mình
+  return tiles;
+}
+
+/**
+ * Lưới đầy đủ = tile viết trong mã (màn của chính Hub) + tile của MINI APP NGOÀI đọc từ
+ * `core.embedded_apps` (migration 0052).
+ *
+ * Trước 02/08/2026 Factory là một khối `if (isStaff)` viết chết ngay trong hàm trên: thêm
+ * một app là sửa file này, build, deploy. Nay không app nào cần một dòng mã nữa — đúng
+ * điều 7.3 của CACH-CHAY-AGENT.md đòi ("đội vibe cắm app mới KHÔNG cần sửa mã lõi").
+ *
+ * DÙNG LẠI `canOpenEmbedApp`, không tự viết phép so vai ở đây. Cùng một hàm quyết định
+ * "ai mở được app này" ở cả ba cửa: lưới tile, trang /embed/<id>, và findAccount của OIDC.
+ * Ba chỗ tự so vai là ba chỗ sẽ lệch, và chỗ lệch là chỗ tile hiện ra rồi bấm vào bị 404.
+ */
+export async function buildMiniAppsWithEmbedded(roles: HubRole[]): Promise<MiniAppTile[]> {
+  const tiles = buildMiniApps(roles);
+  let apps: Awaited<ReturnType<typeof napApps>>;
+  try {
+    apps = await napApps();
+  } catch {
+    // Sổ đăng ký hỏng: trả lưới của riêng Hub thay vì để cả trang chủ đổ. Người dùng mất
+    // tile app ngoài — thấy được ngay — chứ không mất luôn Check-in và Báo cáo.
+    return tiles;
+  }
+  for (const app of apps) {
+    if (!app.embed) continue; // app chỉ đi Đường B (webhook), không có UI để mà mở
+    if (!canOpenEmbedApp(app, roles)) continue;
     tiles.push({
-      key: "factory",
-      label: "Factory",
+      key: app.appId,
+      label: app.embed.displayName,
+      // `auto_awesome` là icon dự phòng khi app chưa tự host logo. Tên này CÓ trong font
+      // đã cắt gọn (public/fonts/icon-names.txt) — tên ngoài danh sách vẽ ra ô trống.
       icon: "auto_awesome",
-      iconImageUrl: "/factory-icon.svg",
-      href: "/embed/factory",
+      iconImageUrl: app.embed.iconImageUrl,
+      href: `/embed/${app.appId}`,
       available: true,
     });
   }

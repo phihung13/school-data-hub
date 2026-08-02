@@ -14,7 +14,7 @@
 #     node tools/pgtap-plan-check.mjs --ket-qua <tsv> --cap-nhat
 # Hạ hàng rào phải là một hành động có tên, không phải một hệ quả phụ.
 #
-# Tổng: 871 assertion trên 50 file.
+# Tổng: 900 assertion trên 51 file.
 0002_core_identity_test.sql	8
 0003_core_rbac_test.sql	8
 0004_attendance_test.sql	7
@@ -65,3 +65,4 @@
 0049_chi_tiet_co_test.sql	20
 0050_so_ghi_migration_test.sql	14
 0051_kenh_bao_dong_test.sql	39
+0052_so_dang_ky_mini_app_test.sql	29

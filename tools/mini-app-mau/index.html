@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini App mẫu — School Data Hub</title>
+<!--
+  tools/mini-app-mau/index.html — BẢN MẪU PHÍA APP CON của Embed Bridge (08-embedded-apps.md mục 3).
+
+  ═══════════════════════════════════════════════════════════════════════════════════════
+  VÌ SAO LÀ MỘT FILE HTML RỜI, KHÔNG PHẢI MỘT ROUTE CỦA HUB
+  ═══════════════════════════════════════════════════════════════════════════════════════
+  Cám dỗ là dựng app mẫu ngay trong Hub, ở /mini-app-mau, cho tiện thử. KHÔNG làm được, và
+  lý do nằm ngay trong §3 của chuẩn:
+
+      "allow-scripts + allow-same-origin chỉ an toàn VÌ iframe khác origin với Hub. CẤM
+       dùng bộ sandbox này để nhúng nội dung cùng origin với Hub — khi đó app con thoát
+       được sandbox và chạm được DOM của Shell."
+
+  Một app mẫu cùng origin sẽ chạy tốt, trông như thật, và dạy người đọc đúng cái điều
+  chuẩn cấm. Ràng buộc CHECK của bảng `core.embedded_apps` cũng chặn nó từ đầu: `origin`
+  phải khớp `^https://` — http://localhost không lọt.
+
+  Nên file này là thứ đúng với thực tế: một trang tĩnh, host ở BẤT KỲ đâu có HTTPS (Base44,
+  Cloudflare Pages, Netlify, hay chính máy chủ của đội vibe), rồi khai vào Hub như một app
+  thật. Không cần build, không phụ thuộc gói nào.
+
+  ═══════════════════════════════════════════════════════════════════════════════════════
+  BỐN VIỆC APP CON PHẢI LÀM — VÀ MỘT VIỆC NÓ KHÔNG ĐƯỢC LÀM
+  ═══════════════════════════════════════════════════════════════════════════════════════
+    1. Gửi `{type:'embed:ready'}` lên window cha NGAY khi tải xong. Hub nạp iframe với URL
+       TRẦN và chỉ gửi mã sau khi nhận được `ready` — không gửi thì không bao giờ có token.
+    2. Nghe `message`, và KIỂM `event.origin` khớp origin của Hub trước khi đọc gì.
+       Thiếu bước này là lỗ hổng đánh cắp token kinh điển: bất kỳ trang nào nhúng được app
+       cũng gửi được một `embed:token` giả.
+    3. Nhận `{type:'embed:token'}` rồi tự đổi sang phiên của mình.
+    4. Gửi `{type:'embed:resize', height}` khi chiều cao đổi, để Hub co giãn khung.
+
+  KHÔNG ĐƯỢC LÀM: tự vẽ nút "quay lại Hub". Hub vẽ nút đó NGOÀI iframe, có chủ ý — app con
+  vẽ thì Hub mất quyền kiểm soát điều hướng, và một nút quay lại hỏng bên trong app là thứ
+  người dùng ghét nhất ở trải nghiệm "app trong app" làm ẩu.
+
+  ═══════════════════════════════════════════════════════════════════════════════════════
+  CÁCH THỬ (đủ để biết cắm đúng hay sai trước khi viết một dòng nghiệp vụ nào)
+  ═══════════════════════════════════════════════════════════════════════════════════════
+    1. Đưa file này lên một địa chỉ HTTPS. Ví dụ nhanh nhất: kéo thả cả thư mục
+       `tools/mini-app-mau/` vào Cloudflare Pages hoặc Netlify Drop.
+    2. Mở Hub bằng tài khoản quản trị → Mini App → "Khai app mới":
+         Mã app     : app-mau
+         Tên         : App mẫu
+         Rổ dữ liệu  : Xanh   (app này không đụng tên em nào)
+         Origin      : https://<địa-chỉ-vừa-nhận>
+         URL iframe  : https://<địa-chỉ-vừa-nhận>/index.html
+         Ngày rà lại : 6 tháng nữa
+    3. Sửa app vừa khai → tick vai được mở (ví dụ "chủ nhiệm") → Lưu.
+    4. Bật app.
+    5. Đăng nhập bằng vai đã tick, mở trang chủ: tile "App mẫu" phải có mặt. Bấm vào.
+
+  Trang này sẽ tự nói ra nó đang ở bước nào. Nếu nó dừng ở "đã gửi ready, đang chờ token"
+  quá 10 giây thì lỗi nằm ở phía Hub hoặc ở CSP — đọc mục "Khi nào hỏng và hỏng ở đâu"
+  trong danh-cho-may/09-cam-mini-app.md.
+-->
+<style>
+  :root { color-scheme: light; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #F4F7FB; color: #0F172A;
+  }
+  /* Ba bậc chữ cách nhau rõ (26 / 15 / 12) thay vì năm bậc sát nhau: trang này là một
+     bảng chẩn đoán, người đọc quét nó bằng mắt chứ không đọc từ đầu tới cuối. */
+  h1 { font-size: 26px; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.02em; }
+  p.phu { margin: 0 0 22px; font-size: 13px; color: #5B6B80; max-width: 62ch; }
+  ol { padding-left: 0; list-style: none; margin: 0; }
+  li {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: #fff; border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(10,42,94,.07);
+  }
+  .dau { flex: none; width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center;
+         font-size: 14px; font-weight: 800; background: #E9EEF5; color: #5B6B80; }
+  li[data-xong="1"] .dau { background: #E3F8ED; color: #126B45; }
+  li[data-xong="loi"] .dau { background: #FFE9E9; color: #D2383E; }
+  .noi { min-width: 0; }
+  .ten { font-size: 15px; font-weight: 700; }
+  .chi-tiet { margin-top: 4px; font-size: 12px; line-height: 1.5; color: #5B6B80; word-break: break-word; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+  .khoi-loi { background: #FFF3F3; color: #8A2226; border-radius: 12px; padding: 14px 16px; font-size: 12px; line-height: 1.6; max-width: 62ch; }
+</style>
+</head>
+<body>
+  <h1>Mini App mẫu</h1>
+  <p class="phu">Trang này không làm gì cho trường. Việc duy nhất của nó là nói ra ổ cắm đang hoạt động tới đâu.</p>
+
+  <ol id="cac-buoc">
+    <li data-buoc="nhung"><span class="dau">1</span><div class="noi"><div class="ten">Đang chạy trong iframe của Hub</div><div class="chi-tiet">…</div></div></li>
+    <li data-buoc="ready"><span class="dau">2</span><div class="noi"><div class="ten">Đã gửi <code>embed:ready</code> lên Hub</div><div class="chi-tiet">…</div></div></li>
+    <li data-buoc="token"><span class="dau">3</span><div class="noi"><div class="ten">Đã nhận <code>embed:token</code></div><div class="chi-tiet">…</div></div></li>
+    <li data-buoc="resize"><span class="dau">4</span><div class="noi"><div class="ten">Đã báo chiều cao cho Hub</div><div class="chi-tiet">…</div></div></li>
+  </ol>
+
+  <div id="loi" class="khoi-loi" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  function dat(buoc, xong, chiTiet) {
+    var li = document.querySelector('li[data-buoc="' + buoc + '"]');
+    if (!li) return;
+    li.dataset.xong = xong;
+    li.querySelector(".chi-tiet").textContent = chiTiet;
+    if (xong === "1") li.querySelector(".dau").textContent = "✓";
+    if (xong === "loi") li.querySelector(".dau").textContent = "✕";
+  }
+
+  function loi(chu) {
+    var box = document.getElementById("loi");
+    box.hidden = false;
+    box.textContent = chu;
+  }
+
+  // ── Bước 1 ────────────────────────────────────────────────────────────────────
+  // Mở thẳng URL này bằng tab trình duyệt cũng "chạy" — và đó là ca dễ nhầm nhất khi thử:
+  // trang hiện ra bình thường, người thử tưởng đã cắm xong, trong khi nó chưa từng nằm
+  // trong Hub. Nói thẳng ra thay vì im lặng.
+  var trongKhung = window.parent !== window;
+  if (!trongKhung) {
+    dat("nhung", "loi", "Trang đang mở TRỰC TIẾP, không nằm trong iframe nào.");
+    loi("Đây là cách mở SAI. App mẫu chỉ có nghĩa khi mở qua Hub: đăng nhập Hub bằng vai đã được cấp, rồi bấm tile của app trên trang chủ. Mở thẳng URL này thì không có Hub nào để bắt tay, và bốn bước dưới đây sẽ đứng yên mãi.");
+    return;
+  }
+  dat("nhung", "1", "Có window cha — đang nằm trong khung của Hub.");
+
+  // ── Bước 2 ────────────────────────────────────────────────────────────────────
+  // `targetOrigin` để "*" ĐÚNG Ở ĐÂY và chỉ ở đây: lúc này app con CHƯA biết origin của
+  // Hub (nó được nạp bằng URL trần, không tham số). Thông điệp `ready` không mang bí mật
+  // nào — nó chỉ nói "tôi tải xong rồi". Mọi thông điệp SAU đó phải gửi tới origin cụ thể.
+  var originHub = null;
+  window.parent.postMessage({ type: "embed:ready", version: 1 }, "*");
+  dat("ready", "1", "Đã gửi. Đang chờ Hub trả mã ngắn hạn…");
+
+  var hetGio = setTimeout(function () {
+    dat("token", "loi", "Quá 10 giây chưa nhận được gì.");
+    loi("Hub không gửi embed:token về. Ba chỗ hay hỏng, theo thứ tự nên kiểm: (1) app chưa được BẬT hoặc chưa cấp cho vai đang đăng nhập — Hub sẽ trả 404 trước cả khi dựng khung; (2) origin khai trong sổ đăng ký không khớp origin thật của trang này, nên CSP frame-src chặn; (3) Hub chưa lấy được mã OIDC. Xem mục 'Khi nào hỏng và hỏng ở đâu' trong danh-cho-may/09-cam-mini-app.md.");
+  }, 10000);
+
+  // ── Bước 3 ────────────────────────────────────────────────────────────────────
+  window.addEventListener("message", function (e) {
+    // KIỂM event.origin TRƯỚC KHI ĐỌC BẤT CỨ THỨ GÌ.
+    //
+    // Ở app thật, so với origin của Hub đã ghi cứng trong cấu hình app con — KHÔNG so với
+    // `e.origin` của chính thông điệp đang xét (như thế là tự chứng minh cho mình). App mẫu
+    // này nhận origin đầu tiên gửi tới rồi khoá lại, và nói rõ ra như vậy: nó là bản mẫu
+    // của LUỒNG, không phải bản mẫu của phép kiểm origin.
+    if (originHub === null) originHub = e.origin;
+    if (e.origin !== originHub) return;
+
+    var d = e.data || {};
+    if (d.type === "embed:token") {
+      clearTimeout(hetGio);
+      var ma = String(d.code || d.token || "");
+      dat(
+        "token",
+        "1",
+        "Nhận từ " + originHub + " · mã dài " + ma.length + " ký tự (không in ra: mã ngắn hạn vẫn là bí mật)."
+      );
+
+      // ── Bước 4 ──────────────────────────────────────────────────────────────
+      var cao = document.documentElement.scrollHeight;
+      window.parent.postMessage({ type: "embed:resize", version: 1, height: cao }, originHub);
+      dat("resize", "1", "Đã gửi chiều cao " + cao + "px tới " + originHub + ".");
+
+      // App THẬT làm tiếp ở đây: POST mã này tới /oidc/token của Hub (server-to-server,
+      // KHÔNG qua trình duyệt) để đổi lấy id_token, rồi dựng phiên của mình. App mẫu dừng
+      // lại — nó không có máy chủ, và giả vờ có một cái là dạy sai.
+      return;
+    }
+
+    if (d.type === "embed:error") {
+      clearTimeout(hetGio);
+      dat("token", "loi", "Hub báo lỗi: " + (d.message || d.error || "không rõ"));
+      loi("Hub chủ động báo lỗi thay vì im lặng — đọc nguyên văn ở dòng trên.");
+    }
+  });
+})();
+</script>
+</body>
+</html>

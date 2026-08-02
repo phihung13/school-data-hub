@@ -27,7 +27,7 @@ import {
 } from "@/components/hub-sidebar";
 import { STUDENT_TABBAR_HREFS, resolveTabs } from "@/components/tab-bar";
 import { buildMiniApps } from "@/server/mini-apps";
-import { findEmbedApp, canOpenEmbedApp } from "@/server/embed/registry";
+
 import type { HubRole } from "@hub/core/contracts";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -110,10 +110,22 @@ function stripComments(src: string): string {
  */
 function rolesAllowedBy(href: string): HubRole[] | null {
   if (href.startsWith("/embed/")) {
-    const appId = href.split("/")[2] ?? "";
-    const app = findEmbedApp(appId);
-    if (!app) return [];
-    return ALL_ROLES.filter((r) => canOpenEmbedApp(app, [r]));
+    // NÉM, KHÔNG TRẢ VỀ MỘT CÂU TRẢ LỜI ĐOÁN (02/08/2026, migration 0052).
+    //
+    // Hàng rào của /embed/* trước đây đọc được tĩnh vì danh sách app là một mảng
+    // TypeScript. Nay nó nằm trong bảng `core.embedded_apps`, mà bài test đơn vị chạy
+    // KHÔNG có Postgres. Hai cách xử sai và một cách đúng:
+    //   · trả `[]`  ⇒ "không vai nào vào được" — sai, và nó làm mọi phép kiểm bên dưới
+    //     xanh một cách vô nghĩa (không tile nào lọt qua vì tile nào cũng "bị cấm").
+    //   · trả `null` ⇒ "trang không chặn ai" — sai theo hướng nguy hiểm hơn: nó khiến
+    //     các phép kiểm BỎ QUA route nhúng và không ai thấy là chúng bị bỏ qua.
+    //   · ném ⇒ người viết phép kiểm mới buộc phải quyết định, ngay tại chỗ.
+    // Tính chất "vai nào mở được app nhúng nào" nay kiểm ở tests/db/mini-app-so-dang-ky.test.ts,
+    // nơi có database thật.
+    throw new Error(
+      `rolesAllowedBy("${href}"): hàng rào của route nhúng nằm trong CSDL (0052), không đọc tĩnh được. ` +
+        "Kiểm nó ở tests/db/mini-app-so-dang-ky.test.ts.",
+    );
   }
   const file = pageFileFor(href);
   if (!file) return [];
@@ -163,11 +175,9 @@ describe("bộ đọc hàng rào vai (tự kiểm chính nó)", () => {
     // Trang không chặn vai nào: null, KHÁC hẳn "mảng rỗng" (rỗng = không ai vào được).
     expect(rolesAllowedBy("/ho-so")).toBeNull();
     expect(rolesAllowedBy("/home")).toBeNull();
-    // Hàng rào của /embed/* nằm ở registry, không nằm trong page.tsx.
-    const factory = rolesAllowedBy("/embed/factory") ?? [];
-    expect(factory).toContain("homeroom");
-    expect(factory).not.toContain("student");
-    expect(factory).not.toContain("guardian");
+    // Hàng rào của /embed/* nay nằm trong CSDL — bộ đọc tĩnh này phải NÉM chứ không
+    // được đoán. Xem lý lẽ đầy đủ trong chính hàm đó.
+    expect(() => rolesAllowedBy("/embed/factory")).toThrow(/nằm trong CSDL/);
     // Trang không tồn tại: không ai vào được, không phải "tự do vào".
     expect(rolesAllowedBy("/khong-he-co-trang-nay")).toEqual([]);
   });
@@ -217,12 +227,35 @@ describe("sidebar: menu chọn theo vai thật", () => {
     // Danh sách này rụng dần theo đúng nhịp các vai có màn hình thật, và đó là chủ ý:
     //   · 31/07/2026 — `counselor` rời đi (có /tam-ly), ca riêng nằm ngay dưới;
     //   · 01/08/2026 — `principal`/`board` rời đi (có /dieu-hanh), ca riêng nằm dưới nữa.
+    //   · 02/08/2026 — `admin` rời đi (có /quan-tri/mini-app), ca riêng nằm ngay dưới.
     // Còn lại đúng `teacher`: giáo viên bộ môn GĐ1 chưa có màn nghiệp vụ nào, nên hai
     // mục vào được thật vẫn tốt hơn một mục dẫn tới trang chặn quyền rồi đá ngược.
-    for (const roles of [["teacher"], ["admin"]] as HubRole[][]) {
+    for (const roles of [["teacher"]] as HubRole[][]) {
       const nav = resolveNav(roles);
       expect(nav.items, `vai ${roles.join("+")}`).toBe(STAFF_ITEMS);
       expect(nav.roleLabel).not.toBe("GVCN");
+    }
+  });
+
+  it("quản trị NỐI THÊM mục Mini App, không thay cả bộ của vai kia", () => {
+    // Nối chứ không thay — và đây không phải chuyện gu thiết kế. Tài khoản quản trị duy
+    // nhất của hệ là admin.hung@va.edu.vn, mang `admin+principal`, mà `principal` đứng
+    // TRƯỚC `admin` trong ROLE_PRIORITY. Nếu chọn menu loại trừ như các vai khác thì anh
+    // ấy nhận BOARD_ITEMS và KHÔNG bao giờ thấy màn Mini App; đảo thứ tự thì mất màn
+    // Điều hành. Một người mang hai vai cần cả hai màn.
+    const chiQuanTri = resolveNav(["admin"]).items.map((i) => i.href);
+    expect(chiQuanTri).toContain("/home");
+    expect(chiQuanTri).toContain("/quan-tri/mini-app");
+
+    const caHai = resolveNav(["admin", "principal"]).items.map((i) => i.href);
+    expect(caHai, "mất màn Điều hành").toContain("/dieu-hanh");
+    expect(caHai, "mất màn Mini App").toContain("/quan-tri/mini-app");
+
+    // Và không nối cho người không phải quản trị.
+    for (const roles of [["principal"], ["teacher"], ["homeroom"], ["counselor"]] as HubRole[][]) {
+      expect(resolveNav(roles).items.map((i) => i.href), `vai ${roles.join("+")}`).not.toContain(
+        "/quan-tri/mini-app",
+      );
     }
   });
 
@@ -424,9 +457,13 @@ describe("mục mờ nói về màn hình của CHÍNH vai đang đọc", () => 
     expect(soonLabels(["counselor"])).not.toContain("Quản trị hệ thống");
   });
 
-  it("chỉ quản trị mới thấy “Quản trị hệ thống”", () => {
-    expect(soonLabels(["admin"])).toEqual(["Quản trị hệ thống"]);
-    for (const roles of [["principal"], ["board"], ["teacher"], ["homeroom"], ["guardian"], ["student"]] as HubRole[][]) {
+  it("KHÔNG còn mục mờ “Quản trị hệ thống” — nó đã thành màn thật", () => {
+    // Mục mờ này trỏ href="#" và đứng suốt từ ngày dựng sidebar: một lời hứa suông với
+    // đúng một người. Ngày 02/08/2026 màn Mini App (/quan-tri/mini-app) dựng thật, nên
+    // lời hứa trở thành một mục BẤM ĐƯỢC — kiểm ở "quản trị NỐI THÊM mục Mini App" bên
+    // trên. Giữ lại mục mờ song song với màn thật thì cùng một ý ("quản trị hệ thống")
+    // hiện hai lần, một chỗ bấm được và một chỗ không.
+    for (const roles of [["admin"], ["principal"], ["board"], ["teacher"], ["homeroom"], ["guardian"], ["student"]] as HubRole[][]) {
       expect(soonLabels(roles), `vai ${roles.join("+")}`).not.toContain("Quản trị hệ thống");
     }
   });

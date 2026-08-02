@@ -5,7 +5,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withServiceRole } from "@hub/core/db";
-import { findEmbedApp, verifyWebhookSecret } from "@/server/embed/registry";
+import { verifyWebhookSecret } from "@/server/embed/registry";
+import { timApp } from "@/server/embed/registry-db";
 import { readJsonBody } from "@/lib/read-json";
 
 const Body = z.object({
@@ -30,7 +31,7 @@ const HTTP_BY_STATUS: Record<string, number> = {
 export async function POST(req: Request) {
   const appId = req.headers.get("x-embed-app");
   const secret = req.headers.get("x-embed-secret");
-  const app = appId ? findEmbedApp(appId) : undefined;
+  const app = appId ? await timApp(appId) : undefined;
   if (!app || !verifyWebhookSecret(app, secret)) {
     return NextResponse.json({ error: "app_id/secret không hợp lệ" }, { status: 401 });
   }

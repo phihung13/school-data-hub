@@ -93,6 +93,72 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 // {
 //   "version": "0.2.0",
 //   "schemas": {
+//     "MiniAppBasket": [
+//       "#enum#xanh",
+//       "#enum#vang"
+//     ],
+//     "MiniAppRow": [
+//       "appId",
+//       "displayName",
+//       "basket",
+//       "enabled",
+//       "allowedRoles",
+//       "allowedEventTypes",
+//       "origin",
+//       "iframeUrl",
+//       "iconImageUrl",
+//       "intro",
+//       "owner",
+//       "reviewDueOn",
+//       "overdueDays",
+//       "webhookSecretEnv",
+//       "daCapSecret",
+//       "updatedAt"
+//     ],
+//     "CreateMiniAppInput": [
+//       "appId",
+//       "displayName",
+//       "basket",
+//       "owner",
+//       "reviewDueOn",
+//       "allowedRoles",
+//       "allowedEventTypes",
+//       "origin",
+//       "iframeUrl",
+//       "iconImageUrl",
+//       "intro",
+//       "webhookSecretEnv"
+//     ],
+//     "UpdateMiniAppInput": [
+//       "appId"
+//     ],
+//     "MiniAppId": [
+//       "#expr#z .string() .regex(/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/, \"Mã app chỉ gồm chữ thường, số và dấu gạch ngang\")"
+//     ],
+//     "MiniAppOrigin": [
+//       "#expr#z .string() .regex(/^https:\\/\\/[a-z0-9.-]+(:\\d{1,5})?$/, \"Origin phải dạng https://ten-mien — không kèm đường dẫn, không dấu / cuối\")"
+//     ],
+//     "MiniAppRole": [
+//       "#enum#student",
+//       "#enum#guardian",
+//       "#enum#teacher",
+//       "#enum#homeroom",
+//       "#enum#counselor",
+//       "#enum#principal",
+//       "#enum#board",
+//       "#enum#admin"
+//     ],
+//     "ListMiniAppsOutput": [
+//       "apps",
+//       "soAppCanRaLai"
+//     ],
+//     "SetMiniAppEnabledInput": [
+//       "appId",
+//       "enabled"
+//     ],
+//     "MiniAppMutationOutput": [
+//       "app"
+//     ],
 //     "HubRole": [
 //       "#enum#student",
 //       "#enum#guardian",

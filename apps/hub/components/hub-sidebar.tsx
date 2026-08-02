@@ -136,9 +136,18 @@ export const BOARD_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
   { key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh" },
 ];
-export const ADMIN_SOON: NavItem[] = [
-  { key: "admin", label: "Quản trị hệ thống", icon: "admin_panel_settings", href: "#" },
+/**
+ * Quản trị: màn Mini App dựng thật 02/08/2026 (migration 0052) nên nó rời khỏi nhóm MỜ.
+ *
+ * Trước đó ở đây có đúng một mục mờ "Quản trị hệ thống" trỏ href="#" — một lời hứa suông
+ * đứng suốt từ ngày dựng sidebar. Nay có một màn thật, và nó phải có đường tới: một màn
+ * hình không có đường tới thì với người dùng nó không tồn tại (đúng lỗi đã bắt được với
+ * /dieu-hanh ngày 01/08 — màn chạy tốt, dữ liệu đủ, mà chỉ vào được bằng cách gõ URL).
+ */
+export const ADMIN_EXTRA: NavItem[] = [
+  { key: "miniapp", label: "Mini App", icon: "space_dashboard", href: "/quan-tri/mini-app" },
 ];
+export const ADMIN_SOON: NavItem[] = [];
 /**
  * Hiệu trưởng, ban giám hiệu, giáo viên bộ môn: KHÔNG mục mờ nào.
  *
@@ -194,7 +203,22 @@ export function resolveNav(roles: HubRole[]): NavSet {
     : roles.includes("principal") || roles.includes("board")
       ? BOARD_ITEMS
       : STAFF_ITEMS;
-  return { items, soon, roleLabel: known ? ROLE_LABEL[known] : "TÀI KHOẢN TRƯỜNG" };
+
+  // NỐI THÊM, KHÔNG THAY CẢ BỘ (02/08/2026).
+  //
+  // Mọi nhánh ở trên là loại trừ: một người nhận đúng MỘT bộ menu, chọn theo ROLE_PRIORITY.
+  // Với vai quản trị thì cách đó hỏng, và hỏng theo một cách đo được: tài khoản quản trị
+  // duy nhất của hệ là `admin.hung@va.edu.vn`, mang `admin+principal` — mà `principal`
+  // đứng TRƯỚC `admin` trong ROLE_PRIORITY. Chọn loại trừ thì anh ấy nhận BOARD_ITEMS và
+  // KHÔNG bao giờ thấy màn Mini App; đảo thứ tự thì anh ấy mất màn Điều hành. Một người
+  // mang hai vai cần cả hai màn, không phải màn của vai xếp trên.
+  //
+  // Cũng vì thế `admin` KHÔNG có bộ menu riêng: quản trị ở trường này luôn kiêm một vai
+  // khác. Bộ riêng sẽ là bộ chỉ đúng cho một người không tồn tại.
+  const itemsDuMuc = roles.includes("admin")
+    ? [...items, ...ADMIN_EXTRA.filter((x) => !items.some((i) => i.href === x.href))]
+    : items;
+  return { items: itemsDuMuc, soon, roleLabel: known ? ROLE_LABEL[known] : "TÀI KHOẢN TRƯỜNG" };
 }
 
 type HubSidebarBaseProps = {

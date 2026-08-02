@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentSession } from "@/lib/session";
 import { resolveIdentity } from "@hub/core/auth-adapter";
-import { findEmbedApp, canOpenEmbedApp } from "@/server/embed/registry";
+import { canOpenEmbedApp } from "@/server/embed/registry";
+import { timApp } from "@/server/embed/registry-db";
 import { EmbedFrame } from "@/components/embed-frame";
 
 // apps/hub/app/embed/[appId]/page.tsx — Embed Bridge Tier 2 (08-embedded-apps.md mục 3).
@@ -11,7 +12,7 @@ import { EmbedFrame } from "@/components/embed-frame";
 // ⋯│✕ NỔI đè lên góc trên phải, giống nút đóng cố định của Zalo Mini App — xem
 // embed-floating-menu.tsx (nút ⋯ có chức năng thật: tải lại, mở tab mới).
 export default async function EmbedAppPage({ params }: { params: { appId: string } }) {
-  const app = findEmbedApp(params.appId);
+  const app = await timApp(params.appId);
   if (!app?.embed) notFound();
 
   const session = await getCurrentSession();

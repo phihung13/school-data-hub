@@ -3,7 +3,7 @@
 // Hub trả về alias riêng của app đó cho em học sinh tương ứng — Hub sinh alias, app không tự khai.
 import { NextResponse } from "next/server";
 import { withServiceRole } from "@hub/core/db";
-import { findEmbedApp } from "@/server/embed/registry";
+import { timApp } from "@/server/embed/registry-db";
 
 function getIssuer(): string {
   return process.env.HUB_URL ?? "http://localhost:3000";
@@ -12,7 +12,10 @@ function getIssuer(): string {
 export async function POST(req: Request) {
   const appId = req.headers.get("x-embed-app");
   const auth = req.headers.get("authorization");
-  if (!appId || !findEmbedApp(appId)) {
+  // `timApp` trả undefined cho CẢ "không tồn tại" lẫn "đang tắt" — cố ý không phân biệt
+  // hai ca đó với người gọi ngoài: nói ra "app này có tồn tại nhưng đang tắt" là kể cho
+  // người lạ biết cấu hình bên trong.
+  if (!appId || !(await timApp(appId))) {
     return NextResponse.json({ error: "app_id không hợp lệ" }, { status: 400 });
   }
   if (!auth?.startsWith("Bearer ")) {

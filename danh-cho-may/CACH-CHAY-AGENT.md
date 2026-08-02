@@ -323,15 +323,27 @@ Mục tiêu chủ đầu tư đặt: **mở mini app trong 3 giây**. Hôm nay l
   và `logoUrl` vào manifest, đừng viết chết trong component.
 - Đo lại bằng `performance.now()` trong trình duyệt thật, không đoán.
 
-### 7.3 Phích cắm mini app cho đủ
+### 7.3 Phích cắm mini app — ĐÃ XONG 02/08/2026
 
-Hôm nay mới có Factory, cắm bằng **file cấu hình**. Nợ #8 trong `DEBT.md`.
+Migration `0052` + màn `/quan-tri/mini-app` + `danh-cho-may/09-cam-mini-app.md` +
+`tools/mini-app-mau/index.html`. Nợ #8 đã trả.
 
-- Bảng đăng ký app trong CSDL (thay `registry.ts`), có RLS.
-- Màn quản trị: thêm/sửa/tắt app, xem app nào đang dùng.
-- Một app mẫu + trang hướng dẫn để đội vibe cắm app mới **không cần sửa mã lõi**.
-- Đọc `danh-cho-may/08-embedded-apps.md` và ADR-015/017 trước — chuẩn đã chốt rồi,
-  việc còn lại là thi hành.
+Cắm một app mới nay **không sửa một dòng mã lõi nào**: khai trên màn quản trị, cấp vai,
+bấm bật. Tắt là một nút, có hiệu lực ở trang ngay lượt request kế tiếp (CSP theo kịp
+trong ≤10 giây — đo được, xem nợ #54).
+
+**Ba điều đo được trong lúc làm, đáng nhớ hơn cả kết quả:**
+
+1. **RLS trên UPDATE không ném lỗi.** Chính sách chỉ-quản-trị lọc HÀNG, không từ chối
+   câu lệnh: câu `update` của cô giáo chạy xong, đổi 0 dòng, im lặng tuyệt đối. `insert`
+   thì ném `42501` thật. Mọi handler ghi phải tự đọc `rowCount` — không thì màn hình báo
+   "đã lưu" cho một thao tác chưa từng xảy ra.
+2. **Bộ chạy migration đòi `begin;`…`commit;` bọc cả file.** Thiếu thì nó từ chối và nói
+   rõ vì sao — nhưng file vẫn chạy ngon qua `psql`, nên chỉ `tests/db/migrate.test.ts`
+   (dựng lại cả kho từ database rỗng) mới bắt được.
+3. **`describe.skipIf(!ready)` đọc `ready` lúc THU THẬP, trước `beforeAll`.** Cả 15 bài
+   "xanh" mà không chạy bài nào. Khuôn đúng của kho là `it("…", async ({ skip }) => { if
+   (!ready) return skip(); … })`.
 
 ### 7.4 Hoàn thiện bản điện thoại
 

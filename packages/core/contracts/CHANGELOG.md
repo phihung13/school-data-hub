@@ -19,6 +19,26 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ### Added
 
+- **Sổ đăng ký Mini App** (migration `0052`, ADR-015 mục 5): `MiniAppRow`, `ListMiniAppsOutput`,
+  `CreateMiniAppInput`, `UpdateMiniAppInput`, `SetMiniAppEnabledInput`, `MiniAppMutationOutput`,
+  cùng ba kiểu nền `MiniAppId`, `MiniAppOrigin`, `MiniAppBasket`, `MiniAppRole`.
+
+  **Vì sao vibe team cần biết:** từ đây thêm một Mini App ngoài KHÔNG còn phải sửa mã lõi.
+  Trước 02/08/2026 danh sách app nằm trong `apps/hub/server/embed/registry.ts` — một mảng
+  TypeScript, nên mỗi lần cắm app là một lần chờ dev lõi sửa file, build, deploy. Nay khai
+  qua màn `/quan-tri/mini-app`, và nguồn sự thật là bảng `core.embedded_apps`.
+
+  **Ba chỗ dễ hiểu nhầm, đọc trước khi dùng:**
+
+  1. `MiniAppBasket` chỉ có **hai** giá trị (`xanh`, `vang`). Rổ Đỏ không phải là "giá trị
+     chưa hỗ trợ" — nó là trạng thái không biểu diễn được, ở cả contract lẫn CHECK của bảng.
+  2. Contract **không** có trường chứa secret webhook. `webhookSecretEnv` là TÊN biến môi
+     trường; giá trị không bao giờ vào database (bản sao lưu database đi ra khỏi máy chủ).
+     Muốn biết "app này đã cấp secret chưa" thì đọc `daCapSecret` — boolean do máy chủ tính.
+  3. `CreateMiniAppInput` **không** có `enabled`. App mới luôn tắt. Bật là một quyết định
+     riêng (`setEnabled`), không gộp vào lần khai.
+
+
 - **`SubmitMoodOutput.moodSaved` + `SubmitMoodOutput.moodBlockedReason`** (migration `0047`,
   ADR-027 bản 2) — máy chủ nay có thể nhận một lượt check-in mà **không** nhận mức tâm trạng:
   nhà em chưa có phiếu đồng ý của người đại diện thì RLS của `attendance.checkins` từ chối giá

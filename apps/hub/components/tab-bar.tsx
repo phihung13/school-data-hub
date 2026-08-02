@@ -163,6 +163,17 @@ export const BOARD_TABBAR_ITEMS: TabItem[] = [
 ];
 
 /**
+ * Mục thêm cho vai quản trị — NỐI vào bộ của vai kia, không thay nó.
+ *
+ * Cùng lý lẽ với ADMIN_EXTRA của sidebar: tài khoản quản trị của hệ mang `admin+principal`,
+ * nên một bộ tab loại trừ sẽ làm mất một trong hai màn. Hai thanh điều hướng của cùng một
+ * người phải nói cùng một điều (luật tự đặt ở resolveTabs) — nên chỗ này đi theo chỗ kia.
+ */
+export const ADMIN_TABBAR_EXTRA: TabItem[] = [
+  { key: "miniapp", label: "Mini App", icon: "space_dashboard", href: "/quan-tri/mini-app" },
+];
+
+/**
  * Vai nhân viên chưa có màn riêng (giáo viên bộ
  * môn, quản trị) và cả tài khoản CHƯA được gán vai nào. Tối thiểu 2 mục — cùng
  * chủ ý với STAFF_ITEMS của sidebar: thà ít mục vào được còn hơn nhiều mục dẫn
@@ -182,12 +193,22 @@ export const STAFF_TABBAR_ITEMS: TabItem[] = [
  * environment: "node").
  */
 export function resolveTabs(roles: HubRole[]): TabItem[] {
-  if (roles.includes("student")) return STUDENT_TABBAR_ITEMS;
-  if (roles.includes("homeroom")) return TEACHER_TABBAR_ITEMS;
-  if (roles.includes("guardian")) return GUARDIAN_TABBAR_ITEMS;
-  if (roles.includes("counselor")) return COUNSELOR_TABBAR_ITEMS;
-  if (roles.includes("principal") || roles.includes("board")) return BOARD_TABBAR_ITEMS;
-  return STAFF_TABBAR_ITEMS;
+  const co = roles.includes("student")
+    ? STUDENT_TABBAR_ITEMS
+    : roles.includes("homeroom")
+      ? TEACHER_TABBAR_ITEMS
+      : roles.includes("guardian")
+        ? GUARDIAN_TABBAR_ITEMS
+        : roles.includes("counselor")
+          ? COUNSELOR_TABBAR_ITEMS
+          : roles.includes("principal") || roles.includes("board")
+            ? BOARD_TABBAR_ITEMS
+            : STAFF_TABBAR_ITEMS;
+  if (!roles.includes("admin")) return co;
+  // Trần 4 mục của DESIGN-GUIDELINES §6 vẫn giữ: bộ dài nhất trong các bộ trên là 3 mục
+  // (tab "Hồ sơ" đã rời sang avatar 02/08/2026), cộng một là 4. Ô avatar không tính vào
+  // đây — nó do chính thanh tab dựng, không đi qua danh sách này.
+  return [...co, ...ADMIN_TABBAR_EXTRA.filter((x) => !co.some((i) => i.href === x.href))];
 }
 
 /**

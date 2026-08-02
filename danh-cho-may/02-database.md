@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 27
+sync-version: 28
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -687,6 +687,40 @@ Kèm một dòng `ops.job_schedule`: `kenh_bao_dong`, kind `script`, runner `run
 **Nửa còn nợ, đừng đọc nhẹ đi:** tệp nhật ký là kênh **KÉO**. Nó không rung điện thoại ai lúc 2 giờ sáng — vẫn phải có người đi mở ra xem. Và bộ sinh báo động nằm **trong chính bộ lịch nó canh**, nên cron chết thì không tin nào được sinh, kể cả tin "cron đã chết". Không vá được từ bên trong; người canh vòng ngoài vẫn là nợ #33.
 
 Kiểm chứng: `0051_kenh_bao_dong_test.sql` **39 assertion** + `tests/db/kenh-bao-dong.test.ts` chạy tiến trình thật và hệ tệp thật. **Toàn bộ pgTAP sau đợt G: 871 assertion / 50 file**, mọi file khớp `plan(N)`.
+
+## Đợt H (`0052`, 02/08/2026) — sổ đăng ký Mini App rời khỏi mã nguồn
+
+`core.embedded_apps` — App Manifest (ADR-015 mục 5) nay là một **bảng**, không còn là mảng TypeScript trong `apps/hub/server/embed/registry.ts`. Trả nợ `DEBT.md` #8.
+
+**Cái đang thiếu, đo được 02/08/2026.** Danh sách app ngoài nằm trong mã nên ba việc đều phải qua một chu trình build: thêm app, **tắt app**, và ghi ngày rà lại. Vế thứ hai là vế nguy hiểm — app ngoài lộ dữ liệu hoặc domain hết hạn rồi bị người khác mua lại thì đường thu hồi nhanh nhất vẫn phải chờ hai dev lõi mở máy. Vế thứ ba làm một luật đã chốt (`08-embedded-apps.md` mục 5: "quá hạn không rà thì thu hồi quyền") sống trên giấy suốt từ ngày viết, vì không có chỗ nào ghi cái ngày đó.
+
+**Bảy ràng buộc, mỗi cái chặn một ca hỏng câm** — cả bảy đã dựng dòng vi phạm và đo database từ chối (`0052_so_dang_ky_mini_app_test.sql`, 29 assertion):
+
+| Ràng buộc | Chặn điều gì |
+|---|---|
+| `basket in ('xanh','vang')` | Rổ **Đỏ** không biểu diễn được — kể cả bằng psql, kể cả bằng quản trị. Mục 0 nói "không có đường xin"; đây là chỗ câu đó thành một trạng thái không tồn tại thay vì một lời dặn |
+| `embedded_apps_nhung_du_bo` | Có `origin` mà thiếu `iframe_url` (khung trống) hoặc ngược lại (CSP không có gì để allowlist) |
+| `embedded_apps_iframe_thuoc_origin` | `iframe_url` trỏ miền khác miền đã allowlist ⇒ CSP chặn, app trắng, không ai hiểu vì sao |
+| `embedded_apps_sao_chi_cho_ro_xanh` | Rổ **Vàng** khai `allowed_event_types = {*}` — ở đó "mọi loại sự kiện" là ký một tờ giấy trắng về từng em |
+| `allowed_roles <@ array[...]` | Một vai gõ sai là một hàng rào không bao giờ khớp ai |
+| `origin ~ '^https://…'` (không path) | `http://` trần, và origin mang đường dẫn — cả hai làm phép so `event.origin` của postMessage trượt |
+| `app_id ~ '^[a-z][a-z0-9-]…'` | Mã app đi thẳng vào `/embed/<app_id>` |
+
+**Mặc định fail-closed:** `enabled = false`, `allowed_roles = '{}'` (mảng rỗng = **không ai** mở được). App mới quên cấp vai hỏng ngay lần bấm đầu, lúc còn người ngồi nhìn.
+
+**Secret webhook KHÔNG vào database.** Cột `webhook_secret_env` giữ **tên biến môi trường**, không giữ giá trị. Ba lý do: bản sao lưu đi ra khỏi máy chủ (3-2-1), mọi `pg_dump` dựng môi trường dev là một lần nhân bản secret, và người có quyền đọc bảng quản trị không đồng nghĩa với người được biết secret. Màn quản trị vẫn trả lời được "app này đã cấp secret chưa" — máy chủ đọc `process.env` rồi trả về một **boolean**.
+
+**RLS:** người đăng nhập bất kỳ đọc được app **đang bật** (trang chủ cần danh sách để dựng lưới tile); quản trị thấy cả app đang tắt và là người duy nhất ghi được.
+
+> **Điều đo được quan trọng nhất của đợt này — RLS trên UPDATE KHÔNG ném lỗi.** Chính sách chỉ-quản-trị áp cho `update` bằng cách **lọc hàng**, không bằng cách từ chối câu lệnh. Cô giáo chạy `update core.embedded_apps set enabled = true` thì câu lệnh hợp lệ, chạy xong, đổi **0 dòng**, và Postgres im lặng tuyệt đối. `insert` thì khác — `with check` không có hàng nào để lọc nên nó ném `42501` thật. Hệ quả nằm ở tầng trên: mọi handler trong `apps/hub/server/routers/admin.ts` phải tự đọc `rowCount` và biến sự im lặng đó thành một lời từ chối, nếu không màn hình sẽ báo "đã lưu" cho một thao tác chưa từng xảy ra — với người vừa tưởng mình thu hồi xong một app đang lộ dữ liệu. `tests/db/mini-app-so-dang-ky.test.ts` (15 phép) gọi đúng procedure màn hình gọi, bằng đúng phiên của một cô giáo, rồi đòi nó **ném**.
+
+`core.v_mini_app_can_ra_lai` — app tới hạn rà trong 30 ngày tới hoặc đã quá hạn. Máy nói cho người biết; việc thu hồi vẫn do người bấm.
+
+**Middleware và Edge runtime.** Header CSP `frame-src` dựng trong `apps/hub/middleware.ts`, chạy trên Edge — không có `net`/`tls` nên không chạy được `pg`. Nó lấy origin qua `/api/embed/manifest` (route Node) và **fail-closed**: không hỏi được thì đặt `frame-src 'self'`, tức app ngoài không nạp. Đường kia (bỏ hẳn header khi hỏng) biến một sự cố database thành một lần gỡ allowlist trên toàn bộ `/embed/*` — đúng lúc hệ đang hỏng là lúc hàng rào biến mất. Một app không mở được thì có người kêu ngay; một allowlist bị gỡ thì không ai biết.
+
+Cách cắm một app mới: `danh-cho-may/09-cam-mini-app.md`. Bản mẫu phía app con: `tools/mini-app-mau/index.html`.
+
+Kiểm chứng: `0052_so_dang_ky_mini_app_test.sql` **29 assertion** + `tests/db/mini-app-so-dang-ky.test.ts` **15 phép** qua router thật. **Toàn bộ pgTAP sau đợt H: 900 assertion / 51 file**, mọi file khớp `plan(N)`.
 
 ## Quy tắc migration (§2)
 

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/lib/session";
 import { resolveIdentity } from "@hub/core/auth-adapter";
 import { HomeView } from "@/components/home-view";
-import { buildMiniApps } from "@/server/mini-apps";
+import { buildMiniAppsWithEmbedded } from "@/server/mini-apps";
 import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
 import { log, describeError } from "@/lib/logger";
 
@@ -51,7 +51,7 @@ export default async function HomePage() {
       // Lưới mini app chỉ phụ thuộc vai trò, mà vai trò đã nằm sẵn trong phiên ở đây —
       // tính luôn phía server để HTML lần đầu đã có đủ tile. Query tRPC bên trong vẫn
       // chạy (nguồn sự thật duy nhất là router), nhưng nó chỉ xác nhận lại thứ đã hiện.
-      initialMiniApps={buildMiniApps(session.roles)}
+      initialMiniApps={await buildMiniAppsWithEmbedded(session.roles)}
     />
   );
 }

@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { findEmbedApp } from "@/server/embed/registry";
 // Import THẲNG file session.ts, không qua "@hub/core/auth-adapter" như mọi nơi khác:
 // index.ts của adapter kéo theo dev-provider → db/client → `pg`, mà Edge runtime của
 // middleware không có `net`/`tls` để chạy `pg`. session.ts chỉ phụ thuộc `jose` + một
@@ -72,6 +71,57 @@ async function callRefresh(req: NextRequest): Promise<Response | null> {
   return null;
 }
 
+/**
+ * Origin của app nhúng — lấy qua `/api/embed/manifest`, KHÔNG đọc thẳng database.
+ *
+ * Middleware chạy trên Edge runtime: không `net`, không `tls`, nên không chạy được `pg`.
+ * Nguồn sự thật là bảng `core.embedded_apps` (migration 0052), và đường duy nhất chạm
+ * tới nó từ đây là một lời gọi HTTP vào chính Hub.
+ *
+ * ── FAIL-CLOSED, và vì sao đó là lựa chọn đúng chứ không phải lựa chọn an toàn ──
+ * Không lấy được danh sách thì hàm này trả `null`, và chỗ gọi đặt `frame-src 'self'` —
+ * tức app ngoài KHÔNG nạp được. Người dùng thấy màn chờ rồi thấy trạng thái "quá lâu"
+ * của embed-intro.tsx.
+ *
+ * Đường kia (fail-open: bỏ hẳn header CSP khi không hỏi được) nghe có vẻ "nhẹ nhàng hơn
+ * với người dùng", nhưng nó biến một sự cố database thành một lần gỡ bỏ allowlist trên
+ * TOÀN BỘ route /embed/* — đúng lúc hệ đang hỏng là lúc hàng rào biến mất. Một app không
+ * mở được thì có người kêu ngay; một allowlist bị gỡ thì không ai biết.
+ *
+ * Bộ đệm 10 giây, cùng con số với `registry-db.ts`. Module scope của Edge sống qua nhiều
+ * request trong cùng một isolate nên đây là bộ đệm thật, không phải bộ đệm một lần.
+ */
+const MANIFEST_DEM_MS = 10_000;
+let manifestDem: { luc: number; theo: Map<string, string> } | null = null;
+
+async function originCuaApp(req: NextRequest, appId: string): Promise<string | null> {
+  const now = Date.now();
+  if (!manifestDem || now - manifestDem.luc >= MANIFEST_DEM_MS) {
+    const candidates = [
+      process.env.HUB_INTERNAL_URL ?? `http://127.0.0.1:${process.env.PORT ?? "3000"}`,
+      req.nextUrl.origin,
+    ];
+    let theo: Map<string, string> | null = null;
+    for (const base of candidates) {
+      try {
+        const res = await fetch(new URL("/api/embed/manifest", base), { cache: "no-store" });
+        if (!res.ok) continue;
+        const body = (await res.json()) as { apps?: Array<{ appId: string; origin: string }> };
+        if (!Array.isArray(body.apps)) continue;
+        theo = new Map(body.apps.map((a) => [a.appId, a.origin]));
+        break;
+      } catch {
+        // Thử đường kế tiếp.
+      }
+    }
+    // KHÔNG ghi bộ đệm khi hỏi hỏng: ghi một Map rỗng vào đây là khoá cứng trạng thái
+    // "không có app nào" suốt 10 giây kế tiếp, kể cả sau khi database đã sống lại.
+    if (!theo) return null;
+    manifestDem = { luc: now, theo };
+  }
+  return manifestDem.theo.get(appId) ?? null;
+}
+
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   let res = NextResponse.next();
@@ -107,16 +157,22 @@ export async function middleware(req: NextRequest) {
   const appId = match?.[1];
   if (!appId) return res;
 
-  const app = findEmbedApp(appId);
+  const origin = await originCuaApp(req, appId);
   res.headers.set("Referrer-Policy", "no-referrer");
-  if (app?.embed) {
+  if (origin) {
     // frame-src allowlist đúng MỘT domain đã khai trong Manifest — không wildcard.
     // BẮT BUỘC thêm 'self': trang /embed/<app-id> còn tự dựng một iframe ẨN trỏ /oidc/auth
     // của chính Hub (embed-frame.tsx, bước lấy mã ngắn hạn) — thiếu 'self' thì CSP chặn luôn
     // iframe ẩn đó, embed:ready tới nhưng không bao giờ có embed:token trả lại (đã bắt lỗi
     // này thật ngày 29/07/2026: Factory xác nhận gửi đúng, Hub xác nhận nhận đúng, nhưng
     // không có gì xảy ra ở giữa — chính là CSP tự chặn chính mình).
-    res.headers.set("Content-Security-Policy", `frame-src 'self' ${app.embed.origin}`);
+    res.headers.set("Content-Security-Policy", `frame-src 'self' ${origin}`);
+  } else {
+    // Không biết origin (app tắt, app không tồn tại, hoặc chưa hỏi được sổ đăng ký):
+    // KHÔNG khung ngoài nào được nạp. Trang /embed/<app> tự trả 404 cho hai ca đầu; ca
+    // thứ ba hiện màn "quá lâu" của embed-intro.tsx. Cả ba đều ồn hơn một allowlist
+    // biến mất trong im lặng.
+    res.headers.set("Content-Security-Policy", "frame-src 'self'");
   }
   return res;
 }

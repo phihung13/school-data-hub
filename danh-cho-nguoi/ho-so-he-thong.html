@@ -1883,7 +1883,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="27">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="28">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -2262,6 +2262,38 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           <p>Mỗi dòng còn ghi một <b>dấu niêm phong</b> của tệp lúc nó được chạy. Nếu về sau ai đó sửa một dòng trong một tệp đã dùng rồi, công cụ so dấu niêm phong, thấy lệch, và <b>dừng lại báo cáo</b>. Không có dấu niêm phong này, đó là kiểu hỏng lặng nhất có thể tưởng tượng: tệp đã sửa sẽ không được chạy lại (sổ bảo là làm rồi), nên máy chủ cứ chạy theo bản cũ trong khi hồ sơ của chúng ta mô tả bản mới &mdash; và không một tiếng động nào báo cho ai biết. Chúng tôi đã thử ngược: thêm đúng một dòng ghi chú vào một tệp cũ, công cụ dừng ngay và in ra cả hai dấu niêm phong để đối chiếu.</p>
         </div>
         <p>Còn một chi tiết nhỏ mà chúng tôi muốn nói rõ, vì nó là chỗ dễ sai nhất: <b>sổ trống không có nghĩa là chưa làm gì</b>. Bốn mươi chín bước đã làm bằng tay từ trước khi có sổ. Nếu công cụ mở sổ ra thấy trống rồi kết luận &ldquo;chưa làm gì&rdquo;, nó sẽ làm lại cả bốn mươi chín bước lên một kho đã đầy đủ. Nên công cụ có một bước riêng gọi là <b>nhận nợ</b>: người vận hành khai &ldquo;bốn mươi chín bước này đã có sẵn rồi&rdquo;, sổ ghi nhận mà không chạy lại, và ghi rõ đó là dòng nhận nợ chứ không phải dòng đã chạy. Hai loại dòng đó không bao giờ được lẫn vào nhau, và kho dữ liệu <b>tự cưỡng chế</b> điều đó chứ không trông vào trí nhớ của ai. Đã chạy thật trên máy dev ngày 02/08: 49 dòng nhận nợ, 1 dòng chạy thật, và lần gọi tiếp theo trả lời gọn <i>&ldquo;50 trên 50 bước đã ở trong sổ&rdquo;</i>.</p>
+
+        <h3>Đợt 02/08/2026 (chiều): cuốn sổ ghi các app ngoài, và cái công tắc tắt được trong mười giây</h3>
+        <p class="lede">Trường sẽ có nhiều ứng dụng nhỏ cắm vào Hub &mdash; app thể lực, app căn tin, app câu lạc bộ. Đợt này trả lời đúng một câu: <b>ai cho phép chúng vào, và tắt chúng đi mất bao lâu?</b></p>
+
+        <p>Cho tới sáng nay, danh sách các app được phép cắm vào Hub nằm <b>trong mã nguồn</b>. Nghe thì bình thường, nhưng nó kéo theo ba việc mà chúng tôi thấy không ổn:</p>
+        <ul class="plain-list">
+          <li>Đội làm app dựng xong lúc 10 giờ tối thì phải chờ một trong hai kỹ sư chính mở máy, sửa file, dựng lại cả hệ &mdash; chỉ để thêm một cái tên vào danh sách.</li>
+          <li><b>Tắt một app cũng phải qua đúng chu trình đó.</b> Đây mới là chỗ nguy hiểm: giả sử một app ngoài để lộ dữ liệu, hoặc tên miền của nó hết hạn rồi bị người khác mua lại &mdash; đường thu hồi nhanh nhất vẫn phải chờ người mở máy.</li>
+          <li>Không có chỗ nào ghi <b>ngày rà lại</b> từng app. Quy định của chính chúng tôi nói &ldquo;quá hạn không rà thì thu quyền&rdquo;, nhưng quy định đó chưa từng chạy được ngày nào, vì không có chỗ ghi cái ngày đó.</li>
+        </ul>
+
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Nay có một cuốn sổ, và một màn hình để mở nó ra</div>
+          <p>Người quản trị vào một màn hình, khai app mới, cấp cho vai nào được mở, bấm bật. <b>Tắt app là một nút, có hiệu lực ngay lượt bấm kế tiếp</b> &mdash; không dựng lại gì, không chờ ai.</p>
+          <p>App vừa khai <b>luôn ở trạng thái tắt và chưa cấp cho ai</b>. Đó là cố ý: &ldquo;app này có tồn tại&rdquo; và &ldquo;app này được chạm vào dữ liệu học sinh&rdquo; là hai quyết định khác nhau, và gộp chúng vào một cú bấm thì cú bấm đó sẽ được bấm lúc đang vội.</p>
+        </div>
+
+        <h4>Ba loại app, và loại thứ ba không có đường xin</h4>
+        <p>Mỗi app phải khai mình thuộc loại nào: <b>Xanh</b> &mdash; không gắn tên em nào (thực đơn tuần, lịch câu lạc bộ); <b>Vàng</b> &mdash; có gắn tên từng em (thể lực, suất ăn và dị ứng); <b>Đỏ</b> &mdash; hồ sơ chăm sóc, y tế, tâm trạng.</p>
+        <p>Loại Đỏ không app ngoài nào được chạm, ở bất kỳ mức nào, kể cả chỉ để đọc. Điều đáng nói là <b>nay nó không còn là một dòng quy định nữa</b>: kho dữ liệu chỉ nhận hai giá trị Xanh và Vàng, nên không ai khai được một app loại Đỏ &mdash; kể cả người quản trị, kể cả người vào thẳng kho bằng dòng lệnh. Một điều cấm nằm trong tài liệu thì người ta đọc rồi quên; một điều cấm nằm trong kho thì kho từ chối, và lời từ chối đó không phụ thuộc vào việc ai đang nhớ điều gì.</p>
+        <p>Có một chỗ dễ nhầm mà chúng tôi ghi hẳn vào màn khai app: <b>app thể lực và app căn tin nghe như loại Xanh nhưng là loại Vàng</b> &mdash; app thể lực ghi chỉ số cơ thể của từng em, căn tin ghi em nào dị ứng món gì.</p>
+
+        <h4>Mật khẩu của app không nằm trong kho dữ liệu</h4>
+        <p>Mỗi app có một chuỗi mật khẩu để gửi dữ liệu về Hub. Cuốn sổ này <b>chỉ ghi tên của chỗ cất mật khẩu, không ghi mật khẩu</b>. Lý do rất thực tế: bản sao lưu kho dữ liệu được mang ra khỏi máy chủ mỗi ngày, và mỗi lần kỹ sư dựng một môi trường thử là một lần sao chép cả kho. Nếu mật khẩu nằm trong kho thì nó đi theo tất cả những bản sao đó.</p>
+        <p>Đổi lại, màn hình vẫn trả lời được câu người quản trị cần: <i>&ldquo;app này đã cấp mật khẩu chưa?&rdquo;</i> &mdash; và nó nói thẳng khi thấy khai tên mà chưa đặt giá trị: <i>&ldquo;chưa được đặt trên máy chủ &mdash; app sẽ bị từ chối&rdquo;</i>. Không có dòng đó thì người khai tin là xong, còn app thì bị chặn mãi mà không ai hiểu vì sao.</p>
+
+        <h4>Một điều chúng tôi đo được và suýt bỏ qua</h4>
+        <p>Khi thử xem cô giáo có tự bật được một app không, kho dữ liệu <b>không báo lỗi</b>. Nó nhận câu lệnh, chạy xong, và <b>không đổi gì cả</b> &mdash; im lặng tuyệt đối. Nếu màn hình cứ thế hiện &ldquo;đã lưu&rdquo;, thì người vừa bấm tắt một app đang lộ dữ liệu sẽ tin là mình đã tắt xong, trong khi app vẫn chạy.</p>
+        <p>Nên phần mềm nay <b>đếm xem có đúng một dòng nào thay đổi không</b>, và nếu không thì nói thẳng là không có quyền. Chúng tôi viết riêng một bộ kiểm chứng gọi đúng cái nút mà màn hình gọi, bằng đúng phiên đăng nhập của một cô giáo, rồi đòi nó phải từ chối &mdash; chứ không chỉ đòi &ldquo;không có gì đổi&rdquo;.</p>
+
+        <h4>Nghiệm thu</h4>
+        <p>29 phép kiểm ở tầng kho dữ liệu (mỗi ràng buộc đều dựng một dòng vi phạm thật rồi đòi kho từ chối) và 15 phép kiểm gọi qua đúng đường mà màn hình đi. Cách cắm một app mới viết thành một bài hướng dẫn riêng, kèm một app mẫu chạy được để đội làm app thử trước khi viết một dòng nghiệp vụ nào.</p>
 
         <details class="details deep">
           <summary>Chi tiết kỹ thuật · khóa, System of Record và vòng đời</summary>

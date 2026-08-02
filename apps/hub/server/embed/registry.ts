@@ -80,7 +80,7 @@ export interface EmbedAppConfig {
  * Gate bằng NODE_ENV: ở production mảng này rỗng ⇒ findEmbedApp('test-external-app') trả
  * undefined ⇒ webhook trả 401 trước cả khi so secret.
  */
-const DEV_ONLY_APPS: EmbedAppConfig[] =
+export const DEV_ONLY_APPS: EmbedAppConfig[] =
   process.env.NODE_ENV !== "production"
     ? [
         {
@@ -93,36 +93,21 @@ const DEV_ONLY_APPS: EmbedAppConfig[] =
       ]
     : [];
 
-export const EMBED_APPS: EmbedAppConfig[] = [
-  ...DEV_ONLY_APPS,
-  // Factory (factory.vietanh.org) — rổ Xanh, 29/07/2026. Không giới hạn event_type: yêu cầu
-  // "toàn bộ dữ liệu đổ về", chấp nhận đổi lấy việc chưa có bảng cấu trúc riêng cho từng loại
-  // sự kiện (xem core.promote_embedded_event nhánh generic, evidence.embedded_app_events).
-  {
-    appId: "factory",
-    webhookSecret: process.env.EMBED_WEBHOOK_SECRET_FACTORY || undefined,
-    basket: "xanh",
-    allowedEventTypes: ["*"],
-    // Factory là app NHÂN VIÊN (soạn giáo án/học liệu) — không có gì cho học sinh, phụ huynh
-    // trong đó. Danh sách này khớp với lưới tile trang chủ, nhưng ở đây nó là hàng rào thật.
-    allowedRoles: ["teacher", "homeroom", "counselor", "principal", "board", "admin"],
-    embed: {
-      displayName: "Factory",
-      origin: "https://factory.vietanh.org",
-      // Factory cần tự dựng route /embed riêng (không phải trang chủ thường) — phát
-      // "embed:ready", nhận "embed:token", KHÔNG tự vẽ nút quay lại (Hub vẽ ở ngoài iframe).
-      iframeUrl: "https://factory.vietanh.org/embed",
-      // ?v = sha256(apps/hub/public/factory-icon.svg).slice(0, 8) — xem chú thích ở
-      // khai báo iconImageUrl. Đổi file icon thì đổi cả chuỗi này.
-      iconImageUrl: "/factory-icon.svg?v=36a33380",
-      intro: "Xưởng nội dung của trường — soạn và quản lý học liệu, dùng chung tài khoản Hub.",
-    },
-  },
-];
-
-export function findEmbedApp(appId: string): EmbedAppConfig | undefined {
-  return EMBED_APPS.find((a) => a.appId === appId);
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// DANH SÁCH APP ĐÃ RỜI KHỎI FILE NÀY (02/08/2026, migration 0052)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Trước đây ở đây có `EMBED_APPS` và `findEmbedApp()`. Nguồn sự thật nay là bảng
+// `core.embedded_apps`; đọc nó qua `./registry-db.ts` (`timApp`, `napApps`) — file đó
+// CHỈ nạp được trên Node.
+//
+// KHÔNG để lại một mảng "dự phòng" ở đây. Cám dỗ là giữ nó cho middleware dùng tạm, và
+// hậu quả đúng bằng thứ cả kho này sợ nhất: hai nguồn sự thật cho một câu hỏi, rồi một
+// hôm quản trị tắt app trên màn hình mà `frame-src` vẫn allowlist domain cũ — tắt trên
+// giấy, còn sống trong header. Middleware lấy origin qua `/api/embed/manifest` và
+// FAIL-CLOSED khi không lấy được.
+//
+// `DEV_ONLY_APPS` ở trên KHÔNG chuyển vào migration, có chủ ý: nó mang secret in trần
+// trong kho. Migration chạy cả trên máy chủ thật.
 
 /**
  * Người mang bộ vai này có được mở app ngoài đó không (Rev E điều 3 — không có đường ghi
