@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Noi quy dung dien thoai trong gio check-in, khop dung luat diem danh cua he thong: mang truong, khung gio, giao vien chu nhiem xac nhan.">
+<title>Nội quy dùng điện thoại trong giờ check-in</title>
+<!--
+  danh-cho-nguoi/noi-quy-dien-thoai.html
+  ======================================
+  Trả cho ô "Nhóm 6 - Quản trị / Nội quy dùng điện thoại trong giờ check-in - Chủ tịch ký"
+  trong lo-trinh-go-live.html.
+
+  TỜ NÀY PHẢI KHỚP TỪNG CHỮ VỚI LUẬT ĐIỂM DANH ĐANG CHẠY, vì nó sẽ được dùng để phân xử
+  khi có tranh cãi "em bị ghi vắng oan". Nguồn của từng khẳng định:
+
+  · ADR-007 (danh-cho-may/ADR.md dòng ADR 007): "Điểm danh = IP trường (server kiểm) +
+    khung giờ + GVCN xác nhận lệch; QR động 30s là nâng cấp ngủ; bản sync muộn = queued_late,
+    không tự tính chuyên cần". Cài đặt thật ở migration 0027_checkin_rules.sql, hàm
+    attendance.resolve_checkin() - ĐÂY LÀ NƠI DUY NHẤT quyết định trạng thái một lần bấm.
+    Đọc thẳng hàm đó, từng nhánh:
+      - chưa khai luật cho cơ sở      -> 'present'  (không phạt em vì thiếu cấu hình của người lớn)
+      - ngoài dải IP của trường       -> 'queued_late' (KHÔNG kết luận vắng)
+      - sau giờ đóng cổng             -> 'late'
+      - còn lại, kể cả trước giờ mở   -> 'present'  ("đi sớm không phải lỗi của em")
+      - gửi bù từ hàng đợi offline    -> 'queued_late' + nguồn 'offline_queue', ngày lấy từ
+                                         đồng hồ MÁY EM; quá hạn -> từ chối và nói thẳng
+  · Khung giờ mặc định 06:45 - 07:30: cột opens_at / closes_at của attendance.checkin_rules
+    (migration 0004_attendance.sql, đọc lại bằng \d trên hub_dev 02/08/2026).
+    TỜ GIẤY CỐ Ý CHỪA Ô TRỐNG để cơ sở điền giờ thật - mệnh lệnh 7 của CLAUDE.md: con số
+    nằm trong bảng, đổi giờ là một câu lệnh cập nhật, không phải một lần cài lại phần mềm.
+    Một cơ sở chỉ có MỘT bộ luật đang hiệu lực (chỉ mục duy nhất checkin_rules_one_active_idx).
+  · Trần tuổi bản gửi bù: cột queue_max_age_days, mặc định 7 ngày, đặt được trong khoảng
+    1..60 (ràng buộc checkin_rules_queue_age_chk).
+  · Năm trạng thái và tên hiển thị: ATTENDANCE_STATUS_LABEL trong packages/core/contracts/care.ts
+      present "Có mặt" · late "Đi muộn" · absent "Vắng" · excused "Có phép"
+      · queued_late "Gửi muộn - chờ xác nhận"
+  · "Chưa điểm danh" KHÔNG mặc định thành "Vắng": apps/hub/components/gvcn/class-attendance-view.tsx,
+    quyết định 3 ở đầu file, và RULES.md phụ lục Rev F điều 8 (im lặng không phải kết luận).
+  · Thiết bị là điện thoại cá nhân, ứng dụng web cài về máy: ADR-003.
+  · Máy không chứng minh được em ĐANG NGỒI TRONG LỚP - chỉ chứng minh được máy ở trong mạng
+    trường: ghi thẳng trong 0027 và DEBT #5. Đó là lý do giáo viên chủ nhiệm vẫn là người chốt.
+  · Không GPS, không camera: ADR-007 nguyên văn "chống gian lận không xâm phạm".
+  · Nhắc quan trọng đi qua Zalo OA, app không đòi push: DESIGN-GUIDELINES muc 8.
+
+  KHÔNG in dải IP của trường lên tờ này. Migration 0024 đã (đúng) đóng bảng luật lại chỉ cho
+  quản trị đọc, với lý do: công khai dải IP trường cho học sinh chính là chỉ dẫn cách gian lận.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --ink:#172033; --muted:#5f6879;
+    --paper:#fbfaf6; --surface:#ffffff; --surface-2:#f3f5f8; --line:#dfe3e8;
+    --navy:#142c52; --blue:#2f6edb; --blue-soft:#eaf1ff;
+    --green:#277c5a; --green-soft:#e8f5ee;
+    --amber:#a66513; --amber-soft:#fff3dc;
+    --red:#b0443d; --red-soft:#fdecea;
+    --radius:18px;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:0 20px 80px;
+    background:var(--paper); color:var(--ink);
+    font-family:"Be Vietnam Pro","Segoe UI",system-ui,sans-serif;
+    font-size:15.2px; line-height:1.6;
+  }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1,h2,h3,h4 { color:var(--navy); text-wrap:balance; }
+  h1 { margin:0; font-size:clamp(1.8rem,3.8vw,2.9rem); line-height:1.06; letter-spacing:-.04em; }
+  h2 { margin:0 0 8px; font-size:clamp(1.25rem,2.2vw,1.7rem); letter-spacing:-.025em; }
+  h3 { margin:24px 0 8px; font-size:1.08rem; }
+  h4 { margin:0 0 5px; font-size:.94rem; }
+  p { max-width:82ch; }
+  .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.7rem; font-weight:850; letter-spacing:.13em; text-transform:uppercase; }
+  .muted { color:var(--muted); }
+  .small { font-size:.86rem; }
+  .micro { font-size:.75rem; }
+
+  section { padding:30px 0; border-top:1px solid var(--line); }
+  section:first-of-type { border-top:0; }
+
+  .hero {
+    margin:24px 0 6px; padding:clamp(24px,4vw,46px);
+    background:var(--surface); border:1px solid color-mix(in srgb, var(--blue) 22%, var(--line));
+    border-radius:24px;
+  }
+  .card { padding:18px 20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); break-inside:avoid; page-break-inside:avoid; }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; }
+
+  table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.89rem; }
+  th, td { text-align:left; vertical-align:top; padding:9px 11px; border-bottom:1px solid var(--line); }
+  th { color:var(--navy); font-size:.76rem; text-transform:uppercase; letter-spacing:.06em; background:var(--surface-2); }
+
+  /* Viền 1px cả bốn cạnh, không dùng dải màu dày một bên - xem lý do trong
+     quy-trinh-tai-khoan.html: mỗi khối đã có tiêu đề chữ, và bản in đen trắng
+     biến dải màu thành một vệt xám vô nghĩa. */
+  .callout { margin:14px 0; padding:15px 18px; border-radius:14px; border:1px solid; }
+  .c-blue { background:var(--blue-soft); border-color:color-mix(in srgb, var(--blue) 34%, #fff); }
+  .c-blue h4 { color:#1d4e9f; }
+  .c-green { background:var(--green-soft); border-color:color-mix(in srgb, var(--green) 34%, #fff); }
+  .c-green h4 { color:var(--green); }
+  .c-amber { background:var(--amber-soft); border-color:color-mix(in srgb, var(--amber) 34%, #fff); }
+  .c-amber h4 { color:var(--amber); }
+  .c-red { background:var(--red-soft); border-color:color-mix(in srgb, var(--red) 34%, #fff); }
+  .c-red h4 { color:var(--red); }
+  .callout h4 { margin-top:0; }
+  .callout p:last-child { margin-bottom:0; }
+
+  .khung-gio {
+    margin-top:14px; padding:20px 22px; background:#fff;
+    border:1.5px solid var(--navy); border-radius:16px;
+  }
+  .khung-gio .o { display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 18px; margin-top:10px; }
+  .khung-gio .dien { min-width:110px; border-bottom:1.6px solid var(--navy); padding:4px 10px 2px; font-size:1.05rem; font-weight:800; color:var(--muted); }
+
+  ol.buoc { counter-reset:b; list-style:none; margin:14px 0 0; padding:0; }
+  ol.buoc > li {
+    counter-increment:b; position:relative; margin-bottom:12px; padding:14px 18px 14px 56px;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    break-inside:avoid; page-break-inside:avoid;
+  }
+  ol.buoc > li::before {
+    content:counter(b); position:absolute; left:16px; top:14px;
+    width:26px; height:26px; border-radius:50%; background:var(--navy); color:#fff;
+    font-size:.82rem; font-weight:850; display:flex; align-items:center; justify-content:center;
+  }
+  ol.buoc b.tieu { display:block; color:var(--navy); }
+
+  ul.gon { margin:8px 0 0; padding-left:19px; }
+  ul.gon li { margin-bottom:5px; }
+
+  .ky { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:22px; margin-top:26px; text-align:center; }
+  .ky div { padding-top:56px; border-top:1px solid var(--ink); font-size:.82rem; color:var(--muted); }
+
+  .page-break { break-before:page; page-break-before:always; }
+
+  @media print {
+    @page { size:A4; margin:12mm 13mm; }
+    :root { --paper:#fff; --surface:#fff; --surface-2:#f4f5f7; --ink:#111827; --muted:#4b5563; --line:#d7dbe1; }
+    body { background:#fff; font-size:10.1pt; padding:0; }
+    section { break-inside:auto; page-break-inside:auto; }
+    .card, .callout, ol.buoc > li, .khung-gio { break-inside:avoid; page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Nội quy - lớp thí điểm</p>
+    <h1>Dùng điện thoại<br>trong giờ check-in</h1>
+    <p class="muted" style="font-size:1.04rem;margin-top:14px;max-width:64ch">
+      Học sinh dùng <b>điện thoại cá nhân</b> để check-in đầu buổi. Tờ này nói rõ: được mở máy
+      lúc nào, phần mềm tính một lần bấm là gì, và khi máy nói một đằng còn sự thật một nẻo thì
+      ai là người quyết.
+    </p>
+    <p class="small muted" style="margin-top:12px">
+      Dán bản rút gọn (trang cuối) trong lớp. Bản đầy đủ giữ trong cặp hồ sơ của giáo viên chủ nhiệm.
+    </p>
+  </div>
+
+  <section>
+    <h2>1. Ba điều kiện để một lần bấm được tính là đúng giờ</h2>
+    <p>
+      Phần mềm không tin vào lời khai của máy. Nó kiểm ba thứ, và ba thứ này là toàn bộ cơ chế
+      chống gian lận - không có GPS, không có camera, không chụp mặt ai.
+    </p>
+    <div class="grid2">
+      <div class="card">
+        <h4>1. Máy đang ở trong mạng của trường</h4>
+        <p class="small" style="margin:0">
+          Máy chủ tự kiểm, em không phải làm gì. Bấm khi đang dùng 4G ở nhà thì phần mềm biết ngay
+          là không ở trường.
+        </p>
+      </div>
+      <div class="card">
+        <h4>2. Bấm trong khung giờ của cơ sở</h4>
+        <p class="small" style="margin:0">
+          Mỗi cơ sở có khung giờ riêng, do nhà trường đặt. Một cơ sở chỉ có <b>một</b> khung giờ
+          đang hiệu lực tại một thời điểm.
+        </p>
+      </div>
+      <div class="card">
+        <h4>3. Giáo viên chủ nhiệm xác nhận phần lệch</h4>
+        <p class="small" style="margin:0">
+          Cái gì không khớp hai điều trên thì máy <b>không tự kết luận</b> - nó xếp sang ô
+          chờ, và cô là người quyết.
+        </p>
+      </div>
+    </div>
+
+    <div class="khung-gio">
+      <h4 style="margin:0">Khung giờ check-in đang áp dụng tại cơ sở này</h4>
+      <p class="small muted" style="margin:6px 0 0">
+        Điền bằng bút khi dán, và sửa lại mỗi khi nhà trường đổi giờ. Giá trị mặc định của phần mềm
+        khi chưa ai đặt là <b>06:45 - 07:30</b>.
+      </p>
+      <div class="o">
+        <span>Mở cổng lúc</span> <span class="dien">.................</span>
+        <span>Đóng cổng lúc</span> <span class="dien">.................</span>
+        <span class="micro muted">Người đặt: .................. Ngày: ..............</span>
+      </div>
+      <p class="small muted" style="margin:12px 0 0">
+        Đổi khung giờ là việc của quản trị hệ thống, làm trong một phút và không phải cài lại gì.
+        Nhưng <b>phải sửa cả tờ giấy này</b> trong cùng ngày - một tờ nội quy ghi sai giờ còn tệ hơn
+        không có tờ nào.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Một lần bấm có thể ra những gì</h2>
+    <p>Năm ô trạng thái dưới đây là toàn bộ những gì phần mềm biết nói. Không có ô nào khác.</p>
+    <table>
+      <thead>
+        <tr><th style="width:24%">Ô hiện trên màn hình</th><th style="width:38%">Xảy ra khi</th><th>Tính chuyên cần thế nào</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Có mặt</b></td>
+          <td>Bấm trong mạng trường, trong khung giờ. <b>Bấm sớm hơn giờ mở cổng cũng là Có mặt</b> - đi sớm không phải lỗi của em.</td>
+          <td>Có mặt đúng giờ</td>
+        </tr>
+        <tr>
+          <td><b>Đi muộn</b></td>
+          <td>Bấm trong mạng trường nhưng sau giờ đóng cổng</td>
+          <td>Có mặt, ghi nhận muộn</td>
+        </tr>
+        <tr>
+          <td><b>Gửi muộn - chờ xác nhận</b></td>
+          <td>Máy không chứng minh được đang ở trong mạng trường, <b>hoặc</b> đây là bản gửi bù từ lúc mất mạng</td>
+          <td><b>Chưa tính gì cả.</b> Chờ giáo viên chủ nhiệm xác nhận. <b>Đây không phải vắng.</b></td>
+        </tr>
+        <tr>
+          <td><b>Vắng</b></td>
+          <td><b>Chỉ khi giáo viên chủ nhiệm tự tay ghi.</b> Không có đường nào để máy tự ghi ô này.</td>
+          <td>Vắng</td>
+        </tr>
+        <tr>
+          <td><b>Có phép</b></td>
+          <td>Giáo viên chủ nhiệm ghi, khi gia đình đã báo</td>
+          <td>Vắng có phép</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout c-amber">
+      <h4>Ô trống không phải là ô Vắng</h4>
+      <p>
+        Buổi sáng sớm, phần lớn ô trên bảng còn trống vì chưa ai bấm và cô chưa ghi. Màn hình có một
+        thẻ riêng tên là <b>Chưa điểm danh</b>, tách hẳn khỏi thẻ <b>Vắng</b>, và nó nói thẳng
+        "chưa ai ghi - không phải vắng". Đừng đọc một ô trống thành một kết luận.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Khi mất mạng</h2>
+    <p>
+      Ứng dụng vẫn bấm được khi không có mạng - đó là lời hứa in ngay trên màn hình của em:
+      <b>Offline vẫn lưu - tự gửi sau.</b> Nhưng phần gửi bù có luật riêng, và phải nói trước cho
+      cả cô lẫn em biết.
+    </p>
+    <ul class="gon">
+      <li>Bản gửi bù nằm ở ngày <b>em đã bấm</b>, không phải ngày máy nối lại mạng. Em bấm thứ Sáu
+          thì nó nằm ở thứ Sáu, dù máy lên mạng vào thứ Hai.</li>
+      <li>Bản gửi bù luôn vào ô <b>Gửi muộn - chờ xác nhận</b>, không bao giờ tự thành có mặt.
+          Đây là chỗ cô phải nhìn mỗi sáng.</li>
+      <li>Bản gửi bù <b>quá hạn</b> thì phần mềm <b>từ chối và nói thẳng</b> với em là đã từ chối,
+          chứ không lặng lẽ dán vào ngày hôm nay. Hạn mặc định là <b>7 ngày</b>; nhà trường đặt được
+          từ 1 tới 60 ngày.</li>
+      <li>Ô cảm xúc và lời <b>Mình cần gặp thầy cô</b> có số phận khác nhau khi mất mạng: ô cảm xúc
+          nằm lại máy và tự gửi sau, còn lời cần gặp thì <b>chưa gửi được</b> và màn hình nói thẳng
+          như vậy. Em nào rơi vào ca đó cần được nhắc: tìm thầy cô nói trực tiếp, đừng chờ máy.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Nội quy dùng máy - phần học sinh phải theo</h2>
+    <ol class="buoc">
+      <li>
+        <b class="tieu">Mở máy đúng lúc, cất máy ngay sau đó</b>
+        Điện thoại chỉ được lấy ra trong khoảng check-in đầu buổi. Bấm xong là cất vào cặp.
+        Ngoài khoảng đó, nội quy dùng điện thoại chung của nhà trường được áp dụng như thường.
+      </li>
+      <li>
+        <b class="tieu">Mỗi em bấm bằng máy của mình</b>
+        Không mượn máy bạn để bấm hộ, không bấm hộ bạn. Một lần bấm hộ là một dòng dữ liệu mang
+        tên sai, và nó đi thẳng vào hồ sơ chuyên cần của một em khác.
+      </li>
+      <li>
+        <b class="tieu">Không có máy thì báo cô, không mượn máy</b>
+        Máy hỏng, hết pin, quên ở nhà: nói với giáo viên chủ nhiệm. Cô ghi điểm danh trực tiếp cho
+        em - đường đó lúc nào cũng có, và nó không thiệt gì cho em cả.
+      </li>
+      <li>
+        <b class="tieu">Bấm rồi thì thôi, đừng bấm lại cho vui</b>
+        Bấm hai lần không tạo ra hai dòng, nhưng chạm nhầm ô cảm xúc thì ô cũ bị thay. Muốn đổi thì
+        dùng đúng nút <b>Đổi tâm trạng</b>.
+      </li>
+      <li>
+        <b class="tieu">Không tìm cách lách</b>
+        Dùng phần mềm đổi vị trí mạng, nhờ người ở trường bấm hộ, chỉnh đồng hồ máy: đây là gian lận
+        hồ sơ chuyên cần và xử theo nội quy nhà trường. Phần mềm ghi lại nguồn của từng lần bấm nên
+        việc này để lại dấu vết.
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>5. Phần giáo viên chủ nhiệm chịu trách nhiệm</h2>
+    <div class="callout c-red">
+      <h4>Máy không biết em có ngồi trong lớp hay không</h4>
+      <p>
+        Điều duy nhất máy chứng minh được là <b>cái điện thoại đang ở trong mạng của trường</b>.
+        Em đứng ở sân, ở căng tin, ở cổng cũng cho ra cùng một kết quả. Đây là giới hạn đã biết và
+        đã ghi vào sổ nợ kỹ thuật, không phải lỗi sẽ được sửa lặng lẽ. <b>Vì vậy sổ điểm danh của cô
+        là bản chốt, không phải màn hình.</b>
+      </p>
+    </div>
+    <ul class="gon">
+      <li>Mỗi sáng mở buồng lái, xử ô <b>Chờ xác nhận</b> trước - đó là những em đang bị treo.</li>
+      <li>Xác nhận là một hành động có tên cô trong sổ máy. Đừng bấm xác nhận cả loạt cho nhanh khi
+          chưa nhìn mặt đủ em.</li>
+      <li>Chỉ cô mới ghi được ô <b>Vắng</b> và ô <b>Có phép</b>. Máy không có đường nào tự ghi hai ô đó.</li>
+      <li>Em nào không có điện thoại thì cô ghi thay, và điều đó phải là chuyện bình thường trong
+          lớp - không nêu tên, không bình luận.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. Bốn điều nhà trường cam kết với gia đình</h2>
+    <div class="grid2">
+      <div class="card">
+        <h4>Không định vị, không camera</h4>
+        <p class="small" style="margin:0">Hệ thống không lấy vị trí GPS của điện thoại và không chụp ảnh ai để điểm danh.</p>
+      </div>
+      <div class="card">
+        <h4>Không đòi cài thêm gì lạ</h4>
+        <p class="small" style="margin:0">Ứng dụng chạy trong trình duyệt, cài về màn hình chính như một biểu tượng. Không có phần mềm theo dõi nào được cài lên máy của em.</p>
+      </div>
+      <div class="card">
+        <h4>Ứng dụng không tự bắn thông báo</h4>
+        <p class="small" style="margin:0">Việc cần báo gấp cho gia đình đi qua Zalo của nhà trường. App không đòi quyền gửi thông báo trên máy em.</p>
+      </div>
+      <div class="card">
+        <h4>Thiếu cấu hình của người lớn thì em không chịu thiệt</h4>
+        <p class="small" style="margin:0">Nếu cơ sở chưa kịp khai khung giờ, phần mềm ghi <b>Có mặt</b> cho mọi lần bấm - không phạt em vì việc người lớn chưa làm.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ký duyệt</h2>
+    <p class="small muted">
+      Nội quy này áp dụng cho lớp thí điểm. Khung giờ ghi ở mục 1 phải khớp với khung giờ đang đặt
+      trong hệ thống - lệch nhau thì tin hệ thống, và sửa tờ giấy ngay trong ngày.
+    </p>
+    <div class="ky">
+      <div>Chủ tịch</div>
+      <div>Hiệu trưởng cơ sở thí điểm</div>
+      <div>Giáo viên chủ nhiệm lớp thí điểm</div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <h2>Bản rút gọn - dán trong lớp</h2>
+    <div class="card" style="padding:26px 28px">
+      <h3 style="margin-top:0;font-size:1.3rem">Điện thoại và giờ check-in</h3>
+      <ul class="gon" style="font-size:1rem">
+        <li>Lấy máy ra <b>chỉ trong giờ check-in đầu buổi</b>. Bấm xong, cất vào cặp.</li>
+        <li>Bấm bằng <b>máy của mình</b>. Không bấm hộ, không nhờ bấm hộ.</li>
+        <li>Không có máy, hết pin, quên ở nhà: <b>nói với cô</b>. Cô ghi giúp, em không thiệt gì.</li>
+        <li>Không có mạng vẫn bấm được, máy giữ lại và tự gửi sau.</li>
+        <li>Bấm ngoài trường thì máy ghi <b>chờ xác nhận</b> - cô sẽ hỏi lại, đây <b>không phải là vắng</b>.</li>
+      </ul>
+      <div class="khung-gio" style="margin-top:18px">
+        <div class="o" style="margin-top:0">
+          <span style="font-weight:800">Giờ check-in của lớp mình:</span>
+          <span class="dien">.................</span>
+          <span>đến</span>
+          <span class="dien">.................</span>
+        </div>
+      </div>
+      <p class="small muted" style="margin-top:14px">
+        Hệ thống không lấy vị trí GPS và không chụp ảnh để điểm danh.
+      </p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

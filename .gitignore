@@ -14,6 +14,11 @@ coverage/
 *.pem
 *.key
 
+# Tệp nhật ký báo động do tools/alert/kenh/tep-nhat-ky.mjs ghi ra (0051).
+# Là ĐẦU RA vận hành của máy đang chạy, không phải mã nguồn — và nó mang tên job,
+# tên luật, tình trạng máy chủ, nên càng không phải thứ đẩy lên kho chung.
+var/
+
 # Log của tools/start-local.sh (tiến trình nền) — không thuộc mã nguồn.
 .hub.log
 .hub.err.log

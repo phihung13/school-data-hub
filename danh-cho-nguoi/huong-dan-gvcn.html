@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Mot to giay cho giao vien chu nhiem lop thi diem: moi sang lam gi, thay co thi lam gi, va nhung gi co khong con thay tren man hinh.">
+<title>Một trang cho giáo viên chủ nhiệm lớp thí điểm</title>
+<!--
+  danh-cho-nguoi/huong-dan-gvcn.html
+  ==================================
+  MỘT TỜ, IN HAI MẶT, cho cô chủ nhiệm lớp thí điểm. Người đọc tờ này cầm nó lúc 7 giờ sáng
+  khi đang có chuyện, không phải lúc rảnh - nên nó bị giữ trong hai mặt A4 bằng kỷ luật, không
+  phải bằng may mắn. Đo ngày 02/08/2026 ở bề rộng vùng in 703px, bơm đúng các giá trị trong
+  khối @media print: bản đầu tiên cao 2981px trên trần 2078px (hai trang) - tràn sang trang
+  thứ tư. Đã cắt chữ và siết khoảng cách, không cắt sự thật nào. Số đo lại nằm cuối chú thích.
+
+  CHỖ DỄ VIẾT SAI NHẤT LÀ MỤC "CÔ KHÔNG CÒN THẤY GÌ". Hứa với cô một quyền cô không có thì cô
+  mở màn ra không thấy và kết luận là hệ hỏng - rồi thôi không mở nữa. Nguồn của từng câu:
+
+  · ADR-026 (chốt 01/08/2026, migration 0044_mood_chi_tam_ly.sql): core.can_read_mood() mất
+    nhánh chủ nhiệm, phạm vi còn lại = chính em hoặc tâm lý cụm. Đo trước khi quyết, ghi trong
+    ADR: số dòng có tâm trạng đọc được qua attendance.checkins_care - cô Lan 75 -> 0,
+    cô Mai (tâm lý cụm) 358 -> 358, chính em 9 -> 9. Cửa hậu attendance.happy_days() cũng đóng
+    (từ chối khoảng hỏi hẹp hơn 5 ngày).
+  · ADR-026 KHÔNG đụng core.can_see_care() - đó là lý do cô VẪN nhận cờ và VẪN nhận ngay tín
+    hiệu "cần gặp thầy cô".
+  · Migration 0049_chi_tiet_co_roi_tam_doc_cua_gvcn.sql: cột care.flags.detail bị che với cô -
+    nên cô không thấy SỐ NGÀY dẫn tới cờ. DESIGN-GUIDELINES muc 9 cấm ba thứ đi ra phía GVCN:
+    chiều của cảm xúc, số ngày, và mọi trích dẫn từ ô nhập của em.
+  · Cô VẪN đọc được lời em viết kèm nút cần gặp: apps/hub/components/gvcn/student-detail-view.tsx
+    khối SignalCard in h.note dưới nhãn "Lời em viết riêng cho thầy cô". Phạm vi ở migration
+    0037_help_requests_scope.sql (is_me hoặc can_see_care).
+  · Hai nhịp của hai loại cờ - apps/hub/components/gvcn-dashboard.tsx, hàm cadenceNote() và
+    describeFlag(); server ở apps/hub/server/routers/care.ts (E_MOOD đọc từ care.flags do lượt
+    quét đêm sinh; E_URGENT tính thẳng trong lượt gọi, [QĐ-2] đòi báo ngay - đo đầu-cuối trên
+    hub_dev: em bấm 195 ms, lượt đọc kế tiếp của cô thấy sau thêm 226 ms).
+  · Năm thẻ số của buồng lái: nhãn là chuỗi ghi thẳng trong gvcn-dashboard.tsx, năm lời gọi
+    <StatCard> liền nhau (dòng 491-509) - "Đã check-in · Chờ xác nhận · Cờ đang mở · Vắng ·
+    Chưa điểm danh". Hàm absentSubtitle() chỉ sinh PHỤ ĐỀ của riêng thẻ "Vắng"; ghi nó làm
+    nguồn của cả năm nhãn là chỉ sai đường cho người sau phải soát lại (sửa 02/08/2026).
+  · Câu "Hết việc rồi - lớp mình đang ổn!" chỉ in khi lượt quét ĐÃ chạy hôm nay VÀ không còn hồ
+    sơ chăm sóc mở: apps/hub/components/gvcn/scan-status.ts, boardEmptyPresentation().
+  · Bốn màn của cô: GVCN_SCREENS trong gvcn-dashboard.tsx - Lớp chủ nhiệm /gvcn/lop ·
+    Điểm danh /gvcn/diem-danh · Duyệt báo cáo /gvcn/duyet-bao-cao · Ghi chú /gvcn/ghi-chu.
+  · Nút "Đã trao đổi với tâm lý cụm (ngoài hệ thống)" KHÔNG chuyển tuyến ai cả - nó chỉ ghi một
+    dòng vào nhật ký lớp. Nhãn cũ là "Đã chuyển tâm lý cụm" và đã phải sửa vì đúng lý do đó:
+    apps/hub/components/gvcn/intervention-notes-view.tsx, chú thích trên hằng QUICK_ACTIONS.
+    Đường chuyển tuyến thật CHƯA TỒN TẠI (ADR-026 ghi thẳng đây là đánh đổi đã chọn).
+  · Mỗi dòng can thiệp reset đồng hồ leo thang 7 ngày: care.interventions (migration 0005_care.sql),
+    nhắc lại ở đầu intervention-notes-view.tsx.
+  · §5 của danh-cho-may/RULES.md: báo cáo học thuật và xếp loại không được dùng dữ liệu cảm xúc.
+
+  ĐO LẠI SAU KHI CẮT (cùng cách đo: bề rộng vùng in 703px, bơm đúng giá trị khối @media print,
+  trần một trang A4 = 297mm - 2*11mm lề = 1039px @96dpi). Mốc ngắt trang cố ý nằm ở mục 3:
+
+      mặt trước (hero + mục 1 + mục 2)   894px   dư 145px
+      mặt sau  (mục 3 + mục 4 + mục 5)   994px   dư  45px
+
+  Đo ở BA bộ font, vì máy văn phòng của trường thường KHÔNG cài Be Vietnam Pro và sẽ rơi về
+  font hệ thống: Be Vietnam Pro 894/994 · Segoe UI 894/994 · Arial 894/1013 (ca xấu nhất, vẫn
+  dư 26px ~ 7mm). Bản đầu tiên trước khi cắt là 2981px, tức BỐN trang - "một trang" lúc đó chỉ
+  là một câu viết ở đầu file chứ không phải một tính chất của tờ giấy.
+
+  NẾU SỬA NỘI DUNG THÌ PHẢI ĐO LẠI. Không đo lại thì tờ này lặng lẽ quay về ba, bốn trang, và
+  người phát hiện ra sẽ là cô giáo đứng ở máy in lúc 7 giờ sáng.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --ink:#172033; --muted:#5f6879;
+    --paper:#fbfaf6; --surface:#ffffff; --surface-2:#f3f5f8; --line:#dfe3e8;
+    --navy:#142c52; --blue:#2f6edb; --blue-soft:#eaf1ff;
+    --green:#277c5a; --green-soft:#e8f5ee;
+    --amber:#a66513; --amber-soft:#fff3dc;
+    --red:#b0443d; --red-soft:#fdecea;
+    --radius:14px;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:0 20px 60px;
+    background:var(--paper); color:var(--ink);
+    font-family:"Be Vietnam Pro","Segoe UI",system-ui,sans-serif;
+    font-size:14.6px; line-height:1.48;
+  }
+  .wrap { max-width:960px; margin:0 auto; }
+  h1,h2,h3,h4 { color:var(--navy); text-wrap:balance; }
+  h1 { margin:0; font-size:clamp(1.6rem,3.2vw,2.3rem); line-height:1.05; letter-spacing:-.04em; }
+  h2 { margin:0 0 5px; font-size:clamp(1.08rem,1.8vw,1.35rem); letter-spacing:-.02em; }
+  h4 { margin:0 0 3px; font-size:.9rem; }
+  p { max-width:84ch; margin:0 0 6px; }
+  .eyebrow { margin:0 0 5px; color:var(--blue); font-size:.66rem; font-weight:850; letter-spacing:.13em; text-transform:uppercase; }
+  .muted { color:var(--muted); }
+  .small { font-size:.84rem; }
+  .micro { font-size:.73rem; }
+
+  section { padding:16px 0; border-top:1px solid var(--line); }
+  section:first-of-type { border-top:0; }
+
+  .hero {
+    margin:16px 0 2px; padding:18px 22px;
+    background:var(--surface); border:1px solid color-mix(in srgb, var(--blue) 22%, var(--line));
+    border-radius:18px;
+  }
+  .card { padding:13px 15px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); break-inside:avoid; page-break-inside:avoid; }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:11px; }
+
+  /* Viền 1px cả bốn cạnh, không dùng dải màu dày một bên - cùng cách sửa mà
+     apps/hub/components/gvcn/student-detail-view.tsx đã làm ngày 02/08/2026. */
+  .callout { margin:10px 0; padding:11px 14px; border-radius:11px; border:1px solid; }
+  .c-blue { background:var(--blue-soft); border-color:color-mix(in srgb, var(--blue) 34%, #fff); }
+  .c-blue h4 { color:#1d4e9f; }
+  .c-green { background:var(--green-soft); border-color:color-mix(in srgb, var(--green) 34%, #fff); }
+  .c-green h4 { color:var(--green); }
+  .c-amber { background:var(--amber-soft); border-color:color-mix(in srgb, var(--amber) 34%, #fff); }
+  .c-amber h4 { color:var(--amber); }
+  .c-red { background:var(--red-soft); border-color:color-mix(in srgb, var(--red) 34%, #fff); }
+  .c-red h4 { color:var(--red); }
+  .callout h4 { margin-top:0; }
+  .callout p:last-child { margin-bottom:0; }
+
+  ol.buoc { counter-reset:b; list-style:none; margin:9px 0 0; padding:0; }
+  ol.buoc > li {
+    counter-increment:b; position:relative; margin-bottom:6px; padding:2px 0 2px 34px;
+    break-inside:avoid; page-break-inside:avoid;
+  }
+  ol.buoc > li::before {
+    content:counter(b); position:absolute; left:0; top:2px;
+    width:22px; height:22px; border-radius:50%; background:var(--navy); color:#fff;
+    font-size:.74rem; font-weight:850; display:flex; align-items:center; justify-content:center;
+  }
+  ol.buoc b.tieu { color:var(--navy); }
+
+  ul.gon { margin:5px 0 0; padding-left:18px; }
+  ul.gon li { margin-bottom:3px; }
+
+  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:.84rem; }
+  th, td { text-align:left; vertical-align:top; padding:6px 9px; border-bottom:1px solid var(--line); }
+  th { color:var(--navy); font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; background:var(--surface-2); }
+
+  .the-co { padding:12px 14px; border:1px solid var(--line); border-radius:13px; background:#fff; break-inside:avoid; page-break-inside:avoid; }
+  .the-co .nhip { display:inline-block; margin-bottom:4px; padding:2px 8px; border-radius:999px; font-size:.66rem; font-weight:850; letter-spacing:.05em; text-transform:uppercase; }
+  .nhip-ngay { background:var(--red-soft); color:var(--red); }
+  .nhip-dem { background:var(--amber-soft); color:var(--amber); }
+  .cau-may { margin:4px 0 6px; padding:7px 10px; background:var(--surface-2); border-radius:8px; font-size:.83rem; font-style:italic; }
+
+  .lien-he { display:grid; grid-template-columns:repeat(auto-fit,minmax(195px,1fr)); gap:11px; margin-top:9px; }
+  .lien-he div { padding:11px 13px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+  .dong-dien { margin-top:6px; border-bottom:1px dotted #9aa3b0; padding-top:15px; }
+
+  .page-break { break-before:page; page-break-before:always; }
+
+  @media print {
+    @page { size:A4 portrait; margin:11mm 12mm; }
+    :root { --paper:#fff; --surface:#fff; --surface-2:#f4f5f7; --ink:#111827; --muted:#4b5563; --line:#d7dbe1; }
+    body { background:#fff; font-size:8.8pt; padding:0; line-height:1.42; }
+    .wrap { max-width:none; }
+    section { break-inside:auto; page-break-inside:auto; padding:8px 0; }
+    table { margin-top:6px; }
+    th, td { padding:5px 8px; }
+    .callout { margin:8px 0; padding:9px 12px; }
+    .lien-he { gap:9px; }
+    .lien-he div { padding:9px 11px; }
+    .hero { margin:0 0 2px; padding:13px 16px; }
+    .card, .callout, .the-co, ol.buoc > li { break-inside:avoid; page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Lớp thí điểm - giáo viên chủ nhiệm</p>
+    <h1>Mỗi sáng năm phút</h1>
+    <p class="muted" style="margin-top:8px;max-width:64ch">
+      Mặt này: <b>sáng nay cô làm gì</b> và <b>thấy cờ thì làm gì</b>.
+      Mặt sau: <b>những gì cô sẽ không thấy trên màn hình</b> - phần đó quan trọng ngang hai phần
+      đầu, vì không biết trước thì cô sẽ tưởng hệ thống hỏng.
+    </p>
+  </div>
+
+  <section>
+    <h2>1. Sáng nay cô làm gì</h2>
+    <ol class="buoc">
+      <li><b class="tieu">Đọc dải trạng thái trước, đừng đọc số trước.</b> Dải ngay dưới lời chào
+          nói lượt quét đêm chạy lúc nào. Dải báo chưa chạy thì mọi con số bên dưới là số của hôm qua.</li>
+      <li><b class="tieu">Liếc năm thẻ số.</b> Đã check-in · Chờ xác nhận · Cờ đang mở · Vắng ·
+          Chưa điểm danh. Hai thẻ cuối khác nhau: <b>chưa điểm danh là chưa ai ghi gì, không phải vắng</b>.
+          Sáng sớm thẻ Vắng bằng 0 thường chỉ vì lớp chưa ai bấm.</li>
+      <li><b class="tieu">Xử ô Chờ xác nhận trước tiên.</b> Đây là những em đang bị treo: máy không
+          chứng minh được em ở trong mạng trường, hoặc em bấm lúc mất mạng rồi máy gửi bù. Nhìn mặt đủ
+          em rồi mới bấm - nút <b>Xác nhận cả N</b> tiện, nhưng nó ghi tên cô vào từng dòng.</li>
+      <li><b class="tieu">Đọc mục Việc cần làm sáng nay.</b> Cờ hiện ở đó. Không có cờ nào thì đọc kỹ
+          câu màn hình in - xem bảng ở mục 3.</li>
+      <li><b class="tieu">Ghi lại việc đã làm, ngay trong buổi</b>, ở màn Ghi chú. Sổ chỉ biết việc
+          được ghi vào: cô gọi phụ huynh mà không ghi thì với hệ thống, việc đó chưa xảy ra.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>2. Thấy cờ thì làm gì - đọc câu trên thẻ, có hai loại</h2>
+    <div class="grid2">
+
+      <div class="the-co">
+        <span class="nhip nhip-ngay">Hiện ngay khi em bấm</span>
+        <h4>Loại 1 - em đã bấm nút cần gặp</h4>
+        <div class="cau-may">"Em đã bấm cần gặp thầy cô và chưa ai đánh dấu đã gặp."</div>
+        <ul class="gon small">
+          <li><b>Nhịp:</b> tới cô trong vài giây, không chờ quét đêm.</li>
+          <li>Gặp em <b>trong ngày</b>. Em vừa làm việc khó nhất là mở lời.</li>
+          <li>Đọc lời em viết: <b>Lớp chủ nhiệm</b> &rarr; bấm tên em &rarr; <b>Tín hiệu cần để ý</b>.
+              Ở đó có chủ đề em chọn, em muốn gặp gấp tới đâu, và lời em viết nếu em có viết.</li>
+          <li>Gặp xong bấm <b>Cô đã gặp em rồi</b>. Chưa bấm thì cờ còn đó và người khác tưởng chưa ai xử.</li>
+        </ul>
+      </div>
+
+      <div class="the-co">
+        <span class="nhip nhip-dem">Do lượt quét đêm tìm ra</span>
+        <h4>Loại 2 - dấu hiệu cần để ý</h4>
+        <div class="cau-may">"Hệ thấy em có dấu hiệu cần được để ý. Nội dung em ghi chỉ thầy cô tâm lý đọc được."</div>
+        <ul class="gon small">
+          <li><b>Nhịp:</b> quét ban đêm. Dấu hiệu của <b>hôm nay</b> phải chờ lượt quét kế tiếp.</li>
+          <li>Tìm cớ tự nhiên nói chuyện với em trong tuần. <b>Đừng hỏi "em buồn chuyện gì"</b> - cô
+              không biết chuyện gì, và câu đó nói cho em biết em đang bị nhìn.</li>
+          <li><b>Gọi điện cho thầy cô tâm lý cụm.</b> Đó là người duy nhất đọc được ngữ cảnh sau cái cờ này.</li>
+          <li>Ghi lại ở màn <b>Ghi chú</b>.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="callout c-red">
+      <h4>Nút "Đã trao đổi với tâm lý cụm (ngoài hệ thống)" KHÔNG chuyển em cho ai cả</h4>
+      <p>
+        Nó chỉ ghi một dòng vào nhật ký lớp. <b>Đường chuyển tuyến thật chưa tồn tại trong phần mềm</b> -
+        đầu bên kia không ai nhận được thông báo nào. Muốn tâm lý cụm biết thì phải <b>gọi điện</b>.
+        Bấm nút rồi ngồi chờ là một em bị bỏ rơi trong khi hai người lớn đều tưởng người kia đang lo.
+        Và đừng ghi chú cho đủ: mỗi dòng làm đồng hồ nhắc việc lùi lại bảy ngày cho một em đáng lẽ
+        phải được nhắc sớm hơn.
+      </p>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <h2>3. Bảng trống nghĩa là gì</h2>
+    <table>
+      <thead><tr><th style="width:44%">Màn hình nói</th><th>Nghĩa thật</th></tr></thead>
+      <tbody>
+        <tr><td><b>"Hết việc rồi - lớp mình đang ổn!"</b> (có hình sư tử)</td>
+            <td>Lượt quét <b>đã chạy hôm nay</b> và lớp <b>không còn hồ sơ chăm sóc nào đang mở</b>.
+                Tốt thật sự - màn hình chỉ in câu này khi cả hai điều kiện đúng.</td></tr>
+        <tr><td>Trống, kèm dải nói quét chưa chạy hôm nay</td>
+            <td><b>Chưa có phép đo nào của hôm nay.</b> Trống ở đây nói về cái máy, không nói về lớp.
+                Báo người trực hệ thống.</td></tr>
+        <tr><td>"Chưa ai ghi hành động nào cho lớp này." · dải vàng "Nguồn dữ liệu chưa tươi"</td>
+            <td>Câu đầu nói về <b>cuốn sổ</b>, không nói về lớp. Dải vàng nghĩa là có nguồn tín hiệu bị
+                bỏ qua trong lượt quét đó - số liệu <b>thiếu</b>, không phải số liệu đẹp.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>4. Những gì cô KHÔNG còn thấy - và đó là đúng, không phải hỏng</h2>
+    <p class="small">
+      Từ 01/08/2026, nhật ký cảm xúc từng ngày của học sinh <b>ra khỏi tầm đọc của giáo viên chủ nhiệm</b>.
+      Quyết định của chủ đầu tư, thi hành ở tầng cơ sở dữ liệu - không màn hình nào hiện ra được.
+    </p>
+    <div class="grid2">
+      <div class="card">
+        <h4>Bốn thứ cô không thấy</h4>
+        <ul class="gon small">
+          <li>Em đã chọn ô cảm xúc nào, ngày nào.</li>
+          <li><b>Số ngày</b> dẫn tới một cái cờ.</li>
+          <li>Chiều của cảm xúc - cờ không nói em buồn hay mệt.</li>
+          <li>Ghi chú buổi tư vấn của thầy cô tâm lý.</li>
+        </ul>
+        <p class="micro muted" style="margin-top:6px">Đừng đi tìm ở màn khác - không có màn nào khác.</p>
+      </div>
+      <div class="card">
+        <h4>Những gì cô vẫn thấy đầy đủ</h4>
+        <ul class="gon small">
+          <li>Điểm danh cả lớp, kèm <b>giờ từng em bấm</b>.</li>
+          <li><b>Cờ</b> - biết là có chuyện, không biết chuyện gì.</li>
+          <li>Tín hiệu <b>ngay lập tức</b> khi em tự bấm nút cần gặp.</li>
+          <li>Chủ đề, mức mong muốn và <b>lời em viết</b> kèm nút đó.</li>
+          <li>Hồ sơ chăm sóc đang mở, nhật ký hành động, duyệt báo cáo tuần.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout c-blue">
+      <h4>Vì sao lại cắt, và hai điều tuyệt đối không làm</h4>
+      <p>
+        Ô cảm xúc là lời một đứa trẻ nói với chính mình, không phải dữ kiện quản lý lớp. Để nó trong tầm
+        đọc thường ngày của đúng người chấm điểm và nhận xét em là đặt cô vào vị trí không công bằng cho
+        cả hai. Cái giá đã nhìn thấy và chấp nhận: <b>cô mất ngữ cảnh</b> - thấy cờ mà không thấy chuyện
+        gì dẫn tới cờ. Đó là lý do mục 2 bảo cô <b>gọi cho tâm lý cụm</b>.
+      </p>
+      <p>
+        <b>Không</b> dùng bất cứ điều gì liên quan tới cảm xúc của em vào nhận xét học tập, xếp loại hay
+        báo cáo đánh giá - đây là luật của hệ thống và có bộ phận máy canh. <b>Không</b> nêu tên em có cờ
+        trước lớp, không nhắn vào nhóm phụ huynh, không nhờ bạn cùng lớp để ý giúp cô: một cái cờ là lời
+        mời cô nói chuyện riêng với em, không phải một thông tin để chia sẻ.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Khi có chuyện thì gọi ai</h2>
+    <div class="lien-he">
+      <div>
+        <h4>Thầy cô tâm lý cụm</h4>
+        <p class="micro muted" style="margin:0">Có cờ loại 2, hoặc cô lo cho một em mà không rõ vì sao.</p>
+        <div class="dong-dien"></div>
+        <div class="micro muted">họ tên - số điện thoại</div>
+      </div>
+      <div>
+        <h4>Người trực hệ thống</h4>
+        <p class="micro muted" style="margin:0">Màn hình trống bất thường, số liệu sai, dải quét báo chưa chạy nhiều ngày.</p>
+        <div class="dong-dien"></div>
+        <div class="micro muted">họ tên - số điện thoại</div>
+      </div>
+      <div>
+        <h4>Hiệu trưởng cơ sở</h4>
+        <p class="micro muted" style="margin:0">Việc vượt quá phạm vi lớp, hoặc cần quyết định gấp về một em.</p>
+        <div class="dong-dien"></div>
+        <div class="micro muted">họ tên - số điện thoại</div>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:8px">
+      Điền ba ô này bằng bút <b>trước</b> khi đưa cô - tờ hướng dẫn không có số điện thoại là tờ hướng
+      dẫn dừng lại đúng lúc cần nhất.
+    </p>
+  </section>
+
+</div>
+</body>
+</html>

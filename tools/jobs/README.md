@@ -10,6 +10,7 @@ Thư mục này chứa các job **không phải request của người dùng**: 
 | `flag_engine` | `run-flag-engine.mjs` | mỗi ngày | Quét tín hiệu ABC+E rồi ghi `care.flags`, gộp thành `care.care_cases`, leo thang cờ quá 7 ngày (`04-flag-engine.md`) — gọi `care.run_flag_engine()` ở `0039` |
 | `emotion_retention` | `run-retention.mjs` | 1 lần/tháng | Tổng hợp `attendance.mood_trends` rồi xoá chi tiết cảm xúc quá 12 tháng (§3, mệnh lệnh 4 CLAUDE.md, Luật 91/2025) |
 | `homeroom_drift` | SQL — `ops.check_homeroom_drift()` | mỗi ngày | Đếm lệch giữa `core.class_assignments` và `core.user_role_scopes` qua `ops.v_homeroom_drift` (`0030`) |
+| `kenh_bao_dong` | `run-bao-dong.mjs` | mỗi giờ | Sinh tin báo động từ `ops.v_job_health` + `ops.v_rule_health` rồi **gửi** qua `ops.alert_channels` (`0051`, nợ #40). Dòng này quá hạn = **không ai được báo về bất cứ chuyện gì nữa** |
 | *(không theo lịch)* | `run-anonymize-user.mjs` | khi có yêu cầu, mỗi lần một người | Ẩn danh hoá một tài khoản theo yêu cầu xoá dữ liệu cá nhân (Luật 91/2025) — gọi `core.anonymize_user()` ở `0033` |
 | *(không theo lịch)* | `run-nap-danh-sach.mjs` | khi nhà trường gửi file | Nạp danh sách cả khối từ CSV vào `core.students`/`classes`/`enrollments` qua `staging` (`0045`, `0048`) |
 
@@ -152,6 +153,15 @@ trong sổ nợ, xem `danh-cho-may/DEBT.md` nợ #40.
 ### Máy chạy cron chết thì sao — chỗ này từng là lỗ hổng
 
 Bản trước của README này tự nêu ra rồi bỏ ngỏ: *"nếu máy chạy cron chết thì job không chạy và không ai biết"*. `0041` đóng nó bằng cách cho **chính bộ lịch** một dòng trong `ops.job_schedule` (`job_scheduler`, nhịp 1 ngày). Máy chạy lịch chết ⇒ không ai ghi dòng mới ⇒ `ops.v_job_health` chuyển dòng đó sang `qua_han` và `needs_attention = true`. Một truy vấn, một cột, trả lời được câu *"đêm qua máy quét có chạy không"*.
+
+**Nhưng "có người biết" chỉ đúng khi có người đi hỏi.** `0041` biến im lặng thành một dòng đọc được; nó không đưa dòng đó tới ai. `0051` (nợ #40) nối tiếp đúng một bước: job `kenh_bao_dong` đọc `ops.v_job_health` + `ops.v_rule_health`, ghi tin vào `ops.outbox_messages`, rồi **gửi thật** qua các kênh khai trong `ops.alert_channels` — hôm nay là một **tệp nhật ký báo động** (`var/bao-dong/bao-dong-<ngày>.log`, adapter `tools/alert/kenh/tep-nhat-ky.mjs`).
+
+Và đây là chỗ **không được tô hồng**, vì nó là giới hạn thật của cả chuỗi:
+
+* Tệp nhật ký vẫn là **kênh KÉO**. Nó không rung điện thoại ai lúc 2 giờ sáng. Cái nó thêm được so với hôm qua đúng ba thứ: một bản ghi nằm **ngoài** database (đọc được cả khi Postgres đang chết), mốc thời gian từng tin, và trạng thái phân biệt được. Kênh ĐẨY thật (Zalo OA / SMS) vẫn là nợ, cần tiền mua hạ tầng (`10-mua-sam-ha-tang.md`).
+* **Bộ sinh báo động nằm TRONG cái nó canh.** `kenh_bao_dong` chạy trong chính `run-all.mjs`. Máy chạy cron chết ⇒ không lượt nào gọi nó ⇒ **không tin nào được sinh, kể cả tin "cron đã chết"**. Người canh ngoài cùng bắt buộc phải đứng ngoài hệ, và hôm nay chỗ đó vẫn trống: `run-all.mjs --check` trả mã thoát `1`, nhưng tác vụ `HubJobs` **chưa được đăng ký trên máy nào** (nợ #33).
+
+Xem nhanh tình trạng kênh và hàng đợi, không chạm gì: `node tools/jobs/run-bao-dong.mjs --xem`.
 
 ### Bảy trạng thái của `ops.v_job_health`
 

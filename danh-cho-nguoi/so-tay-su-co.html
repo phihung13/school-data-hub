@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="So tay su co School Data Hub: nam kich ban thuong gap, moi kich ban mot trang A4 in ra dan o phong truc.">
+<title>School Data Hub: Sổ tay sự cố — 5 kịch bản, in ra dán ở phòng trực</title>
+<style>
+  /* Không tệp nào tải từ Internet: không phông ngoài, không ảnh ngoài, không script.
+     Sổ tay này phải đọc được cả khi chính đường mạng là thứ đang hỏng. */
+  :root {
+    color-scheme: light;
+    --ink:#141a24; --muted:#4d5766; --line:#c9d0d8;
+    --paper:#ffffff; --tint:#f2f5f8;
+    --red:#a8322c; --red-bg:#fdeceb;
+    --green:#1f6d4c; --green-bg:#e7f4ec;
+    --amber:#8a5308; --amber-bg:#fff4e0;
+    --blue:#1d4f9c; --blue-bg:#e9f0fb;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:0 18px 60px; background:var(--tint); color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    font-size:17px; line-height:1.5;
+  }
+  .wrap { max-width:900px; margin:0 auto; }
+
+  .page {
+    background:var(--paper); border:1px solid var(--line); border-radius:10px;
+    padding:26px 30px 30px; margin:22px 0;
+  }
+
+  h1 { margin:0 0 6px; font-size:1.95rem; line-height:1.15; letter-spacing:-.02em; }
+  h2 { margin:0; font-size:1.45rem; line-height:1.2; letter-spacing:-.015em; }
+  h3 {
+    margin:18px 0 7px; font-size:1rem; letter-spacing:.04em; text-transform:uppercase;
+    padding-bottom:4px; border-bottom:2px solid var(--ink);
+  }
+  p { margin:7px 0; }
+  ol, ul { margin:7px 0; padding-left:24px; }
+  li { margin:4px 0; }
+
+  .kicker {
+    display:inline-block; padding:3px 11px; border-radius:4px;
+    font-size:.78rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase;
+    background:var(--ink); color:#fff;
+  }
+  .muc { float:right; font-size:.8rem; font-weight:800; letter-spacing:.06em;
+         color:#fff; background:var(--red); padding:3px 10px; border-radius:4px; }
+  .muc.sev2 { background:var(--amber); }
+  .muc.sev3 { background:var(--blue); }
+  .sub { margin:6px 0 0; color:var(--muted); font-size:.95rem; }
+
+  code, .cmd { font-family:Consolas,"Courier New",monospace; }
+  .cmd {
+    display:block; margin:8px 0; padding:11px 13px;
+    background:#151c26; color:#eef2f6; border-radius:7px;
+    font-size:.85rem; line-height:1.45; white-space:pre-wrap; word-break:break-word;
+  }
+  code { font-size:.9em; padding:1px 5px; border-radius:4px; background:var(--tint); }
+
+  table { width:100%; border-collapse:collapse; margin:8px 0; font-size:.92rem; }
+  th, td { text-align:left; vertical-align:top; padding:7px 9px; border:1px solid var(--line); }
+  th { background:var(--tint); font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; }
+
+  /* Khung viền kín, không phải vạch màu một bên: máy in đen trắng ở phòng trực
+     dựng được đường viền kín ổn định hơn hẳn một mảng màu đặc. */
+  .box { margin:9px 0; padding:11px 14px; border-radius:8px; border:1.5px solid; }
+  .b-red   { background:var(--red-bg);   border-color:var(--red); }
+  .b-green { background:var(--green-bg); border-color:var(--green); }
+  .b-amber { background:var(--amber-bg); border-color:var(--amber); }
+  .b-blue  { background:var(--blue-bg);  border-color:var(--blue); }
+  .box p:first-child { margin-top:0; }
+  .box p:last-child { margin-bottom:0; }
+
+  .noi { font-style:italic; color:var(--muted); }
+  .dodac { font-size:.87rem; color:var(--muted); }
+
+  .goidev { margin-top:14px; padding:11px 14px; border:2px solid var(--red); border-radius:8px; background:var(--red-bg); }
+  .goidev h4 { margin:0 0 5px; font-size:.98rem; color:var(--red); letter-spacing:.03em; text-transform:uppercase; }
+  .goidev p:last-child { margin-bottom:0; }
+
+  /* ── In ra giấy: A4, mỗi kịch bản đúng một trang ───────────────────────────
+     Cỡ chữ in để 10,5pt: to hơn báo giấy (8–9pt), gần bằng cỡ mặc định của một
+     văn bản Word (11pt), đọc được dưới đèn phòng trực. Đây là một ĐÁNH ĐỔI đã
+     đo chứ không phải một con số chọn bừa: ở 12pt thì kịch bản 4 và 5 tràn sang
+     mặt giấy thứ hai, mà một kịch bản bị cắt đôi giữa hai tờ là đúng thứ làm
+     người trực đọc sót phần "kiểm đã chữa xong". Chiều cao TỪNG trang đã được
+     đo lại sau mỗi lần sửa chữ; xem số đo trong 07-operations.md mục 4d.       */
+  @page { size:A4; margin:10mm 12mm; }
+  @media print {
+    body { background:#fff; padding:0; font-size:10.5pt; line-height:1.28; }
+    .wrap { max-width:none; }
+    .page {
+      border:0; border-radius:0; padding:0; margin:0;
+      page-break-after:always; break-after:page;
+    }
+    .page:last-child { page-break-after:auto; break-after:auto; }
+    h1 { font-size:18pt; margin-bottom:3pt; }
+    h2 { font-size:15pt; }
+    h3 { font-size:10.5pt; margin:7pt 0 3pt; padding-bottom:2pt; }
+    p  { margin:3pt 0; }
+    ol, ul { margin:3pt 0; padding-left:16pt; }
+    li { margin:1.5pt 0; }
+    .cmd { background:#fff; color:#000; border:1pt solid #000; font-size:9pt;
+           line-height:1.28; padding:3.5pt 6pt; margin:4pt 0; }
+    code { background:#fff; border:.6pt solid #999; }
+    table { font-size:9.8pt; margin:4pt 0; }
+    th, td { padding:2.5pt 5pt; }
+    .box  { padding:5pt 8pt; margin:5pt 0; }
+    .goidev { padding:5pt 8pt; margin-top:7pt; }
+    .sub { font-size:9.5pt; }
+    .dodac { font-size:9pt; }
+    /* Không để một bảng hay một khung bị cắt đôi giữa hai mặt giấy. */
+    table, .box, .goidev, .cmd { break-inside:avoid; page-break-inside:avoid; }
+    .khong-in { display:none; }
+    a { color:#000; text-decoration:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ══════════════ TRANG BÌA: CÁCH DÙNG + BẢNG TRA ══════════════ -->
+<section class="page">
+  <span class="kicker">School Data Hub</span>
+  <h1>Sổ tay sự cố — 5 kịch bản</h1>
+  <p class="sub">Bản in cho phòng trực. Viết 02/08/2026. In bằng Ctrl+P, khổ A4 — mỗi kịch bản đúng một trang.</p>
+
+  <div class="box b-green">
+    <p><b>Sổ tay này viết cho người không biết lập trình.</b> Không cần hiểu hệ thống chạy thế nào. Chỉ cần: nhìn dấu hiệu, gõ đúng một lệnh để biết đúng bệnh, làm theo các bước, rồi chứng minh là đã xong.</p>
+  </div>
+
+  <h3>Không biết bắt đầu từ đâu — gõ đúng câu này</h3>
+  <span class="cmd">bash tools/start-local.sh</span>
+  <p>Lệnh này đi qua cả năm chỗ dễ hỏng theo đúng thứ tự và tự bật lại thứ nào đang tắt. Đọc <b>dòng đầu tiên có dấu <code>x</code></b> — đó là chỗ hỏng. Không có dấu <code>x</code> nào thì hệ đang khoẻ.</p>
+
+  <h3>Bảng tra: người dùng nói gì thì mở trang nào</h3>
+  <table>
+    <tr><th style="width:36%">Người dùng nói</th><th style="width:44%">Mở trang</th><th>Mức</th></tr>
+    <tr><td class="noi">bấm không ăn, nút chết</td><td><b>Trang 1</b> — Hub mở được nhưng không bấm được</td><td>Nặng</td></tr>
+    <tr><td class="noi">đăng nhập quay mãi rồi lỗi; mở lớp thì trắng trơn</td><td><b>Trang 2</b> — Không nối được cơ sở dữ liệu</td><td>Nặng</td></tr>
+    <tr><td class="noi">ở nhà không vào được, ở trường vào được</td><td><b>Trang 3</b> — Đường ra Internet chết</td><td>Nặng</td></tr>
+    <tr><td class="noi">sáng nay bảng cảnh báo trống trơn</td><td><b>Trang 4</b> — Bộ quét cảnh báo không chạy đêm qua</td><td>Vừa</td></tr>
+    <tr><td class="noi">lớp em thiếu một bạn so với file</td><td><b>Trang 5</b> — Nạp danh sách có dòng bị từ chối</td><td>Nhẹ</td></tr>
+  </table>
+
+  <div class="box b-amber">
+    <p><b>Câu quan trọng nhất trong cả cuốn sổ:</b> <i>mở thử thấy trang hiện ra</i> KHÔNG phải bằng chứng đã sửa xong. Phép kiểm đó đã lừa hai lần trong hai ngày. Mỗi trang dưới đây có một phép kiểm nói được nhiều hơn thế — làm đúng phép kiểm đó rồi mới báo là xong.</p>
+  </div>
+
+  <div class="box b-red">
+    <p><b>Ba điều tuyệt đối không làm.</b></p>
+    <ol>
+      <li>Không chạy lệnh dựng bản phát hành (<code>next build</code>). Không cần, và nó làm hỏng thêm.</li>
+      <li>Không sửa, xoá hay thêm dòng nào trong cơ sở dữ liệu bằng tay, trừ đúng câu được in trong sổ tay này.</li>
+      <li>Không chép mã mở khoá vào tin nhắn, ảnh chụp màn hình hay tài liệu. Mã nằm trong tệp <code>apps/hub/.env.local</code>; đọc tại chỗ, đọc xong đóng lại.</li>
+    </ol>
+  </div>
+
+  <p class="dodac">Bản đầy đủ cho kỹ thuật: <code>danh-cho-may/07-operations.md</code> mục 4d. Mọi lệnh trong sổ tay này đã được gõ thật trên máy ngày 02/08/2026, ở cả trạng thái khoẻ lẫn trạng thái hỏng dựng lại.</p>
+</section>
+
+<!-- ══════════════ TRANG 1: KHÔNG BẤM ĐƯỢC ══════════════ -->
+<section class="page">
+  <span class="muc">Mức nặng</span>
+  <span class="kicker">Trang 1 / RB-13</span>
+  <h2>Hub mở được nhưng KHÔNG BẤM ĐƯỢC</h2>
+
+  <h3>1. Dấu hiệu — người dùng sẽ nói thế này</h3>
+  <p class="noi">bấm không ăn · nút chết · trang hiện chữ mà không làm gì · tôi không vào được</p>
+  <p>Chữ hiện đủ, logo hiện đủ, ô nhập hiện đủ. Chỉ là bấm vào thì không có gì xảy ra. Lần gần nhất chuyện này xảy ra, <b>người phát hiện là chủ đầu tư, bằng điện thoại</b>, với đúng một câu như trên.</p>
+
+  <h3>2. Xác nhận đúng bệnh — gõ đúng một lệnh</h3>
+  <span class="cmd">bash tools/start-local.sh</span>
+  <p>Đọc khối có chữ <b>2b. Hub có bấm được không</b>:</p>
+  <table>
+    <tr><th style="width:52%">Máy in ra</th><th>Nghĩa là</th></tr>
+    <tr><td><code>✓ 7 tệp JS đều tải được — trang bấm được thật</code></td><td><b>Không phải bệnh này.</b> Sang trang 2 hoặc trang 3.</td></tr>
+    <tr><td><code>✗ trang mở được nhưng KHÔNG BẤM ĐƯỢC — thiếu tệp JS:</code> kèm dòng bắt đầu bằng <code>404</code></td><td><b>Đúng bệnh.</b> Làm tiếp phần 3.</td></tr>
+  </table>
+
+  <h3>3. Chữa — theo thứ tự, không đảo</h3>
+  <ol>
+    <li>Tìm số hiệu tiến trình đang giữ cổng 3000 — <b>gõ nguyên cả dòng, kể cả đoạn cuối</b>:
+      <span class="cmd">netstat -ano | findstr :3000 | findstr LISTENING</span>
+      Ra hai dòng nhưng <b>cùng một con số ở cuối</b> là bình thường. Bỏ đoạn <code>| findstr LISTENING</code> thì lệnh in ra hàng chục dòng với nhiều con số khác nhau, và phần lớn <b>không phải máy chủ Hub</b> — tắt nhầm chúng là tắt nhầm việc của người khác.</li>
+    <li>Tắt tiến trình đó — thay <code>&lt;số&gt;</code> bằng con số vừa thấy:
+      <span class="cmd">taskkill /PID &lt;số&gt; /F</span>
+      Nếu bước 1 ra <b>nhiều con số khác nhau</b> thì tắt hết, đừng chọn một cái: nhiều máy chủ cùng chạy chính là một trong hai nguyên nhân của bệnh này.</li>
+    <li>Xoá thư mục dựng tạm: <span class="cmd">rm -rf apps/hub/.next</span></li>
+    <li>Bật lại: <span class="cmd">bash tools/start-local.sh</span></li>
+  </ol>
+
+  <h3>4. Kiểm đã chữa xong — cần đủ cả hai</h3>
+  <ul>
+    <li><b>Máy nói:</b> lệnh ở bước 4 chạy tới hết và in <code>✓ N tệp JS đều tải được — trang bấm được thật</code>, không còn dòng nào có dấu <code>x</code>.</li>
+    <li><b>Người thử:</b> mở <code>hub.truongvietanh.com/login</code> trên <b>điện thoại</b>, gõ mã mở khoá, và <b>thấy màn hình đổi</b>.</li>
+  </ul>
+  <div class="box b-red">
+    <p><b>Không kết luận từ việc trang mở ra và chữ hiện đủ.</b> Đo thật 02/08/2026: giấu đi đúng một tệp làm cả trang chết nút, mà trang vẫn trả về mã 200 y như lúc khoẻ.</p>
+  </div>
+
+  <div class="goidev">
+    <h4>5. Khi nào gọi kỹ thuật</h4>
+    <ul>
+      <li>Đã xoá thư mục và bật lại <b>hai lượt</b> mà vẫn còn dòng <code>404</code>.</li>
+      <li>Bước 1 ra nhiều máy chủ, tắt xong lại mọc lại.</li>
+      <li>Tệp <code>.hub.log</code> ở thư mục gốc có dòng lỗi lạ.</li>
+    </ul>
+    <p><b>Dừng ở đây.</b> Đừng chạm mã nguồn, đừng chạy lệnh dựng bản phát hành, đừng cài lại thư viện.</p>
+  </div>
+</section>
+
+<!-- ══════════════ TRANG 2: CƠ SỞ DỮ LIỆU ══════════════ -->
+<section class="page">
+  <span class="muc">Mức nặng</span>
+  <span class="kicker">Trang 2 / RB-01</span>
+  <h2>Không nối được cơ sở dữ liệu</h2>
+
+  <h3>1. Dấu hiệu — người dùng sẽ nói thế này</h3>
+  <p class="noi">đăng nhập quay mãi rồi báo lỗi · bấm vào lớp thì trắng trơn · lưu điểm danh xong nó kêu lỗi</p>
+  <p>Trang đăng nhập vẫn mở ra bình thường — đó là cái bẫy. Đo thật với cơ sở dữ liệu đã tắt hẳn: trang đăng nhập vẫn trả mã <b>200</b>, còn thao tác đăng nhập thật thì trả <b>lỗi 500</b>.</p>
+
+  <h3>2. Xác nhận đúng bệnh — gõ đúng một lệnh</h3>
+  <span class="cmd">docker exec -i pg_hub psql -U postgres -d hub_dev -c "select 'CSDL TRA LOI DUOC' as ket_qua;"</span>
+  <table>
+    <tr><th style="width:48%">Máy in ra</th><th>Nghĩa là — làm gì</th></tr>
+    <tr><td><code>CSDL TRA LOI DUOC</code></td><td>Cơ sở dữ liệu khoẻ. <b>Không phải bệnh này</b> — sang trang 1 hoặc trang 3.</td></tr>
+    <tr><td><code>container ... is not running</code></td><td>Cơ sở dữ liệu bị dừng. Làm bước A.</td></tr>
+    <tr><td><code>error during connect: ... dial tcp ...</code></td><td>Docker Desktop chưa chạy xong. Làm bước B.</td></tr>
+    <tr><td><code>No such container: pg_hub</code></td><td><b>Gọi kỹ thuật ngay.</b> Cơ sở dữ liệu đã bị xoá chứ không phải tắt. Đừng tự tạo lại.</td></tr>
+  </table>
+
+  <h3>3. Chữa</h3>
+  <p><b>Bước A — cơ sở dữ liệu bị dừng:</b></p>
+  <span class="cmd">docker start pg_hub</span>
+  <p class="dodac">Đo thật 02/08/2026: nhận kết nối lại sau 2 giây.</p>
+  <p><b>Bước B — Docker Desktop chưa chạy:</b> mở Docker Desktop, đợi biểu tượng con cá voi <b>hết quay</b> (10 đến 40 giây), rồi gõ <code>bash tools/start-local.sh</code>. Lệnh này tự chờ tới 60 giây và tự bật lại cơ sở dữ liệu.</p>
+
+  <h3>4. Kiểm đã chữa xong — cần đủ cả ba</h3>
+  <ol>
+    <li>Gõ lại đúng lệnh ở phần 2, phải in ra <code>CSDL TRA LOI DUOC</code>.</li>
+    <li><code>bash tools/start-local.sh</code> chạy tới hết, không dòng nào có dấu <code>x</code>.</li>
+    <li><b>Thử một việc có chạm dữ liệu thật:</b> đăng nhập vào Hub và mở một lớp, phải thấy danh sách học sinh hiện ra.</li>
+  </ol>
+  <div class="box b-red">
+    <p><b>Chỉ mở được trang đăng nhập thì chưa chứng minh được gì.</b> Trang đó vẫn trả về 200 kể cả khi cơ sở dữ liệu đã tắt hẳn — đã đo.</p>
+  </div>
+  <div class="box b-green">
+    <p><b>Một điều đỡ lo.</b> Sau khi cơ sở dữ liệu sống lại thì <b>không cần khởi động lại Hub</b>: đo thật, thao tác đăng nhập trả kết quả đúng ngay ở lần bấm đầu tiên.</p>
+  </div>
+
+  <div class="goidev">
+    <h4>5. Khi nào gọi kỹ thuật</h4>
+    <ul>
+      <li>Máy trả lời <code>No such container</code>.</li>
+      <li>Cơ sở dữ liệu đã in <code>CSDL TRA LOI DUOC</code> mà Hub vẫn báo lỗi.</li>
+      <li><b>Đang trong giờ điểm danh 06:45 tới 07:30.</b> Gọi ngay, đồng thời phát <b>bảng 4 màu in sẵn</b> cho các lớp — hệ sẽ tự bù khi sống lại.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ TRANG 3: ĐƯỜNG RA INTERNET ══════════════ -->
+<section class="page">
+  <span class="muc">Mức nặng</span>
+  <span class="kicker">Trang 3 / RB-14</span>
+  <h2>Đường ra Internet chết</h2>
+
+  <h3>1. Dấu hiệu — người dùng sẽ nói thế này</h3>
+  <p class="noi">ở trường vào được mà ở nhà không vào được · điện thoại báo trang lỗi · hiện một trang xám lạ chứ không phải màn hình đăng nhập</p>
+  <p>Hub vẫn chạy tốt. Chỉ con đường từ Internet vào là đứt.</p>
+
+  <h3>2. Xác nhận đúng bệnh — dán cả hai dòng cùng lúc</h3>
+  <span class="cmd">curl -s -o /dev/null -w 'trong nha  = %{http_code}\n' -m 8  http://localhost:3000/login
+curl -s -o /dev/null -w 'ngoai duong = %{http_code}\n' -m 12 https://hub.truongvietanh.com/login</span>
+  <table>
+    <tr><th style="width:44%">Máy in ra</th><th>Nghĩa là</th></tr>
+    <tr><td><code>trong nha = 200</code> và <code>ngoai duong = 200</code></td><td>Đường ra khoẻ. <b>Không phải bệnh này.</b></td></tr>
+    <tr><td><code>trong nha = 200</code> và <code>ngoai duong = 502</code></td><td><b>Đúng bệnh.</b> Hub sống, đường ra chết.</td></tr>
+    <tr><td><code>trong nha</code> khác 200</td><td>Bệnh khác — sang trang 1 hoặc trang 2 trước. Đường ra chỉ là nạn nhân.</td></tr>
+  </table>
+  <div class="box b-amber">
+    <p><b>Đừng đi tìm số 1033.</b> Nhiều người kể rằng đường ra chết thì hiện lỗi 1033. Trên hệ này thì không: đo 02/08/2026 bằng cách tắt hẳn đường hầm rồi gọi 6 lần trong 40 giây, <b>cả 6 lần đều ra 502</b>. Đi tìm một con số không xuất hiện là cách chắc chắn để kết luận nhầm rằng mọi thứ vẫn ổn.</p>
+  </div>
+
+  <h3>3. Chữa</h3>
+  <ol>
+    <li>Xem đường hầm còn sống không: <span class="cmd">tasklist | findstr cloudflared</span>
+      Không ra dòng nào = đã chết hẳn.</li>
+    <li>Bật lại: <span class="cmd">bash tools/start-local.sh</span>
+      Lệnh này tự bật đường hầm và tự chờ tới khi địa chỉ công khai trả lời. Đo thật 02/08/2026: khoảng 11 giây.</li>
+  </ol>
+
+  <h3>4. Kiểm đã chữa xong — cần đủ cả hai</h3>
+  <ol>
+    <li>Gõ lại đúng hai dòng ở phần 2, phải ra <code>ngoai duong = 200</code>.</li>
+    <li>Mở tệp <code>.cloudflared.log</code> ở thư mục gốc, tìm dòng có chữ <b><code>Registered tunnel connection</code></b> mang <b>giờ vừa nãy</b>. Lúc khoẻ có <b>bốn</b> dòng như vậy.</li>
+  </ol>
+  <div class="box b-blue">
+    <p><b>Vì sao phải xem tệp log.</b> Con số 200 chỉ nói có ai đó trả lời. Bốn dòng trong log nói <b>chính đường hầm này</b> đã nối lại — đúng thứ vừa hỏng.</p>
+  </div>
+  <div class="box b-red">
+    <p><b>Không có ai canh tự động.</b> Sáng 02/08/2026 đường hầm chết, và thứ bật nó lên là <b>một con người gõ đúng lệnh ở trên</b>. Máy tính khởi động lại là đường ra mất — phải có người bật lại bằng tay.</p>
+  </div>
+
+  <div class="goidev">
+    <h4>5. Khi nào gọi kỹ thuật</h4>
+    <ul>
+      <li>Bật lại rồi mà sau <b>2 phút</b> vẫn ra <code>502</code>.</li>
+      <li>Tệp log có dòng nhắc tới <code>credentials</code>, chứng chỉ, hoặc <code>Unauthorized</code>.</li>
+    </ul>
+    <p><b>Dừng ở đây.</b> Đừng sửa tệp cấu hình đường hầm, đừng tạo đường hầm mới, đừng đụng tới tên miền.</p>
+  </div>
+</section>
+
+<!-- ══════════════ TRANG 4: BỘ QUÉT CẢNH BÁO ══════════════ -->
+<section class="page">
+  <span class="muc sev2">Mức vừa</span>
+  <span class="kicker">Trang 4 / RB-02</span>
+  <h2>Bộ quét cảnh báo không chạy đêm qua</h2>
+
+  <div class="box b-red">
+    <p><b>Vì sao việc này quan trọng hơn nó trông.</b> Từ 01/08/2026 giáo viên chủ nhiệm không còn đọc được nhật ký cảm xúc từng ngày của lớp mình, nên bộ quét đêm là <b>con đường phát hiện sớm duy nhất</b> còn lại của cô.</p>
+  </div>
+
+  <h3>1. Dấu hiệu</h3>
+  <p>Giáo viên mở buồng lái và thấy một <b>dải màu vàng ở đầu trang</b> thay vì bảng cảnh báo: <span class="noi">Bộ quét cờ quá hạn</span> · <span class="noi">chưa chạy lần nào</span> · <span class="noi">lần quét gần nhất đã HỎNG</span> · <span class="noi">đang treo</span>. Hoặc giáo viên nói <span class="noi">sáng nay bảng trống trơn</span> — và đúng lúc này thì <b>trống trơn không có nghĩa là không có chuyện</b>.</p>
+
+  <h3>2. Xác nhận đúng bệnh — gõ đúng một lệnh</h3>
+  <span class="cmd">docker exec -i pg_hub psql -U postgres -d hub_dev -c "select label, state, to_char(last_finished_at at time zone 'Asia/Ho_Chi_Minh','DD/MM HH24:MI') as xong_luc, needs_attention from ops.v_job_health order by 4 desc, 1;"</span>
+  <p>Đọc cột <code>state</code> ở dòng <b>Bộ quét cờ đêm</b>:</p>
+  <table>
+    <tr><th style="width:24%">state</th><th>Nghĩa là — làm gì</th></tr>
+    <tr><td><code>ok</code></td><td><b>Không phải bệnh này.</b> Bảng trống là bảng trống thật.</td></tr>
+    <tr><td><code>qua_han</code> · <code>chua_chay</code> · <code>that_bai</code></td><td>Quá giờ, chưa chạy lần nào, hoặc lần gần nhất hỏng. Làm phần 3. Riêng <code>that_bai</code> hai lần liên tiếp thì gọi kỹ thuật.</td></tr>
+    <tr><td><code>treo</code> · <code>tat</code></td><td><b>Gọi kỹ thuật.</b> Đừng tự chạy lại.</td></tr>
+    <tr><td><code>dang_chay</code></td><td>Đang chạy: chờ, đừng chạy chồng lên.</td></tr>
+  </table>
+
+  <h3>3. Chữa</h3>
+  <ol>
+    <li>Chạy thử trước. Lệnh này <b>không chữa được gì</b>, nó chỉ cho biết bộ quét có chạy nổi không:
+      <span class="cmd">DATABASE_URL=postgres://postgres:postgres@localhost:5434/hub_dev node tools/jobs/run-flag-engine.mjs --dry-run</span></li>
+    <li>Chạy thật: cùng lệnh, <b>bỏ phần <code>--dry-run</code></b> ở cuối.</li>
+    <li>Nếu 30 phút chưa xong: báo nhóm giáo viên chủ nhiệm <b>bằng lời</b> rằng hôm nay buồng lái không có cảnh báo mới.</li>
+  </ol>
+  <div class="box b-green">
+    <p><b>Ba dòng này là bình thường, không phải sự cố:</b> <code>bỏ qua B_BEHAVIOR</code> · <code>C_CEFR</code> · <code>C_MASTERY</code>. Ba loại đó chưa có dữ liệu chảy vào, mà chấm một luật bằng dữ liệu không tồn tại còn tệ hơn không chấm.</p>
+  </div>
+
+  <h3>4. Kiểm đã chữa xong</h3>
+  <p>Gõ lại <b>đúng lệnh ở phần 2</b> và đòi hai thứ cùng lúc: <code>state</code> là <code>ok</code> kèm <code>needs_attention</code> là <code>f</code>; và <b><code>xong_luc</code> đã nhích sang giờ vừa chạy</b>. Đo 02/08/2026: trước khi chữa <code>02/08 02:11</code>, sau khi chạy thật <code>02/08 08:54</code>.</p>
+  <div class="box b-red">
+    <p><b>Không kết luận từ việc mở buồng lái thấy có cảnh báo.</b> Cảnh báo đang hiện có thể là của lần quét trước, chính màn hình cũng nói vậy. Thứ phải nhích là <b>đồng hồ</b>, không phải cái bảng.</p>
+  </div>
+
+  <div class="goidev">
+    <h4>5. Khi nào gọi kỹ thuật</h4>
+    <ul>
+      <li><code>state</code> là <code>treo</code> hoặc <code>tat</code>.</li>
+      <li>Chạy tay cũng hỏng, hoặc <code>that_bai</code> hai lần liên tiếp.</li>
+    </ul>
+    <p><b>Dừng ở đây.</b> Đừng sửa ngưỡng cảnh báo, đừng xoá dòng nào trong sổ chạy, đừng sửa cảnh báo trong cơ sở dữ liệu bằng tay.</p>
+  </div>
+</section>
+
+<!-- ══════════════ TRANG 5: NẠP DANH SÁCH ══════════════ -->
+<section class="page">
+  <span class="muc sev3">Mức nhẹ</span>
+  <span class="kicker">Trang 5 / RB-09</span>
+  <h2>Nạp danh sách học sinh có dòng bị từ chối</h2>
+
+  <h3>1. Dấu hiệu</h3>
+  <p>Cuối màn hình của lệnh nạp có dòng <code>Vào sổ lỗi : 1</code> (hoặc nhiều hơn) kèm câu <b>CÓ VIỆC CHỜ NGƯỜI</b>. Hoặc muộn hơn, giáo viên nói: <span class="noi">lớp em thiếu một bạn · bạn này có trong file mà không có trong Hub</span>.</p>
+
+  <h3>2. Xác nhận đúng bệnh — gõ đúng một lệnh</h3>
+  <span class="cmd">docker exec -i pg_hub psql -U postgres -d hub_dev -c "select id, dong_trong_file, ma_hoc_sinh, ho_ten, ma_lop, ly_do from staging.v_loi_nap_danh_sach where resolved_at is null order by created_at desc;"</span>
+  <p><code>dong_trong_file</code> là <b>số dòng thấy khi mở file trong Excel</b> (dòng 1 là tiêu đề). Mở file, nhảy tới đúng dòng đó.</p>
+  <table>
+    <tr><th style="width:38%">Cột <code>ly_do</code> bắt đầu bằng</th><th>Ai sửa, sửa gì</th></tr>
+    <tr><td>lớp chưa tồn tại trong năm học này</td><td>Gõ sai mã lớp: văn phòng sửa ô đó trong file. Nếu đúng là lớp mới thật, xem phần 3 mục 3.</td></tr>
+    <tr><td>trùng mã học sinh trong cùng một file nhưng khác họ tên</td><td><b>Nhà trường phải xác nhận em nào là em thật.</b> Hệ bỏ qua cả hai dòng; người trực không được chọn hộ.</td></tr>
+    <tr><td>vắng mặt trong file mới</td><td><b>Hệ tuyệt đối không tự cho em nghỉ học.</b> Phải có người xác nhận: trường xuất nhầm bộ lọc, hay em chuyển trường thật.</td></tr>
+  </table>
+  <p>Gặp một câu không có trong bảng trên: gọi kỹ thuật, đừng đoán.</p>
+
+  <h3>3. Chữa</h3>
+  <ol>
+    <li><b>Sửa ô trong file Excel, không sửa cơ sở dữ liệu.</b> File của nhà trường là bản gốc.</li>
+    <li>Lưu file, rồi chạy lại <b>đúng lệnh nạp cũ với đúng các tham số cũ</b>. Nếu đúng là lớp mới thật thì thêm <code>--tao-lop-moi</code>: lệnh sẽ in danh sách lớp sắp tạo trước khi tạo, đọc bằng mắt rồi mới cho chạy tiếp.</li>
+    <li><b>Đóng dòng cũ trong sổ lỗi.</b> Bước dễ quên nhất: nạp lại thành công <b>không</b> tự đóng dòng lỗi cũ (đã đo). Thay <code>&lt;id&gt;</code> bằng số ở cột <code>id</code>:
+      <span class="cmd">docker exec -i pg_hub psql -U postgres -d hub_dev -c "update staging.import_errors set retry_state='resolved', resolved_at=now() where id = &lt;id&gt;;"</span></li>
+  </ol>
+
+  <h3>4. Kiểm đã chữa xong — đếm, đừng nhìn</h3>
+  <span class="cmd">docker exec -i pg_hub psql -U postgres -d hub_dev -c "select (select count(*) from core.students) as so_hoc_sinh, (select count(*) from (select student_code from core.students group by 1 having count(*)>1) a) as ma_bi_trung, (select count(*) from (select student_id from core.enrollments where valid_to is null group by 1 having count(*)>1) b) as hai_ky_hoc_mo, (select count(*) from staging.v_loi_nap_danh_sach where resolved_at is null) as con_cho_nguoi;"</span>
+  <ul>
+    <li><code>ma_bi_trung</code> và <code>hai_ky_hoc_mo</code> phải là <b>0</b>, và <code>con_cho_nguoi</code> cũng phải là <b>0</b>. Khác 0 là còn người phải xử, dù màn hình nạp đã xanh.</li>
+    <li><code>so_hoc_sinh</code> chỉ tăng đúng bằng số em <b>mới thật</b>. Đo 02/08/2026: nạp lại 13 dòng trong đó 12 dòng đã có sẵn, số học sinh đi từ <b>109 lên 110</b>, đúng một em.</li>
+  </ul>
+  <div class="box b-green">
+    <p><b>Hai điều đã đo, để yên tâm mà làm.</b> Dòng bị từ chối <b>không để lại một nửa nào</b>: lúc có 1 dòng lỗi, em đó hoàn toàn không có trong kho. Và gõ lại lệnh nạp vì lỡ tay là <b>an toàn</b>: lần thứ ba cùng file cho ra <i>Đã vào kho 0, đã có sẵn 13</i>.</p>
+  </div>
+
+  <div class="goidev">
+    <h4>5. Khi nào gọi kỹ thuật</h4>
+    <ul>
+      <li>Màn hình in <code>DỪNG GIỮA CHỪNG</code> — hỏng ở mức cả lô (sai cột, sai năm học, sai file).</li>
+      <li>Có dòng <i>trùng mã học sinh nhưng khác họ tên</i> — việc này phải hỏi nhà trường.</li>
+      <li><code>hai_ky_hoc_mo</code> khác 0.</li>
+    </ul>
+    <p><b>Dừng ở đây.</b> Đừng sửa hay xoá gì trong bảng học sinh và bảng ghi danh bằng tay.</p>
+  </div>
+</section>
+
+<p class="dodac khong-in" style="text-align:center">In: Ctrl+P, khổ A4, bật <b>In cả màu nền</b> nếu muốn giữ các khung màu. Mỗi kịch bản tự sang một trang.</p>
+
+</div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 26
+sync-version: 27
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -648,6 +648,45 @@ Hai hệ quả phải ghi vì chúng đổi mẫu số của các phép đo sau:
 **Toàn bộ bộ pgTAP sau đợt F, đo trên database dựng lại từ đầu: 832 assertion / 49 file, mọi file khớp `plan(N)`** (đầu đợt: 798 / 47). Từ nay con số này **kiểm được chứ không phải là một lần đo trong quá khứ** — nguồn là `tools/pgtap-moc.tsv`, và lệch với nguồn đó là CI đỏ kèm tên file.
 
 *Các số cũ trong file này (`564` ở mục `0043`, `601` ở mục `0044`, `731`/`796` ở mục đợt E) là số của đúng thời điểm đó và cố ý giữ nguyên — chúng là hồ sơ của một lần đo.*
+
+## Đợt G (`0051`, 02/08/2026) — hệ biết job hỏng, nhưng chưa có đường nào tới một con người
+
+`ops.outbox_messages` (`0008`) có **bộ GHI** mà chưa có **bộ GỬI**. Đo 01/08/2026: bảng có đúng một chỗ ghi (`0039_flag_engine.sql:534`), `grep -rn "outbox" apps/ tools/ packages/core/src` ra **0 hit**, và bảng rỗng. Hệ **biết** job hỏng (`ops.v_job_health`, `ops.v_rule_health`) nhưng lời biết đó không đi đâu cả.
+
+Sau ADR-026 chuyện này nặng hơn hẳn: buồng lái GVCN phụ thuộc **hoàn toàn** vào lượt quét đêm để có cờ cảm xúc. Engine ngủ một đêm là cô mất khả năng phát hiện sớm — và không ai được báo.
+
+### Cột thêm vào `ops.outbox_messages`
+
+| Cột | Kiểu | Việc |
+|---|---|---|
+| `status` | `text not null default 'cho_gui'` | `cho_gui` · `da_gui` · `gui_hong` · `het_luot` · `khong_co_kenh` |
+| `max_attempts` | `smallint not null default 5` | hết lượt ⇒ `het_luot`, **nổi lên**, không nằm im |
+| `next_attempt_at` | `timestamptz not null default now()` | giãn dần 5 phút → 10 → 20 … trần 6 giờ |
+| `last_attempt_at` | `timestamptz` | lần thử gần nhất |
+
+Ràng buộc trung tâm của cả gói: `outbox_sent_khop_chk check ((status = 'da_gui') = (sent_at is not null))`. Trước `0051`, `sent_at is null` gộp **bốn sự thật khác hẳn nhau** vào một chỗ, và nguy hiểm nhất là để "không có kênh nào để gửi" đọc thành "đã gửi" — lúc đó màn hình khẳng định đã báo cho một tin **chưa từng rời khỏi database**. Ràng buộc này biến điều đó thành lỗi Postgres chứ không phải một quy ước trong đầu người viết mã.
+
+### Bảng, hàm, view mới
+
+| Đối tượng | Việc |
+|---|---|
+| `ops.alert_channels` | Sổ khai kênh, cùng hình dạng và cùng luật với `ops.job_schedule` (`0041`): **chỉ khai kênh đã có adapter thật**. Hôm nay đúng một dòng, `tep_nhat_ky`. RLS bật, không policy, không GRANT. |
+| `ops.alert_deliveries` | Bằng chứng từng lần gửi. Tách bảng chứ không thêm cột vì một tin đi qua nhiều kênh: "đã gửi" của TIN là hợp của các kênh, còn lý do hỏng thuộc về TỪNG kênh. Chỉ mục một phần `(message_id, channel_id) where status = 'da_gui'` **chính là §9 ở tầng database**. |
+| `ops.kenh_cho`, `ops.co_kenh_khai_bao` | Kênh đang bật cho một đối tượng nhận; và đối tượng đó đã từng có kênh nào được khai chưa. |
+| `ops.sinh_bao_dong` | Đọc `v_job_health` + `v_rule_health` rồi ghi tin. `dedup_key` mang **NGÀY** — một chuyện hỏng cả tuần ra 7 tin, không phải 168. |
+| `ops.claim_bao_dong` | Nhặt tin tới lượt và **khoá** (`for update skip locked`). Phải gọi BÊN TRONG transaction; gọi ngoài là mở lại cửa "hai tiến trình cùng gửi một tin". |
+| `ops.ghi_ket_qua_gui`, `ops.da_gui_qua`, `ops.ket_thuc_gui` | Ghi một lần gửi · lớp hỏi-trước · chốt trạng thái tin theo **bốn ngả tách bạch**. `khong_co_kenh` **không đốt lượt thử** — đốt thì sau 5 lượt tin mang lý do SAI "thử 5 lần đều hỏng" trong khi chưa ai từng thử. |
+| `ops.v_bao_dong` | **Sổ trực** — mỗi tin một dòng kèm một câu tiếng Việt nói đúng trạng thái, không phải một mã. |
+| `ops.v_bao_dong_ton` | Tin đang **mắc kẹt**, cần tay người. Ranh giới đèn chép nguyên từ `0043`: tin `khong_co_kenh` của một đối tượng **chưa từng có kênh nào** (ví dụ `care_team`) KHÔNG tính là mắc kẹt — đó là nợ hạ tầng có tên (#40). Nhưng "đã khai kênh rồi mà tắt hết" thì có người vừa tắt một đường báo động, và điều đó phải kêu. |
+| `ops.v_suc_khoe_kenh` | Sức khoẻ **từng kênh**. Ra đời từ một lỗ hổng tìm được bằng thử ngược: một tin gửi được qua kênh A vẫn là `da_gui` dù kênh B hỏng, mà tin đã `da_gui` thì không bao giờ được nhặt lại — **kênh B chết trong im lặng** nếu chỉ nhìn trạng thái của tin. |
+
+Cả ba view **không** GRANT cho `authenticated`: chúng đọc `ops.outbox_messages`, bảng đó cố ý đóng từ `0024` vì chứa nội dung bản tin. Ngày có màn hình trực thật thì mở bằng một migration riêng, có `security_invoker` và policy — đừng mở lén.
+
+Kèm một dòng `ops.job_schedule`: `kenh_bao_dong`, kind `script`, runner `run-bao-dong.mjs`, mỗi 1 giờ, dung sai 2 giờ — khai được vì bộ chạy ra đời trong cùng commit (luật của `0041`).
+
+**Nửa còn nợ, đừng đọc nhẹ đi:** tệp nhật ký là kênh **KÉO**. Nó không rung điện thoại ai lúc 2 giờ sáng — vẫn phải có người đi mở ra xem. Và bộ sinh báo động nằm **trong chính bộ lịch nó canh**, nên cron chết thì không tin nào được sinh, kể cả tin "cron đã chết". Không vá được từ bên trong; người canh vòng ngoài vẫn là nợ #33.
+
+Kiểm chứng: `0051_kenh_bao_dong_test.sql` **39 assertion** + `tests/db/kenh-bao-dong.test.ts` chạy tiến trình thật và hệ tệp thật. **Toàn bộ pgTAP sau đợt G: 871 assertion / 50 file**, mọi file khớp `plan(N)`.
 
 ## Quy tắc migration (§2)
 

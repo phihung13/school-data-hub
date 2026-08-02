@@ -281,7 +281,28 @@ async function voiSoNhatKy(
   }
 }
 
+/**
+ * Số dòng `flag_engine` trong sổ nhật ký TRƯỚC khi nhóm 4 đụng vào nó. Đo một lần, dùng
+ * để so ở bài cuối nhóm.
+ *
+ * Vì sao phải là SO SÁNH chứ không phải một ngưỡng: bài cuối nhóm trước đây khẳng định
+ * `count > 0`, và nó xanh suốt vì `hub_dev` đã tích hàng trăm lượt chạy engine. Ngày
+ * 02/08/2026 nợ #41 tách bộ test sang `hub_test` dựng lại từ đầu — sổ nhật ký ở đó RỖNG,
+ * nên `count > 0` đỏ. Bài test không hỏng lúc đó; nó vốn đã sai từ đầu và chỉ được đống
+ * dữ liệu bẩn che cho. Câu hỏi thật của bài này là "sổ có được TRẢ LẠI NGUYÊN TRẠNG
+ * không", và nguyên trạng của một cơ sở dữ liệu sạch là số không.
+ */
+let soDongTruocNhom4 = -1;
+
 describe("4 · trạng thái bộ quét cờ đi ra tới buồng lái", () => {
+  beforeAll(async () => {
+    if (!ready) return;
+    const { rows } = await asSystem((c) =>
+      c.query<{ n: string }>("select count(*)::text as n from ops.job_runs where job_name = 'flag_engine'"),
+    );
+    soDongTruocNhom4 = Number(rows[0]?.n ?? -1);
+  });
+
   it("(b) CHƯA QUÉT LẦN NÀO → state 'chua_chay', needsAttention, và lastScanAt = null", async ({ skip }) => {
     if (!ready) return skip();
     // Đây là trạng thái KHÔNG BAO GIỜ xảy ra trên máy dev (flag_engine đã chạy hàng trăm
@@ -413,7 +434,11 @@ describe("4 · trạng thái bộ quét cờ đi ra tới buồng lái", () => {
       ),
     );
     expect(Number(rows[0]?.parked ?? -1)).toBe(0);
-    expect(Number(rows[0]?.n ?? 0)).toBeGreaterThan(0);
+    // SO với mốc đo đầu nhóm, KHÔNG so với một ngưỡng. Xem chú thích của `soDongTruocNhom4`:
+    // câu `> 0` cũ chỉ xanh nhờ dữ liệu bẩn tích trên hub_dev, và nó đỏ ngay ngày bộ test
+    // được chuyển sang một cơ sở dữ liệu dựng lại từ đầu.
+    expect(soDongTruocNhom4).toBeGreaterThanOrEqual(0); // beforeAll đã chạy thật
+    expect(Number(rows[0]?.n ?? -1)).toBe(soDongTruocNhom4);
   });
 });
 

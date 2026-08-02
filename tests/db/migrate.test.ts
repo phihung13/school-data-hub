@@ -10,7 +10,7 @@
 // Vì sao có cả corpus GIẢ lẫn corpus THẬT:
 //   · Corpus giả (3 file bịa) — kiểm LOGIC của bộ chạy: sổ, từ chối áp lại, lệch băm,
 //     transaction, nhận nợ. Nhanh, và mỗi ca dựng được đúng tình huống muốn dựng.
-//   · Corpus thật (50 file của kho) — kiểm rằng LOGIC ĐÓ đúng trên thứ sẽ chạy thật.
+//   · Corpus thật (toàn bộ file của kho, đếm từ đĩa) — kiểm rằng LOGIC ĐÓ đúng trên thứ sẽ chạy thật.
 //     Một bộ chạy xanh trên ba file bịa mà nghẹn ở file thứ 37 của kho là bộ chạy
 //     chưa từng được kiểm.
 //
@@ -20,7 +20,15 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync, copyFileSync, cpSync } from "node:fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  copyFileSync,
+  cpSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -32,6 +40,22 @@ const GOC = new URL("../../", import.meta.url);
 const CONG_CU = fileURLToPath(new URL("tools/migrate/migrate.mjs", GOC));
 const MIGRATIONS_THAT = fileURLToPath(new URL("packages/core/db/migrations/", GOC));
 const SO_GHI_THAT = `${MIGRATIONS_THAT}0050_so_ghi_migration.sql`;
+
+/**
+ * Số file migration ĐẾM TỪ ĐĨA, không viết cứng.
+ *
+ * Trước 02/08/2026 con số này là `50` viết thẳng trong assertion, và migration `0051`
+ * làm bài test đỏ — đỏ vì kho lớn thêm, không vì bộ chạy sai. Một cổng đỏ theo cách đó
+ * dạy người ta sửa con số cho xanh, tức là dạy đúng thói quen mà cả bộ test sinh ra để
+ * chống. Điều đáng khẳng định không phải "có đúng 50 file" mà là **sổ ghi khớp đĩa**:
+ * bộ chạy áp hết, không sót, không thừa.
+ */
+const SO_FILE_THAT = readdirSync(MIGRATIONS_THAT).filter((f) => /^\d{4}_.*\.sql$/.test(f)).length;
+const VERSION_CUOI = readdirSync(MIGRATIONS_THAT)
+  .filter((f) => /^\d{4}_.*\.sql$/.test(f))
+  .map((f) => f.slice(0, 4))
+  .sort()
+  .at(-1)!;
 
 /** Ba database nháp, tự dựng tự xoá. Hậu tố `_test` theo đúng luật đặt tên của kho. */
 const DB_GIA = "hub_migrate_gia_test";
@@ -360,9 +384,9 @@ describe("NHẬN NỢ BAN ĐẦU — 48 migration đã áp bằng tay trước k
   });
 });
 
-describe("corpus THẬT — 50 migration của kho, dựng từ database rỗng", () => {
+describe(`corpus THẬT — ${SO_FILE_THAT} migration của kho, dựng từ database rỗng`, () => {
   it(
-    "up dựng đủ 50, ghi đủ 50 dòng sổ, và backup_reader đọc được sổ (ADR-006)",
+    "up dựng đủ số file trên đĩa, ghi đủ chừng ấy dòng sổ, và backup_reader đọc được sổ (ADR-006)",
     async ({ skip }) => {
       if (!ready) return skip();
       await dungLaiDb(DB_THAT);
@@ -376,9 +400,9 @@ describe("corpus THẬT — 50 migration của kho, dựng từ database rỗng"
                 max(version) as v_max
            from ops.schema_migrations`,
       );
-      expect(x!.n).toBe("50");
+      expect(x!.n).toBe(String(SO_FILE_THAT));
       expect(x!.nhan_no).toBe("0");
-      expect(x!.v_max).toBe("0050");
+      expect(x!.v_max).toBe(VERSION_CUOI);
 
       // Đây là hệ quả của việc file mồi phải chạy TRƯỚC 0001 (nơi tạo vai
       // backup_reader): GRANT trong nó bị bỏ qua ở lần đầu, và bộ chạy phải chạy lại
@@ -429,7 +453,7 @@ describe("corpus THẬT — 50 migration của kho, dựng từ database rỗng"
       try {
         cpSync(MIGRATIONS_THAT, banSao, { recursive: true });
         writeFileSync(
-          join(banSao, "0051_co_tinh_hong.sql"),
+          join(banSao, "9999_co_tinh_hong.sql"),
           "begin;\ncreate table ops.nua_voi (i int);\nselect 1/0;\ncommit;\n",
         );
         const r = chay(["up"], DB_THAT, banSao);
@@ -438,7 +462,7 @@ describe("corpus THẬT — 50 migration của kho, dựng từ database rỗng"
         const [x] = await doc<{ bang: string | null; dong: string }>(
           DB_THAT,
           `select to_regclass('ops.nua_voi')::text as bang,
-                  (select count(*)::text from ops.schema_migrations where version = '0051') as dong`,
+                  (select count(*)::text from ops.schema_migrations where version = '9999') as dong`,
         );
         expect(x!.bang).toBeNull();
         expect(x!.dong).toBe("0");

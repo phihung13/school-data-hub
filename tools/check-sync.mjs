@@ -67,6 +67,12 @@ const MACHINE_FILES = [
  * phải viết tên món nợ vào đây — không có đường ghi nợ ẩn danh.
  */
 const NO_TAI_LIEU = [
+  // TRẢ NỢ 02/08/2026 (lượt gộp đợt G): 12 đối tượng của `kenh-bao-dong` (0051) đã được
+  // `02-database.md` gọi tên đủ trong mục "Đợt G", bản nháp `.wip` đã xoá, nên danh sách
+  // rỗng lại. Đây đúng vòng đời mà bánh cóc `SO NO THUA` canh: ghi nợ có tên khi đợt còn
+  // bay, và BẮT BUỘC xoá khi tài liệu đã theo kịp — nợ nằm lại sau khi đã trả là một lời
+  // khai sai, chỉ theo chiều ngược lại.
+  //
   // TRẢ NỢ 02/08/2026 (lượt gộp đợt F). Hai món ghi ở đây trong lúc đợt còn bay —
   // `care.flags_tam_ly` (0049) và `ops.schema_migrations` (0050) — nay đã được
   // `02-database.md` gọi tên trong mục "Đợt F", nên danh sách rỗng lại.

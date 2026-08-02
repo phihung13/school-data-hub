@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Quy trinh cap va thu hoi tai khoan School Data Hub trong giai doan thi diem: bieu mau giay, quan tri truc thao tac.">
+<title>Quy trình cấp và thu hồi tài khoản - giai đoạn thí điểm</title>
+<!--
+  danh-cho-nguoi/quy-trinh-tai-khoan.html
+  =======================================
+  Trả cho ô "Nhóm 6 - Quản trị" trong lo-trinh-go-live.html:
+  "Quy trình cấp và thu hồi tài khoản: giai đoạn thí điểm dùng biểu mẫu giấy,
+   admin trực thao tác (tạm thời) - Chủ tịch ký".
+
+  NGUỒN CỦA TỪNG CON SỐ VÀ TỪNG CÂU KHẲNG ĐỊNH (đọc từ mã và CSDL ngày 02/08/2026,
+  không chép lại từ tài liệu khác):
+
+  · Tám vai: select code, name from core.roles trên hub_dev - admin, board, counselor,
+    guardian, homeroom, principal, student, teacher (migration 0003_core_rbac.sql).
+  · Ba trạng thái tài khoản: core.users.status CHECK ('active','disabled','pending')
+    - đọc bằng \d core.users trên hub_dev.
+  · Không xoá cứng được: trigger users_block_hard_delete trên core.users
+    (migration 0033_anonymize_user.sql). Đường xoá hợp lệ duy nhất là core.anonymize_user(),
+    chạy qua tools/jobs/run-anonymize-user.mjs (có --dry-run, tự ghi ops.audit_log).
+  · Không hạ được về pending: trigger users_no_pending_downgrade
+    (migration 0047_duong_keu_cuu_khong_khoa.sql, ADR-027 bản 2) - không có cửa thoát hiểm.
+  · Mã mời phụ huynh: bảng core.parent_invite_codes. Ràng buộc code ~ '^[A-Z0-9]{6}$'
+    (6 ký tự hoa + số). Cột revoked_at/revoked_by/full_name/redeemed_count thêm ở
+    migration 0036_invite_single_use.sql. Cửa sổ nhận lại 15 phút, không gia hạn: ADR-024.
+  · Nạp học sinh bằng file CSV sáu cột: tools/jobs/run-nap-danh-sach.mjs, hằng COT_BAT_BUOC
+    = ma_hoc_sinh, ho_ten, ngay_sinh, ma_co_so, ma_lop, khoi (ngay_sinh và khoi được để
+    trống nhưng CỘT phải có). Ba mã thoát 0/1/2 chép từ phần chú thích đầu file đó.
+  · Ranh giới phiếu đồng ý: ADR-027 bản 2 + migration 0047. Phiếu gác VIỆC GHI TÂM TRẠNG
+    (cột mood), KHÔNG gác tài khoản; đường "Mình cần gặp thầy cô" không bao giờ khoá.
+  · Cửa đăng nhập tạm: ADR-028 + DEBT #19. Có khoá bằng một bí mật dùng chung.
+    TỜ NÀY KHÔNG IN BÍ MẬT ĐÓ và không được in - xem ô cảnh báo trong phần 5.
+
+  KHÔNG in mật khẩu, không in chuỗi kết nối, không in mã cửa. Đã soát tay.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --ink:#172033; --muted:#5f6879; --faint:#8991a0;
+    --paper:#fbfaf6; --surface:#ffffff; --surface-2:#f3f5f8; --line:#dfe3e8;
+    --navy:#142c52; --blue:#2f6edb; --blue-soft:#eaf1ff;
+    --green:#277c5a; --green-soft:#e8f5ee;
+    --amber:#a66513; --amber-soft:#fff3dc;
+    --red:#b0443d; --red-soft:#fdecea;
+    --radius:18px;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:0 20px 80px;
+    background:var(--paper); color:var(--ink);
+    font-family:"Be Vietnam Pro","Segoe UI",system-ui,sans-serif;
+    font-size:15.2px; line-height:1.6;
+  }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1,h2,h3,h4 { color:var(--navy); text-wrap:balance; }
+  h1 { margin:0; font-size:clamp(1.8rem,3.8vw,2.9rem); line-height:1.06; letter-spacing:-.04em; }
+  h2 { margin:0 0 8px; font-size:clamp(1.25rem,2.2vw,1.7rem); letter-spacing:-.025em; }
+  h3 { margin:24px 0 8px; font-size:1.08rem; }
+  h4 { margin:0 0 5px; font-size:.94rem; }
+  p { max-width:82ch; }
+  .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.7rem; font-weight:850; letter-spacing:.13em; text-transform:uppercase; }
+  .muted { color:var(--muted); }
+  .small { font-size:.86rem; }
+  .micro { font-size:.75rem; }
+  code { font-family:Consolas,monospace; font-size:.85em; padding:.1em .34em; border-radius:5px; background:var(--surface-2); color:#4a3a72; }
+
+  section { padding:30px 0; border-top:1px solid var(--line); }
+  section:first-of-type { border-top:0; }
+
+  .hero {
+    margin:24px 0 6px; padding:clamp(24px,4vw,46px);
+    background:var(--surface); border:1px solid color-mix(in srgb, var(--blue) 22%, var(--line));
+    border-radius:24px;
+  }
+  .card { padding:18px 20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; }
+
+  table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.89rem; }
+  th, td { text-align:left; vertical-align:top; padding:9px 11px; border-bottom:1px solid var(--line); }
+  th { color:var(--navy); font-size:.76rem; text-transform:uppercase; letter-spacing:.06em; background:var(--surface-2); }
+
+  /* Khối lưu ý: viền 1px CẢ BỐN CẠNH, không phải dải dày một bên.
+     Cùng cách sửa mà apps/hub/components/gvcn/student-detail-view.tsx làm ngày 02/08/2026:
+     mỗi khối dưới đây đã có TIÊU ĐỀ CHỮ nói rõ nó là lưu ý gì, nên dải màu dày là lớp thứ
+     ba nói lại cùng một điều bằng thứ ngôn ngữ mà người mù màu không đọc được - và trên
+     bản in đen trắng thì nó chỉ còn là một vệt xám. Màu giữ lại ở nền và ở tiêu đề. */
+  .callout { margin:14px 0; padding:15px 18px; border-radius:14px; border:1px solid; }
+  .c-blue { background:var(--blue-soft); border-color:color-mix(in srgb, var(--blue) 34%, #fff); }
+  .c-blue h4 { color:#1d4e9f; }
+  .c-green { background:var(--green-soft); border-color:color-mix(in srgb, var(--green) 34%, #fff); }
+  .c-green h4 { color:var(--green); }
+  .c-amber { background:var(--amber-soft); border-color:color-mix(in srgb, var(--amber) 34%, #fff); }
+  .c-amber h4 { color:var(--amber); }
+  .c-red { background:var(--red-soft); border-color:color-mix(in srgb, var(--red) 34%, #fff); }
+  .c-red h4 { color:var(--red); }
+  .callout h4 { margin-top:0; }
+  .callout p:last-child { margin-bottom:0; }
+
+  ol.buoc { counter-reset:b; list-style:none; margin:14px 0 0; padding:0; }
+  ol.buoc > li {
+    counter-increment:b; position:relative; margin-bottom:14px; padding:14px 18px 14px 56px;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    break-inside:avoid; page-break-inside:avoid;
+  }
+  ol.buoc > li::before {
+    content:counter(b); position:absolute; left:16px; top:14px;
+    width:26px; height:26px; border-radius:50%; background:var(--navy); color:#fff;
+    font-size:.82rem; font-weight:850; display:flex; align-items:center; justify-content:center;
+  }
+  ol.buoc b.tieu { display:block; color:var(--navy); }
+
+  .bieu-mau {
+    margin-top:16px; padding:24px 26px; background:#fff;
+    border:1.5px solid var(--navy); border-radius:16px;
+    break-inside:avoid; page-break-inside:avoid;
+  }
+  .bieu-mau .dau { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:flex-start; border-bottom:1.5px solid var(--navy); padding-bottom:10px; margin-bottom:16px; }
+  .bieu-mau .dau h3 { margin:0; font-size:1.15rem; }
+  .o-dien { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px 20px; }
+  .dong { border-bottom:1px dotted #9aa3b0; padding:16px 0 4px; font-size:.82rem; color:var(--muted); }
+  .dong.cao { padding-top:34px; }
+  .o-tick { margin:12px 0 0; padding:0; list-style:none; font-size:.88rem; }
+  .o-tick li { margin-bottom:5px; }
+  .o-tick li::before { content:""; display:inline-block; width:13px; height:13px; margin-right:8px; border:1.4px solid var(--navy); border-radius:3px; vertical-align:-1px; }
+  .ky { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:22px; margin-top:26px; text-align:center; }
+  .ky div { padding-top:56px; border-top:1px solid var(--ink); font-size:.82rem; color:var(--muted); }
+
+  .page-break { break-before:page; page-break-before:always; }
+
+  @media print {
+    @page { size:A4; margin:12mm 13mm; }
+    :root { --paper:#fff; --surface:#fff; --surface-2:#f4f5f7; --ink:#111827; --muted:#4b5563; --line:#d7dbe1; }
+    body { background:#fff; font-size:10.1pt; padding:0; }
+    section { break-inside:auto; page-break-inside:auto; }
+    .card, .callout, ol.buoc > li, .bieu-mau { break-inside:avoid; page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Quy trình vận hành - giai đoạn thí điểm</p>
+    <h1>Cấp và thu hồi<br>tài khoản</h1>
+    <p class="muted" style="font-size:1.04rem;margin-top:14px;max-width:64ch">
+      Giai đoạn thí điểm chưa có phần mềm quản trị tài khoản. Mọi việc cấp và thu hồi đi qua
+      <b>một tờ giấy có chữ ký</b>, do <b>quản trị trực</b> thực hiện, và để lại dấu vết trong
+      sổ. Tờ này là quy trình đó: ai được ký, ai được bấm, làm theo thứ tự nào, và những gì
+      <b>không được</b> làm.
+    </p>
+    <p class="small muted" style="margin-top:12px">
+      In hai mặt, kẹp vào cặp hồ sơ của người trực. Hai biểu mẫu ở cuối in rời, mỗi lần dùng một tờ.
+    </p>
+  </div>
+
+  <section>
+    <h2>1. Vì sao là giấy, và giấy tới bao giờ</h2>
+    <p>
+      Hôm nay không có màn hình nào trong Hub để tạo hay khoá một tài khoản. Việc đó chạm thẳng
+      vào cơ sở dữ liệu, và ai chạm được thì chạm được vào dữ liệu của mọi đứa trẻ trong trường.
+      Vì vậy giai đoạn thí điểm chọn cách chậm mà rõ: <b>một yêu cầu là một tờ giấy có chữ ký</b>,
+      người trực làm theo giấy, và tờ giấy được lưu lại.
+    </p>
+    <p>
+      Giấy sẽ được thay bằng màn hình khi Hub có đăng nhập thật (Google cho người trong trường,
+      Zalo cho phụ huynh). Trước ngày đó, <b>không có ngoại lệ nào được làm bằng miệng</b> - kể cả
+      khi người yêu cầu là hiệu trưởng, kể cả khi đang gấp.
+    </p>
+    <div class="callout c-amber">
+      <h4>Việc gấp thì làm thế nào</h4>
+      <p>
+        Vẫn làm ngay, nhưng <b>giấy phải theo sau trong ngày</b>: người trực ghi vào sổ trước
+        (giờ, ai gọi, làm gì), rồi lấy chữ ký bù trong ngày hôm đó. Một thao tác không có tờ giấy
+        nào đi kèm sau 24 giờ là một thao tác phải báo cáo lên hiệu trưởng, không phải một thao tác
+        được bỏ qua.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Tám vai, ai duyệt cho ai</h2>
+    <p>
+      Hệ thống có đúng tám vai. Không tự chế thêm vai, không gộp hai vai vào một tài khoản để
+      cho tiện - vai là thứ quyết định người đó nhìn thấy dữ liệu của những em nào.
+    </p>
+    <table>
+      <thead>
+        <tr><th style="width:22%">Vai</th><th style="width:34%">Người thật là ai</th><th>Ai được ký đề nghị cấp</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Học sinh</b></td><td>Học sinh lớp thí điểm</td><td>Không cấp lẻ - đi theo file danh sách lớp (mục 3)</td></tr>
+        <tr><td><b>Phụ huynh</b></td><td>Cha, mẹ hoặc người giám hộ hợp pháp</td><td>Giáo viên chủ nhiệm của lớp em đó</td></tr>
+        <tr><td><b>Giáo viên chủ nhiệm</b></td><td>Cô/thầy chủ nhiệm lớp thí điểm</td><td>Hiệu trưởng cơ sở</td></tr>
+        <tr><td><b>Giáo viên bộ môn</b></td><td>Thầy cô dạy môn</td><td>Hiệu trưởng cơ sở</td></tr>
+        <tr><td><b>Tâm lý cụm</b></td><td>Chuyên viên tâm lý phụ trách cụm</td><td>Hiệu trưởng cơ sở, báo Chủ tịch</td></tr>
+        <tr><td><b>Hiệu trưởng / BGH cơ sở</b></td><td>Ban giám hiệu của một cơ sở</td><td>Chủ tịch</td></tr>
+        <tr><td><b>Ban điều hành</b></td><td>Hội đồng dữ liệu, ban điều hành hệ thống</td><td>Chủ tịch</td></tr>
+        <tr><td><b>Quản trị hệ thống</b></td><td>Người trực hệ thống</td><td>Chủ tịch - <b>ký từng người một</b>, không ký theo danh sách</td></tr>
+      </tbody>
+    </table>
+    <div class="callout c-red">
+      <h4>Vai tâm lý cụm là vai nặng nhất, đừng cấp cho tiện</h4>
+      <p>
+        Đây là vai duy nhất ngoài chính em được đọc nhật ký cảm xúc từng ngày và ghi chú tư vấn.
+        Giáo viên chủ nhiệm <b>không</b> có quyền đó, và không được cấp thêm vai tâm lý cụm để
+        "cô tiện theo dõi lớp". Muốn đổi ranh giới này thì phải có quyết định của Hội đồng dữ liệu,
+        không phải một dòng trong biểu mẫu.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Cấp tài khoản học sinh - đi theo lớp, không đi theo em</h2>
+    <p>
+      Học sinh không được cấp lẻ từng em. Nhà trường gửi <b>một file danh sách</b>, người trực nạp
+      cả file, và hệ thống tự dựng lớp lẫn danh sách em. Cách này chống được lỗi gõ tay và giữ cho
+      mã học sinh là duy nhất suốt 12 năm.
+    </p>
+    <h3>File nhà trường phải gửi</h3>
+    <p>Đúng <b>sáu cột</b>, tên cột viết y như dưới đây, không dấu, không viết hoa:</p>
+    <table>
+      <thead><tr><th style="width:22%">Tên cột</th><th style="width:26%">Nội dung</th><th>Bắt buộc điền</th></tr></thead>
+      <tbody>
+        <tr><td><code>ma_hoc_sinh</code></td><td>Mã học sinh của trường</td><td>Có</td></tr>
+        <tr><td><code>ho_ten</code></td><td>Họ tên đầy đủ</td><td>Có</td></tr>
+        <tr><td><code>ngay_sinh</code></td><td>Ngày sinh</td><td>Cột phải có, ô được để trống</td></tr>
+        <tr><td><code>ma_co_so</code></td><td>Mã cơ sở</td><td>Có</td></tr>
+        <tr><td><code>ma_lop</code></td><td>Mã lớp</td><td>Có</td></tr>
+        <tr><td><code>khoi</code></td><td>Khối</td><td>Cột phải có, ô được để trống</td></tr>
+      </tbody>
+    </table>
+    <p class="small muted">
+      Thiếu một cột là dừng cả lần nạp, không nạp một phần. File xuất từ Excel thường có ký tự ẩn ở
+      đầu dòng tiêu đề - công cụ đã tự bỏ ký tự đó, người trực không phải làm gì.
+    </p>
+
+    <h3>Ba bước, làm đúng thứ tự</h3>
+    <ol class="buoc">
+      <li>
+        <b class="tieu">Chạy thử trước, bao giờ cũng vậy</b>
+        Người trực chạy lần nạp ở chế độ <b>thử</b>. Máy làm đúng như thật rồi hoàn tác, và in ra
+        đúng con số của lần thật. Đọc con số đó trước khi chạy thật.
+      </li>
+      <li>
+        <b class="tieu">Chạy thật, rồi đọc mã kết quả</b>
+        Có <b>ba</b> kết quả, không phải hai:
+        <b>0</b> = nạp sạch, không dòng nào lỗi ·
+        <b>1</b> = dừng vì hỏng (file sai, thiếu cột, quá nhiều lỗi) ·
+        <b>2</b> = chạy hết file <i>nhưng</i> có dòng đang chờ người xử lý.
+        <b>Mã 2 không phải là xong.</b> Ghi vào sổ và xử tiếp trong ngày.
+      </li>
+      <li>
+        <b class="tieu">Đối chiếu em vắng mặt trong file - và không tự quyết</b>
+        Công cụ liệt kê những em có trong sổ mà không có trong file mới. Nó <b>chỉ liệt kê</b>.
+        Người trực mang danh sách đó hỏi giáo vụ: em chuyển trường thật, hay trường xuất nhầm
+        bộ lọc? Hai chuyện đó nhìn giống hệt nhau trong file. <b>Không ai được tự cho một em nghỉ học.</b>
+      </li>
+    </ol>
+    <div class="callout c-blue">
+      <h4>Nạp lại cùng một file thì sao</h4>
+      <p>
+        An toàn. Hệ thống chống trùng ở hai tầng và nạp lại cùng file không sinh ra em thứ hai.
+        Nếu lần trước dừng giữa chừng, cứ sửa file rồi chạy lại từ đầu - đó là cách đúng.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Cấp tài khoản phụ huynh - mã mời sáu ký tự</h2>
+    <p>
+      Phụ huynh không được người trực tạo tài khoản hộ. Giáo viên chủ nhiệm phát cho phụ huynh một
+      <b>mã mời sáu ký tự</b> (chữ in hoa và số), phụ huynh tự nhập để nhận tài khoản gắn với con
+      mình. Giáo viên nhập sẵn tên phụ huynh lúc phát mã, để về sau còn biết mã đó phát cho ai.
+    </p>
+    <div class="grid2">
+      <div class="card">
+        <h4>Ba điều về mã mời phải nói với phụ huynh</h4>
+        <ul class="small" style="padding-left:18px;margin:6px 0 0">
+          <li><b>Dùng một lần.</b> Nhập xong là mã chết.</li>
+          <li><b>Có 15 phút để nhập lại</b> nếu rớt mạng hoặc bấm nhầm hai lần. Sau 15 phút thì
+              hết, và <b>không gia hạn</b>.</li>
+          <li><b>Cần thêm máy hoặc thêm người</b> (ví dụ cả bố lẫn mẹ) thì <b>xin mã mới</b>,
+              không dùng lại mã cũ.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Mã lỡ gửi nhầm - thu hồi ngay</h4>
+        <p class="small">
+          Gửi nhầm nhóm lớp, nhầm số điện thoại, hoặc gia đình có thay đổi về quyền nuôi con:
+          báo người trực <b>thu hồi mã</b> trong ngày. Sau khi thu hồi, mã đó nhập vào không còn
+          tác dụng. Đây là lý do mã mời không bao giờ được gửi vào nhóm chung - <b>gửi riêng từng
+          phụ huynh</b>.
+        </p>
+      </div>
+    </div>
+    <div class="callout c-red">
+      <h4>Mã mời là chìa khoá vào hồ sơ một đứa trẻ cụ thể</h4>
+      <p>
+        Ai cầm mã còn sống thì vào được điểm danh, báo cáo và sức khoẻ của đúng em đó. Vì vậy:
+        không đọc mã qua điện thoại cho người lạ, không dán mã lên bảng lớp, không nhắn mã vào
+        nhóm phụ huynh. Nghi ngờ mã lọt ra ngoài thì thu hồi trước, hỏi sau.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Phiếu đồng ý của phụ huynh gác cái gì - và không gác cái gì</h2>
+    <p>
+      Đây là chỗ hay bị hiểu nhầm nhất, và hiểu nhầm ở đây gây hại thật. Phiếu đồng ý của phụ huynh
+      <b>không</b> bật tắt tài khoản của em. Nó chỉ gác đúng một thứ.
+    </p>
+    <table>
+      <thead><tr><th style="width:44%">Đường</th><th style="width:18%">Phiếu có gác không</th><th>Nghĩa là</th></tr></thead>
+      <tbody>
+        <tr><td><b>Ghi tâm trạng hằng ngày</b> (bốn ô cảm xúc)</td><td><b>CÓ gác</b></td><td>Chưa có phiếu thì phần mềm không ghi ô cảm xúc. Màn hình nói thẳng với em là phần đó đang tạm tắt, không phải lỗi của em.</td></tr>
+        <tr><td><b>Nút "Mình cần gặp thầy cô"</b></td><td><b>KHÔNG bao giờ gác</b></td><td>Em bấm được trong mọi hoàn cảnh, kể cả khi gia đình chưa ký hay đã rút lại. Đường này không có công tắc nào tắt được nó.</td></tr>
+        <tr><td><b>Điểm danh</b> (cô ghi và em tự bấm)</td><td>Không gác</td><td>Trường có nghĩa vụ trông giữ trẻ, việc đó đứng trên một cơ sở pháp lý khác.</td></tr>
+        <tr><td><b>Đọc Báo cáo Trưởng thành</b></td><td>Không gác</td><td>Không được giữ thứ phụ huynh vốn có quyền biết về con để đổi lấy chữ ký.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout c-green">
+      <h4>Câu nói với phụ huynh, dùng đúng câu này</h4>
+      <p style="font-size:1.02rem">
+        <b>Chưa bấm thì phần mềm chưa ghi tâm trạng của con - và đường con nhờ giúp đỡ thì không bao giờ khoá.</b>
+      </p>
+    </div>
+    <div class="callout c-amber">
+      <h4>Cửa đăng nhập tạm - hai điều tuyệt đối</h4>
+      <p>
+        Giai đoạn này Hub chưa nối đăng nhập thật, nên có một cửa tạm được khoá bằng <b>một mã dùng
+        chung</b> do người phụ trách kỹ thuật giữ.
+        <b>Một:</b> mã đó không được viết lên bất kỳ biểu mẫu nào, không nhắn qua tin nhắn nhóm,
+        không đọc to trong phòng họp - nó đã phải đổi một lần vì bị hiện lên màn hình.
+        <b>Hai:</b> mã đó chỉ trả lời câu "máy này có được phép thử không", nó <b>không</b> biết ai
+        đang ngồi trước máy. Vì vậy đây là cửa để chạy thí điểm, không phải cửa để mở cho học sinh
+        thật ngoài lớp thí điểm.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Thu hồi - ba mức khác nhau, đừng gọi chung là "xoá"</h2>
+    <table>
+      <thead><tr><th style="width:20%">Mức</th><th style="width:26%">Dùng khi nào</th><th>Chuyện gì xảy ra</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Khoá tạm</b></td>
+          <td>Nghỉ phép dài, đang xác minh một sự việc, máy bị mất</td>
+          <td>Tài khoản chuyển sang trạng thái <b>đã khoá</b>. Người đó không đăng nhập được nữa. Dữ liệu và lịch sử giữ nguyên. Mở lại được.</td>
+        </tr>
+        <tr>
+          <td><b>Thu hồi mã mời</b></td>
+          <td>Mã gửi nhầm, gia đình thay đổi người giám hộ</td>
+          <td>Chỉ mã đó chết. Tài khoản phụ huynh đã nhận trước đó (nếu có) không bị ảnh hưởng - muốn cắt cả tài khoản thì làm thêm mức khoá tạm.</td>
+        </tr>
+        <tr>
+          <td><b>Xoá dữ liệu cá nhân</b></td>
+          <td>Phụ huynh hoặc nhân sự yêu cầu xoá theo Luật 91/2025</td>
+          <td>Tên, email và sổ đăng nhập bị xoá thật. <b>Dòng dữ liệu vẫn ở lại</b> để còn trả lời được câu "ai đã làm gì với con tôi" - đó cũng là thứ luật bảo hộ. Việc này <b>không hoàn tác được</b>.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout c-red">
+      <h4>Hai điều hệ thống tự chặn, biết trước để khỏi hoảng</h4>
+      <p>
+        <b>Một:</b> không ai xoá cứng được một tài khoản, kể cả người trực - cơ sở dữ liệu chặn và
+        chỉ đúng sang đường xoá hợp lệ. Nếu thấy thông báo đó, nghĩa là mọi thứ đang đúng.
+        <b>Hai:</b> không ai hạ được một tài khoản đang chạy về trạng thái "chờ đồng ý". Trước đây
+        làm được, và nó đã cắt mất đường một đứa trẻ nhờ giúp đỡ - cửa đó nay bị đóng vĩnh viễn.
+      </p>
+    </div>
+    <h3>Thứ tự làm khi thu hồi</h3>
+    <ol class="buoc">
+      <li><b class="tieu">Nhận biểu mẫu có chữ ký</b> - đúng người ký theo bảng ở mục 2.</li>
+      <li><b class="tieu">Chạy thử trước</b> với mức xoá dữ liệu cá nhân. Đọc kỹ tên hiện ra trên
+          màn hình có đúng là người cần xoá không - <b>xoá nhầm người thì không lấy lại được</b>.</li>
+      <li><b class="tieu">Chạy thật, kèm lý do bằng chữ</b> ghi rõ số phiếu và ai yêu cầu. Câu lý do
+          đó được lưu vào sổ máy, sau này tra lại được.</li>
+      <li><b class="tieu">Ghi vào sổ giấy</b>: ngày giờ, ai yêu cầu, làm mức nào, kết quả. Kẹp biểu
+          mẫu vào cặp.</li>
+      <li><b class="tieu">Báo lại người ký</b> trong ngày, bằng một câu ngắn: đã làm xong, lúc mấy giờ.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>7. Sổ theo dõi - người trực ghi tay</h2>
+    <p>
+      Máy có sổ riêng của máy, nhưng người trực vẫn ghi một sổ giấy: đó là thứ đọc được lúc 7 giờ
+      sáng khi mạng hỏng. Mỗi dòng một việc, đủ sáu cột.
+    </p>
+    <table>
+      <thead><tr><th>Ngày giờ</th><th>Ai yêu cầu</th><th>Việc</th><th>Đối tượng</th><th>Kết quả</th><th>Người trực ký</th></tr></thead>
+      <tbody>
+        <tr><td class="muted micro">02/08 07:20</td><td class="muted micro">Cô Lan, GVCN 6A1</td><td class="muted micro">Phát mã mời phụ huynh</td><td class="muted micro">PH em Minh</td><td class="muted micro">Đã phát, gửi riêng</td><td class="muted micro">-</td></tr>
+        <tr><td colspan="6" class="micro muted" style="text-align:center">(dòng trên là ví dụ cách ghi, không phải dữ liệu thật)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="page-break">
+    <h2>Biểu mẫu 1 - Đề nghị cấp tài khoản</h2>
+    <p class="small muted">In một tờ cho mỗi lần đề nghị. Điền bằng bút mực. Không ghi mật khẩu hay bất kỳ mã nào lên tờ này.</p>
+
+    <div class="bieu-mau">
+      <div class="dau">
+        <div>
+          <h3>PHIẾU ĐỀ NGHỊ CẤP TÀI KHOẢN</h3>
+          <div class="micro muted">School Data Hub - Hệ thống Trường Việt Anh - giai đoạn thí điểm</div>
+        </div>
+        <div class="micro muted">Số phiếu: ......................</div>
+      </div>
+
+      <div class="o-dien">
+        <div class="dong">Người đề nghị (họ tên, chức vụ)</div>
+        <div class="dong">Cơ sở / lớp</div>
+        <div class="dong">Ngày đề nghị</div>
+        <div class="dong">Số điện thoại liên hệ</div>
+      </div>
+
+      <h4 style="margin-top:20px">Loại tài khoản đề nghị cấp</h4>
+      <ul class="o-tick">
+        <li>Phụ huynh - phát mã mời (ghi rõ tên phụ huynh và tên học sinh)</li>
+        <li>Giáo viên chủ nhiệm</li>
+        <li>Giáo viên bộ môn</li>
+        <li>Tâm lý cụm <span class="micro muted">(cần chữ ký hiệu trưởng, báo Chủ tịch)</span></li>
+        <li>Hiệu trưởng / BGH cơ sở <span class="micro muted">(Chủ tịch ký)</span></li>
+        <li>Ban điều hành <span class="micro muted">(Chủ tịch ký)</span></li>
+        <li>Quản trị hệ thống <span class="micro muted">(Chủ tịch ký từng người một)</span></li>
+        <li>Nạp danh sách học sinh cả lớp / cả khối <span class="micro muted">(đính kèm file, sáu cột)</span></li>
+      </ul>
+
+      <div class="o-dien" style="margin-top:18px">
+        <div class="dong cao">Họ tên người được cấp</div>
+        <div class="dong cao">Học sinh liên quan (nếu là phụ huynh)</div>
+        <div class="dong cao">Email trong trường (nếu có)</div>
+        <div class="dong cao">Lý do cần tài khoản</div>
+      </div>
+
+      <div class="callout c-amber" style="margin-top:18px">
+        <p class="small" style="margin:0">
+          <b>Người đề nghị xác nhận:</b> người được cấp ở trên có nhiệm vụ thật cần tới dữ liệu này,
+          và tôi đã đọc mục 2 của quy trình - đặc biệt là ràng buộc về vai tâm lý cụm.
+        </p>
+      </div>
+
+      <div class="ky">
+        <div>Người đề nghị ký, ghi rõ họ tên</div>
+        <div>Người có thẩm quyền duyệt ký</div>
+        <div>Quản trị trực ký khi đã làm xong</div>
+      </div>
+
+      <div class="o-dien" style="margin-top:22px;border-top:1px dashed var(--line);padding-top:14px">
+        <div class="dong">Người trực thực hiện lúc (ngày giờ)</div>
+        <div class="dong">Kết quả / mã kết quả</div>
+        <div class="dong">Đã ghi vào sổ theo dõi (có / không)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <h2>Biểu mẫu 2 - Đề nghị khoá hoặc thu hồi tài khoản</h2>
+    <p class="small muted">In một tờ cho mỗi lần đề nghị. Mức "xoá dữ liệu cá nhân" không hoàn tác được - đọc kỹ trước khi ký.</p>
+
+    <div class="bieu-mau">
+      <div class="dau">
+        <div>
+          <h3>PHIẾU ĐỀ NGHỊ KHOÁ / THU HỒI TÀI KHOẢN</h3>
+          <div class="micro muted">School Data Hub - Hệ thống Trường Việt Anh - giai đoạn thí điểm</div>
+        </div>
+        <div class="micro muted">Số phiếu: ......................</div>
+      </div>
+
+      <div class="o-dien">
+        <div class="dong">Người đề nghị (họ tên, chức vụ)</div>
+        <div class="dong">Cơ sở / lớp</div>
+        <div class="dong">Ngày đề nghị</div>
+        <div class="dong">Mức độ gấp (trong ngày / thường)</div>
+      </div>
+
+      <h4 style="margin-top:20px">Mức đề nghị - chọn đúng một</h4>
+      <ul class="o-tick">
+        <li><b>Khoá tạm</b> - người đó không đăng nhập được nữa, dữ liệu giữ nguyên, mở lại được</li>
+        <li><b>Thu hồi mã mời phụ huynh</b> - chỉ mã đó chết</li>
+        <li><b>Xoá dữ liệu cá nhân theo Luật 91/2025</b> - <b>không hoàn tác được</b></li>
+      </ul>
+
+      <div class="o-dien" style="margin-top:18px">
+        <div class="dong cao">Họ tên người bị khoá / thu hồi</div>
+        <div class="dong cao">Vai trong hệ thống</div>
+        <div class="dong cao">Học sinh liên quan (nếu là phụ huynh)</div>
+        <div class="dong cao">Lý do</div>
+      </div>
+
+      <div class="callout c-red" style="margin-top:18px">
+        <p class="small" style="margin:0">
+          <b>Chỉ điền phần này khi chọn mức xoá dữ liệu cá nhân.</b> Người yêu cầu xoá là ai, yêu cầu
+          bằng hình thức nào (đơn giấy, email, biên bản làm việc), lưu ở đâu:
+        </p>
+        <div class="dong cao" style="margin-top:6px">Nguồn của yêu cầu xoá</div>
+      </div>
+
+      <div class="ky">
+        <div>Người đề nghị ký, ghi rõ họ tên</div>
+        <div>Người có thẩm quyền duyệt ký</div>
+        <div>Quản trị trực ký khi đã làm xong</div>
+      </div>
+
+      <div class="o-dien" style="margin-top:22px;border-top:1px dashed var(--line);padding-top:14px">
+        <div class="dong">Đã chạy thử trước (có / không)</div>
+        <div class="dong">Người trực thực hiện lúc (ngày giờ)</div>
+        <div class="dong">Đã báo lại người ký lúc</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ký duyệt quy trình</h2>
+    <p class="small muted">
+      Quy trình này có hiệu lực trong giai đoạn thí điểm và hết hiệu lực khi Hub có màn hình quản trị
+      tài khoản với đăng nhập thật. Khi đó phải viết lại, không sửa vá tờ này.
+    </p>
+    <div class="ky">
+      <div>Chủ tịch</div>
+      <div>Hiệu trưởng cơ sở thí điểm</div>
+      <div>Người trực hệ thống</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

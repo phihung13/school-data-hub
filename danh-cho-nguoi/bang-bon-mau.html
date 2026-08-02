@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Bảng bốn màu cảm xúc, in A4 dán trong lớp. Bốn ô đúng tên và đúng màu đang chạy trong ứng dụng.">
+<title>Bốn ô cảm xúc - bảng dán lớp</title>
+<!--
+  danh-cho-nguoi/bang-bon-mau.html
+  ================================
+  TỜ GIẤY NÀY DÁN LÊN TƯỜNG LỚP HỌC VÀ NẰM ĐÓ CẢ NĂM. Sai một chi tiết là sai suốt năm,
+  và người đọc nó là học sinh lớp 6 - các em không có cách nào kiểm chứng lại.
+
+  MỌI THỨ IN RA ĐÂY ĐỀU CHÉP TỪ MÃ NGUỒN ĐANG CHẠY, không tự nghĩ:
+
+  · Bốn tên mức: packages/core/contracts/checkin.ts, hằng MOOD_LABEL
+      { 1: "Buồn", 2: "Mệt", 3: "Bình thường", 4: "Vui" }
+    KHÔNG đổi tên cho hay, KHÔNG thêm mức thứ năm. Cột attendance.checkins.mood có
+    CHECK constraint 1..4 (migration 0004_attendance.sql) - mức thứ năm không tồn tại
+    ở tầng dữ liệu.
+
+  · Bốn cặp màu: apps/hub/tailwind.config.ts, nhóm token `mood`, và
+    danh-cho-may/DESIGN-GUIDELINES.md muc 3 ("4 màu mood - thống nhất bản giấy, KHÔNG đổi")
+      Vui         #00D97A -> #00A85E   chữ trắng
+      Bình thường #4E9BFF -> #2C7BF2   chữ trắng
+      Mệt         #FFC833 -> #F5A300   chữ #6B4A00  (đây là mức DUY NHẤT chữ không trắng)
+      Buồn        #FF7A7F -> #F0474D   chữ trắng
+
+  · Thứ tự bốn ô: apps/hub/components/checkin-view.tsx dòng 767-770 và hằng MOOD_ORDER
+    trong home-view.tsx = [4, 3, 2, 1]. Trên màn hình là lưới 2 cột, nên trên giấy cũng
+    2 cột cùng thứ tự: Vui - Bình thường / Mệt - Buồn. Em nhìn tờ giấy rồi nhìn máy phải
+    thấy cùng một bố cục.
+
+  · Câu "Hôm nay em thấy thế nào?" - nguyên văn tiêu đề màn /checkin (checkin-view.tsx:705).
+  · Câu "Chỉ thầy cô tâm lý đọc" - hằng NHAN_AI_DOC_CAM_XUC trong
+    apps/hub/components/ui/labels.ts, chốt tại DESIGN-GUIDELINES muc 9 (ADR-026,
+    migration 0044: core.can_read_mood() = chính em hoặc thầy cô tâm lý cụm).
+    ĐỔI QUYỀN THÌ ĐỔI CÂU NÀY, cùng lúc với nhãn trong app - không hẹn lại.
+  · Câu "Offline vẫn lưu - tự gửi sau." - nguyên văn checkin-view.tsx:807.
+  · Năm chủ đề và ba mức mong muốn của nút cần gặp thầy cô: HELP_REQUEST_TOPIC_LABEL và
+    HELP_REQUEST_URGENCY_LABEL trong packages/core/contracts/checkin.ts.
+
+  GIỌNG: DESIGN-GUIDELINES muc 8 cấm từ vựng vận hành trước mặt học sinh. Tờ này KHÔNG
+  chứa các chữ: cờ, ngưỡng, quét, leo thang, định mức, hồ sơ chăm sóc. Đã soát tay.
+
+  MẶT CƯỜI vẽ bằng SVG nội tuyến, không dùng font icon: trang này phải in được ở một
+  phòng không có mạng, trên máy tính không cài gì thêm.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --ink:#0F172A; --navy:#0A2A5E; --muted:#5F6B7D; --line:#E4E9F0;
+    --paper:#F7F9FC;
+    /* Bốn cặp màu - chép nguyên từ tailwind.config.ts, đừng sửa ở đây mà không sửa ở đó */
+    --vui-1:#00D97A;  --vui-2:#00A85E;
+    --binh-1:#4E9BFF; --binh-2:#2C7BF2;
+    --met-1:#FFC833;  --met-2:#F5A300;  --met-chu:#6B4A00;
+    --buon-1:#FF7A7F; --buon-2:#F0474D;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:18px 16px 60px;
+    background:var(--paper); color:var(--ink);
+    font-family:"Be Vietnam Pro","Segoe UI",system-ui,sans-serif;
+    line-height:1.5;
+  }
+  .to-giay { max-width:820px; margin:0 auto; }
+
+  .dau-trang {
+    padding:26px 28px;
+    background:linear-gradient(155deg,#0A2A5E 0%,#1E5FB8 100%);
+    border-radius:24px; color:#fff; text-align:center;
+  }
+  .dau-trang .lop { font-size:.78rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; opacity:.82; }
+  .dau-trang h1 { margin:8px 0 0; font-size:clamp(1.9rem,4.6vw,2.7rem); line-height:1.08; letter-spacing:-.03em; color:#fff; }
+  .dau-trang p { margin:10px auto 0; max-width:52ch; font-size:.98rem; opacity:.93; }
+
+  .luoi { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+  .o {
+    display:flex; align-items:center; gap:16px;
+    padding:20px 20px; border-radius:22px; color:#fff;
+    break-inside:avoid; page-break-inside:avoid;
+  }
+  .o .mat { flex:0 0 auto; }
+  .o .ten { font-size:1.6rem; font-weight:900; line-height:1.05; letter-spacing:-.02em; }
+  .o .noi { margin-top:5px; font-size:.92rem; font-weight:600; line-height:1.42; }
+  .o-vui  { background:linear-gradient(155deg,var(--vui-1),var(--vui-2)); }
+  .o-binh { background:linear-gradient(155deg,var(--binh-1),var(--binh-2)); }
+  .o-met  { background:linear-gradient(155deg,var(--met-1),var(--met-2)); color:var(--met-chu); }
+  .o-buon { background:linear-gradient(155deg,var(--buon-1),var(--buon-2)); }
+
+  .khoa {
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin-top:16px; padding:14px 18px;
+    background:#fff; border:1.6px solid var(--line); border-radius:18px;
+    font-size:1.05rem; font-weight:900; color:var(--navy); text-align:center;
+  }
+  .khoa small { display:block; margin-top:3px; font-size:.8rem; font-weight:600; color:var(--muted); }
+
+  .hai-cot { display:grid; grid-template-columns:1.15fr 1fr; gap:14px; margin-top:14px; }
+  .the {
+    padding:18px 20px; background:#fff; border:1px solid var(--line);
+    border-radius:20px; break-inside:avoid; page-break-inside:avoid;
+  }
+  .the h2 { margin:0 0 8px; font-size:1.12rem; color:var(--navy); letter-spacing:-.01em; }
+  .the p { margin:0 0 8px; font-size:.9rem; }
+  .the p:last-child { margin-bottom:0; }
+  .chip-hang { display:flex; flex-wrap:wrap; gap:7px; margin:8px 0 0; padding:0; list-style:none; }
+  .chip {
+    padding:4px 11px; border-radius:999px; background:#F1F4F8;
+    font-size:.82rem; font-weight:800; color:#33507C;
+  }
+  .vang { background:#FFFBEE; border-color:#FFE29A; }
+  .vang h2 { color:#8A5A00; }
+
+  .chan {
+    margin-top:16px; padding-top:12px; border-top:1px solid var(--line);
+    font-size:.76rem; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px 18px; justify-content:space-between;
+  }
+
+  @media (max-width:640px) {
+    .luoi, .hai-cot { grid-template-columns:1fr; }
+  }
+
+  @media print {
+    @page { size:A4 portrait; margin:11mm 12mm; }
+    body { background:#fff; padding:0; font-size:10pt; }
+    .to-giay { max-width:none; }
+    .luoi, .hai-cot { grid-template-columns:1fr 1fr; }
+    .dau-trang, .o, .the, .khoa { box-shadow:none; }
+
+    /* NỚI CHỖ CHO BẢN IN - tờ này PHẢI nằm gọn một trang A4.
+       Đo ngày 02/08/2026 ở bề rộng vùng in 703px: bản chưa nới cao 1026px trên trần
+       1039px, tức chỉ dư 13px (~3,4mm). Máy dev có cài Be Vietnam Pro, máy văn phòng
+       của trường thì thường không - lúc đó chữ rơi về Segoe UI với thước đo khác và
+       13px dư biến mất, tờ giấy tràn sang trang hai với đúng một dòng lạc lõng.
+       Các con số dưới đây mua thêm khoảng dư thật, không đổi thứ tự hay màu của bốn ô. */
+    .dau-trang { padding:18px 22px; border-radius:18px; }
+    .dau-trang h1 { font-size:23pt; }
+    .dau-trang p { margin-top:7px; }
+    .luoi { gap:10px; margin-top:11px; }
+    .o { padding:14px 16px; gap:13px; border-radius:16px; }
+    .o .ten { font-size:15pt; }
+    .khoa { margin-top:11px; padding:10px 14px; }
+    .hai-cot { gap:10px; margin-top:10px; }
+    .the { padding:13px 15px; border-radius:15px; }
+    .chan { margin-top:11px; padding-top:9px; }
+    /* In màu: bốn ô cảm xúc MẤT NGHĨA nếu trình duyệt bỏ nền. Nếu bản in ra trắng đen,
+       xin in lại bằng máy in màu - bảng này là bảng MÀU, không phải bảng chữ. */
+    .o { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .dau-trang { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+<div class="to-giay">
+
+  <div class="dau-trang">
+    <div class="lop">Lớp mình</div>
+    <h1>Hôm nay em thấy thế nào?</h1>
+    <p>Mỗi sáng, con mở ứng dụng của trường và chạm vào <b>một ô</b> giống con nhất.
+       Chỉ một chạm là xong. Không có ô nào là ô sai.</p>
+  </div>
+
+  <div class="luoi">
+
+    <div class="o o-vui">
+      <svg class="mat" width="66" height="66" viewBox="0 0 66 66" aria-hidden="true">
+        <circle cx="33" cy="33" r="30" fill="none" stroke="#fff" stroke-width="3.4"/>
+        <circle cx="23" cy="27" r="3.6" fill="#fff"/>
+        <circle cx="43" cy="27" r="3.6" fill="#fff"/>
+        <path d="M19 39c4.6 7.4 10.4 11 14 11s9.4-3.6 14-11" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="ten">Vui</div>
+        <div class="noi">Hôm nay nhẹ nhàng, con thấy thích.</div>
+      </div>
+    </div>
+
+    <div class="o o-binh">
+      <svg class="mat" width="66" height="66" viewBox="0 0 66 66" aria-hidden="true">
+        <circle cx="33" cy="33" r="30" fill="none" stroke="#fff" stroke-width="3.4"/>
+        <circle cx="23" cy="27" r="3.6" fill="#fff"/>
+        <circle cx="43" cy="27" r="3.6" fill="#fff"/>
+        <path d="M21 43h24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="ten">Bình thường</div>
+        <div class="noi">Không có gì đặc biệt. Cũng ổn.</div>
+      </div>
+    </div>
+
+    <div class="o o-met">
+      <svg class="mat" width="66" height="66" viewBox="0 0 66 66" aria-hidden="true">
+        <circle cx="33" cy="33" r="30" fill="none" stroke="#6B4A00" stroke-width="3.4"/>
+        <path d="M18 26h10M38 26h10" fill="none" stroke="#6B4A00" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M22 44c4-3.4 8.6-3.4 11-3.4s7 0 11 3.4" fill="none" stroke="#6B4A00" stroke-width="3.4" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="ten">Mệt</div>
+        <div class="noi">Người uể oải, không còn sức, muốn nghỉ.</div>
+      </div>
+    </div>
+
+    <div class="o o-buon">
+      <svg class="mat" width="66" height="66" viewBox="0 0 66 66" aria-hidden="true">
+        <circle cx="33" cy="33" r="30" fill="none" stroke="#fff" stroke-width="3.4"/>
+        <circle cx="23" cy="27" r="3.6" fill="#fff"/>
+        <circle cx="43" cy="27" r="3.6" fill="#fff"/>
+        <path d="M20 47c4.6-7.4 10.4-11 14-11s8.4 3 12 8.2" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="ten">Buồn</div>
+        <div class="noi">Trong lòng nặng nặng, không vui được.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="khoa">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4.5" y="10" width="15" height="10.5" rx="2.6" fill="none" stroke="#0A2A5E" stroke-width="2"/>
+      <path d="M8 10V7.6a4 4 0 0 1 8 0V10" fill="none" stroke="#0A2A5E" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="15.2" r="1.7" fill="#0A2A5E"/>
+    </svg>
+    <div>
+      Chỉ thầy cô tâm lý đọc
+      <small>Ô con chạm mỗi sáng là chuyện riêng của con. Thầy cô chủ nhiệm không đọc được ô đó.</small>
+    </div>
+  </div>
+
+  <div class="hai-cot">
+
+    <div class="the vang">
+      <h2>Khi con muốn nói chuyện với thầy cô</h2>
+      <p>Trong ứng dụng có nút <b>Mình cần gặp thầy cô</b>. Bấm nút đó là thầy cô chủ nhiệm
+         nhận được <b>ngay</b>, không phải chờ tới hôm sau.</p>
+      <p style="font-weight:700">Con chọn chuyện muốn nói:</p>
+      <ul class="chip-hang">
+        <li class="chip">Chuyện ở lớp</li>
+        <li class="chip">Chuyện ở nhà</li>
+        <li class="chip">Việc học</li>
+        <li class="chip">Sức khỏe</li>
+        <li class="chip">Chuyện khác</li>
+      </ul>
+      <p style="margin-top:10px;font-weight:700">Và con muốn gặp khi nào:</p>
+      <ul class="chip-hang">
+        <li class="chip">Càng sớm càng tốt</li>
+        <li class="chip">Trong hôm nay</li>
+        <li class="chip">Tuần này là được</li>
+      </ul>
+      <p style="margin-top:10px">Con có thể viết thêm vài dòng, hoặc không viết gì cũng được.
+         Bấm nút thôi đã đủ để thầy cô biết là con cần gặp.</p>
+    </div>
+
+    <div class="the">
+      <h2>Vài điều con nên biết</h2>
+      <p><b>Chạm nhầm ô thì sao?</b> Mở lại ứng dụng, bấm <b>Đổi tâm trạng</b>. Ô cũ được thay
+         bằng ô mới, không ai trách con.</p>
+      <p><b>Máy không có mạng?</b> Con cứ chạm. Màn hình sẽ ghi
+         <b>Offline vẫn lưu - tự gửi sau.</b> Ô cảm xúc nằm lại trong máy con và tự đi khi có mạng.</p>
+      <p><b>Nhưng lời cần gặp thầy cô thì khác:</b> lúc mất mạng nó <b>chưa gửi được</b>, và màn hình
+         sẽ nói thẳng với con như vậy. Khi đó con tìm thầy cô nói trực tiếp, đừng chờ máy.</p>
+      <p><b>Quên bấm một hôm?</b> Không sao cả. Đây không phải bài tập, không có điểm, và không
+         ai bị trừ gì vì quên.</p>
+    </div>
+
+  </div>
+
+  <div class="chan">
+    <span>Bảng dán lớp - Hệ thống Trường Việt Anh</span>
+    <span>Bốn ô này giống hệt bốn ô trên màn hình. Nếu tờ giấy và màn hình khác nhau, tin màn hình và báo thầy cô.</span>
+  </div>
+
+</div>
+</body>
+</html>
