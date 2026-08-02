@@ -81,6 +81,13 @@ const config: Config = {
         },
       },
       keyframes: {
+        // Thanh chạy của màn chờ mini app (embed-intro.tsx). Cố ý KHÔNG phải vòng xoay
+        // và cố ý không có phần trăm: không ai đo được app ngoài còn bao lâu, nên một
+        // thanh đầy dần theo phần trăm bịa là nói dối bằng hình.
+        embedSlide: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(300%)" },
+        },
         floaty: {
           "0%,100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-5px)" },
@@ -106,6 +113,7 @@ const config: Config = {
         floaty: "floaty 4s ease-in-out infinite",
         pulseDot: "pulseDot 2.6s ease-out infinite",
         popIn: "popIn 320ms cubic-bezier(.34,1.56,.64,1)",
+        embedSlide: "embedSlide 1.1s ease-in-out infinite",
       },
     },
   },

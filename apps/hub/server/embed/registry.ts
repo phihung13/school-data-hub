@@ -56,6 +56,18 @@ export interface EmbedAppConfig {
      * phía Hub (thiếu chuỗi này từ 29/07 tới 31/07/2026).
      */
     iconImageUrl?: string;
+    /**
+     * Một câu nói app này LÀM GÌ, hiện trong lúc chờ app ngoài nạp (02/08/2026).
+     *
+     * Vì sao nằm ở manifest chứ không viết chết trong component: mỗi app một câu, và
+     * người thêm app mới phải khai nó ở ĐÚNG chỗ khai mọi thứ khác về app đó. Để trong
+     * component thì app thứ hai sẽ dùng nhờ câu của app thứ nhất — đúng kiểu hỏng mà
+     * repo này gọi là "một nhãn hai đích".
+     *
+     * Bỏ trống được: lúc đó màn chờ chỉ hiện tên app. Thà không nói gì còn hơn nói một
+     * câu chung chung đúng cho mọi app và vì thế không nói gì về app nào.
+     */
+    intro?: string;
   };
 }
 
@@ -103,6 +115,7 @@ export const EMBED_APPS: EmbedAppConfig[] = [
       // ?v = sha256(apps/hub/public/factory-icon.svg).slice(0, 8) — xem chú thích ở
       // khai báo iconImageUrl. Đổi file icon thì đổi cả chuỗi này.
       iconImageUrl: "/factory-icon.svg?v=36a33380",
+      intro: "Xưởng nội dung của trường — soạn và quản lý học liệu, dùng chung tài khoản Hub.",
     },
   },
 ];

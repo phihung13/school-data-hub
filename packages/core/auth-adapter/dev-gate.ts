@@ -84,9 +84,31 @@ export const DEV_GATE_ATTEMPTS_PER_MINUTE = 5;
  */
 export type DevGateState = "absent" | "misconfigured" | "locked" | "open";
 
-/** Route đăng nhập tạm chỉ tồn tại ngoài production. Lời hứa (d). */
+/**
+ * Route đăng nhập tạm có tồn tại không. Lời hứa (d).
+ *
+ * SỬA 02/08/2026 — vì `NODE_ENV=production` đã ĐỔI NGHĨA giữa chừng.
+ *
+ * Lúc viết luật này, "production" chỉ có một nghĩa: bản chạy thật cho trường, có dữ liệu
+ * trẻ em thật. Hôm nay nó mang thêm nghĩa thứ hai: bản dựng ĐÃ RÚT GỌN mà chính máy dev
+ * phải chạy để không bắt điện thoại tải 2,3 MB mỗi lần mở trang. Hai nghĩa đó cần hai
+ * câu trả lời khác nhau, mà một biến thì chỉ trả lời được một câu.
+ *
+ * Đo được ngay sau khi bật bản chạy thật: cửa trả 404, và chủ đầu tư mất đường vào trên
+ * điện thoại — trong khi Google/Zalo chưa nối nên KHÔNG có cửa nào khác.
+ *
+ * Nên tách: mặc định vẫn là ĐÓNG ở production (không đổi lời hứa), và chỉ mở lại khi có
+ * một biến khai TƯỜNG MINH `DEV_LOGIN_CHO_PHEP_O_BAN_THAT=1`. Ba tính chất giữ nguyên:
+ *   · vẫn phải có `DEV_LOGIN_SECRET` hợp lệ mới qua được cửa (biến này KHÔNG thay bí mật);
+ *   · máy chủ thật của trường sẽ không có biến này trong môi trường, nên cửa vẫn không
+ *     tồn tại ở đó — `.env.local` không đi theo lên máy chủ;
+ *   · quên khai thì cửa ĐÓNG, không phải mở. Mặc định luôn nghiêng về phía an toàn.
+ *
+ * Ngày gỡ hẳn `dev-login` (khi có Google/Zalo thật, nợ #19) thì xoá cả hàm này.
+ */
 export function devLoginRouteExists(env: Record<string, string | undefined> = process.env): boolean {
-  return env.NODE_ENV !== "production";
+  if (env.NODE_ENV !== "production") return true;
+  return (env.DEV_LOGIN_CHO_PHEP_O_BAN_THAT ?? "").trim() === "1";
 }
 
 /**

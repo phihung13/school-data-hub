@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import { TrpcProvider } from "@/lib/trpc-provider";
+import { NavProgress } from "@/components/ui/nav-progress";
 
 // Tự host qua next/font (build tải font về, phục vụ từ chính domain Hub) — KHÔNG dùng
 // <link> trỏ fonts.googleapis.com nữa. Lý do: tiện ích chặn quảng cáo/riêng tư của trình
@@ -55,6 +56,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#noi-dung" className="skip-link">
           Bỏ qua menu, tới nội dung chính
         </a>
+        {/* Thanh báo "đang chuyển trang" — đặt ngoài TrpcProvider vì nó không cần dữ
+            liệu nào, chỉ nghe cú bấm. Đứng ở layout gốc nên phủ MỌI trang: thêm màn mới
+            không phải nhớ cắm lại, và đó là chủ ý (xem nav-progress.tsx). */}
+        <NavProgress />
         <TrpcProvider>{children}</TrpcProvider>
       </body>
     </html>

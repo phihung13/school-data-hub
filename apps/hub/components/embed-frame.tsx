@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { EmbedAppConfig } from "@/server/embed/registry";
 import { EmbedFloatingMenu } from "@/components/embed-floating-menu";
+import { EmbedIntro } from "@/components/embed/embed-intro";
 
 type Status = "waiting-ready" | "authorizing" | "ready" | "timeout" | "error";
 
@@ -129,6 +130,21 @@ export function EmbedFrame({
         sandbox="allow-scripts allow-forms allow-same-origin"
         referrerPolicy="no-referrer"
       />
+      {/* MÀN GIỚI THIỆU THAY CHO MÀN TRẮNG (02/08/2026).
+
+          Giữ nguyên iframe BÊN DƯỚI chứ không dựng sau: app con phải được nạp song song
+          với lúc người dùng đọc phần giới thiệu, nếu không thì màn chờ này lại chính là
+          thứ làm chậm thêm. Lớp phủ chỉ biến mất khi status === "ready" — tức là khi app
+          con đã bắt tay xong, KHÔNG phải khi iframe vừa onLoad. Hai thời điểm đó cách
+          nhau vài giây, và cái sau mới là lúc người dùng thật sự dùng được app. */}
+      {status !== "ready" && status !== "error" && (
+        <EmbedIntro
+          tenApp={embed.displayName}
+          intro={embed.intro}
+          iconImageUrl={embed.iconImageUrl}
+          onThuLai={() => window.location.reload()}
+        />
+      )}
       <EmbedFloatingMenu appOrigin={embed.origin} onReload={() => window.location.reload()} />
       {status === "timeout" && (
         <div className="absolute inset-x-0 top-0 bg-[#FFF4E5] px-4 py-2 pr-24 text-[13px] text-[#8A5A00]">

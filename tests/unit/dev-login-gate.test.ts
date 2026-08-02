@@ -50,8 +50,46 @@ describe("(d) NODE_ENV=production: route không tồn tại, bất kể bí mậ
     expect(evaluateDevGate({ cookie: issueDevGateToken(SECRET) }, env)).toBe("absent");
   });
 
+  // ── Cửa mở lại ở bản chạy thật CHỈ KHI khai tường minh (thêm 02/08/2026) ──────
+  //
+  // Vì sao phải nới: `NODE_ENV=production` đổi nghĩa giữa chừng. Nó vốn nghĩa là "bản
+  // thật cho trường"; nay còn nghĩa là "bản đã rút gọn mà máy dev phải chạy để điện
+  // thoại không tải 2,3 MB mỗi trang". Bật bản rút gọn xong thì cửa trả 404 và chủ đầu
+  // tư mất đường vào — trong khi Google/Zalo chưa nối nên không còn cửa nào khác.
+  //
+  // Ba tính chất phải giữ, và ba bài dưới đây ghim đúng ba tính chất đó.
+  it("bật cờ vẫn CHƯA đủ — không có bí mật thì vẫn không vào được", () => {
+    const env = { NODE_ENV: "production", DEV_LOGIN_CHO_PHEP_O_BAN_THAT: "1" };
+    expect(devLoginRouteExists(env)).toBe(true); // route có tồn tại
+    expect(evaluateDevGate({}, env)).toBe("misconfigured"); // nhưng chưa cấu hình bí mật
+  });
+
+  it("bật cờ + có bí mật đúng thì mới qua được", () => {
+    const env = {
+      NODE_ENV: "production",
+      DEV_LOGIN_SECRET: SECRET,
+      DEV_LOGIN_CHO_PHEP_O_BAN_THAT: "1",
+    };
+    expect(evaluateDevGate({ header: SECRET }, env)).toBe("open");
+    expect(evaluateDevGate({ header: "sai-be-bet" }, env)).toBe("locked");
+    expect(evaluateDevGate({}, env)).toBe("locked");
+  });
+
+  it("QUÊN khai cờ thì cửa ĐÓNG, không phải mở — mặc định nghiêng về an toàn", () => {
+    const env = { NODE_ENV: "production", DEV_LOGIN_SECRET: SECRET };
+    expect(devLoginRouteExists(env)).toBe(false);
+    // Mọi giá trị KHÁC "1" đều là không bật. Không nhận "true", "yes", "on" — một cờ
+    // an ninh mà nhận nhiều cách viết là một cờ sẽ bị bật nhầm.
+    for (const v of ["", "0", "true", "yes", "on", "TRUE"]) {
+      expect(
+        devLoginRouteExists({ ...env, DEV_LOGIN_CHO_PHEP_O_BAN_THAT: v }),
+        `giá trị ${JSON.stringify(v)} không được coi là bật`,
+      ).toBe(false);
+    }
+  });
+
   it("chiều ngược lại: ngoài production thì cửa có tồn tại", () => {
-    expect(devLoginRouteExists({ NODE_ENV: "production" })).toBe(false);
+    expect(devLoginRouteExists({ NODE_ENV: "production" })).toBe(false); // chưa khai cờ
     expect(devLoginRouteExists({ NODE_ENV: "development" })).toBe(true);
     expect(devLoginRouteExists({ NODE_ENV: "test" })).toBe(true);
     // Biến không đặt (chạy `node server.mjs` trần) = dev. Đây là mặc định của server.mjs.
