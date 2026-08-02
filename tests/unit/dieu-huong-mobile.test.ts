@@ -19,17 +19,19 @@ import { describe, it, expect } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  GUARDIAN_TABBAR_ITEMS,
-  STAFF_TABBAR_ITEMS,
-  STUDENT_TABBAR_ITEMS,
-  STUDENT_TABBAR_HREFS,
-  TEACHER_TABBAR_ITEMS,
-  resolveTabs,
-  type TabItem,
-} from "@/components/tab-bar";
-import { TEACHER_ITEMS, resolveNav } from "@/components/hub-sidebar";
+import { STUDENT_TABBAR_HREFS, resolveTabs, type TabItem } from "@/components/tab-bar";
+import { resolveNav } from "@/components/hub-sidebar";
 import type { HubRole } from "@hub/core/contracts";
+
+// Sáu mảng tab và bảy mảng menu đã rời khỏi hai file kia ngày 02/08/2026 — nguồn duy nhất
+// nay là `apps/hub/lib/man-hinh.ts`. Bài test đi qua ĐÚNG hai hàm mà màn hình gọi, thay vì
+// nhập thẳng hằng số: nhập hằng số là kiểm cái kho chứa, gọi hàm là kiểm cái người dùng
+// thật sự nhận được. Nội dung kiểm không đổi một phép nào.
+const GUARDIAN_TABBAR_ITEMS = resolveTabs(["guardian"]);
+const STAFF_TABBAR_ITEMS = resolveTabs(["teacher"]);
+const STUDENT_TABBAR_ITEMS = resolveTabs(["student"]);
+const TEACHER_TABBAR_ITEMS = resolveTabs(["homeroom"]);
+const TEACHER_ITEMS = resolveNav(["homeroom"]).items;
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 const appDir = join(repoRoot, "apps", "hub", "app");
@@ -209,10 +211,23 @@ describe("hai giọng không trộn (§8 · mệnh lệnh 4 CLAUDE.md)", () => {
 });
 
 describe("tab bar và sidebar nói cùng một điều", () => {
-  it("thứ tự ưu tiên vai giống resolveNav: học sinh → GVCN → phụ huynh → nhân viên", () => {
-    expect(resolveTabs(["guardian", "homeroom"])).toBe(TEACHER_TABBAR_ITEMS);
+  it("người nhiều vai nhận GỘP cả hai bộ, và tab bar khớp sidebar", () => {
+    // ĐỔI HÀNH VI 02/08/2026 — xem lý lẽ đầy đủ ở nav-links.test.ts, mục "người vừa là
+    // GVCN vừa là phụ huynh". Tóm tắt: luật "ưu tiên một bộ" làm cô giáo đồng thời là
+    // phụ huynh mất đường tới báo cáo của chính con mình.
+    //
+    // Điều KHÔNG đổi, và là điều bài này canh: thanh tab và menu trái phải nói CÙNG một
+    // điều. Nay chúng đọc chung `lib/man-hinh.ts` nên không thể lệch — phép kiểm dưới
+    // đây đối chiếu thẳng hai bên thay vì so với một hằng số.
+    const tabs = resolveTabs(["guardian", "homeroom"]).map((i) => i.href);
+    const menu = resolveNav(["guardian", "homeroom"]).items.map((i) => i.href);
+    for (const h of tabs) expect(menu, `tab có ${h} mà menu không`).toContain(h);
+    expect(tabs, "mất bảng điều khiển của GVCN").toContain("/gvcn");
+    expect(menu, "cô là phụ huynh mà không có đường tới báo cáo của con").toContain("/bao-cao");
     expect(resolveNav(["guardian", "homeroom"]).roleLabel).toBe("GVCN");
-    expect(resolveTabs(["student", "guardian"])).toBe(STUDENT_TABBAR_ITEMS);
+    expect(resolveTabs(["student", "guardian"]).map((i) => i.href)).toEqual(
+      expect.arrayContaining(["/home", "/checkin"]),
+    );
     // Sửa 01/08/2026: tâm lý cụm và BGH KHÔNG còn rơi vào bộ nhân viên tối thiểu.
     // Câu cũ ở đây khẳng định `counselor → STAFF_TABBAR_ITEMS` và nó ĐÚNG với mã lúc đó,
     // nhưng cái đúng ấy là một lỗi: sidebar đã có /tam-ly còn tab bar thì chưa, nên cô
@@ -221,7 +236,7 @@ describe("tab bar và sidebar nói cùng một điều", () => {
     expect(resolveTabs(["counselor"]).map((i) => i.href)).toContain("/tam-ly");
     expect(resolveTabs(["principal"]).map((i) => i.href)).toContain("/dieu-hanh");
     expect(resolveTabs(["board"]).map((i) => i.href)).toContain("/dieu-hanh");
-    expect(resolveTabs(["teacher"])).toBe(STAFF_TABBAR_ITEMS);
+    expect(resolveTabs(["teacher"])).toEqual(STAFF_TABBAR_ITEMS);
   });
 
   it("mọi đích trong tab bar người lớn cũng có trong sidebar cùng vai", () => {

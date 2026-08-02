@@ -11,6 +11,7 @@
 // Đây là file cấu hình dùng chung cho ba runtime (Edge middleware · Server Component ·
 // Route Handler Node). Giữ nó thuần TypeScript là điều kiện để nó ở được cả ba nơi.
 import type { HubRole } from "@hub/core/contracts";
+import { canOpenEmbedAppRoles } from "@/lib/vai-app-ngoai";
 
 export interface EmbedAppConfig {
   appId: string;
@@ -118,8 +119,11 @@ export const DEV_ONLY_APPS: EmbedAppConfig[] =
  * Chặn ở một cửa mà bỏ cửa kia thì hàng rào chỉ là trang trí.
  */
 export function canOpenEmbedApp(app: EmbedAppConfig, roles: readonly HubRole[]): boolean {
-  if (!app.allowedRoles || app.allowedRoles.length === 0) return false; // fail-closed
-  return roles.some((role) => app.allowedRoles!.includes(role));
+  // Lõi phép so nằm ở `lib/vai-app-ngoai.ts` để màn xem trước (chạy ở TRÌNH DUYỆT, chỉ có
+  // `MiniAppRow` chứ không có `EmbedAppConfig`) dùng chung ĐÚNG một luật. Hai bản luật
+  // giống nhau hôm nay sẽ khác nhau một ngày nào đó, và chỗ khác nhau sẽ là màn xem
+  // trước — tức là công cụ sinh ra để canh lại là cái nói dối.
+  return canOpenEmbedAppRoles(app.allowedRoles, roles);
 }
 
 /**

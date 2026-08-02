@@ -29,6 +29,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { HubRole } from "@hub/core/contracts";
+import { manChoTab } from "@/lib/man-hinh";
 import { UserMenu } from "./user-menu";
 
 /**
@@ -111,104 +112,21 @@ export interface TabItem {
   href: string;
 }
 
-export const STUDENT_TABBAR_ITEMS: TabItem[] = [
-  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-  { key: "checkin", label: "Check-in", icon: "sentiment_satisfied", href: CHECKIN_HREF },
-];
+// ═══════════════════════════════════════════════════════════════════════════════
+// SÁU MẢNG TAB ĐÃ RỜI KHỎI FILE NÀY (02/08/2026)
+// ═══════════════════════════════════════════════════════════════════════════════
+// STUDENT/TEACHER/GUARDIAN/COUNSELOR/BOARD/STAFF_TABBAR_ITEMS + ADMIN_TABBAR_EXTRA đều
+// nằm ở đây, trong khi `hub-sidebar.tsx` có bộ mảng riêng cho CÙNG câu hỏi. Chú thích
+// của `resolveTabs` bên dưới đã tự đặt luật từ lâu — "hai thanh điều hướng của cùng một
+// người mà nói khác nhau thì bản thân điều đó đã là lỗi" — nhưng luật đó không có gì thi
+// hành, và nó đã bị vi phạm thật: cô Mai thấy hộp việc tâm lý trên máy tính, không thấy
+// trên điện thoại, suốt từ 31/07 tới 01/08.
+//
+// Nay luật ấy được thi hành bằng cấu trúc, không bằng lời dặn: cả hai đọc chung
+// `apps/hub/lib/man-hinh.ts`, nên chúng KHÔNG THỂ nói khác nhau.
 
-/**
- * GVCN — 4 mục, đúng trần của DESIGN-GUIDELINES §6.
- *
- * Vì sao "Trang chủ" chiếm một ô mà "Lớp chủ nhiệm" thì không: §1.1 là "một cửa
- * vào chung", và trên điện thoại tab bar là thứ DUY NHẤT thay được sidebar. Bỏ
- * /home ra khỏi đây thì GVCN vào vùng /gvcn là mất luôn lưới mini app (Factory,
- * các app sau này) — đúng loại ngõ cụt gói này sinh ra để dẹp. Bốn màn con của
- * buồng lái vẫn tới được đủ: lưới tắt trên chính trang /gvcn (gvcn-dashboard.tsx)
- * dẫn tới cả bốn, và mỗi màn con có nút quay lại (gvcn-shell.tsx).
- */
-export const TEACHER_TABBAR_ITEMS: TabItem[] = [
-  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-  { key: "cockpit", label: "Bảng điều khiển", icon: "space_dashboard", href: "/gvcn" },
-  { key: "attendance", label: "Điểm danh", icon: "fact_check", href: "/gvcn/diem-danh" },
-];
-
-/**
- * Phụ huynh — 3 mục. Chỉ từ vựng Glow & Grow (§8): không "buồng lái", không
- * "cờ", không "ngưỡng". /bao-cao chặn đúng hai vai học sinh + phụ huynh
- * (app/bao-cao/page.tsx), nên mục này không dẫn ai vào trang bị đá ngược.
- */
-export const GUARDIAN_TABBAR_ITEMS: TabItem[] = [
-  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-  { key: "report", label: "Báo cáo", icon: "workspace_premium", href: "/bao-cao" },
-];
-
-/**
- * Tâm lý cụm và BGH — thêm 01/08/2026.
- *
- * Chú thích của `resolveTabs()` ngay dưới đây đã tự đặt luật: "cùng THỨ TỰ ƯU TIÊN
- * với resolveNav() của sidebar — hai thanh điều hướng của cùng một người mà nói
- * khác nhau thì bản thân điều đó đã là lỗi". Luật đúng, nhưng hàm thì chưa theo:
- * sidebar đã có COUNSELOR_ITEMS (/tam-ly) và BOARD_ITEMS (/dieu-hanh), còn ở đây
- * cả hai vai vẫn rơi vào nhánh nhân viên tối thiểu. Hệ quả: cô Mai mở Hub trên
- * MÁY TÍNH thì thấy hộp việc tâm lý; mở trên ĐIỆN THOẠI — thứ mà §3 nói là thiết
- * bị chính — thì không thấy đâu cả, và không có gì báo là nó tồn tại.
- */
-export const COUNSELOR_TABBAR_ITEMS: TabItem[] = [
-  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-  { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "/tam-ly" },
-];
-export const BOARD_TABBAR_ITEMS: TabItem[] = [
-  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-  { key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh" },
-];
-
-/**
- * Mục thêm cho vai quản trị — NỐI vào bộ của vai kia, không thay nó.
- *
- * Cùng lý lẽ với ADMIN_EXTRA của sidebar: tài khoản quản trị của hệ mang `admin+principal`,
- * nên một bộ tab loại trừ sẽ làm mất một trong hai màn. Hai thanh điều hướng của cùng một
- * người phải nói cùng một điều (luật tự đặt ở resolveTabs) — nên chỗ này đi theo chỗ kia.
- */
-export const ADMIN_TABBAR_EXTRA: TabItem[] = [
-  { key: "miniapp", label: "Mini App", icon: "space_dashboard", href: "/quan-tri/mini-app" },
-];
-
-/**
- * Vai nhân viên chưa có màn riêng (giáo viên bộ
- * môn, quản trị) và cả tài khoản CHƯA được gán vai nào. Tối thiểu 2 mục — cùng
- * chủ ý với STAFF_ITEMS của sidebar: thà ít mục vào được còn hơn nhiều mục dẫn
- * tới trang chặn quyền. Nhưng "ít" không bao giờ được ít tới mức mất /ho-so:
- * không biết anh là ai thì ra ít quyền hơn, KHÔNG phải mất lối tự đăng xuất.
- */
-export const STAFF_TABBAR_ITEMS: TabItem[] = [
-  { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-];
-
-/**
- * Chọn bộ tab theo vai thật. Cùng THỨ TỰ ƯU TIÊN với resolveNav() của sidebar
- * (hub-sidebar.tsx) — hai thanh điều hướng của cùng một người mà nói khác nhau
- * thì bản thân điều đó đã là lỗi.
- *
- * Hàm thuần, không đụng DOM, để test được ở môi trường node (vitest chạy
- * environment: "node").
- */
 export function resolveTabs(roles: HubRole[]): TabItem[] {
-  const co = roles.includes("student")
-    ? STUDENT_TABBAR_ITEMS
-    : roles.includes("homeroom")
-      ? TEACHER_TABBAR_ITEMS
-      : roles.includes("guardian")
-        ? GUARDIAN_TABBAR_ITEMS
-        : roles.includes("counselor")
-          ? COUNSELOR_TABBAR_ITEMS
-          : roles.includes("principal") || roles.includes("board")
-            ? BOARD_TABBAR_ITEMS
-            : STAFF_TABBAR_ITEMS;
-  if (!roles.includes("admin")) return co;
-  // Trần 4 mục của DESIGN-GUIDELINES §6 vẫn giữ: bộ dài nhất trong các bộ trên là 3 mục
-  // (tab "Hồ sơ" đã rời sang avatar 02/08/2026), cộng một là 4. Ô avatar không tính vào
-  // đây — nó do chính thanh tab dựng, không đi qua danh sách này.
-  return [...co, ...ADMIN_TABBAR_EXTRA.filter((x) => !co.some((i) => i.href === x.href))];
+  return manChoTab(roles).map((m) => ({ key: m.key, label: m.nhan, icon: m.icon, href: m.href }));
 }
 
 /**

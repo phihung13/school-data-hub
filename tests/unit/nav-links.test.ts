@@ -11,20 +11,22 @@ import { describe, it, expect } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  STUDENT_ITEMS,
-  STUDENT_SOON,
-  TEACHER_ITEMS,
-  TEACHER_SOON,
-  GUARDIAN_ITEMS,
-  GUARDIAN_SOON,
-  STAFF_ITEMS,
-  STAFF_SOON,
-  COUNSELOR_SOON,
-  ADMIN_SOON,
-  resolveNav,
-  type NavItem,
-} from "@/components/hub-sidebar";
+import { resolveNav, type NavItem } from "@/components/hub-sidebar";
+
+// Bảy mảng menu đã rời khỏi hub-sidebar.tsx ngày 02/08/2026 — nguồn duy nhất nay là
+// `apps/hub/lib/man-hinh.ts`. Bài test đi qua ĐÚNG hàm mà sidebar gọi thay vì nhập thẳng
+// hằng số: nhập hằng số là kiểm cái kho chứa, gọi hàm là kiểm cái người dùng thật sự
+// nhận được. Không phép kiểm nào bị bỏ.
+const STUDENT_ITEMS = resolveNav(["student"]).items;
+const STUDENT_SOON = resolveNav(["student"]).soon;
+const TEACHER_ITEMS = resolveNav(["homeroom"]).items;
+const TEACHER_SOON = resolveNav(["homeroom"]).soon;
+const GUARDIAN_ITEMS = resolveNav(["guardian"]).items;
+const GUARDIAN_SOON = resolveNav(["guardian"]).soon;
+const STAFF_ITEMS = resolveNav(["teacher"]).items;
+const STAFF_SOON = resolveNav(["teacher"]).soon;
+const COUNSELOR_SOON = resolveNav(["counselor"]).soon;
+const ADMIN_SOON = resolveNav(["admin"]).soon;
 import { STUDENT_TABBAR_HREFS, resolveTabs } from "@/components/tab-bar";
 import { buildMiniApps } from "@/server/mini-apps";
 
@@ -207,18 +209,18 @@ describe("sidebar: mục bấm được phải có trang thật", () => {
 
 describe("sidebar: menu chọn theo vai thật", () => {
   it("học sinh thấy menu học sinh", () => {
-    expect(resolveNav(["student"]).items).toBe(STUDENT_ITEMS);
+    expect(resolveNav(["student"]).items).toEqual(STUDENT_ITEMS);
     expect(resolveNav(["student"]).roleLabel).toBe("HỌC SINH");
   });
 
   it("GVCN thấy menu GVCN", () => {
-    expect(resolveNav(["homeroom", "teacher"]).items).toBe(TEACHER_ITEMS);
+    expect(resolveNav(["homeroom", "teacher"]).items).toEqual(TEACHER_ITEMS);
     expect(resolveNav(["homeroom"]).roleLabel).toBe("GVCN");
   });
 
   it("phụ huynh KHÔNG thấy menu GVCN", () => {
     const nav = resolveNav(["guardian"]);
-    expect(nav.items).toBe(GUARDIAN_ITEMS);
+    expect(nav.items).toEqual(GUARDIAN_ITEMS);
     expect(nav.roleLabel).toBe("PHỤ HUYNH");
     expect(nav.roleLabel).not.toContain("GVCN");
   });
@@ -232,7 +234,7 @@ describe("sidebar: menu chọn theo vai thật", () => {
     // mục vào được thật vẫn tốt hơn một mục dẫn tới trang chặn quyền rồi đá ngược.
     for (const roles of [["teacher"]] as HubRole[][]) {
       const nav = resolveNav(roles);
-      expect(nav.items, `vai ${roles.join("+")}`).toBe(STAFF_ITEMS);
+      expect(nav.items, `vai ${roles.join("+")}`).toEqual(STAFF_ITEMS);
       expect(nav.roleLabel).not.toBe("GVCN");
     }
   });
@@ -290,12 +292,28 @@ describe("sidebar: menu chọn theo vai thật", () => {
 
   it("tài khoản chưa được gán vai nào không rơi vào menu của ai cả", () => {
     const nav = resolveNav([]);
-    expect(nav.items).toBe(STAFF_ITEMS);
+    expect(nav.items).toEqual(STAFF_ITEMS);
     expect(nav.roleLabel).toBe("TÀI KHOẢN TRƯỜNG");
   });
 
-  it("người vừa là GVCN vừa là phụ huynh: ưu tiên menu GVCN (nhiều việc hơn)", () => {
-    expect(resolveNav(["guardian", "homeroom"]).items).toBe(TEACHER_ITEMS);
+  it("người vừa là GVCN vừa là phụ huynh nhận CẢ HAI, không phải một bộ ưu tiên", () => {
+    // ĐỔI HÀNH VI CÓ CHỦ Ý 02/08/2026, và đây là một lần SỬA LỖI chứ không phải một lần
+    // đổi ý. Luật cũ ghi "ưu tiên menu GVCN (nhiều việc hơn)" — nghĩa là một cô giáo
+    // đồng thời là phụ huynh của một em trong trường nhận menu GVCN và KHÔNG có đường
+    // nào tới báo cáo của chính con mình. Một ngõ cụt, im lặng, đúng loại mà kho này
+    // vẫn đi bắt.
+    //
+    // Cùng lý lẽ đã áp cho `admin+principal` ở phần thanh tab: một người mang hai vai
+    // cần cả hai màn, không phải màn của vai xếp trên. Bản khai (`lib/man-hinh.ts`) lọc
+    // theo GIAO của vai với từng màn, nên chuyện gộp là hệ quả tự nhiên — không còn ai
+    // phải nhớ viết thêm nhánh.
+    const hrefs = resolveNav(["guardian", "homeroom"]).items.map((i) => i.href);
+    for (const cua of resolveNav(["homeroom"]).items.map((i) => i.href)) {
+      expect(hrefs, `mất mục GVCN: ${cua}`).toContain(cua);
+    }
+    expect(hrefs, "cô là phụ huynh mà không có đường tới báo cáo của con mình").toContain("/bao-cao");
+    // Nhãn vai vẫn theo ROLE_PRIORITY — một người một nhãn, không đổi.
+    expect(resolveNav(["guardian", "homeroom"]).roleLabel).toBe("GVCN");
   });
 });
 
@@ -369,7 +387,11 @@ describe("lưới mini app trang chủ", () => {
     expect(tiles.filter((t) => t.available).map((t) => t.href)).toEqual(["/bao-cao"]);
     // Điểm danh của con: quyền đọc đã có ở tầng RLS nhưng chưa có màn hình. Mờ = nói
     // thật "chưa có"; xoá hẳn thì phụ huynh tưởng hệ thống không theo dõi việc đó.
-    expect(tiles.find((t) => t.key === "attendance")?.available).toBe(false);
+    // Mã khoá đổi 02/08/2026: `attendance` từng được dùng cho BA màn khác nhau tuỳ vai
+    // (/diem-danh của em · /gvcn/diem-danh của cô · ô mờ này của phụ huynh). Một mã ba
+    // đích thì `key` không còn nghĩa gì, và nó cũng là `key` của React. Nay mỗi màn một
+    // mã: `attendance` · `attendance-lop` · `attendance-con`.
+    expect(tiles.find((t) => t.key === "attendance-con")?.available).toBe(false);
   });
 });
 
