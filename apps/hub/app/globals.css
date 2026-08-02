@@ -84,6 +84,12 @@ textarea::placeholder {
   border-radius: 10px;
   background: #0a2a5e;
   color: #ffffff;
+  /* min-height 44px, không phải padding 10px: đo thật trên 360px ngày 02/08/2026 ra
+     257×41 — thiếu đúng 3px so với ngưỡng vùng chạm §11, và đây là phần tử ĐẦU TIÊN mà
+     người dùng bàn phím/đọc màn hình chạm tới trên MỌI trang. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 800;

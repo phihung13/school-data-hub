@@ -26,6 +26,7 @@ import { formatWeekLabel } from "@/lib/week-label";
 import { Mascot } from "./mascot";
 import { PageShell } from "./page-shell";
 import { HubSidebar } from "./hub-sidebar";
+import { HubTabBar } from "./tab-bar";
 import { ErrorState, LoadingState } from "./ui/query-state";
 import type { HubRole } from "@hub/core/contracts";
 
@@ -110,9 +111,24 @@ export function GrowthReportView({
   }
   const { report } = query.data;
 
-  // Bản desktop CHỈ dành cho học sinh (sidebar là menu của em) — phụ huynh luôn xem bản
-  // mobile, ở mọi khổ màn. Dựng đúng một nhánh: xem ghi chú 3 đầu file.
-  if (!isStudent || !isDesktop) return <MobileReport report={report} />;
+  // PHỤ HUYNH NAY CŨNG CÓ BẢN DESKTOP (02/08/2026). Chủ đầu tư mở /bao-cao trên máy tính
+  // và mô tả đúng cái đang có: "1 cái trang chết không có lối thoát không có gì cả, thậm
+  // chí ở desktop nó còn không phù hợp".
+  //
+  // Cả hai vế đều đúng, và vế thứ hai nặng hơn vế thứ nhất:
+  //   · Không lối thoát — bản mobile dựng bằng <PageShell> trần, KHÔNG thanh tab, KHÔNG
+  //     menu. Phụ huynh mở link Zalo vào đây thì đường duy nhất đi tiếp là nút Back của
+  //     trình duyệt. Không có cả nút đăng xuất.
+  //   · Không phù hợp trên máy tính — dòng cũ ở đây ép `!isStudent` xuống bản mobile ở MỌI
+  //     khổ màn, nên trên màn 1920px phụ huynh nhận một thẻ rộng 576px trôi giữa nền trống.
+  //
+  // Lý lẽ cũ ("sidebar là menu của em") đã sai từ lâu mà không ai kiểm lại: `resolveNav()`
+  // có GUARDIAN_ITEMS riêng từ 31/07, và `DesktopReport` không đọc `isStudent` một lần nào
+  // — grep cả file chỉ thấy nó ở đúng dòng này. Tức là bản desktop đã chạy được cho phụ
+  // huynh suốt, chỉ có một câu điều kiện chặn lại.
+  if (!isDesktop) {
+    return <MobileReport report={report} roles={effectiveRoles} displayName={displayName} email={email} />;
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
@@ -121,6 +137,7 @@ export function GrowthReportView({
       </div>
       <DesktopReport
         report={report}
+        isStudent={isStudent}
         weekOffset={weekOffset}
         onPrevWeek={() => setWeekOffset((w) => w - 1)}
         onNextWeek={() => setWeekOffset((w) => w + 1)}
@@ -129,10 +146,23 @@ export function GrowthReportView({
   );
 }
 
-function MobileReport({ report }: { report: Report | undefined }) {
+function MobileReport({
+  report,
+  roles,
+  displayName,
+  email,
+}: {
+  report: Report | undefined;
+  roles: HubRole[];
+  displayName: string;
+  email: string;
+}) {
   if (!report) return null;
   return (
-    <PageShell>
+    // flex-col + min-h-screen: thanh tab phải nằm ĐÁY MÀN HÌNH, không trôi ngay dưới nội
+    // dung khi báo cáo ngắn. <PageShell> đã tự căn giữa nên nó ở trong, không ở ngoài.
+    <div className="flex min-h-screen w-full flex-col bg-[#EAEFF6]">
+      <PageShell>
       <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light px-5 pb-12 pt-4">
         <div
           aria-hidden
@@ -210,7 +240,14 @@ function MobileReport({ report }: { report: Report | undefined }) {
             đặt gì". Mã giai đoạn dự án là chuyện của người làm sản phẩm, không phải điều
             một người mẹ mở link lúc 9 giờ tối cần đọc (§8 · PRODUCT.md "không thuật ngữ"). */}
       </div>
-    </PageShell>
+      </PageShell>
+      {/* LỐI RA. Đây là thứ trang này thiếu suốt từ đầu: phụ huynh mở link Zalo vào /bao-cao
+          không có một đường nào đi tiếp — không thanh tab, không menu, không cả nút đăng
+          xuất. Nút Back của trình duyệt là "lối ra" duy nhất, và với người mở từ ứng dụng
+          Zalo thì nó cũng không có nốt. Thanh tab này còn mang theo avatar tài khoản, nên
+          nó đồng thời trả lại đường tới Hồ sơ và đường thoát phiên. */}
+      <HubTabBar roles={roles} fullName={displayName} email={email} />
+    </div>
   );
 }
 
@@ -219,13 +256,20 @@ function DesktopReport({
   weekOffset,
   onPrevWeek,
   onNextWeek,
+  isStudent,
 }: {
   report: Report;
   weekOffset: number;
   onPrevWeek: () => void;
   onNextWeek: () => void;
+  /** Người ĐANG XEM là em hay là phụ huynh — quyết định khối "gửi cho ai" có nghĩa hay không. */
+  isStudent: boolean;
 }) {
-  const guardians = trpc.report.getMyGuardians.useQuery();
+  // Chỉ hỏi khi khối đó thật sự được vẽ. Trước 02/08/2026 màn này chỉ học sinh mở nên câu
+  // hỏi luôn có nghĩa; nay phụ huynh cũng vào đây, và với họ `report.getMyGuardians` trả
+  // rỗng (họ không có "phụ huynh" nào của riêng mình) — gọi rồi bỏ đi là một lượt truy vấn
+  // thừa trên mọi lần mở báo cáo của mọi phụ huynh.
+  const guardians = trpc.report.getMyGuardians.useQuery(undefined, { enabled: isStudent });
   if (!report) return null;
 
   return (
@@ -329,6 +373,13 @@ function DesktopReport({
           </div>
 
           <div className="min-w-0 flex-[1_1_300px] flex flex-col gap-4">
+            {/* KHỐI NÀY CHỈ CÓ NGHĨA VỚI HỌC SINH (ẩn cho phụ huynh 02/08/2026).
+                "Báo cáo này gửi cho ai?" là câu em hỏi về bố mẹ mình. Với người đang đọc
+                CHÍNH LÀ bố mẹ, `getMyGuardians` trả rỗng nên khối in ra "Chưa có phụ huynh
+                nào gắn với tài khoản này" — một câu vừa vô nghĩa vừa gây hoang mang đúng
+                cho người mà cả trang này sinh ra để phục vụ. Đo thật ngay lần đầu mở bản
+                desktop bằng phiên phụ huynh. */}
+            {isStudent && (
             <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
               <div className="text-[15px] font-black text-navy">Báo cáo này gửi cho ai?</div>
               <div className="mt-3.5 flex flex-col gap-3">
@@ -357,6 +408,7 @@ function DesktopReport({
                 )}
               </div>
             </div>
+            )}
             <div className="flex items-start gap-2.5 rounded-[20px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-[18px]">
               <span className="msr flex-none text-[19px] text-[#E8940D]">verified_user</span>
               <span className="text-[12px] font-semibold leading-relaxed text-[#8A5A00]">

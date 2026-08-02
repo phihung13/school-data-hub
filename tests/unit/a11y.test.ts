@@ -207,6 +207,42 @@ describe("font cắt gọn phủ đủ icon app đang dùng", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 2b. Vùng chạm 44px — hai chỗ ĐO ĐƯỢC bằng trình duyệt thật, không đoán từ mã
+// ---------------------------------------------------------------------------
+//
+// Thêm 02/08/2026 sau một lượt rà 360px/375px trên trình duyệt thật (6 vai, 23 lượt tải
+// trang). Bộ quét tĩnh không bắt được hai chỗ này vì cả hai đều "trông đúng" trong mã:
+// một cái là CSS thuần, một cái là <a> có padding nhưng padding không cộng lên chiều cao
+// của phần tử inline.
+//
+// GIỚI HẠN PHẢI NÓI RA: hai phép kiểm dưới đây là ẢNH CHỤP của hai chỗ đã sửa, KHÔNG
+// phải một cổng phủ toàn app. Đo chiều cao thật đòi một trình duyệt, mà repo chưa có
+// Playwright. Bộ đo bằng iframe dùng hôm nay nằm ở scratchpad và cách chạy ghi trong
+// CACH-CHAY-AGENT.md — chạy lại nó là việc của người rà, không phải của CI.
+
+describe("vùng chạm 44px: hai chỗ đo được đã sửa", () => {
+  it("đường tắt “Bỏ qua menu” cao đủ 44px", () => {
+    // Đo thật: 257×41 — thiếu 3px, và nó là phần tử ĐẦU TIÊN người dùng bàn phím chạm tới
+    // trên MỌI trang. padding 10px trên một <a> không tạo ra chiều cao 44px.
+    const khoi = globalsCss.slice(globalsCss.indexOf(".skip-link"), globalsCss.indexOf(".skip-link:focus"));
+    expect(khoi, ".skip-link thiếu min-height 44px").toMatch(/min-height:\s*44px/);
+    expect(khoi, ".skip-link cần display:inline-flex để min-height có tác dụng").toMatch(/display:\s*inline-flex/);
+  });
+
+  it("link “Về trang chủ” trên màn KHÔNG có thanh tab đều có vùng chạm 44px", () => {
+    // Hai màn này cố ý toàn màn (không thanh tab): luồng check-in của em, và hồ sơ của
+    // người lớn. Ở đó link "Về trang chủ" là đường ra DUY NHẤT — đo được 81×19.
+    for (const f of ["checkin-view.tsx", "profile-view.tsx"]) {
+      const src = readCode(join(componentsDir, f));
+      const chỗ = [...src.matchAll(/<(?:a|Link)[^>]*href="\/home"[^>]*>/g)].map((m) => m[0]);
+      expect(chỗ.length, `${f}: không tìm thấy link về trang chủ`).toBeGreaterThan(0);
+      const thieu = chỗ.filter((t) => !/min-h-\[44px\]/.test(t));
+      expect(thieu, `${f}: link về trang chủ thiếu min-h-[44px]`).toEqual([]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 3. Icon trang trí không được đọc thành lời
 // ---------------------------------------------------------------------------
 

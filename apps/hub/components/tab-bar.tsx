@@ -29,19 +29,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { HubRole } from "@hub/core/contracts";
+import { UserMenu } from "./user-menu";
 
 /**
  * Ba đích của tab bar, khai ở một chỗ để tests/unit/nav-links.test.ts kiểm được là
  * mỗi đích có page.tsx thật — cùng luật với sidebar (gói "sidebar-dieu-huong"):
  * KHÔNG mục điều hướng nào được trỏ vào trang chưa tồn tại.
  */
-export const STUDENT_TABBAR_HREFS = ["/home", "/checkin", "/ho-so"] as const;
-const [HOME_HREF, CHECKIN_HREF, PROFILE_HREF] = STUDENT_TABBAR_HREFS;
+export const STUDENT_TABBAR_HREFS = ["/home", "/checkin"] as const;
+const [HOME_HREF, CHECKIN_HREF] = STUDENT_TABBAR_HREFS;
 
-export function StudentTabBar() {
+export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps = {}) {
   const pathname = usePathname();
   const isHome = pathname === HOME_HREF;
-  const isProfile = pathname === PROFILE_HREF;
 
   return (
     // aria-label trên <nav>: trang có thể có nhiều landmark điều hướng (menu trái +
@@ -81,14 +81,13 @@ export function StudentTabBar() {
         <span className="text-[9.5px] font-black text-gold-textDark">Check-in</span>
       </Link>
 
-      <Link
-        href={PROFILE_HREF}
-        aria-current={isProfile ? "page" : undefined}
-        className="flex min-h-[44px] w-[70px] flex-col items-center justify-center gap-0.5"
-      >
-        <span aria-hidden="true" className={`msr text-[22px] ${isProfile ? "text-navy" : "text-muted"}`}>person</span>
-        <span className={`text-[9.5px] ${isProfile ? "font-black text-navy" : "text-muted"}`}>Hồ sơ</span>
-      </Link>
+      {/* Ô thứ ba KHÔNG còn là <Link> tới /ho-so (02/08/2026). Trước đó thanh tab chỉ có
+          ba ô mà một ô dành cho "Hồ sơ" — một trang em mở vài lần một học kỳ — trong khi
+          menu trái và lớp nổi avatar đã có sẵn đường tới đó. Nay ô này là chính avatar,
+          mở ra lớp nổi tài khoản: cùng một chỗ, cùng một nội dung với bản máy tính. */}
+      <div className="flex min-h-[44px] w-[70px] items-center justify-center">
+        <UserMenu variant="avatar" placement="tren" fullName={fullName} email={email} roleTag={roleTag} />
+      </div>
     </nav>
   );
 }
@@ -96,6 +95,13 @@ export function StudentTabBar() {
 // ---------------------------------------------------------------------------
 // Người lớn — GVCN, phụ huynh, nhân viên
 // ---------------------------------------------------------------------------
+
+/** Danh tính để dựng avatar cuối thanh tab. Xem lý lẽ ở chỗ dựng <UserMenu>. */
+export interface TaiKhoanProps {
+  fullName?: string;
+  email?: string | null;
+  roleTag?: string | null;
+}
 
 export interface TabItem {
   key: string;
@@ -108,7 +114,6 @@ export interface TabItem {
 export const STUDENT_TABBAR_ITEMS: TabItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
   { key: "checkin", label: "Check-in", icon: "sentiment_satisfied", href: CHECKIN_HREF },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
 ];
 
 /**
@@ -125,7 +130,6 @@ export const TEACHER_TABBAR_ITEMS: TabItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
   { key: "cockpit", label: "Bảng điều khiển", icon: "space_dashboard", href: "/gvcn" },
   { key: "attendance", label: "Điểm danh", icon: "fact_check", href: "/gvcn/diem-danh" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
 ];
 
 /**
@@ -136,7 +140,6 @@ export const TEACHER_TABBAR_ITEMS: TabItem[] = [
 export const GUARDIAN_TABBAR_ITEMS: TabItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
   { key: "report", label: "Báo cáo", icon: "workspace_premium", href: "/bao-cao" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
 ];
 
 /**
@@ -153,12 +156,10 @@ export const GUARDIAN_TABBAR_ITEMS: TabItem[] = [
 export const COUNSELOR_TABBAR_ITEMS: TabItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
   { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "/tam-ly" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
 ];
 export const BOARD_TABBAR_ITEMS: TabItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
   { key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
 ];
 
 /**
@@ -170,7 +171,6 @@ export const BOARD_TABBAR_ITEMS: TabItem[] = [
  */
 export const STAFF_TABBAR_ITEMS: TabItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: HOME_HREF },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: PROFILE_HREF },
 ];
 
 /**
@@ -198,12 +198,13 @@ export function resolveTabs(roles: HubRole[]): TabItem[] {
  * Dùng ở mọi màn Hub bản mobile. KHÔNG dùng trong app nhúng (/embed/*): ở đó
  * đường ra là capsule ⋯│✕ (§6).
  */
-export function HubTabBar({ roles }: { roles: HubRole[] }) {
-  if (roles.includes("student")) return <StudentTabBar />;
-  return <AdultTabBar roles={roles} />;
+export function HubTabBar({ roles, fullName = "", email, roleTag }: { roles: HubRole[] } & TaiKhoanProps) {
+  if (roles.includes("student"))
+    return <StudentTabBar fullName={fullName} email={email} roleTag={roleTag} />;
+  return <AdultTabBar roles={roles} fullName={fullName} email={email} roleTag={roleTag} />;
 }
 
-function AdultTabBar({ roles }: { roles: HubRole[] }) {
+function AdultTabBar({ roles, fullName = "", email, roleTag }: { roles: HubRole[] } & TaiKhoanProps) {
   const pathname = usePathname();
   const items = resolveTabs(roles);
 
@@ -232,6 +233,13 @@ function AdultTabBar({ roles }: { roles: HubRole[] }) {
           </Link>
         );
       })}
+      {/* Avatar luôn là ô CUỐI, ở MỌI vai. Đây là điều kiện để bỏ được tab "Hồ sơ": chú
+          thích của STAFF_TABBAR_ITEMS đã đặt luật "ít mục thế nào cũng không được mất lối
+          tự đăng xuất". Đặt trong chính thanh tab (chứ không phải đầu mỗi trang) là cách
+          duy nhất bảo đảm điều đó — hễ có thanh tab thì có avatar, không màn nào quên. */}
+      <div className="flex min-h-[44px] flex-1 items-center justify-center">
+        <UserMenu variant="avatar" placement="tren" fullName={fullName} email={email} roleTag={roleTag} />
+      </div>
     </nav>
   );
 }

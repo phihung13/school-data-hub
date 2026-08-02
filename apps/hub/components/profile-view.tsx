@@ -226,10 +226,12 @@ function SimpleProfile({
           onClick={logout}
           className="mt-2 flex items-center gap-2 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] px-6 py-3 text-[13.5px] font-black text-[#D2383E]"
         />
-        {/* Nhân viên không có tab bar; nút này là đường ra duy nhất trên điện thoại. */}
+        {/* Nhân viên không có tab bar; nút này là đường ra duy nhất trên điện thoại.
+            inline-flex + min-h-[44px]: đo thật trên 360px ngày 02/08/2026 ra 81×19 — một
+            đường ra cao 19px trên màn cảm ứng, đúng ở màn mà nó là đường ra DUY NHẤT. */}
         <a
           href="/home"
-          className="text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2 md:hidden"
+          className="inline-flex min-h-[44px] items-center text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2 md:hidden"
         >
           Về trang chủ
         </a>
@@ -422,7 +424,7 @@ function StudentProfile({
         </div>
       </MainContent>
       <div className="md:hidden">
-        <StudentTabBar />
+        <StudentTabBar fullName={displayName} email={email} />
       </div>
     </div>
   );

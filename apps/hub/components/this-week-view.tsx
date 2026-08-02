@@ -283,7 +283,7 @@ export function ThisWeekView({
           cách duy nhất quay về Hub khi app đã thêm vào màn hình chính (không có nút Back). */}
       {roles.includes("student") && (
         <div className="md:hidden">
-          <StudentTabBar />
+          <StudentTabBar fullName={displayName} email={email} />
         </div>
       )}
     </div>

@@ -371,8 +371,12 @@ describe("giọng §8: màn người lớn không dỗ dành", () => {
 // 5. Hai lời hứa suông đã gỡ — không được quay lại
 // ---------------------------------------------------------------------------
 
-describe("sidebar: không hứa hợp đồng ARIA mà không thi hành", () => {
-  const src = read("hub-sidebar.tsx");
+// Lớp nổi tài khoản chuyển từ hub-sidebar.tsx sang user-menu.tsx ngày 02/08/2026 (nó có
+// chỗ đứng thứ hai: avatar cuối thanh tab điện thoại). Bài test đi theo NÓ chứ không đi
+// theo file cũ — trỏ vào hub-sidebar.tsx nữa thì cả ba khẳng định dưới đây vẫn "xanh" mãi
+// mãi vì file đó không còn dòng nào để mà sai, đúng kiểu xanh-vì-rỗng.
+describe("lớp nổi tài khoản: không hứa hợp đồng ARIA mà không thi hành", () => {
+  const src = read("user-menu.tsx");
 
   it('không còn role="menu" / role="menuitem" khi chưa có hành vi menu', () => {
     // Khai role=menu là hứa với trình đọc màn hình rằng mũi tên lên/xuống, Home/End và
@@ -383,7 +387,15 @@ describe("sidebar: không hứa hợp đồng ARIA mà không thi hành", () => 
   });
 
   it("Escape đóng lớp nổi thì trả focus về nút đã mở nó", () => {
-    expect(src).toMatch(/menuButtonRef\.current\?\.focus\(\)/);
+    expect(src).toMatch(/buttonRef\.current\?\.focus\(\)/);
+  });
+
+  it("lớp nổi này là đường thoát phiên của MỌI vai, nên phải có đủ hai lối", () => {
+    // Sau 02/08/2026 đây là chỗ DUY NHẤT có nút đăng xuất và đường tới hồ sơ. Mất một
+    // trong hai là nhốt người dùng trong phiên của chính họ — trên điện thoại thì không
+    // còn cách nào khác ngoài xoá cookie bằng tay.
+    expect(src).toContain('href="/ho-so"');
+    expect(src).toMatch(/\/api\/auth\/logout/);
   });
 });
 

@@ -230,7 +230,7 @@ export function AttendanceView({
           (chỉ học sinh mới có tab bar Hub), không dựa vào một điều kiện ngầm. */}
       {roles.includes("student") && (
         <div className="md:hidden">
-          <StudentTabBar />
+          <StudentTabBar fullName={displayName} email={email} />
         </div>
       )}
     </div>

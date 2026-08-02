@@ -688,7 +688,13 @@ export function CheckinView() {
             <span aria-hidden className="msr text-[18px] text-[#E8940D]">waving_hand</span>
             Mình cần gặp thầy cô
           </Link>
-          <Link href="/home" className="mt-4 text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2">
+          {/* inline-flex + min-h-[44px] (§11). Đo thật 360px ngày 02/08/2026: 81×19 — và đây
+              là màn KHÔNG có thanh tab (luồng check-in cố ý toàn màn), nên link này là
+              đường ra duy nhất. Một đường ra cao 19px trên màn cảm ứng. */}
+          <Link
+            href="/home"
+            className="mt-4 inline-flex min-h-[44px] items-center text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2"
+          >
             Về trang chủ
           </Link>
         </div>

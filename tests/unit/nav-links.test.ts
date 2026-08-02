@@ -234,7 +234,11 @@ describe("sidebar: menu chọn theo vai thật", () => {
       const nav = resolveNav(roles);
       expect(nav.items.map((i) => i.href), `vai ${roles.join("+")}`).toContain("/dieu-hanh");
       // Không được là ngõ cụt: vẫn phải có đường về trang chủ và tới hồ sơ (nơi đăng xuất).
-      expect(nav.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/home", "/ho-so"]));
+      // "/ho-so" đã rời khỏi mọi danh sách điều hướng ngày 02/08/2026 và về dưới avatar.
+    // Tính chất "vai này không bị nhốt" KHÔNG bị bỏ — nó chuyển sang ba phép kiểm trong
+    // tests/unit/dieu-huong-mobile.test.ts ("KHÔNG vai nào bị khoá…"), đọc thẳng mã nguồn
+    // của thanh tab, menu trái và lớp nổi tài khoản.
+    expect(nav.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/home"]));
       expect(nav.roleLabel).not.toBe("GVCN");
     }
   });
@@ -244,7 +248,11 @@ describe("sidebar: menu chọn theo vai thật", () => {
     expect(nav.roleLabel).toBe("TÂM LÝ CỤM");
     expect(nav.items.map((i) => i.href)).toContain("/tam-ly");
     // Và không được là ngõ cụt: phải có đường về trang chủ và tới hồ sơ (nơi đăng xuất).
-    expect(nav.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/home", "/ho-so"]));
+    // "/ho-so" đã rời khỏi mọi danh sách điều hướng ngày 02/08/2026 và về dưới avatar.
+    // Tính chất "vai này không bị nhốt" KHÔNG bị bỏ — nó chuyển sang ba phép kiểm trong
+    // tests/unit/dieu-huong-mobile.test.ts ("KHÔNG vai nào bị khoá…"), đọc thẳng mã nguồn
+    // của thanh tab, menu trái và lớp nổi tài khoản.
+    expect(nav.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/home"]));
   });
 
   it("tài khoản chưa được gán vai nào không rơi vào menu của ai cả", () => {

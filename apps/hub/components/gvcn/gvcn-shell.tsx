@@ -122,7 +122,7 @@ export function GvcnShell({
           {/* Bốn màn con luôn thuộc vai GVCN (page.tsx của chúng chặn `homeroom` rồi
               mới render), nên bộ tab ở đây là bộ GVCN — không suy từ prop nào cả. */}
           <div className="md:hidden">
-            <HubTabBar roles={["homeroom"]} />
+            <HubTabBar roles={["homeroom"]} fullName={displayName} email={email} />
           </div>
         </div>
       </div>

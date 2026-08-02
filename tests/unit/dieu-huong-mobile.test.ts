@@ -116,14 +116,47 @@ describe("KHÔNG vai nào bị khoá trong phiên của chính mình", () => {
   for (const roles of ROLE_SETS) {
     const who = roles.length ? roles.join("+") : "(chưa gán vai)";
 
-    it(`${who} — có đường tới ${LOGOUT_HREF} để tự đăng xuất`, () => {
-      expect(resolveTabs(roles).map((i) => i.href)).toContain(LOGOUT_HREF);
+    // CHUYỂN CÁCH CHỨNG MINH, KHÔNG HẠ CHUẨN (02/08/2026).
+    //
+    // Tính chất phải giữ vẫn y nguyên: không vai nào bị nhốt trong phiên của chính mình.
+    // Cái đổi là chỗ thi hành — "Hồ sơ" không còn chiếm một ô trong thanh tab; đường tới
+    // hồ sơ và nút đăng xuất nay nằm trong lớp nổi dưới AVATAR, và avatar được dựng NGAY
+    // TRONG thanh tab nên hễ có thanh tab thì có nó, không màn nào quên.
+    //
+    // Nếu chỉ xoá phép kiểm cũ đi thì hệ mất luôn thứ duy nhất canh tính chất này. Nên nó
+    // được viết lại thành ba khẳng định về mã nguồn thật, ở ngay dưới vòng lặp vai.
+    it(`${who} — thanh tab dựng được, không rỗng`, () => {
+      expect(resolveTabs(roles).length).toBeGreaterThan(0);
     });
 
     it(`${who} — có đường về trang chủ chung ${HOME_HREF}`, () => {
       expect(resolveTabs(roles).map((i) => i.href)).toContain(HOME_HREF);
     });
   }
+
+  // Ba khẳng định thay cho phép kiểm cũ "mọi bộ tab đều chứa /ho-so". Đọc THẲNG mã nguồn
+  // vì đây là chuyện dựng JSX, không phải chuyện dữ liệu — `resolveTabs` không còn biết gì
+  // về hồ sơ nữa, mà thanh tab thì vẫn phải mang avatar.
+  it("thanh tab của MỌI vai đều dựng avatar tài khoản", () => {
+    const src = readFileSync(join(componentsDir, "tab-bar.tsx"), "utf8");
+    // Hai nhánh: học sinh (có nút Check-in nổi giữa) và người lớn. Thiếu một nhánh là một
+    // nửa số vai mất đường đăng xuất — đúng loại lỗi im lặng mà bộ test này tồn tại để bắt.
+    const soLan = [...src.matchAll(/<UserMenu\s+variant="avatar"/g)].length;
+    expect(soLan, "tab-bar.tsx phải dựng <UserMenu variant=\"avatar\"> ở CẢ HAI nhánh").toBe(2);
+  });
+
+  it("menu trái cũng dựng đúng lớp nổi tài khoản đó", () => {
+    const src = readFileSync(join(componentsDir, "hub-sidebar.tsx"), "utf8");
+    expect(src).toMatch(/<UserMenu\s+variant="sidebar"/);
+  });
+
+  it(`lớp nổi tài khoản có đường tới ${LOGOUT_HREF} VÀ có nút đăng xuất thật`, () => {
+    const src = readFileSync(join(componentsDir, "user-menu.tsx"), "utf8");
+    expect(src, "mất đường tới hồ sơ").toContain(`href="${LOGOUT_HREF}"`);
+    // Không kiểm chữ "Đăng xuất" — chữ đổi được mà chức năng vẫn còn, và ngược lại. Kiểm
+    // đúng thứ làm việc: lời gọi huỷ phiên.
+    expect(src, "mất lời gọi huỷ phiên").toMatch(/\/api\/auth\/logout/);
+  });
 
   it("không tổ hợp vai nào nhận thanh điều hướng rỗng", () => {
     for (const roles of ROLE_SETS) {
@@ -206,7 +239,11 @@ describe("tab bar và sidebar nói cùng một điều", () => {
     // đường nào quay về trang chủ chung, kể cả trên máy tính.
     expect(TEACHER_ITEMS.find((i) => i.key === "home")?.href).toBe(HOME_HREF);
     expect(TEACHER_ITEMS.find((i) => i.href === "/gvcn")?.label).toBe("Bảng điều khiển");
-    expect(TEACHER_ITEMS.map((i) => i.href)).toContain(LOGOUT_HREF);
+    // Dòng cũ ở đây đòi TEACHER_ITEMS chứa /ho-so. Mục đó đã rời khỏi mọi danh sách
+    // điều hướng và về dưới avatar (02/08/2026) — tính chất "GVCN không bị nhốt" nay
+    // được chứng minh ở ba phép kiểm trong khối "KHÔNG vai nào bị khoá…" bên trên,
+    // đọc thẳng mã nguồn của thanh tab, menu trái và lớp nổi tài khoản.
+    expect(TEACHER_ITEMS.map((i) => i.href), "Hồ sơ đã về dưới avatar, không nằm trong menu nữa").not.toContain(LOGOUT_HREF);
   });
 });
 

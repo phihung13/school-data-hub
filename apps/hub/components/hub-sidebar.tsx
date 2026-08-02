@@ -18,9 +18,8 @@
 //      danh sách vai thật (`roles`).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
 import type { HubRole } from "@hub/core/contracts";
+import { UserMenu } from "./user-menu";
 
 /** Giữ lại cho các màn chưa kịp truyền `roles` xuống — xem HubSidebarProps. */
 type LegacyRole = "student" | "teacher";
@@ -45,7 +44,6 @@ export const STUDENT_ITEMS: NavItem[] = [
   // tính em nhìn thấy một nhãn ở hai chỗ dẫn đi hai nơi khác nhau.
   { key: "attendance", label: "Lịch điểm danh", icon: "fact_check", href: "/diem-danh" },
   { key: "report", label: "Báo cáo Trưởng thành", icon: "workspace_premium", href: "/bao-cao" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 export const STUDENT_SOON: NavItem[] = [
   { key: "study", label: "Học tập", icon: "menu_book", href: "#" },
@@ -68,7 +66,6 @@ export const TEACHER_ITEMS: NavItem[] = [
   { key: "attendance", label: "Điểm danh lớp", icon: "fact_check", href: "/gvcn/diem-danh" },
   { key: "review", label: "Duyệt báo cáo", icon: "rate_review", href: "/gvcn/duyet-bao-cao" },
   { key: "notes", label: "Ghi chú can thiệp", icon: "edit_note", href: "/gvcn/ghi-chu" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 /**
  * GVCN không còn mục mờ nào (31/07/2026, gói "menu-noi-dung-dich").
@@ -89,7 +86,6 @@ export const TEACHER_SOON: NavItem[] = [];
 export const GUARDIAN_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
   { key: "report", label: "Báo cáo Trưởng thành", icon: "workspace_premium", href: "/bao-cao" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 export const GUARDIAN_SOON: NavItem[] = [
   { key: "health", label: "Y tế", icon: "favorite", href: "#" },
@@ -102,7 +98,6 @@ export const GUARDIAN_SOON: NavItem[] = [
  */
 export const STAFF_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 
 /**
@@ -123,7 +118,6 @@ export const STAFF_ITEMS: NavItem[] = [
 export const COUNSELOR_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
   { key: "psych", label: "Tâm lý cụm", icon: "psychology", href: "/tam-ly" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 export const COUNSELOR_SOON: NavItem[] = [];
 
@@ -141,7 +135,6 @@ export const COUNSELOR_SOON: NavItem[] = [];
 export const BOARD_ITEMS: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", href: "/home" },
   { key: "operations", label: "Điều hành", icon: "bar_chart", href: "/dieu-hanh" },
-  { key: "profile", label: "Hồ sơ", icon: "person", href: "/ho-so" },
 ];
 export const ADMIN_SOON: NavItem[] = [
   { key: "admin", label: "Quản trị hệ thống", icon: "admin_panel_settings", href: "#" },
@@ -225,28 +218,13 @@ export type HubSidebarProps = HubSidebarBaseProps &
   ({ roles: HubRole[]; role?: never } | { role: LegacyRole; roles?: never });
 
 export function HubSidebar({ role, roles, active, fullName, email, classCode }: HubSidebarProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
 
-  // Đóng lớp nổi thì TRẢ FOCUS về nút đã mở nó (sửa 01/08/2026).
-  //
-  // Trước đó `useDismissable` gọi `setMenuOpen(false)` rồi thôi. Bấm Escape khi con trỏ
-  // bàn phím đang đứng trên "Đăng xuất" thì phần tử đang giữ focus bị gỡ khỏi DOM, trình
-  // duyệt trả focus về <body>, và người dùng bàn phím mất chỗ đứng — phải Tab lại từ đầu
-  // trang qua trọn bộ menu trái. Trong khi lớp nổi này chứa đường thoát phiên duy nhất.
-  const closeMenu = () => {
-    setMenuOpen(false);
-    menuButtonRef.current?.focus();
-  };
-  useDismissable(menuOpen, [menuRef, menuButtonRef], closeMenu);
 
   const effectiveRoles: HubRole[] = roles ?? (role === "student" ? ["student"] : ["homeroom"]);
   const { items, soon, roleLabel } = resolveNav(effectiveRoles);
   const trimmedClass = classCode?.trim();
   const roleTag = trimmedClass ? `${roleLabel} · ${trimmedClass}` : roleLabel;
-  const initial = fullName.trim().slice(0, 1).toUpperCase() || "?";
 
   return (
     <nav className="flex h-full w-full flex-col border-r border-line bg-white">
@@ -315,122 +293,13 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
         ))}
       </div>
 
-      <div className="relative border-t border-[#F1F4F8] p-2.5 pb-[14px]">
-        <button
-          type="button"
-          ref={menuButtonRef}
-          onClick={() => setMenuOpen((v) => !v)}
-          // aria-haspopup="true" chứ không phải "menu": giá trị "menu" là một LỜI HỨA
-          // rằng thứ mở ra tuân theo hợp đồng ARIA của role=menu (mũi tên lên/xuống,
-          // Home/End, giam focus). Lớp nổi dưới đây không làm việc đó và cố ý không làm —
-          // xem ghi chú ở chính nó. Hứa sai còn tệ hơn không hứa: trình đọc màn hình đã
-          // đọc "menu" thì người dùng sẽ bấm mũi tên, và không có gì xảy ra.
-          aria-haspopup="true"
-          aria-expanded={menuOpen}
-          className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2.5 py-[9px] hover:bg-[#F5F8FC]"
-        >
-          <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[13px] font-black text-navy">
-            {initial}
-          </span>
-          <div className="min-w-0 flex-1 text-left">
-            <div className="truncate text-[12.5px] font-extrabold text-[#0F172A]">{fullName}</div>
-            <div className="truncate text-[10px] text-muted">{email}</div>
-          </div>
-          <span className="msr text-[18px] text-caption" aria-hidden>
-            unfold_more
-          </span>
-        </button>
-
-        {menuOpen && (
-          // BỎ role="menu" / role="menuitem" (01/08/2026).
-          //
-          // Chúng có ở đây từ đầu nhưng KHÔNG có một hành vi menu nào đi kèm: không
-          // useEffect nào đặt focus vào mục đầu khi mở, không onKeyDown nào xử lý
-          // ArrowUp/ArrowDown/Home/End, không gì giam focus lại trong lớp nổi. Hợp đồng
-          // ARIA của role=menu BẮT BUỘC điều hướng bằng mũi tên — khai role rồi không
-          // thi hành là nói với trình đọc màn hình một điều không đúng, và người dùng
-          // dựa vào lời đó sẽ bấm mũi tên rồi tưởng bàn phím mình hỏng.
-          //
-          // Hai đường sửa: làm trọn hợp đồng, hoặc thôi khai. Ở đây lớp nổi có ĐÚNG HAI
-          // mục (Hồ sơ của tôi · Đăng xuất) nên thôi khai là đường đúng: Tab đã đi theo
-          // thứ tự DOM, Enter/Space đã hoạt động, Escape đã đóng và nay trả focus về nút
-          // mở (xem `closeMenu`). Không mất chức năng nào, chỉ mất một lời hứa suông.
-          // Thêm hai nghi thức menu giả cho hai mục là code không ai bảo trì được.
-          <div
-            ref={menuRef}
-            aria-label="Tài khoản"
-            className="absolute bottom-[62px] left-2.5 right-2.5 z-20 flex flex-col gap-px rounded-2xl border border-line bg-white p-[7px] shadow-[0_16px_36px_rgba(10,42,94,.2)]"
-          >
-            {/* "Cài đặt" và "Trợ giúp" đã bỏ 31/07/2026: mục đầu trỏ trùng /ho-so với
-                "Hồ sơ của tôi", mục sau là href="#" — cả hai là nút bấm không dẫn đi đâu. */}
-            <Link
-              href="/ho-so"
-              onClick={() => setMenuOpen(false)}
-              className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-[12.5px] font-bold text-[#1F2A3A] hover:bg-[#F7F9FC]"
-            >
-              <span className="msr text-[18px] text-caption" aria-hidden>
-                person
-              </span>
-              Hồ sơ của tôi
-            </Link>
-            <div className="mx-0.5 my-1 h-px bg-[#F1F4F8]" />
-            <LogoutMenuItem />
-          </div>
-        )}
+      {/* Hàng tài khoản. Gỡ ra thành <UserMenu> 02/08/2026 khi lớp nổi này có chỗ đứng
+          thứ hai (đầu trang điện thoại) — xem lý lẽ ở đầu user-menu.tsx. Mục "Hồ sơ" đã
+          rời khỏi danh sách điều hướng bên trên và về đây, nên đây KHÔNG còn là lối tắt
+          tiện tay mà là đường DUY NHẤT tới hồ sơ và tới nút đăng xuất. */}
+      <div className="border-t border-[#F1F4F8] p-2.5 pb-[14px]">
+        <UserMenu variant="sidebar" fullName={fullName} email={email} roleTag={roleTag} />
       </div>
     </nav>
-  );
-}
-
-/**
- * Đóng lớp nổi khi bấm ra ngoài hoặc bấm Escape. Mẫu gốc nằm ở
- * embed-floating-menu.tsx:12-18 nhưng ở đó chỉ bắt mousedown và luôn gắn listener;
- * bản này thêm phím Escape (bàn phím/đọc màn hình cũng thoát được) và chỉ gắn
- * listener khi menu đang mở.
- *
- * Nhận nhiều ref vì nút mở nằm NGOÀI hộp menu: bấm lại vào nút mà tính là "bấm ra
- * ngoài" thì hook đóng menu rồi onClick mở lại ngay — menu không bao giờ tắt bằng nút.
- */
-function useDismissable(
-  open: boolean,
-  refs: Array<RefObject<HTMLElement>>,
-  onDismiss: () => void,
-) {
-  useEffect(() => {
-    if (!open) return;
-    function handlePointerDown(e: MouseEvent) {
-      const target = e.target as Node;
-      if (refs.some((r) => r.current?.contains(target))) return;
-      onDismiss();
-    }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onDismiss();
-    }
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refs/onDismiss dựng lại mỗi lần render; phụ thuộc thật chỉ là trạng thái mở
-  }, [open]);
-}
-
-function LogoutMenuItem() {
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        fetch("/api/auth/logout", { method: "POST" }).finally(() => {
-          window.location.href = "/login";
-        });
-      }}
-      className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-left text-[12.5px] font-extrabold text-[#D2383E] hover:bg-[#FFF3F3]"
-    >
-      <span className="msr text-[18px] text-[#D2383E]" aria-hidden>
-        logout
-      </span>
-      Đăng xuất
-    </button>
   );
 }

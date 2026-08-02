@@ -365,7 +365,7 @@ export function GvcnDashboard({
               bỏ qua được gì. */}
           <MainContent className="flex min-w-0 flex-1 flex-col md:overflow-hidden">{children}</MainContent>
           <div className="md:hidden">
-            <HubTabBar roles={roles} />
+            <HubTabBar roles={roles} fullName={displayName} email={email} />
           </div>
         </div>
       </div>

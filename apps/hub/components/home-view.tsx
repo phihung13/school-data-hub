@@ -260,7 +260,7 @@ function MobileHome({ data }: { data: HomeData }) {
           — trang DUY NHẤT có nút Đăng xuất. Kể từ khi trang này dựng một nhánh theo khổ
           màn, đây còn là lưới an toàn cho cả khung máy tính: nhánh desktop (có menu trái)
           chỉ dựng sau hydrate, nên HTML đầu tiên phải tự mang được đường đi của nó. */}
-      <HubTabBar roles={data.roles} />
+      <HubTabBar roles={data.roles} fullName={data.displayName} email={data.email} />
     </div>
   );
 }

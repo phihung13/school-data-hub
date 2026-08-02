@@ -92,7 +92,7 @@ export function OperationsShell({
           </MainContent>
 
           <div className="md:hidden">
-            <HubTabBar roles={roles} />
+            <HubTabBar roles={roles} fullName={displayName} email={email} />
           </div>
         </div>
       </div>
