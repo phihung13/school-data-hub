@@ -26,8 +26,35 @@ const handle = app.getRequestHandler();
 const { getProvider, notifyBackchannelLogout } = await import("./server/oidc/provider.ts");
 const { handleOidcInteraction } = await import("./server/oidc/interaction-handler.ts");
 
-await app.prepare();
-const provider = await getProvider();
+// KHỞI ĐỘNG PHẢI CHẾT THÀNH TIẾNG (thêm 02/08/2026).
+//
+// Trước đó `await app.prepare()` đứng trần ở top-level. Khi nó ném — và nó ĐÃ ném thật:
+// "Could not find a production build in the '.next' directory" vì hai chế độ giành nhau
+// một thư mục — tiến trình thoát mà log không có lấy một dòng. Triệu chứng người dùng
+// nhìn thấy chỉ là "trang không mở được", và tôi phải viết một file dò riêng mới tìm ra.
+//
+// Một máy chủ chết câm còn tệ hơn một máy chủ chết ồn: cái sau mất năm giây để hiểu,
+// cái trước mất nửa tiếng. Nên bọc lại, in đúng bệnh và đúng cách chữa, rồi thoát khác 0
+// để bộ giám sát (Task Scheduler, PM2, systemd) biết là hỏng chứ không tưởng đã xong.
+let provider;
+try {
+  await app.prepare();
+  provider = await getProvider();
+} catch (err) {
+  const thuMuc = dev ? ".next" : ".next-prod";
+  console.error("\n✗ HUB KHÔNG KHỞI ĐỘNG ĐƯỢC — chết ở bước chuẩn bị, trước khi mở cổng.\n");
+  console.error(`  Chế độ      : ${dev ? "lập trình viên" : "CHẠY THẬT"}`);
+  console.error(`  Thư mục dựng: apps/hub/${thuMuc}`);
+  console.error(`  Lỗi gốc     : ${err?.message ?? err}\n`);
+  if (String(err?.message ?? "").includes("production build")) {
+    console.error("  Chữa: chưa có bản dựng thật. Chạy trước:");
+    console.error("      pnpm --filter @hub/app build");
+    console.error("  rồi bật lại. (Bản dựng thật nằm ở .next-prod, tách khỏi .next của");
+    console.error("  chế độ lập trình viên — hai bên không còn ghi đè nhau.)\n");
+  }
+  console.error(err?.stack ?? "");
+  process.exit(1);
+}
 const oidcCallback = provider.callback();
 
 function readJsonBody(req) {
@@ -80,5 +107,7 @@ createServer((req, res) => {
 
   return handle(req, res, parsedUrl);
 }).listen(port, () => {
-  console.log(`> Ready on http://localhost:${port} (OIDC bridge tại /oidc/*)`);
+  console.log(
+    `> Ready on http://localhost:${port} (OIDC bridge tại /oidc/*) · chế độ ${dev ? "lập trình viên" : "CHẠY THẬT"}`,
+  );
 });

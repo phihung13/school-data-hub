@@ -1,0 +1,10 @@
+(node:23520) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:23520) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/ASUS/school-data-hub/apps/hub/server/oidc/provider.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\ASUS\school-data-hub\apps\hub\package.json.
+oidc-provider WARNING: Unsupported runtime. Use Node.js v22.x LTS, or a later LTS release.
+[oidc] khoá ký: nguồn=env-jwks, kid=XQ43VlWGbNaOjL6RUDNzBNLRZ_vTwhVY-OATB6B-n8Y, số khoá công bố=1
+oidc-provider WARNING: a quick start development-only in-memory adapter is used, you MUST change it in order to not lose all stateful provider data upon restart and to be able to share these between processes
+[oidc] Đang mở cửa sổ chồng lấn secret cho "factory" tới 2026-08-06T17:00:00.000Z — nhận cả khóa cũ lẫn khóa mới cho tới lúc đó.
+> Ready on http://localhost:3001 (OIDC bridge tại /oidc/*) · chế độ CHẠY THẬT

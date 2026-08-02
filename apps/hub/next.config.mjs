@@ -4,7 +4,23 @@
 // những thứ đó (manifest, robots) thay đổi mà không đổi tên file.
 const IMMUTABLE_ASSET_EXTS = "jpg|jpeg|png|webp|avif|gif|svg|ico|woff|woff2";
 
+// Thư mục dựng TÁCH ĐÔI theo chế độ chạy (02/08/2026) — bản chạy thật `.next-prod`,
+// bản lập trình viên `.next`.
+//
+// Vì sao: hai chế độ dùng chung một thư mục thì cái chạy sau ghi đè cái trước, và điều
+// đó đã gây HAI sự cố khác nhau trong cùng một ngày:
+//   · Chủ đầu tư mở điện thoại thấy trang hiện đủ chữ mà bấm không ăn — `next build`
+//     ghi đè `.next` trong lúc máy chủ chế độ lập trình viên đang chạy, ba tệp JS lõi
+//     404, React không bao giờ gắn vào.
+//   · Bật bản chạy thật thì máy chủ chết câm — vì trước đó đã chạy lại chế độ lập trình
+//     viên, `.next` không còn `BUILD_ID`. Lỗi thật là "Could not find a production
+//     build", nhưng nó không lọt vào log nào (xem server.mjs).
+// Tách thư mục là cách duy nhất làm hai chế độ thôi giẫm chân nhau; mọi cách khác đều
+// là "nhớ đừng chạy cái kia cùng lúc", mà trí nhớ thì đã hỏng hai lần.
+const distDir = process.env.NODE_ENV === "production" ? ".next-prod" : ".next";
+
 const nextConfig = {
+  distDir,
   reactStrictMode: true,
   // GĐ1 chưa cần Realtime/edge — App Router mặc định là đủ (ADR-010).
   // typedRoutes tắt: MiniAppTile.href tới từ dữ liệu server (session.miniApps),

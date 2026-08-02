@@ -23,3 +23,6 @@ var/
 .hub.log
 .hub.err.log
 .cloudflared.log
+
+# Bản dựng thật — tách khỏi .next của chế độ lập trình viên (next.config.mjs).
+apps/hub/.next-prod

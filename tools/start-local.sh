@@ -14,6 +14,31 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# ── Hai chế độ chạy, và mặc định là chế độ NHANH ────────────────────────────
+#
+#   bash tools/start-local.sh          → bản CHẠY THẬT (mặc định, cho demo và cho điện thoại)
+#   bash tools/start-local.sh --sua     → chế độ lập trình viên (sửa mã là trang tự nạp lại)
+#
+# Vì sao mặc định là bản chạy thật: đo 02/08/2026 trên chính trang buồng lái GVCN,
+# thứ điện thoại phải tải về —
+#     chế độ lập trình viên : 7 tệp · 10.058 KB thô · 2.298 KB khi nén
+#     bản chạy thật         : 5 tệp ·    404 KB thô ·   124 KB khi nén
+# Nhẹ hơn 18,5 lần khi truyền. Chủ đầu tư báo "mở mini app chờ 30 giây" — 2,3 MB
+# qua đường hầm trên điện thoại đúng bằng chừng đó. Chạy máy chủ chế độ lập trình
+# viên cho người dùng thật là trả giá đó mỗi lần mở trang, để đổi lấy một tiện nghi
+# mà chỉ người viết mã mới dùng tới.
+#
+# Hai chế độ ghi vào HAI thư mục khác nhau (`.next-prod` và `.next`, xem
+# next.config.mjs) nên không còn giẫm chân nhau như hai lần sự cố hôm 01–02/08.
+CHE_DO="that"
+for a in "$@"; do
+  case "$a" in
+    --sua|--dev) CHE_DO="sua" ;;
+    --that|--prod) CHE_DO="that" ;;
+  esac
+done
+
 DB_CONTAINER="pg_hub"
 DB_URL="postgres://postgres:postgres@localhost:5434/hub_dev"
 HUB_URL="http://localhost:3000"
@@ -114,14 +139,29 @@ else
   wait_for "sẵn sàng nhận kết nối" 60 db_reachable || exit 1
 fi
 
-echo "── 2. Hub ($HUB_URL)"
+echo "── 2. Hub ($HUB_URL · chế độ $( [ "$CHE_DO" = that ] && echo "CHẠY THẬT" || echo "lập trình viên" ))"
 if curl -sf -m 3 "$HUB_URL/login" >/dev/null 2>&1; then
   ok "đang chạy sẵn"
+  warn "đang chạy sẵn thì script KHÔNG đổi chế độ — muốn đổi thì tắt tiến trình node server.mjs trước"
 else
-  # nohup + & : giữ tiến trình sống sau khi script thoát.
-  ( cd "$ROOT/apps/hub" && nohup node server.mjs > "$ROOT/.hub.log" 2>&1 & )
-  wait_for "trả 200 ở /login" 60 curl -sf -m 3 "$HUB_URL/login" || {
-    fail "xem log: $ROOT/.hub.log"; exit 1;
+  if [ "$CHE_DO" = "that" ]; then
+    # Bản chạy thật cần bản dựng nằm ở .next-prod. Dựng lại mỗi lần bật thì chậm;
+    # chỉ dựng khi CHƯA có, còn lại để người sửa mã tự gọi build khi cần.
+    if [ ! -f "$ROOT/apps/hub/.next-prod/BUILD_ID" ]; then
+      warn "chưa có bản dựng thật — đang dựng (một lần, khoảng một phút)"
+      ( cd "$ROOT" && npx pnpm --filter @hub/app build ) >"$ROOT/.hub-build.log" 2>&1 || {
+        fail "dựng hỏng — xem $ROOT/.hub-build.log"; exit 1;
+      }
+      ok "đã dựng xong"
+    fi
+    ( cd "$ROOT/apps/hub" && NODE_ENV=production nohup node server.mjs > "$ROOT/.hub.log" 2>&1 & )
+  else
+    ( cd "$ROOT/apps/hub" && nohup node server.mjs > "$ROOT/.hub.log" 2>&1 & )
+  fi
+  wait_for "trả 200 ở /login" 90 curl -sf -m 3 "$HUB_URL/login" || {
+    fail "Hub không lên. Máy chủ nay in đúng bệnh và cách chữa vào log:"
+    tail -14 "$ROOT/.hub.log" 2>/dev/null | sed 's/^/     /'
+    exit 1;
   }
 fi
 

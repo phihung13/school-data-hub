@@ -1,0 +1,31 @@
+[oidc] khoá ký: nguồn=dev-file, kid=dTXg_cL-vclXObdDLxbbqYGj6rIiT31SJ1R9EWtsouA, số khoá công bố=1
+> Ready on http://localhost:3000 (OIDC bridge tại /oidc/*)
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 646ms (154 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 5.8s (942 modules)
+ GET /login 200 in 6180ms
+ GET /login 200 in 94ms
+ GET /login 200 in 49ms
+ GET /login 200 in 71ms
+ ✓ Compiled /api/auth/dev-login in 481ms (614 modules)
+ POST /api/auth/dev-login 401 in 609ms
+ POST /api/auth/dev-login 200 in 44ms
+ GET /login 200 in 130ms
+ GET /login 200 in 53ms
+ POST /api/auth/dev-login 401 in 10ms
+ ✓ Compiled in 1120ms (512 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 546ms (575 modules)
+ GET /login 200 in 998ms
+ GET /login 200 in 53ms
+   Reload env: .env.local
+ ✓ Compiled in 741ms (1073 modules)
+   Reload env: .env.local
+ ✓ Compiled in 226ms (498 modules)
+ ○ Compiling /api/auth/dev-login ...
+ ✓ Compiled /api/auth/dev-login in 739ms (213 modules)
+ POST /api/auth/dev-login 200 in 1244ms
+ ○ Compiling /gvcn ...
+ ✓ Compiled /gvcn in 987ms (886 modules)
+ GET /gvcn 200 in 1355ms
