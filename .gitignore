@@ -26,3 +26,6 @@ var/
 
 # Bản dựng thật — tách khỏi .next của chế độ lập trình viên (next.config.mjs).
 apps/hub/.next-prod
+
+# Log máy chủ sinh khi chạy nền (mọi biến thể).
+.hub*.log
