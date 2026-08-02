@@ -111,14 +111,23 @@ describe("giọng nói: bề mặt học sinh/phụ huynh không nói tiếng v�
     expect((src.match(/teacherLabel\(/g) ?? []).length).toBeGreaterThanOrEqual(4);
   });
 
-  it("👋 chỉ đi kèm lời chào HỌC SINH (§4: emoji tiết chế)", () => {
+  it("👋 chỉ đi kèm lời chào HỌC SINH, và chỉ ở MỘT chỗ (§4: emoji tiết chế)", () => {
     // Trang chủ là trang chung của mọi vai — cùng một dòng chữ đó chào cả hiệu trưởng.
+    //
+    // SIẾT THÊM 02/08/2026. Bản cũ chỉ hỏi "mỗi 👋 có nằm sau chữ `isStudent` không", và
+    // nó xanh suốt trong khi câu chào được viết HAI LẦN (một bản mobile, một bản desktop)
+    // — tức luật này cũng có hai bản, và sửa một bản là hai bản nói khác nhau. Nay câu
+    // chào gom vào `<LoiChao>`, nên phép kiểm đòi thêm: đúng MỘT chỗ.
+    //
+    // Cũng nới tên biến: điều kiện nay là `laHocSinh` (prop của LoiChao) chứ không còn là
+    // `data.isStudent`. Luật cần giữ là "emoji nằm trong một điều kiện về việc người đọc
+    // có phải học sinh không", không phải "biến đó phải tên gì".
     const src = readComponent("home-view.tsx");
     const positions = [...src.matchAll(/👋/g)].map((m) => m.index!);
-    expect(positions.length, "trang chủ phải còn lời chào có 👋 cho học sinh").toBeGreaterThan(0);
+    expect(positions.length, "trang chủ phải còn lời chào có 👋 cho học sinh").toBe(1);
     for (const at of positions) {
-      expect(src.slice(Math.max(0, at - 80), at), "👋 nằm ngoài điều kiện isStudent").toMatch(
-        /isStudent/,
+      expect(src.slice(Math.max(0, at - 80), at), "👋 nằm ngoài điều kiện về vai học sinh").toMatch(
+        /isStudent|laHocSinh/,
       );
     }
   });

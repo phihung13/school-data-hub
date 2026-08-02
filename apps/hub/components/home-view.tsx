@@ -191,6 +191,49 @@ export function HomeView({
  * Một con số ở hero: đang tải → ô xám; hỏng → "—"; xong → số thật.
  * KHÔNG có nhánh nào trả về 0 khi chưa biết.
  */
+/**
+ * KHỐI NÀO hiện với người đang xem — quyết định MỘT LẦN, hai cây cùng đọc.
+ *
+ * Vì sao cần, dù hai cây bố cục là chuyện đúng: trang này cố ý dựng hai cây riêng cho
+ * điện thoại và máy tính (xem ghi chú 2 ở đầu file — dựng cả hai rồi ẩn bằng CSS khiến
+ * máy yếu trả tiền cho cây nó không bao giờ thấy). Cái giá của quyết định đó là mọi câu
+ * "ai thấy khối này" bị viết HAI LẦN, và hai lần thì có ngày lệch.
+ *
+ * Đã lệch thật, và chú thích ngay trong file này ghi lại: bản mobile có `relative z-[2]`
+ * từ đầu, bản desktop sót — chữ "Mini App" bị nền navy cắt ngang, và CHỈ vai người lớn
+ * nhìn thấy (ảnh chụp của Cô Hạnh, 31/07/2026).
+ *
+ * PHẢI NÓI RÕ GIỚI HẠN: hàm này chỉ gom được câu hỏi "khối này có hiện không". Nó KHÔNG
+ * chặn được ca vừa kể — đó là lệch KIỂU DÁNG, và không cấu trúc nào bắt được. Thứ bắt
+ * được ca đó là mở cả hai khổ màn ra nhìn: `tools/ra-mobile.js`.
+ */
+export function khoiChoVai(data: { isStudent: boolean; isHomeroom: boolean }) {
+  return {
+    theCheckin: data.isStudent,
+    tuanNay: data.isStudent,
+    // `&& !isStudent`: một em học sinh đồng thời là GVCN không tồn tại, nhưng nếu dữ liệu
+    // hỏng mà ra tổ hợp đó thì màn của em phải thắng — em không được thấy lời nhắc về
+    // buồng lái. Giữ nguyên phép so cũ, chỉ chuyển chỗ.
+    loiTatGvcn: data.isHomeroom && !data.isStudent,
+  };
+}
+
+/**
+ * Lời chào. MỘT chỗ soạn câu, hai cây chỉ khác cỡ chữ.
+ *
+ * 👋 chỉ đi với lời chào HỌC SINH (§4: emoji tiết chế, chỉ ở đó) — cùng dòng chữ này còn
+ * chào hiệu trưởng và kế toán lúc 7 giờ sáng. Trước 02/08/2026 câu này viết hai lần, nên
+ * luật "emoji chỉ cho học sinh" cũng có hai bản.
+ */
+function LoiChao({ ten, laHocSinh }: { ten: string; laHocSinh: boolean }) {
+  return (
+    <>
+      Chào {ten}
+      {laHocSinh ? " 👋" : ""}
+    </>
+  );
+}
+
 function StatValue({ state, value, width }: { state: StatState; value: string; width: string }) {
   if (state === "loading") return <SkeletonBlock className={`${width} h-6`} />;
   if (state === "error") return <>—</>;
@@ -201,6 +244,7 @@ function StatValue({ state, value, width }: { state: StatState; value: string; w
 // Mobile — M3: hero cong, thẻ check-in trồi lên vòm, tab bar dưới cùng.
 // ---------------------------------------------------------------------------
 function MobileHome({ data }: { data: HomeData }) {
+  const khoi = khoiChoVai(data);
   return (
     <div className="flex min-h-screen w-full flex-col bg-pagebg">
       <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light pb-[54px]">
@@ -214,10 +258,8 @@ function MobileHome({ data }: { data: HomeData }) {
             {data.displayName.slice(0, 1)}
           </div>
           <div className="flex-1">
-            {/* 👋 chỉ đi với lời chào HỌC SINH (§4: emoji tiết chế, chỉ ở đó). Cùng một
-                dòng chữ này còn chào hiệu trưởng và kế toán lúc 7 giờ sáng. */}
             <div className="text-[17px] font-black text-white">
-              Chào {data.displayName}{data.isStudent ? " 👋" : ""}
+              <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
             </div>
             <div className="mt-0.5 text-[11.5px] text-[#D6E6FF]">{data.today}</div>
           </div>
@@ -228,7 +270,7 @@ function MobileHome({ data }: { data: HomeData }) {
       <div className="relative -mt-8 h-8 rounded-t-[100%] bg-pagebg" aria-hidden />
 
       <div className="flex flex-1 flex-col px-4">
-        {data.isStudent && <CheckinCardMobile data={data} />}
+        {khoi.theCheckin && <CheckinCardMobile data={data} />}
 
         <div className={`${data.isStudent ? "mt-3.5" : "mt-5"} text-[14px] font-black text-navy`}>Mini App</div>
         <div className="grid grid-cols-4 gap-3 py-1.5">
@@ -247,7 +289,7 @@ function MobileHome({ data }: { data: HomeData }) {
           </>
         )}
 
-        {data.isHomeroom && !data.isStudent && (
+        {khoi.loiTatGvcn && (
           <p className="mt-4 text-center text-[12px] text-muted">
             Mở <b>Bảng điều khiển</b> ở lưới mini app phía trên để xem lớp sáng nay.
           </p>
@@ -318,6 +360,7 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
 // bịa lịch CLB/đọc sách — GĐ1 chưa có dữ liệu đó).
 // ---------------------------------------------------------------------------
 function DesktopHome({ data }: { data: HomeData }) {
+  const khoi = khoiChoVai(data);
   const [modalOpen, setModalOpen] = useState(false);
   const [autoOpened, setAutoOpened] = useState(false);
 
@@ -345,7 +388,7 @@ function DesktopHome({ data }: { data: HomeData }) {
           <div className="relative mt-3 flex flex-wrap items-end gap-6">
             <div className="min-w-0 flex-1 basis-[300px]">
               <div className="text-[40px] font-black leading-[1.1] text-white">
-                Chào {data.displayName}{data.isStudent ? " 👋" : ""}
+                <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
               </div>
               <div className="mt-2 text-[14px] font-semibold text-[#D6E6FF]">{data.today}</div>
             </div>
@@ -401,7 +444,7 @@ function DesktopHome({ data }: { data: HomeData }) {
         */}
         <div className="relative z-[2] mt-[-34px] flex flex-wrap items-start gap-5 px-7">
           <div className="flex min-w-0 flex-[3_1_520px] flex-col gap-[18px]">
-            {data.isStudent && <CheckinCardDesktop data={data} onOpenModal={() => setModalOpen(true)} />}
+            {khoi.theCheckin && <CheckinCardDesktop data={data} onOpenModal={() => setModalOpen(true)} />}
 
             <div className="rounded-[22px] border border-white bg-white p-6 shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
               <div className="flex items-baseline justify-between">
@@ -428,7 +471,7 @@ function DesktopHome({ data }: { data: HomeData }) {
               />
             )}
             {data.isStudent && data.checkedInToday && data.checkedInAt && <TodayCard checkedInAt={data.checkedInAt} />}
-            {data.isHomeroom && !data.isStudent && (
+            {khoi.loiTatGvcn && (
               <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
                 <div className="text-[16px] font-black text-navy">Buồng lái đang chờ</div>
                 <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
@@ -741,7 +784,10 @@ function ThisWeekCard({
       )}
       <Link
         href="/bao-cao"
-        className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-[#F5F8FC] py-[11px] text-[12.5px] font-extrabold text-[#1D4E8F]"
+        // min-h-[44px] (§11): đo thật ở 1280px ngày 02/08/2026 ra 290×41 — thiếu 3px.
+        // `py-[11px]` cộng chữ 12,5px chỉ ra 41px, và 1280px không đồng nghĩa với "có
+        // chuột": máy tính bảng và laptop cảm ứng cũng nằm ở khổ đó.
+        className="mt-4 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-[#F5F8FC] py-[11px] text-[12.5px] font-extrabold text-[#1D4E8F]"
       >
         Xem Báo cáo Trưởng thành
         <span className="msr text-[17px]">arrow_forward</span>
