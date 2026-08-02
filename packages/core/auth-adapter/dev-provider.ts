@@ -36,10 +36,10 @@ export interface DevAccount {
  *   · Tâm lý cụm, quản trị kiêm hiệu trưởng cơ sở — như cũ.
  */
 export const DEV_ACCOUNTS: DevAccount[] = [
-  { authUid: "90000000-0000-0000-0000-000000000001", email: "gvcn@va.edu.vn", displayName: "Cô Lan (GVCN 6A1)", audience: "staff" },
-  { authUid: "90000000-0000-0000-0000-000000000006", email: "gvcn2@va.edu.vn", displayName: "Cô Hạnh (GVCN 6A2)", audience: "staff" },
-  { authUid: "90000000-0000-0000-0000-000000000008", email: "gvcn3@va.edu.vn", displayName: "Cô Vân (GVCN 6A3 và 6A4)", audience: "staff" },
-  { authUid: "90000000-0000-0000-0000-000000000009", email: "gvcn4@va.edu.vn", displayName: "Thầy Kiên (GVCN 6A5)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000001", email: "gvcn@va.edu.vn", displayName: "Cô Lan (chủ nhiệm 6A1)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000006", email: "gvcn2@va.edu.vn", displayName: "Cô Hạnh (chủ nhiệm 6A2)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000008", email: "gvcn3@va.edu.vn", displayName: "Cô Vân (chủ nhiệm 6A3 và 6A4)", audience: "staff" },
+  { authUid: "90000000-0000-0000-0000-000000000009", email: "gvcn4@va.edu.vn", displayName: "Thầy Kiên (chủ nhiệm 6A5)", audience: "staff" },
   // Thầy Nam (…0002) bị bỏ 31/07/2026 để nhường chỗ cho tài khoản quản trị, và cùng lúc
   // đó vai "teacher" mất luôn tài khoản demo cuối cùng. Trả lại ở đây — không phải cho
   // đủ danh sách, mà vì không có nó thì nhánh "giáo viên bộ môn" của mọi màn hình và
@@ -48,7 +48,27 @@ export const DEV_ACCOUNTS: DevAccount[] = [
   { authUid: "90000000-0000-0000-0000-00000000000a", email: "gvbomon2@va.edu.vn", displayName: "Cô Diệp (bộ môn Ngữ văn)", audience: "staff" },
   { authUid: "90000000-0000-0000-0000-000000000003", email: "tamly@va.edu.vn", displayName: "Cô Mai (tâm lý cụm)", audience: "staff" },
   { authUid: "90000000-0000-0000-0000-000000000007", email: "admin.hung@va.edu.vn", displayName: "Hùng (Quản trị)", audience: "staff" },
-  { authUid: "90000000-0000-0000-0000-000000000005", email: "minh@va.edu.vn", displayName: "Học sinh Minh", audience: "student" },
+  { authUid: "90000000-0000-0000-0000-000000000005", email: "minh@va.edu.vn", displayName: "Học sinh Minh (6A1)", audience: "student" },
+  // Thêm 02/08/2026 — chủ đầu tư: "quá nhiều thầy cô nhưng lại chỉ 1 học sinh?".
+  //
+  // Nhận xét đúng, và nó chỉ ra một lỗ kiểm chứng chứ không chỉ một danh sách lệch: cả
+  // phía HỌC SINH của hệ chỉ từng được đi qua bằng ĐÚNG MỘT tài khoản, mà em đó lại là
+  // em duy nhất KHÔNG mang cờ nào. Nghĩa là màn của một em ĐANG có cờ — thứ mà cả hệ
+  // chăm sóc sinh ra để phục vụ — chưa ai mở bằng mắt lần nào.
+  //
+  // Hai em thêm vào có chủ ý khác nhau (tên lấy đúng theo seed, không tự đặt):
+  //   · Khôi là em số 7 của 6A3, mang chuỗi cảm xúc xấu do seed gieo ⇒ đo được 1 cờ
+  //     E_MOOD thật, và là lớp của Cô Vân nên đối chiếu được bảng điều khiển ↔ màn của em.
+  //   · An là em số 1 cùng lớp, 0 cờ ⇒ mẫu đối chứng. Không có nó thì mọi khẳng định
+  //     "em này khác em kia" đều thiếu vế so sánh.
+  //
+  // Mã bắt đầu từ …0010 vì …000b–…000f đã là năm thầy cô khối 7–8.
+  { authUid: "90000000-0000-0000-0000-000000000010", email: "hs.khoi@va.edu.vn", displayName: "Học sinh Khôi (6A3 · đang có cờ)", audience: "student" },
+  { authUid: "90000000-0000-0000-0000-000000000011", email: "hs.an@va.edu.vn", displayName: "Học sinh An (6A3)", audience: "student" },
+  // Phụ huynh ĐÃ CÓ trong cơ sở dữ liệu từ lâu (core.parents, ph@va.edu.vn) nhưng chưa
+  // bao giờ có mặt ở đây — nên vai phụ huynh chỉ vào được bằng mã mời, và Báo cáo
+  // Trưởng thành chưa ai xem bằng đúng con mắt sẽ đọc nó.
+  { authUid: "90000000-0000-0000-0000-000000000004", email: "ph@va.edu.vn", displayName: "Phụ huynh của Minh", audience: "student" },
 ];
 
 export function findDevAccount(authUid: string): DevAccount | undefined {

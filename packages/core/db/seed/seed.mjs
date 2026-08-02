@@ -37,6 +37,7 @@
 // Chạy: DATABASE_URL=postgres://... node packages/core/db/seed/seed.mjs
 
 import pg from "pg";
+import { readFile } from "node:fs/promises";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -609,6 +610,60 @@ async function run() {
       }
     }
 
+    // ── Tài khoản đăng nhập cho HAI em nữa (02/08/2026) ──────────────────────
+    //
+    // Chủ đầu tư: "quá nhiều thầy cô nhưng lại chỉ 1 học sinh?". Nhận xét đó chỉ ra một
+    // lỗ kiểm chứng chứ không chỉ một danh sách lệch: trước hôm nay cả phía HỌC SINH của
+    // hệ chỉ đi qua được bằng ĐÚNG MỘT tài khoản, mà em đó lại là em duy nhất KHÔNG mang
+    // cờ nào. Nghĩa là màn của một em ĐANG có cờ — thứ cả hệ chăm sóc sinh ra để phục vụ
+    // — chưa ai mở bằng mắt lần nào.
+    //
+    // Chọn hai em CÙNG LỚP 6A3 (lớp Cô Vân) và khác nhau đúng một điều:
+    //   · em số 7 mang chuỗi cảm xúc xấu do phần HOẠT ĐỘNG gieo ⇒ có cờ thật;
+    //   · em số 1 không ⇒ mẫu đối chứng.
+    // Không có vế thứ hai thì mọi khẳng định "em này khác em kia" đều thiếu chỗ so.
+    // Mã bắt đầu từ …0010: …000b–…000f LÀ Cô Thu, Thầy Phúc, Cô Yến, Thầy Lộc, Thầy Sơn
+    // (khối 7–8). Tôi đã lấy nhầm …000b/…000c một lần trong hôm nay và hậu quả không hề
+    // nổ ra: `on conflict (id) do update set full_name` ĐỔI TÊN hai giáo viên thành tên
+    // hai em, nối hai em vào tài khoản giáo viên, và cấp thêm vai `student` cho họ —
+    // tất cả im lặng, seed vẫn in "OK". Ghi lại đây vì đó là hình mẫu của lỗi nguy hiểm
+    // nhất trong bộ dữ liệu mẫu: TRÙNG MÃ thì upsert không cãi, nó phục tùng.
+    const HS_THEM = [
+      { user: "40000000-0000-0000-0000-000000000010", auth: "90000000-0000-0000-0000-000000000010", email: "hs.khoi@va.edu.vn", sid: studentId(3, 7) },
+      { user: "40000000-0000-0000-0000-000000000011", auth: "90000000-0000-0000-0000-000000000011", email: "hs.an@va.edu.vn", sid: studentId(3, 1) },
+    ];
+    for (const em of HS_THEM) {
+      const { rows } = await client.query("select full_name from core.students where id = $1", [em.sid]);
+      const ten = rows[0]?.full_name ?? "Học sinh";
+
+      // Cổng chống trùng mã — dựng vì lỗi ở trên chứ không phải phòng xa. Nếu mã này đã
+      // thuộc về NGƯỜI KHÁC, dừng ngay; upsert mà chạy tiếp thì nó ghi đè người ta.
+      const cu = await client.query("select email from core.users where id = $1", [em.user]);
+      if (cu.rows[0] && cu.rows[0].email !== em.email) {
+        throw new Error(
+          `Mã người dùng ${em.user} đã thuộc về ${cu.rows[0].email}, không phải ${em.email}. ` +
+            "Đổi mã cho tài khoản học sinh mới thay vì ghi đè.",
+        );
+      }
+      await client.query(
+        `insert into core.users (id, auth_uid, email, full_name, status)
+         values ($1,$2,$3,$4,'active')
+         on conflict (id) do update set full_name = excluded.full_name`,
+        [em.user, em.auth, em.email, ten],
+      );
+      await client.query(
+        `insert into core.user_role_scopes (user_id, role_code) values ($1,'student')
+         on conflict do nothing`,
+        [em.user],
+      );
+      // Nối tài khoản vào đúng em. `students.user_id` là UNIQUE nên gán nhầm sẽ nổ chứ
+      // không âm thầm cho hai em dùng chung một tài khoản.
+      await client.query("update core.students set user_id = $2 where id = $1 and user_id is null", [
+        em.sid,
+        em.user,
+      ]);
+    }
+
     // Mã mời phụ huynh mẫu cho Bình — thử luồng "Zalo + mã mời" trong dev.
     await client.query(
       `insert into core.parent_invite_codes (code, student_id, expires_at, created_by)
@@ -619,7 +674,7 @@ async function run() {
 
     const summary = await verify(client);
     await client.query("commit");
-    report(summary);
+    await report(summary, client);
   } catch (err) {
     await client.query("rollback").catch(() => {});
     throw err;
@@ -845,7 +900,7 @@ async function verifyKhoi78(client, problems) {
   return { roster, grades, day, khoiDay, tong };
 }
 
-function report({ roster, homerooms, subjects, khoi78 }) {
+async function report({ roster, homerooms, subjects, khoi78 }, client) {
   console.log("OK — seed xong. Khối 6 cơ sở Quận 7:");
   console.log(`  ${roster.map((r) => `${r.code}: ${r.n} em`).join(" · ")}`);
   console.log(
@@ -866,13 +921,42 @@ function report({ roster, homerooms, subjects, khoi78 }) {
   // hệ thống không giữ: các tài khoản khối 7/8 CÓ trong CSDL nhưng CHƯA có trong
   // DEV_ACCOUNTS của packages/core/auth-adapter/dev-provider.ts, nên `/api/auth/dev-login`
   // từ chối chúng. Người đọc sẽ mất mười lăm phút tưởng mình gõ sai mật khẩu.
-  console.log("Đăng nhập dev được ngay (có trong DEV_ACCOUNTS):");
-  console.log("  gvcn@va.edu.vn · gvcn2@va.edu.vn · gvcn3@va.edu.vn · gvcn4@va.edu.vn (chủ nhiệm khối 6)");
-  console.log("  gvbomon@va.edu.vn · gvbomon2@va.edu.vn (bộ môn khối 6)");
-  console.log("  tamly@va.edu.vn · admin.hung@va.edu.vn · minh@va.edu.vn");
-  console.log("CÓ trong CSDL nhưng CHƯA đăng nhập dev được — cần thêm vào DEV_ACCOUNTS:");
-  console.log("  gvcn5@va.edu.vn (7A1) · gvcn6@va.edu.vn (7A2) · gvcn7@va.edu.vn (8A1)");
-  console.log("  gvcn8@va.edu.vn (8B1, cơ sở Quận 2) · gvbomon3@va.edu.vn (bộ môn dạy chéo khối)");
+  // ĐỌC danh sách từ chính dev-provider.ts thay vì chép tay vào đây. Bản chép tay đứng
+  // ở đây tới 02/08/2026 và đã sai ngay lần đầu có người thêm tài khoản: nó vẫn hứa
+  // "minh@va.edu.vn" là học sinh duy nhất trong khi đã có ba em. Một dòng chữ mô tả sai
+  // hệ thống thì tệ hơn không có dòng nào — người đọc tin nó và đi tìm lỗi ở chỗ khác.
+  let choPhep = null;
+  try {
+    const nguon = await readFile(new URL("../../auth-adapter/dev-provider.ts", import.meta.url), "utf8");
+    const than = nguon.slice(nguon.indexOf("DEV_ACCOUNTS"));
+    choPhep = new Set([...than.matchAll(/email:\s*"([^"]+)"/g)].map((m) => m[1]));
+    if (choPhep.size === 0) choPhep = null; // đọc được file nhưng không thấy gì ⇒ coi như không đọc được
+  } catch {
+    choPhep = null;
+  }
+
+  const moiEmail = await client.query("select email from core.users order by email");
+  if (choPhep) {
+    const duoc = moiEmail.rows.map((r) => r.email).filter((e) => choPhep.has(e));
+    const chua = moiEmail.rows.map((r) => r.email).filter((e) => !choPhep.has(e));
+    console.log(`Đăng nhập dev được ngay (${duoc.length} tài khoản, đọc từ dev-provider.ts):`);
+    console.log("  " + duoc.join(" · "));
+    if (chua.length) {
+      console.log(`CÓ trong CSDL nhưng CHƯA đăng nhập dev được (${chua.length}) — thêm vào DEV_ACCOUNTS nếu cần:`);
+      console.log("  " + chua.join(" · "));
+    }
+    // Chiều ngược lại — khai trong DEV_ACCOUNTS mà CSDL không có — là ca hỏng nặng hơn:
+    // bấm vào sẽ nổ HTTP 500 chứ không phải mờ đi.
+    const coTrongDb = new Set(moiEmail.rows.map((r) => r.email));
+    const ma = [...choPhep].filter((e) => !coTrongDb.has(e));
+    if (ma.length) {
+      console.log(`⚠ ${ma.length} tài khoản khai trong DEV_ACCOUNTS nhưng KHÔNG có trong CSDL — bấm vào sẽ lỗi:`);
+      console.log("  " + ma.join(" · "));
+    }
+  } else {
+    console.log(`Có ${moiEmail.rowCount} tài khoản trong CSDL. KHÔNG đọc được dev-provider.ts nên`);
+    console.log("không biết cái nào đăng nhập dev được — tự mở file đó ra xem.");
+  }
   console.log("  Mã mời phụ huynh cho Bình (chưa có tài khoản): DEV001");
 }
 

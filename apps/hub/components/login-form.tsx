@@ -224,33 +224,10 @@ export function LoginForm({
             <UnlockPanel secret={secret} setSecret={setSecret} loading={loading} onSubmit={unlockGate} />
           )}
           {gate === "misconfigured" && <GateClosedNotice />}
-          {gate === "open" && (
-            <>
-              {/* CẢNH BÁO KHI CỬA ĐANG MỞ KHÔNG MẬT KHẨU (02/08/2026).
-
-                  Chủ đầu tư bỏ mật khẩu vì nó đã rò hai lần trong một ngày, cả hai đều
-                  do công cụ tự in ra. Quyết định đó chính đáng — nhưng rủi ro còn lại
-                  thì không được biến mất theo, nó chỉ được chuyển từ "một mật khẩu ai
-                  cũng biết" sang "một dòng chữ ai cũng thấy".
-
-                  Câu này CỐ Ý đứng trên danh sách tài khoản, không nhét xuống chân
-                  trang: thứ nó cảnh báo là điều người ta sắp làm ngay bên dưới. */}
-              <div
-                role="note"
-                className="flex items-start gap-2.5 rounded-2xl border border-[#F3D9A6] bg-[#FFF9EC] p-[11px_13px]"
-              >
-                <span aria-hidden className="msr flex-none text-[19px] text-[#8A5A00]">
-                  info
-                </span>
-                <span className="text-[12px] font-semibold leading-[1.5] text-[#8A5A00]">
-                  Bản đang thử, mở không cần mật khẩu — ai có địa chỉ này đều vào được
-                  bằng một vai bất kỳ. Sau cửa này hiện chỉ có dữ liệu mẫu.{" "}
-                  <b>Đừng nạp danh sách học sinh thật khi cửa còn mở.</b>
-                </span>
-              </div>
-              <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />
-            </>
-          )}
+          {/* Ô cảnh báo "cửa đang mở không mật khẩu" đã GỠ 02/08/2026 theo yêu cầu chủ
+              đầu tư. Cảnh báo tương ứng vẫn còn ở `tools/start-local.sh` — chỗ đó là
+              người vận hành đọc, không phải người dùng cuối. */}
+          {gate === "open" && <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />}
 
           <div className="flex items-center gap-2.5">
             <span className="h-px flex-1 bg-[#EFE9DC]" />
@@ -319,6 +296,47 @@ function MobileHeroBand() {
   );
 }
 
+/**
+ * Nhóm hiển thị trong ô chọn. Suy từ NHÃN chứ không từ `audience`, vì `audience` chỉ có
+ * hai giá trị (staff/student) — không đủ để tách cô chủ nhiệm khỏi thầy cô bộ môn, mà đó
+ * lại đúng là thứ người demo cần phân biệt.
+ */
+/**
+ * Nhóm cho ô chọn vai. Hai luật, cả hai đều học từ lỗi đo được 02/08/2026:
+ *
+ *   1. KHỚP TRƯỚC ĂN TRƯỚC — mỗi tài khoản vào ĐÚNG một nhóm. Bản đầu để mỗi nhóm tự
+ *      lọc cả danh sách, nên "Phụ huynh của Minh" (audience `student`, tên có chữ "phụ
+ *      huynh") hiện HAI LẦN trong ô chọn.
+ *   2. CÓ NHÓM VÉT — tài khoản không khớp luật nào rơi vào "Vai khác". Không có nó thì
+ *      thêm một vai mới mà quên sửa file này sẽ làm tài khoản đó BIẾN MẤT khỏi ô chọn:
+ *      không lỗi, không dòng trống, chỉ là không có ở đó. Người thử sẽ kết luận "vai đó
+ *      chưa làm xong" trong khi nó chạy tốt.
+ *
+ * Thứ tự quan trọng: "Phụ huynh" phải đứng TRƯỚC "Học sinh" vì phụ huynh cũng mang
+ * audience `student` (họ đi qua cùng một cổng đăng nhập).
+ */
+const NHOM_VAI: Array<{ ten: string; thuoc: (a: DevAccount) => boolean }> = [
+  { ten: "Phụ huynh", thuoc: (a) => /phụ huynh/i.test(a.displayName) },
+  { ten: "Học sinh", thuoc: (a) => a.audience === "student" },
+  { ten: "Giáo viên chủ nhiệm", thuoc: (a) => /chủ nhiệm/i.test(a.displayName) },
+  { ten: "Giáo viên bộ môn", thuoc: (a) => /bộ môn/i.test(a.displayName) },
+  { ten: "Tâm lý · Quản trị", thuoc: (a) => /tâm lý|quản trị|hiệu trưởng/i.test(a.displayName) },
+];
+
+/** Chia danh sách thành các nhóm rời nhau, kèm nhóm vét cho phần không khớp. */
+export function chiaNhom(
+  ds: DevAccount[],
+): Array<{ ten: string; tai: DevAccount[] }> {
+  const con = new Set(ds);
+  const ra = NHOM_VAI.map((nhom) => {
+    const tai = [...con].filter((a) => nhom.thuoc(a));
+    for (const a of tai) con.delete(a);
+    return { ten: nhom.ten, tai };
+  }).filter((n) => n.tai.length > 0);
+  if (con.size > 0) ra.push({ ten: "Vai khác", tai: [...con] });
+  return ra;
+}
+
 function StaffPanel({
   devAccounts,
   loading,
@@ -328,6 +346,11 @@ function StaffPanel({
   loading: boolean;
   onPick: (authUid: string) => void;
 }) {
+  // Mặc định chọn một em học sinh, không phải cô giáo đứng đầu danh sách: màn đầu tiên
+  // người ta muốn xem khi demo gần như luôn là màn của trẻ.
+  const [chon, setChon] = useState(
+    devAccounts.find((a) => a.audience === "student")?.authUid ?? devAccounts[0]?.authUid ?? "",
+  );
   // GHI RA ĐỂ KHÔNG AI TƯỞNG LÀ ĐÃ SẠCH (01/08/2026): HTML thật của /login vẫn chứa chuỗi
   // "Cô Lan (GVCN 6A1)". Nó KHÔNG đến từ file này mà từ `full_name` của bảng tài khoản thử
   // (packages/core/auth-adapter/dev-provider.ts), nên tests/unit/giong-noi.test.ts — vốn chỉ
@@ -341,22 +364,47 @@ function StaffPanel({
         <span className="rounded bg-chip px-2 py-0.5 text-[10px] font-black uppercase text-caption">DEV</span>
         Chọn tài khoản thử (thay Google SSO thật)
       </p>
+      {/* MỘT Ô CHỌN thay cho một danh sách nút (02/08/2026, yêu cầu chủ đầu tư).
+
+          Bản trước vẽ mỗi tài khoản một nút cao 56px. Chín tài khoản là hơn 500px chỉ để
+          chọn một thứ — trên điện thoại phải cuộn qua hết đội ngũ giáo viên mới thấy học
+          sinh, mà em học sinh lại đúng là màn người ta hay mở đầu tiên khi demo.
+
+          Gộp theo NHÓM VAI chứ không xếp phẳng: người chọn đang tìm "một cô chủ nhiệm"
+          hay "một em học sinh", không tìm một cái tên cụ thể. `optgroup` làm đúng việc
+          đó, và trình đọc màn hình cũng đọc được tên nhóm. */}
       <div className="flex flex-col gap-2.5">
-        {devAccounts.map((acc) => (
-          <button
-            key={acc.authUid}
-            type="button"
+        <label htmlFor="tk-thu" className="sr-only">
+          Chọn tài khoản thử
+        </label>
+        <div className="flex items-center gap-2.5 rounded-[15px] border-[1.6px] border-[#E4DFD3] bg-white px-3.5 shadow-[0_6px_16px_rgba(38,39,93,.10)]">
+          <GoogleMark />
+          <select
+            id="tk-thu"
+            value={chon}
             disabled={loading}
-            onClick={() => onPick(acc.authUid)}
-            className="flex h-14 items-center gap-[11px] rounded-[15px] border-[1.6px] border-[#E4DFD3] bg-white px-4 text-left shadow-[0_6px_16px_rgba(38,39,93,.10)] transition-all hover:-translate-y-0.5 hover:border-[#CFC8B8] hover:shadow-[0_12px_26px_rgba(38,39,93,.14)] disabled:opacity-50"
+            onChange={(e) => setChon(e.target.value)}
+            className="min-h-[52px] min-w-0 flex-1 bg-transparent text-[13.5px] font-black text-[#1B1C3A] outline-none disabled:opacity-50"
           >
-            <GoogleMark />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[13.5px] font-black text-[#1B1C3A]">{acc.displayName}</div>
-              <div className="truncate text-[11px] text-muted">{acc.email}</div>
-            </div>
-          </button>
-        ))}
+            {chiaNhom(devAccounts).map((nhom) => (
+              <optgroup key={nhom.ten} label={nhom.ten}>
+                {nhom.tai.map((acc) => (
+                  <option key={acc.authUid} value={acc.authUid}>
+                    {acc.displayName}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          disabled={loading || !chon}
+          onClick={() => onPick(chon)}
+          className="flex min-h-[48px] items-center justify-center rounded-[15px] bg-gradient-to-br from-navy to-navy-light text-[14px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)] transition-all hover:-translate-y-0.5 disabled:opacity-50"
+        >
+          {loading ? "Đang vào…" : "Vào Hub"}
+        </button>
       </div>
     </div>
   );
