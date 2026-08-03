@@ -60,7 +60,10 @@ describe("dải trạng thái bộ quét — mọi trạng thái đều phải n
     const b = scanBannerPresentation(scan(), HOM_NAY);
     expect(b.tone).toBe("on-dinh");
     expect(b.choPhepKetLuanOn).toBe(true);
-    expect(b.title).toContain("đã chạy lúc");
+    // Câu chữ RÚT NGẮN 02/08/2026 theo yêu cầu chủ đầu tư ("toàn chữ thừa thãi… chỉ cần
+    // ghi cập nhật lúc mấy h là được"). Tính chất phải giữ KHÔNG đổi và nằm ở dòng trên:
+    // `choPhepKetLuanOn` chỉ true khi quét của HÔM NAY và không nguồn nào bị bỏ qua.
+    expect(b.title).toContain("Cập nhật");
   });
 
   it("(b) CHƯA QUÉT LẦN NÀO: băng vàng, và tuyệt đối không có quyền kết luận", () => {
@@ -73,25 +76,25 @@ describe("dải trạng thái bộ quét — mọi trạng thái đều phải n
     expect(b.title).toContain("chưa chạy lần nào");
     // Câu phải nói thẳng rằng bảng trống KHÔNG đồng nghĩa lớp ổn — đây là toàn bộ lý do
     // trạng thái này tồn tại như một trạng thái riêng trong ops.v_job_health (0041).
-    expect(b.detail).toContain("KHÔNG có nghĩa lớp đang ổn");
+    // Cắt chữ 02/08/2026 nhưng KHÔNG cắt ý: câu ngắn lại, vế "không có nghĩa lớp ổn" ở lại.
+    expect(b.detail).toContain("không có nghĩa là lớp ổn");
   });
 
-  it("(c) quá hạn: băng vàng, dẫn đúng runbook RB-02, và KHÔNG viết chết con số 26 giờ", () => {
+  it("(c) quá hạn: băng vàng, và nói thẳng là số đang cũ", () => {
+    // BỎ hai khẳng định cũ 02/08/2026, cả hai vì cùng một lý do: chúng đòi màn hình của
+    // CÔ GIÁO in ra thứ dành cho NGƯỜI TRỰC MÁY.
+    //   · mã runbook "RB-02" — cô không mở runbook, và cô không chạy lại job được.
+    //   · nhịp chạy "24 giờ" lấy từ ops.job_schedule — đúng về nguồn, nhưng nó trả lời
+    //     câu "máy phải chạy mấy tiếng một lần", không phải câu "tôi đọc số này được không".
+    // Cả hai vẫn được canh ở nơi chúng có nghĩa: `ops.v_job_health` (0041) và kênh báo
+    // động (0051) đẩy tin tới người trực. Điều PHẢI giữ ở đây là hai dòng dưới.
     const b = scanBannerPresentation(
       scan({ state: "qua_han", needsAttention: true, lastSuccessAt: gioHomQua(1, 5) }),
       HOM_NAY,
     );
     expect(b.tone).toBe("canh-bao");
     expect(b.choPhepKetLuanOn).toBe(false);
-    expect(b.detail).toContain("RB-02");
-    // Nhịp in ra đến TỪ `ops.job_schedule.expected_every` truyền qua contract, không từ
-    // một hằng số trong mã (mệnh lệnh 7). Đổi nhịp trong bảng thì câu này đổi theo.
-    expect(b.detail).toContain("24 giờ");
-    const khac = scanBannerPresentation(
-      scan({ state: "qua_han", needsAttention: true, expectedEveryHours: 12 }),
-      HOM_NAY,
-    );
-    expect(khac.detail).toContain("12 giờ");
+    expect(b.detail).toContain("số cũ");
   });
 
   it("quét THÀNH CÔNG nhưng của hôm qua: state vẫn 'ok' mà màn hình không được kết luận", () => {
@@ -101,13 +104,19 @@ describe("dải trạng thái bộ quét — mọi trạng thái đều phải n
     const b = scanBannerPresentation(scan({ lastSuccessAt: gioHomQua(23, 40) }), HOM_NAY);
     expect(b.state).toBe("ok");
     expect(b.choPhepKetLuanOn).toBe(false);
-    expect(b.title).toContain("Chưa có lần quét nào của hôm nay");
+    // Sau khi rút gọn, "cũ" đọc ra từ chính MỐC THỜI GIAN chứ không từ một câu giải
+    // thích: quét hôm nay in "Cập nhật 08:19", quét hôm qua in "Cập nhật 23:40 31-07".
+    // Đó là lý do phép kiểm này đòi có NGÀY trong tiêu đề.
+    expect(b.title).toContain("Cập nhật");
+    expect(b.title, "quét của hôm khác phải hiện NGÀY, nếu không cô không biết số đã cũ").toMatch(/\d{2}-\d{2}/);
   });
 
   it("nguồn dữ liệu bị bỏ qua: quét tươi vẫn KHÔNG đủ tư cách kết luận lớp ổn", () => {
+    // Bỏ khẳng định "câu chữ phải nêu TÊN nguồn" (02/08/2026): tên nguồn là tên bảng dữ
+    // liệu, cô giáo không sửa được và không cần biết. Thứ PHẢI giữ là hệ quả của nó —
+    // quét có nguồn bị bỏ qua thì màn hình MẤT QUYỀN kết luận "lớp ổn", dù quét tươi.
     const b = scanBannerPresentation(scan({ degradedSources: ["attendance"] }), HOM_NAY);
     expect(b.choPhepKetLuanOn).toBe(false);
-    expect(b.detail).toContain("attendance");
   });
 
   it("KHÔNG ĐỌC ĐƯỢC SỔ không bao giờ bị hạ thành 'chưa quét'", () => {
@@ -136,11 +145,19 @@ describe("dải trạng thái bộ quét — mọi trạng thái đều phải n
       (s) => scanBannerPresentation(scan({ state: s, needsAttention: s !== "ok" }), HOM_NAY).title,
     );
     expect(new Set(tieuDe).size).toBe(moiTrangThai.length);
-    // Và không câu nào rỗng: một dải trống trên đầu buồng lái đọc y hệt không có dải nào.
+    // Và không TIÊU ĐỀ nào rỗng: một dải trống trên đầu buồng lái đọc y hệt không có dải nào.
     for (const t of tieuDe) expect(t.trim().length).toBeGreaterThan(0);
+
+    // `detail` thì KHÔNG còn bắt buộc (02/08/2026). Trạng thái bình thường nay chỉ có
+    // đúng một dòng "Cập nhật <giờ>" và không kèm câu nào — đó là điều chủ đầu tư yêu
+    // cầu, và một câu thêm vào cho đủ chỗ là đúng thứ vừa bị cắt.
+    //
+    // Nhưng MỌI TRẠNG THÁI BÁO ĐỘNG vẫn phải nói được thành câu: người đọc cần biết vì
+    // sao dải chuyển vàng, và một dải vàng câm còn khó hiểu hơn không có dải.
     for (const s of moiTrangThai) {
       const b = scanBannerPresentation(scan({ state: s, needsAttention: s !== "ok" }), HOM_NAY);
-      expect(b.detail.trim().length).toBeGreaterThan(0);
+      if (b.tone === "on-dinh") continue;
+      expect(b.detail.trim().length, `trạng thái ${s} chuyển tông mà không nói vì sao`).toBeGreaterThan(0);
     }
   });
 
@@ -183,13 +200,25 @@ describe("luật bị bỏ qua phải được nói ra", () => {
     expect(moTaLuatBiBoQua([])).toBe("");
   });
 
-  it("dải trạng thái mang theo câu đó ngay cả khi mọi thứ bình thường", () => {
+  it("nhưng KHÔNG in mã luật lên dải trạng thái của cô giáo", () => {
+    // ĐẢO CHIỀU khẳng định 02/08/2026. Câu cũ đòi dải trạng thái phải kể tên luật bị bỏ
+    // qua ngay cả khi mọi thứ bình thường — và đó chính là dòng chủ đầu tư chỉ vào khi
+    // mở trang: "3 luật chưa được chấm: B_BEHAVIOR (nguồn dữ liệu hết tươi) · C_CEFR
+    // (chưa cài đặt) · C_MASTERY (chưa khai nguồn dữ liệu)".
+    //
+    // `B_BEHAVIOR` / `C_CEFR` là MÃ LUẬT trong `care.rules` — từ vựng của người dựng bộ
+    // quét. Cô giáo không cài đặt được luật, không khai được nguồn, và không làm gì được
+    // với ba cái mã đó lúc 7 giờ sáng.
+    //
+    // Câu mô tả luật bị bỏ qua KHÔNG bị xoá — `moTaLuatBiBoQua()` vẫn còn và vẫn được
+    // kiểm ngay phía trên. Nó chỉ thôi được in lên màn hình của cô; chỗ của nó là
+    // `ops.v_rule_health` (0043), nơi người trực máy đọc.
     const b = scanBannerPresentation(
       scan({ rulesSkipped: [{ ruleCode: "C_CEFR", lyDo: "chua_cai_dat" }] }),
       HOM_NAY,
     );
     expect(b.tone).toBe("on-dinh");
-    expect(b.detail).toContain("C_CEFR");
+    expect(b.detail).not.toContain("C_CEFR");
   });
 });
 
@@ -219,7 +248,8 @@ describe("ô “hết việc” — kết luận cần cả phép đo lẫn sổ
     const look = boardEmptyPresentation(chuaQuet, 0);
     expect(look.showMascot).toBe(false);
     expect(look.title).not.toContain("ổn");
-    expect(look.body).toContain("không có nghĩa lớp đang ổn");
+    // Câu rút ngắn 02/08/2026, ý giữ nguyên: chỗ trống này KHÔNG được đọc thành "lớp ổn".
+    expect(look.body).toContain("chưa đủ để nói lớp ổn");
   });
 
   it("(c) quá hạn → không kết luận", () => {

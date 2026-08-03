@@ -23,7 +23,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { absentSubtitle, cadenceNote, moodClosedText } from "@/components/gvcn-dashboard";
+import { absentSubtitle, cadenceNote } from "@/components/gvcn-dashboard";
 import { STATUS_CELL, dayCellLabel } from "@/components/gvcn/student-detail-view";
 import { CHOICE_STYLE } from "@/components/gvcn/class-attendance-view";
 import { checkinRate, rateReason } from "@/components/dieu-hanh/operations-view";
@@ -243,19 +243,26 @@ describe("không màn người lớn nào dựa vào title= để giải thích 
 // 3. Im lặng không phải kết luận — mỗi ô trống nói đúng loại trống của nó
 // ---------------------------------------------------------------------------
 
-describe("buồng lái: ô “Cảm xúc lớp hôm nay” nói VÌ SAO nó không còn ([QĐ-1])", () => {
-  it("không đọc được vì quy định → nói ra quy định, không để ô trống", () => {
-    const text = moodClosedText({ readable: false, reason: "chi_tam_ly" });
-    expect(text).toContain("tâm lý");
-    // Phải nói CẢ phần cô còn giữ — bỏ mất vế này là để cô tưởng mình mất luôn cả cờ.
-    expect(text).toContain("cần để ý");
-    expect(text.length).toBeGreaterThan(40);
+describe("cô giáo phải biết VÌ SAO không đọc được cảm xúc của em ([QĐ-1])", () => {
+  // CHUYỂN CHỖ KIỂM, KHÔNG BỎ KIỂM (02/08/2026).
+  //
+  // Ô "Cảm xúc lớp hôm nay" đã gỡ khỏi buồng lái theo yêu cầu chủ đầu tư ("nếu bị khoá
+  // rồi thì hiển thị lên đây làm gì") — nó không có dữ liệu, không có việc để làm, và chỉ
+  // lặp lại một quy định đã có hiệu lực từ 01/08.
+  //
+  // Nhưng TÍNH CHẤT phải giữ nguyên: cô không được để mặc tự đoán vì sao lịch của em
+  // thôi tô màu theo tâm trạng. Câu đó nay đứng ở `gvcn/student-detail-view.tsx`, ngay
+  // dưới lịch điểm danh của từng em — đúng chỗ người ta đi tìm nó. Bài kiểm đi theo câu
+  // chữ, không đi theo cái ô đã gỡ.
+  const src = read(join("gvcn", "student-detail-view.tsx"));
+
+  it("màn hồ sơ một em nói ra quy định, không để cô tự đoán", () => {
+    expect(src).toContain("chỉ thầy cô tâm lý đọc được");
   });
 
-  it("máy chủ không nói lý do → KHÔNG bịa lý do hộ nó", () => {
-    const text = moodClosedText({ readable: false, reason: null });
-    expect(text).not.toContain("tâm lý");
-    expect(text).toContain("chưa nhận được lý do");
+  it("và nói ở ĐÚNG chỗ lịch điểm danh, nơi màu sắc vừa đổi", () => {
+    const i = src.indexOf("chỉ thầy cô tâm lý đọc được");
+    expect(src.slice(Math.max(0, i - 400), i)).toMatch(/điểm danh/);
   });
 });
 

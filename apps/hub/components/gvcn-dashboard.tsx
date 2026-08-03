@@ -475,12 +475,12 @@ export function GvcnDashboard({
           "bốn con số này đáng tin tới đâu", không phải một ghi chú cuối trang. */}
       <ScanBanner scan={scan} />
 
-      {d.staleSources.length > 0 && (
-        <div className="mt-3.5 flex items-center gap-2 rounded-xl bg-[#FFF1C9] px-4 py-2.5 text-[11.5px] font-bold text-gold-textDark">
-          <span className="msr text-[16px]">warning</span>
-          Nguồn dữ liệu chưa tươi: {d.staleSources.join(", ")} — số liệu có thể chưa cập nhật đủ.
-        </div>
-      )}
+      {/* GỠ 02/08/2026 — dải "Nguồn dữ liệu chưa tươi: <tên nguồn kỹ thuật>". Nó nói với
+          cô giáo bằng tên bảng dữ liệu ("Dấu chân hoạt động") về một thứ cô không sửa
+          được, ngay cạnh bốn con số cô cần đọc. Sức khoẻ nguồn dữ liệu vẫn được canh ở
+          đúng chỗ của nó — `ops.v_rule_health` bật đèn cho người trực máy (0043) và kênh
+          báo động 0051 đẩy tin đi. Bỏ ở đây không làm mất phép đo nào, chỉ thôi đặt nó
+          trước mặt người không có việc gì để làm với nó. */}
 
       {/* Năm thẻ, không còn bốn ([QĐ-3]). Thẻ "Chưa điểm danh" thêm 01/08/2026 vì thẻ
           "Vắng" một mình đọc sai: nó đếm `status = 'absent'`, nên buổi sáng chưa ai ghi
@@ -490,7 +490,12 @@ export function GvcnDashboard({
       <div className="mt-[18px] flex flex-wrap gap-3 md:gap-4">
         <StatCard label="Đã check-in" icon="how_to_reg" iconBg="bg-[#E3F8ED]" iconColor="text-[#00A05F]" value={`${d.totals.checkinCount}/${d.totals.totalStudents}`} sub="tính đến giờ" />
         <StatCard label="Chờ xác nhận" icon="hourglass_top" iconBg="bg-[#FFF1C9]" iconColor="text-[#E8940D]" value={String(d.totals.pendingLateCount)} sub="gửi muộn — chưa phải vắng" accentTop="#FFC629" />
-        <StatCard label="Cờ đang mở" icon="flag" iconBg="bg-[#FFF0F0]" iconColor="text-[#D2383E]" value={String(d.priorityFlags.length)} sub={d.priorityFlags.length > 0 ? "cần xử lý" : "không có cờ nào"} accentTop={d.priorityFlags.length > 0 ? "#F0474D" : undefined} />
+        {/* "Cờ đang mở" → "Em cần để ý" (02/08/2026). Chủ đầu tư mở trang và hỏi thẳng:
+            "cờ đang mở là cờ gì?" — câu hỏi đó CHÍNH LÀ câu trả lời về cái nhãn. "Cờ" là
+            từ của người làm hệ thống; con số này đếm SỐ EM mà bộ quét thấy có dấu hiệu
+            cần xem. Nhãn mới nói đúng thứ đang đếm, và trùng với từ "cần để ý" mà em học
+            sinh và phụ huynh đã đọc ở các màn khác — một khái niệm, một từ. */}
+        <StatCard label="Em cần để ý" icon="flag" iconBg="bg-[#FFF0F0]" iconColor="text-[#D2383E]" value={String(d.priorityFlags.length)} sub={d.priorityFlags.length > 0 ? "cần xem hôm nay" : "chưa em nào"} accentTop={d.priorityFlags.length > 0 ? "#F0474D" : undefined} />
         <StatCard
           label="Vắng"
           icon="person_off"
@@ -575,8 +580,14 @@ export function GvcnDashboard({
         </div>
 
         <div className="min-w-0 flex-[1_1_280px] flex flex-col gap-4">
-          <MoodClosedCard visibility={d.moodVisibility} />
-
+          {/* GỠ ô "Cảm xúc lớp hôm nay" khỏi buồng lái (02/08/2026). Chủ đầu tư: "nếu bị
+              khoá rồi thì hiển thị lên đây làm gì".
+              Ô này KHÔNG có dữ liệu, KHÔNG có việc để làm, và chỉ lặp lại một quy định đã
+              có hiệu lực từ 01/08. Lý do cũ để giữ nó — "bỏ đi thì cô tưởng màn hình
+              hỏng" — đúng ở TUẦN ĐẦU đổi quy định, không đúng sau một tháng.
+              Câu đó KHÔNG biến mất khỏi sản phẩm: nó vẫn đứng ở đúng chỗ người ta thật sự
+              đi tìm cảm xúc của một em — `gvcn/student-detail-view.tsx`, ngay dưới lịch
+              điểm danh. Nói một lần ở đúng chỗ, thay vì nói mọi lúc ở chỗ không liên quan. */}
           <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
             <div className="text-[15px] font-black text-navy">Hành động gần đây</div>
             <div className="mt-3.5 flex flex-col gap-3">
@@ -584,10 +595,10 @@ export function GvcnDashboard({
                 // "Chưa ai ghi" chứ không phải "chưa có hành động nào": sổ can thiệp chỉ
                 // biết việc ĐƯỢC GHI VÀO HỆ THỐNG. Cô gọi điện cho phụ huynh mà không ghi
                 // lại thì ô này vẫn trống — trống ở đây nói về cái sổ, không nói về lớp.
-                <p className="text-[12px] leading-relaxed text-muted">
-                  Chưa ai ghi hành động nào cho lớp này. Trống ở đây nghĩa là sổ chưa có dòng nào — không
-                  phải là mọi việc đã xong.
-                </p>
+                // "Chưa ai GHI" chứ không phải "chưa có hành động nào" — sổ chỉ biết việc
+                // được ghi vào. Giữ đúng bốn chữ đó là đủ; câu giải thích phía sau nói lại
+                // chính điều bốn chữ đã nói.
+                <p className="text-[12px] leading-relaxed text-muted">Chưa ai ghi hành động nào.</p>
               )}
               {d.recentActions.map((a, i) => (
                 <div key={i} className="flex items-start gap-2.5">
@@ -600,12 +611,11 @@ export function GvcnDashboard({
             </div>
           </div>
 
-          <div className="flex items-start gap-2.5 rounded-[20px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-[18px]">
-            <span className="msr flex-none text-[19px] text-[#E8940D]">translate</span>
-            <span className="text-[12px] font-semibold leading-relaxed text-[#8A5A00]">
-              Từ "cờ / ngưỡng" chỉ dùng ở đây. Nội dung gửi phụ huynh tự chuyển sang giọng Glow &amp; Grow.
-            </span>
-          </div>
+          {/* GỠ 02/08/2026 khối "Từ 'cờ / ngưỡng' chỉ dùng ở đây…". Đó là một lời dặn cho
+              NGƯỜI VIẾT PHẦN MỀM, in nhầm lên màn hình của người dùng: cô giáo không phải
+              là người quyết định từ nào đi vào báo cáo phụ huynh. Luật đó vẫn sống ở nơi
+              nó thi hành được — `tests/unit/giong-noi.test.ts` chặn từ vựng vận hành lọt
+              sang bề mặt học sinh/phụ huynh, và chặn bằng CI chứ không bằng một dòng chữ. */}
         </div>
       </div>
     </div>,
@@ -632,55 +642,29 @@ function ScanBanner({ scan }: { scan: ScanBannerPresentation }) {
       </span>
       <div className="min-w-0">
         <div className={`text-[11.5px] font-black ${scan.titleClass}`}>{scan.title}</div>
-        <div className={`mt-0.5 text-[11.5px] font-semibold leading-relaxed ${scan.bodyClass}`}>
-          {scan.detail}
-        </div>
+        {/* Detail rỗng thì KHÔNG dựng thẻ — một <div> rỗng vẫn ăn khoảng cách dòng, và
+            sau khi cắt chữ (02/08/2026) trạng thái bình thường không còn detail nào. */}
+        {scan.detail ? (
+          <div className={`mt-0.5 text-[11.5px] font-semibold leading-relaxed ${scan.bodyClass}`}>
+            {scan.detail}
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-/**
- * Chỗ từng là ô "Cảm xúc lớp hôm nay" — nay là MỘT câu nói vì sao nó không còn.
- *
- * Vì sao không bỏ hẳn ô đi (01/08/2026, [QĐ-1]): cô mở buồng lái quen thuộc, thấy thiếu
- * một ô, và kết luận màn hình đang lỗi rồi đi báo IT. Bỏ trong im lặng cũng là một cách
- * nói dối — nó để người dùng tự dựng lấy một lời giải thích sai. Một câu, gọn, đúng một
- * lần: đây là quy định, không phải hỏng.
- *
- * Câu chữ bám sát NHÃN CHUẨN đã chốt ở DESIGN-GUIDELINES §9 ("Chỉ thầy cô tâm lý đọc"),
- * và cố ý KHÔNG hứa hẹn gì thêm: không "sẽ mở lại sau", không "liên hệ quản trị" — chưa
- * ai quyết hai điều đó.
- */
-export function moodClosedText(visibility: { readable: boolean; reason: string | null }): string {
-  if (visibility.readable) {
-    // Chưa có ca này hôm nay (buồng lái là màn của GVCN). Có nhánh để lần sau ai mở lại
-    // quyền thì không phải sửa hàm này ở hai chỗ.
-    return "Nhật ký cảm xúc của lớp hiện ở màn riêng.";
-  }
-  if (visibility.reason === "chi_tam_ly") {
-    return "Từ 01/08/2026, nhật ký cảm xúc từng ngày chỉ thầy cô tâm lý đọc được. Thầy cô vẫn nhận cờ “cần để ý” và vẫn nhận ngay khi em bấm nút cần gặp — biết là có chuyện, không đọc nội dung em ghi.";
-  }
-  // Máy chủ nói không đọc được nhưng không nói vì sao: KHÔNG bịa lý do hộ nó.
-  return "Mục này hiện không mở cho thầy cô. Màn hình chưa nhận được lý do cụ thể — nếu cần biết, hỏi quản trị hệ thống.";
-}
+/* Ở đây từng có `moodClosedText()` + `MoodClosedCard` — ô "Cảm xúc lớp hôm nay" chỉ để
+   nói vì sao nó không còn nội dung. Gỡ 02/08/2026 (chủ đầu tư: "nếu bị khoá rồi thì hiển
+   thị lên đây làm gì").
 
-function MoodClosedCard({ visibility }: { visibility: { readable: boolean; reason: string | null } }) {
-  return (
-    <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-black text-navy">Cảm xúc lớp hôm nay</span>
-        <span className="flex flex-none items-center gap-1 rounded-full bg-chip px-2 py-1 text-[9.5px] font-bold text-[#5B6B80]">
-          <span className="msr text-[13px]" aria-hidden>
-            lock
-          </span>
-          chỉ thầy cô tâm lý
-        </span>
-      </div>
-      <p className="mt-3 text-[12px] leading-relaxed text-muted">{moodClosedText(visibility)}</p>
-    </div>
-  );
-}
+   KHÔNG để lại hàm "phòng khi cần": một hàm không ai gọi là lời mời cho lần sửa sau nối
+   lại đúng thứ vừa cắt — chính chú thích ở đầu file này đã nói câu đó khi cắt bảng tra
+   cảm xúc, và nó vẫn đúng.
+
+   Sự thật KHÔNG mất: `gvcn/student-detail-view.tsx` vẫn nói "Nhật ký cảm xúc từng ngày
+   chỉ thầy cô tâm lý đọc được", ngay dưới lịch điểm danh của từng em — tức ở đúng chỗ
+   người ta đi tìm nó, thay vì ở chỗ người ta đi tìm việc phải làm sáng nay. */
 
 /**
  * Ô "không còn việc nào" của buồng lái. Câu "tốt thật sự" là một KẾT LUẬN, chỉ được in ra

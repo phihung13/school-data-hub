@@ -177,37 +177,30 @@ export function scanBannerPresentation(
     case "ok":
       // Quét xong trong hạn. Vẫn tách hai ca theo NGÀY: "chạy lúc 07:10" và "chạy lúc
       // 23:40 hôm qua" là hai mức tin cậy khác nhau với người đang dạy sáng nay.
+      // CẮT NGẮN 02/08/2026 theo yêu cầu chủ đầu tư: "toàn chữ thừa thãi… chỉ cần ghi
+      // cập nhật lúc mấy h là được".
+      //
+      // Cái gì CẮT: đoạn văn kể lần quét bỏ qua luật nào, nguồn nào hết tươi, nhịp chạy
+      // theo sổ lịch. Ba câu đó nói về SỨC KHOẺ CỦA MÁY, và người đọc màn này là cô giáo
+      // lúc 7 giờ sáng — máy hỏng là việc của người trực (`ops.v_job_health` đã bật đèn
+      // ở đúng chỗ đó, không cần bật lại trên mặt cô).
+      //
+      // Cái gì GIỮ, và không thương lượng: MỐC THỜI GIAN. Nó là thứ duy nhất phân biệt
+      // "bảng này của sáng nay" với "bảng này của hôm kia" — và đúng thứ chủ đầu tư giữ
+      // lại khi cắt. Ngày hiện kèm giờ khi lần quét KHÔNG phải hôm nay, nên "cũ" đọc ra
+      // được mà không cần một câu nào giải thích.
       return quetHomNay
-        ? dung(
-            "on-dinh",
-            "task_alt",
-            `Bộ quét cờ đã chạy lúc ${mocQuet} hôm nay`,
-            ghepCau("Bảng bên dưới đứng sau lần quét đó.", boQua, nguonHong),
-            // Đây là ca DUY NHẤT màn hình được phép kết luận "lớp ổn" khi bảng trống.
-            scan.degradedSources.length === 0,
-          )
-        : dung(
-            "cho",
-            "history",
-            `Chưa có lần quét nào của hôm nay — lần gần nhất là ${mocQuet}`,
-            ghepCau(
-              "Bảng bên dưới là kết quả của lần quét đó, chưa phải của hôm nay.",
-              boQua,
-              nguonHong,
-            ),
-          );
+        ? dung("on-dinh", "task_alt", `Cập nhật ${mocQuet}`, "", scan.degradedSources.length === 0)
+        : dung("cho", "history", `Cập nhật ${mocQuet}`, "");
 
     case "dang_chay":
       return dung(
         "cho",
         "hourglass_top",
         "Bộ quét cờ đang chạy",
-        ghepCau(
-          mocQuet
-            ? `Số đang hiện là của lần quét trước (${mocQuet}); tải lại trang sau vài phút để thấy kết quả mới.`
-            : "Chưa có lần quét nào xong, nên bảng bên dưới chưa có kết quả quét đứng sau.",
-          boQua,
-        ),
+        mocQuet
+          ? `Số đang hiện là của lần quét ${mocQuet}. Tải lại sau vài phút.`
+          : "Chưa có lần quét nào xong.",
       );
 
     case "chua_chay":
@@ -218,10 +211,10 @@ export function scanBannerPresentation(
         "canh-bao",
         "question_mark",
         "Bộ quét cờ chưa chạy lần nào",
-        ghepCau(
-          "Chưa có phép đo nào đứng sau màn hình này: bảng trống KHÔNG có nghĩa lớp đang ổn, và bảng có cờ cũng không phải kết quả quét. Báo bộ phận kỹ thuật kiểm bộ chạy job (07-operations RB-02).",
-          nhip,
-        ),
+        // Trạng thái báo động thì GIỮ LẠI một câu — cắt cả câu này là biến một màn hình
+        // không có phép đo nào thành một màn hình trông như bình thường. Nhưng chỉ một
+        // câu, và là câu nói với CÔ GIÁO, không phải với người trực máy.
+        "Bảng bên dưới chưa có phép đo nào đứng sau — trống không có nghĩa là lớp ổn.",
       );
 
     case "qua_han":
@@ -231,11 +224,7 @@ export function scanBannerPresentation(
         mocQuet
           ? `Bộ quét cờ quá hạn — lần chạy xong gần nhất là ${mocQuet}`
           : "Bộ quét cờ quá hạn — chưa có lần chạy nào xong",
-        ghepCau(
-          "Buồng lái đang nhìn số cũ. Đây là mức SEV2 theo 07-operations RB-02: chạy lại tay, 30 phút không xong thì công bố với GVCN rằng hôm nay không có cờ mới.",
-          nhip,
-          boQua,
-        ),
+        "Số đang hiện là số cũ. Hôm nay chưa có cờ mới.",
       );
 
     case "that_bai":
@@ -243,15 +232,9 @@ export function scanBannerPresentation(
         "canh-bao",
         "error",
         "Lần quét gần nhất đã HỎNG",
-        ghepCau(
-          scan.lastFinishedAt
-            ? `Lần chạy lúc ${formatScanMoment(scan.lastFinishedAt, isSameLocalDay(scan.lastFinishedAt, asOfDate))} kết thúc bằng lỗi.`
-            : "Lần chạy gần nhất kết thúc bằng lỗi.",
-          mocQuet
-            ? `Số đang hiện là của lần quét thành công cuối cùng (${mocQuet}).`
-            : "Chưa có lần quét thành công nào, nên bảng bên dưới không có kết quả quét đứng sau.",
-          "Xem ops.job_runs để biết vì sao (07-operations RB-02).",
-        ),
+        mocQuet
+          ? `Số đang hiện là của lần quét ${mocQuet}.`
+          : "Chưa có lần quét nào xong, nên bảng bên dưới chưa có kết quả quét đứng sau.",
       );
 
     case "treo":
@@ -259,11 +242,7 @@ export function scanBannerPresentation(
         "canh-bao",
         "sync_problem",
         "Bộ quét cờ đang treo",
-        ghepCau(
-          "Có một lần chạy mở quá lâu mà chưa đóng sổ — gần như chắc chắn tiến trình đã chết giữa chừng, không phải đang chạy.",
-          mocQuet ? `Số đang hiện là của lần quét ${mocQuet}.` : "",
-          nhip,
-        ),
+        mocQuet ? `Số đang hiện là của lần quét ${mocQuet}.` : "Chưa có lần quét nào xong.",
       );
 
     case "tat":
@@ -373,10 +352,13 @@ export function boardEmptyPresentation(
   return {
     showMascot: false,
     icon: "question_mark",
-    title: "Chỗ trống này chưa nói được điều gì",
+    // Tiêu đề NÓI THẲNG điều cần biết thay vì mở bài rồi mới nói. Câu cũ ("Chỗ trống này
+    // chưa nói được điều gì" + ba dòng giải thích) đúng về nội dung nhưng bắt cô đọc hết
+    // mới hiểu — mà thứ cô cần chỉ là: đừng đọc chỗ trống này thành "lớp ổn".
+    title: "Chưa kết luận được",
     body: ghepCau(
-      "Không có cờ nào để hiện, nhưng lần quét gần nhất không đủ tư cách để kết luận (xem dòng trạng thái ở đầu trang): không có nghĩa lớp đang ổn, cũng không có nghĩa đang có chuyện.",
-      openCareCases > 0 ? `Lớp còn ${openCareCases} hồ sơ chăm sóc đang mở.` : "",
+      "Lần quét gần nhất chưa đủ để nói lớp ổn hay không.",
+      openCareCases > 0 ? `Còn ${openCareCases} hồ sơ chăm sóc đang mở.` : "",
     ),
     boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#F5F7FA]",
     titleClass: "text-[#33507C]",
