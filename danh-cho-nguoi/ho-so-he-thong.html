@@ -769,7 +769,7 @@
         <div class="callout"><div class="callout-title"><span class="dot"></span>Đầu ra thật sự chỉ có năm loại</div><p>Hồ sơ của học sinh · buồng lái GVCN · bản tin phụ huynh · gói dữ liệu cải tiến chuyên môn · chỉ báo VAAR cấp cơ sở. Không xây dashboard nếu chưa biết ai sẽ dùng nó để làm gì.</p></div>
       </section>
 
-      <section class="part" id="kien-truc" data-pair="danh-cho-may/01-architecture.md" data-sync-version="12">
+      <section class="part" id="kien-truc" data-pair="danh-cho-may/01-architecture.md" data-sync-version="13">
         <div class="part-group-banner"><b>Phần A &middot; Thiết kế Backend</b></div>
         <div class="section-head">
           <div class="section-no">03</div>
@@ -946,6 +946,40 @@
         <h3>Hub giới thiệu người sang Moodle kèm luôn vai trò</h3>
         <div class="answer-box"><div class="label">Quyết định 27/07/2026 &middot; ADR-016</div><p>Trước đây Hub chỉ nói "đây là người số 4821". Từ nay Hub nói kèm <b>đây là giáo viên hay học sinh, lớp nào, cơ sở nào</b> &mdash; Moodle tự xếp vào đúng lớp. Tiết kiệm hàng trăm thao tác gán tay mỗi đầu năm, và hai hệ không còn lệch nhau khi có em chuyển lớp.</p></div>
         <p class="lede">Một điểm cần biết trước để không hiểu nhầm: em chuyển lớp giữa năm thì Moodle cập nhật ở <b>lần đăng nhập kế tiếp</b> của em đó &mdash; thường là trong ngày. Hub không đẩy thông báo sang Moodle ngay lúc đổi, vì thêm đường đó là thêm một thứ có thể hỏng, đổi lại lợi ích rất nhỏ.</p>
+
+        <h3>Ai mở app ra thấy gì &mdash; một tờ khai duy nhất, và một trang xem hết</h3>
+        <p class="lede">Chủ đầu tư, 02/08/2026: <i>&ldquo;Trang home của mỗi người bị phân mảnh, tôi khó kiểm soát hết được.&rdquo;</i> Nhận xét đúng, nhưng chỗ phân mảnh không nằm ở màn hình.</p>
+
+        <p>Hub giống các ứng dụng &ldquo;siêu app&rdquo; quen thuộc: <b>một khung chung cho tất cả</b> &mdash; cùng đầu trang, cùng lưới ô, cùng thanh dưới đáy &mdash; rồi <b>nội dung mới rẽ theo từng người</b>. Một em học sinh và một cô chủ nhiệm mở cùng một ứng dụng, nhưng ô trên lưới thì khác nhau, y như tài xế và khách hàng mở cùng một app gọi xe.</p>
+
+        <p>Chỗ hỏng nằm ở <b>bên trong</b>: câu hỏi &ldquo;người này được thấy những gì&rdquo; trước đây được <b>ba nơi khác nhau trong phần mềm tự trả lời riêng</b> &mdash; một nơi lo lưới ô, một nơi lo menu bên trái, một nơi lo thanh dưới đáy điện thoại. Ba nơi cùng trả lời một câu hỏi thì sớm muộn cũng có ngày ba câu trả lời khác nhau.</p>
+
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Ba lần đã lệch thật &mdash; và không lần nào có tiếng động</div>
+          <ul class="plain-list">
+            <li>Màn hình dành cho hiệu trưởng chạy tốt, dữ liệu đầy đủ, quyền đầy đủ &mdash; nhưng suốt <b>hai ngày không một chỗ nào trong app dẫn tới nó</b>. Người duy nhất mở được là người đã biết sẵn phải gõ địa chỉ. Với người dùng, màn hình đó coi như không tồn tại.</li>
+            <li>Cô phụ trách tâm lý mở máy tính thì thấy danh sách việc của mình; mở <b>điện thoại</b> thì không thấy đâu cả &mdash; trong khi điện thoại mới là thiết bị các thầy cô dùng ở trường.</li>
+            <li>Mục &ldquo;Hồ sơ&rdquo; xuất hiện ở <b>ba chỗ cùng lúc</b> cho cùng một người.</li>
+          </ul>
+          <p>Không lỗi nào trong ba lỗi này làm phần mềm báo hỏng. Chúng chỉ im lặng, và chỉ lộ ra khi có người ngồi bấm thử từng vai một.</p>
+        </div>
+
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Nay chỉ còn một tờ khai, và một trang nhìn thấy hết</div>
+          <p>Mỗi màn hình của Hub nay được khai <b>đúng một dòng</b> ở một chỗ duy nhất: tên là gì, ai được vào, hiện ở lưới hay ở menu hay ở thanh dưới đáy. Ba nơi kia thôi tự quyết &mdash; chúng chỉ đọc tờ khai đó rồi lọc theo người đang đăng nhập. <b>Thêm một màn hình mới giờ là thêm một dòng</b>, và nó tự có mặt ở đủ ba chỗ.</p>
+          <p>Kèm theo là một trang riêng cho người quản trị: <b>mở ra thấy ngay trang chủ của cả sáu vai xếp cạnh nhau</b> &mdash; học sinh, phụ huynh, chủ nhiệm, giáo viên bộ môn, tâm lý, hiệu trưởng. Trước đây muốn biết một phụ huynh nhìn thấy gì thì phải đăng nhập bằng tài khoản phụ huynh; muốn biết cả sáu vai thì phải đăng nhập sáu lần, và không lần nào so được hai vai cùng lúc.</p>
+        </div>
+
+        <h4>Vì sao KHÔNG cho mọi người thấy giống nhau</h4>
+        <p>Cách đơn giản nhất để &ldquo;hết phân mảnh&rdquo; là cho ai cũng thấy cùng một bộ ô. Chúng tôi <b>không</b> làm vậy, vì hai lý do cụ thể:</p>
+        <ul class="plain-list">
+          <li><b>Ô dẫn tới nơi mình không vào được là một cái bẫy.</b> Em học sinh bấm ô &ldquo;Bảng điều khiển&rdquo; thì bị đẩy ngược về trang chủ, không một lời giải thích. Cho mọi người thấy đủ mọi ô là dựng lại cái bẫy đó ở sáu chỗ cùng lúc.</li>
+          <li><b>Danh sách ô tự nó đã là thông tin.</b> Một em nhìn thấy ô &ldquo;Tâm lý&rdquo; là biết có một màn hình nơi người lớn bàn về tình trạng cảm xúc của các em. Một phụ huynh nhìn thấy ô &ldquo;Điều hành&rdquo; là biết có màn số liệu toàn trường. Cái đó không trung tính.</li>
+        </ul>
+        <p>Nên thứ được đồng bộ là <b>cách làm</b>, không phải <b>nội dung</b>: một cái khuôn, một chỗ khai, một chỗ xem &mdash; còn cái mỗi người nhìn thấy vẫn phải đúng với vai của họ.</p>
+
+        <h4>Máy tự canh, không trông vào trí nhớ</h4>
+        <p>Tờ khai nói &ldquo;vai này được vào màn kia&rdquo;, còn bản thân màn hình thì tự chặn ở cửa. Hai chỗ đó có thể nói khác nhau, và lệch chiều nào cũng hỏng: khai rộng hơn thì người dùng bấm vào rồi bị đẩy ngược; khai hẹp hơn thì màn hình có thật mà không ai tới được. Nay có một phép kiểm tự động <b>đọc chính câu chặn cửa của từng màn hình rồi đối chiếu với tờ khai</b> &mdash; khai sai là hệ thống kiểm tra báo đỏ ngay khi lập trình viên vừa sửa, chứ không phải người dùng phát hiện.</p>
 
         <details class="details">
           <summary>Ngữ cảnh nghiệp vụ · hai vòng lặp và hành trình 12 năm</summary>

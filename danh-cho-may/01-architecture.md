@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 12
+sync-version: 13
 ---
 
 # Architecture — Hub là NỀN TẢNG (Super App + Mini App), không phải một ứng dụng nghiệp vụ
@@ -49,6 +49,33 @@ Supabase Auth UID → core.users → roles → permissions → Mini App
 ## 5. Frontend — MD-07 (ĐÃ CHỐT, ADR-013)
 
 Super App là **PWA TypeScript (Next.js + tRPC)** — đúng nền đang chạy hôm nay, giữ nguyên. Không chuyển sang Flutter, dù ở dạng thuần (Fastify + Zod→OpenAPI→Dart client) hay vỏ Flutter + Mini App webview. Contract vẫn viết bằng Zod trong `packages/core/contracts`; không cần sinh OpenAPI cho client Dart vì không có client Dart.
+
+### 5.1 Một bản khai cho mọi màn — điều hướng KHÔNG viết tay ở từng bề mặt (02/08/2026)
+
+Hub là Super App: một vỏ chung cho mọi vai, nội dung phân nhánh theo người dùng. Trước 02/08/2026, phần **phân nhánh** được ba nơi tự trả lời riêng bằng `if` viết tay — `server/mini-apps.ts` (lưới tile trang chủ, 11 dòng), `components/hub-sidebar.tsx` (menu trái, 8), `components/tab-bar.tsx` (thanh tab điện thoại, 7). Ba nơi, một câu hỏi "vai này thấy gì", ba câu trả lời.
+
+Ba lần lệch đã xảy ra thật, và **không lần nào làm hỏng build, hỏng test, hay in ra một dòng lỗi**:
+
+- Màn Điều hành (`/dieu-hanh`) chạy thật, dữ liệu đủ, quyền đủ — suốt hai ngày **không một mục điều hướng nào dẫn tới**. Người duy nhất vào được là người đã biết phải gõ URL.
+- Cô tâm lý cụm thấy hộp việc của mình trên máy tính, **không thấy trên điện thoại** — thiết bị mà DESIGN-GUIDELINES §3 gọi là thiết bị chính.
+- Mục "Hồ sơ" đứng ở ba nơi cùng lúc cho cùng một người.
+
+**Nguồn duy nhất nay là `apps/hub/lib/man-hinh.ts`**: mỗi màn một dòng khai `href`, `icon`, nhãn, **`vai` (ai vào được)**, và nó hiện ở bề mặt nào (`luoi` / `menu` / `tab`) kèm thứ tự. Ba file kia thôi quyết định, chỉ gọi `manChoLuoi()` / `manChoMenu()` / `manChoTab()` — 26 nhánh còn 2, và hai dòng còn lại không phải phân quyền (một chọn *nhãn* vai theo `ROLE_PRIORITY`, một chọn *kiểu bố cục* thanh tab vì bản học sinh có nút Check-in tròn nổi giữa).
+
+**Cùng mô hình với sổ đăng ký Mini App ngoài (`core.embedded_apps`, `0052`), khác chỗ cất — có chủ ý:**
+
+| | Màn của Hub | Mini App ngoài |
+|---|---|---|
+| Khai ở | `lib/man-hinh.ts` (mã) | `core.embedded_apps` (CSDL) |
+| Hàng rào thật | câu `redirect()` trong chính `page.tsx` | KHÔNG có gì khác ngoài bảng đó |
+| Đổi bằng | sửa mã + PR | một nút trên màn quản trị, hiệu lực ngay lượt request kế tiếp |
+
+Đưa quyền vào màn của Hub xuống CSDL sẽ dựng **hai nguồn sự thật cho cùng một hàng rào** — và hai nguồn thì có ngày lệch, còn chỗ lệch là chỗ không ai kiểm. Cũng không nên tồn tại một cái nút cấp cho học sinh quyền vào màn tâm lý bằng một cú bấm. App ngoài thì ngược lại: chúng cần **tắt được trong mười giây** khi lộ dữ liệu, và chúng không có hàng rào nào khác.
+
+**Hai thứ đi kèm, cả hai đều là hàng rào chứ không phải tiện ích:**
+
+- `tests/unit/man-hinh.test.ts` (28 phép) đọc câu `redirect()` **thật** trong từng `page.tsx` rồi đối chiếu với `vai` đã khai — **cả hai chiều**. Khai rộng hơn hàng rào ⇒ mục hiện ra rồi bấm vào bị đá ngược ("menu 404", đã sửa ba lần). Khai hẹp hơn ⇒ màn có thật mà không đường nào tới. Từ nay khai sai là CI đỏ, không phải người dùng bị đá ngược.
+- `/quan-tri/xem-truoc` — màn quản trị hiện trang chủ của **cả sáu vai cạnh nhau** (lưới · menu · thanh tab, kèm app ngoài đang bật cho vai đó). Nó **gọi đúng ba hàm mà sản phẩm thật gọi**, không dựng bảng mô tả riêng: một bảng mô tả sẽ lệch, và lúc đó chính công cụ sinh ra để canh lại là cái nói dối.
 
 ## 6. Giữ nguyên từ Rev B/C (không đổi)
 

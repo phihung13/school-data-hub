@@ -258,6 +258,17 @@ bash tools/start-local.sh
 >   và cấm `describe.skipIf` trên cờ chỉ biết được sau `beforeAll`.
 >
 > Ba cái bẫy còn lại vẫn chỉ có lời dặn. Đọc kỹ chúng.
+>
+> **Bẫy thứ tám, thêm 02/08/2026 — ĐẾM CẢ CHÚ THÍCH.** Tôi mắc HAI LẦN trong một ngày:
+> báo "60 nhánh phân quyền" (thật ra 54 — sáu dòng kia nằm trong chú thích), rồi viết một
+> phép kiểm đòi "emoji 👋 chỉ một lần" và nó đỏ với số 4, ba trong đó là những dòng KỂ LẠI
+> luật. Kho này viết chú thích rất dài và rất nhiều tên biến; mọi phép đếm bằng `grep` đều
+> phồng lên. **Bỏ chú thích trước khi đếm**, và nói rõ con số nào là "mã thật".
+>
+> Nguy hiểm hơn con số sai là **kết luận sai theo sau nó**: từ "60 nhánh rải bốn file" tôi
+> suýt đi gộp hai cây mobile/desktop của trang chủ làm một — trong khi hai cây riêng là
+> quyết định ĐÚNG, có lý do đo được (dựng cả hai rồi ẩn bằng CSS khiến máy yếu trả tiền
+> cho cây nó không bao giờ thấy). Đếm sai dẫn tới chẩn sai.
 
 ### 6.1 `next build` giết máy chủ đang chạy
 
@@ -361,10 +372,43 @@ trong ≤10 giây — đo được, xem nợ #54).
    "xanh" mà không chạy bài nào. Khuôn đúng của kho là `it("…", async ({ skip }) => { if
    (!ready) return skip(); … })`.
 
-### 7.4 Hoàn thiện bản điện thoại
+### 7.4 Hoàn thiện bản điện thoại — ĐÃ RÀ MỘT LƯỢT 02/08/2026
 
-Rà từng màn ở 360px và 375px. Đã có cổng canh một phần trong
-`tests/unit/a11y*.test.ts` và `dieu-huong-mobile.test.ts`, nhưng chưa phủ hết màn.
+Bộ đo: `tools/ra-mobile.js` — dán vào Console của trình duyệt, gõ `await raMobile()`. Nó
+nạp từng trang vào một `<iframe>` 360/375px NGAY TRONG trang đang mở, nên cùng engine,
+cùng CSS, cùng JavaScript với bản thật.
+
+**Lượt rà 02/08/2026: 6 vai × 2 khổ, không trang nào tràn ngang.** Ba lỗi vùng chạm đã
+sửa (đường tắt "Bỏ qua menu" 257×41 · "Về trang chủ" 81×19 ở /checkin và /ho-so · nút
+"Xem Báo cáo Trưởng thành" 290×41 ở 1280px).
+
+Hai điều phải đọc trước khi rà lại:
+
+1. **Bộ đo từng báo động giả ba lần** — ba ô nhập "cao 21px" trên `/gvcn/diem-danh`,
+   `/dieu-hanh`, `/dieu-khoan`. Cả ba đều nằm trong `<label>` cao 44px, tức vùng chạm
+   thật là cái label. Luật `closest('label')` sinh ra từ đó. Thêm luật mới thì kiểm cả
+   chiều ngược lại: nó có báo cái đang đúng không.
+2. **Cổng CI chỉ giữ được ẢNH CHỤP của hai chỗ đã sửa** (`a11y.test.ts` mục 2b). Đo chiều
+   cao thật cần một trình duyệt, mà repo chưa có Playwright — nói thẳng đây là việc của
+   người rà, đừng đọc bộ test thành "mobile đã an toàn".
+
+### 7.4b Điều hướng: MỘT bản khai, đừng viết `if` theo vai nữa (02/08/2026)
+
+Trước khi thêm bất kỳ màn nào: **`apps/hub/lib/man-hinh.ts` là nguồn duy nhất** cho câu
+"vai này thấy gì". Thêm màn = thêm MỘT dòng ở đó, và nó tự có mặt ở lưới trang chủ, menu
+trái và thanh tab điện thoại đúng như dòng đó khai.
+
+Trước 02/08/2026 ba file tự trả lời riêng (`server/mini-apps.ts` · `components/hub-sidebar.tsx`
+· `components/tab-bar.tsx`) và đã lệch **ba lần**, mỗi lần đều im lặng — màn Điều hành
+chạy hai ngày mà không đường nào dẫn tới; cô tâm lý thấy hộp việc trên máy tính nhưng
+không thấy trên điện thoại; mục "Hồ sơ" đứng ba nơi cùng lúc.
+
+- Khai `vai` ở đó **phải khớp câu `redirect()` thật** trong `page.tsx`. Cổng
+  `tests/unit/man-hinh.test.ts` (28 phép) đối chiếu hai chiều — khai sai là CI đỏ.
+- Muốn xem cả sáu vai cùng lúc: `/quan-tri/xem-truoc` (vai `admin`). Nó GỌI đúng ba hàm
+  sản phẩm gọi, không dựng bảng mô tả riêng.
+- Mini App NGOÀI **không** khai ở đây — chúng ở bảng `core.embedded_apps` (`0052`), sửa
+  bằng màn `/quan-tri/mini-app`. Xem `danh-cho-may/09-cam-mini-app.md`.
 
 ### 7.5 Tính năng mới — CHỜ CHỦ ĐẦU TƯ
 
