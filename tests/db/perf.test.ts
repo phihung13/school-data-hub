@@ -136,15 +136,55 @@ describe("index đường nóng (0029)", () => {
   it('"Quét đêm qua" đọc job_runs bằng index, không quét cả bảng', async ({ skip }) => {
     if (!ready) return skip();
 
-    const { rows } = await asSystem((c) =>
-      c.query<{ "QUERY PLAN": string }>(
-        "explain (costs off) select max(finished_at) from ops.job_runs where status = 'success'",
-      ),
-    );
-    const plan = rows.map((r) => r["QUERY PLAN"]).join("\n");
+    // BÀI NÀY TỰ DỰNG BẢNG ĐỦ LỚN — sửa 08/08/2026, và lý do đáng đọc.
+    //
+    // Bản trước gọi thẳng EXPLAIN trên bảng như-nó-đang-có rồi đòi thấy tên index. Nó ĐỎ
+    // trên một database vừa dựng, và đo ra vì sao: `ops.job_runs` lúc đó có **5 dòng**. Với
+    // 5 dòng thì quét thẳng RẺ HƠN đi qua index, và Postgres chọn đúng — index vẫn tồn tại
+    // và vẫn dùng được (ép `enable_seqscan=off` là nó nhảy vào Index Only Scan ngay).
+    //
+    // Nghĩa là bài test cũ đo "hôm nay trình tối ưu thích gì trên một bảng bé", chứ không
+    // đo "đường nóng có index đỡ hay không". Nó xanh nhờ RÁC của các bài chạy trước bơm đủ
+    // dòng vào bảng — cùng họ với cái bẫy `chuong-viec-cho` gỡ sáng nay (§6.9), và nó chỉ
+    // lộ ra sau khi `run-db-tests.sh` bắt đầu dựng lại database từ số không.
+    //
+    // Bản này dựng ~2.000 dòng rồi ANALYZE để trình tối ưu có một lựa chọn THẬT. Đó mới là
+    // hình dạng bảng ở trường thật sau vài tháng chạy job đêm — và là lúc index đáng giá.
+    const SO_DONG = 2000;
+    try {
+      await asSystem(async (c) => {
+        await c.query(
+          `insert into ops.job_runs (job_name, mode, status, started_at, finished_at)
+           select 'perf-test-index', 'live',
+                  case when i % 3 = 0 then 'failed' else 'success' end,
+                  now() - (i || ' minutes')::interval,
+                  now() - (i || ' minutes')::interval
+             from generate_series(1, $1) i`,
+          [SO_DONG],
+        );
+        // BẮT BUỘC: không ANALYZE thì trình tối ưu vẫn đọc thống kê CŨ (5 dòng) và vẫn chọn
+        // quét thẳng — bài test sẽ đỏ vì một lý do không liên quan gì tới index.
+        await c.query("analyze ops.job_runs");
+      });
 
-    expect(plan).toMatch(/job_runs_success_finished_idx/);
-    expect(plan).not.toMatch(/Seq Scan on job_runs/);
+      const { rows } = await asSystem((c) =>
+        c.query<{ "QUERY PLAN": string }>(
+          "explain (costs off) select max(finished_at) from ops.job_runs where status = 'success'",
+        ),
+      );
+      const plan = rows.map((r) => r["QUERY PLAN"]).join("\n");
+
+      expect(plan).toMatch(/job_runs_success_finished_idx/);
+      expect(plan).not.toMatch(/Seq Scan on job_runs/);
+    } finally {
+      // Dọn trong `finally` VÀ analyze lại: để lại 2.000 dòng là bơm rác vào sổ vận hành mà
+      // các bài khác đọc (nợ #41 — bộ test bịa được lịch sử chạy máy), còn để lại thống kê
+      // sai là để bài sau đọc một trình tối ưu đang tưởng bảng vẫn lớn.
+      await asSystem(async (c) => {
+        await c.query("delete from ops.job_runs where job_name = 'perf-test-index'");
+        await c.query("analyze ops.job_runs");
+      });
+    }
   });
 
   it("bốn index còn lại tồn tại đúng tên", async ({ skip }) => {
