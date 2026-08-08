@@ -173,6 +173,19 @@ async function buildProvider(): Promise<Provider> {
       (rpDangCo.length ? ` (${rpDangCo.map((c) => c.client_id).join(", ")})` : " — chưa app nào bật SSO"),
   );
 
+  // SOI CỬA SỔ XOAY KHOÁ MỘT LẦN LÚC KHỞI ĐỘNG — không dùng kết quả, chỉ lấy phần log.
+  //
+  // Trước ADR-032, `loadPreviousSecretWindows()` chạy đúng một lần ở đây, nên người vận hành
+  // thấy ngay dòng "Secret cũ của X đã hết hạn — không nhận nữa" và biết đi dọn hai dòng
+  // `_PREVIOUS` chết trong `.env.local`. Sau ADR-032 nó chuyển vào giữa middleware, chỉ chạy
+  // khi có request mang `Authorization: Basic` — tức là cảnh báo dọn dẹp KHÔNG bao giờ xuất
+  // hiện nữa nếu không ai đăng nhập.
+  //
+  // Đo thật 08/08/2026: khoá cũ của Factory hết hạn từ 07/08, hai dòng đó vẫn nằm trong file
+  // cấu hình, và log khởi động im lặng hoàn toàn. Một khoá đã chết mà trông như đang sống là
+  // đúng loại rác nguy hiểm — nhất là khi chính nó là khoá phải xoay vì đã lộ.
+  loadPreviousSecretWindows(rpDangCo);
+
   const provider = new Provider(getIssuer(), {
     // RỖNG là đúng: không còn client nào viết cứng. Mọi client đi qua `adapter('Client')`,
     // nên sửa một dòng trong sổ có hiệu lực mà không cần dựng lại provider — xem khối chú
