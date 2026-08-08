@@ -127,6 +127,28 @@ export const MiniAppRow = z.object({
    */
   daCapSsoSecret: z.boolean(),
 
+  /**
+   * App này ĐÃ GỬI VỀ những gì — một dòng cho mỗi loại sự kiện.
+   *
+   * Sinh ra từ một câu chủ đầu tư hỏi 08/08/2026: *"các app mini nhúng vào bây giờ đổ dữ
+   * liệu của app về hết được chưa"*. Trước trường này, câu đó chỉ trả lời được bằng một lời
+   * hứa — bảng nhận `ops.embedded_app_events` không vai nào đọc được, không màn hình nào
+   * hiện, nên "dữ liệu có về không" là chuyện phải tin.
+   *
+   * Mảng RỖNG có nghĩa rõ ràng và cần nói ra trên màn: app chưa gửi về gì cả. Đó là trạng
+   * thái bình thường của một app vừa khai, và là trạng thái ĐÁNG NGỜ của một app đã bật ba
+   * tuần — hai ca đó chỉ phân biệt được khi có con số đứng cạnh.
+   */
+  daNhan: z.array(
+    z.object({
+      eventType: z.string(),
+      soSuKien: z.number().int(),
+      /** Bao nhiêu em khác nhau. `0` = sự kiện không gắn em nào (thực đơn tuần, lịch CLB). */
+      soEm: z.number().int(),
+      lanCuoi: z.string(),
+    }),
+  ),
+
   updatedAt: z.string(),
 });
 export type MiniAppRow = z.infer<typeof MiniAppRow>;

@@ -15,7 +15,7 @@
 -- quyền rồi mới kiểm: chặn phải đến từ quyền trên bảng gốc, không phải từ sự quên.
 
 begin;
-select plan(14);
+select plan(15);
 select test_support.seed_basic();
 
 -- ── Dữ liệu phụ: một hồ sơ care của Minh + một cờ gắn vào hồ sơ đó ───────────
@@ -88,12 +88,29 @@ select is(
   'ops.embedded_app_events bật FORCE RLS — chủ bảng cũng bị lọc, vì pool của app chạy bằng chính vai đó'
 );
 
+-- ĐỔI CHỦ Ý 08/08/2026 (ADR-033) — ghi lại thay vì xoá phép kiểm cũ.
+--
+-- Bản gốc của khối này đòi `throws_ok(…, '42501')`: người đăng nhập chạm vào bảng là
+-- **permission denied**, vì payload đến từ app ngoài và chưa ai rà nội dung — deny-by-default.
+-- Lập luận đó đúng khi bảng chỉ là một cổng nhận thô mà không ai đọc.
+--
+-- Nay bảng có `student_id` (0056) và chủ đầu tư đã quyết cho **cả phụ huynh và học sinh**
+-- xem được dữ liệu Mini App của chính em. Nên hàng rào chuyển từ tầng GRANT sang tầng RLS —
+-- và phép kiểm này phải đổi theo, nếu không nó sẽ đỏ vì tài liệu cũ chứ không vì mã sai.
+--
+-- Điều đáng giữ thì GIỮ, và nay khẳng định nó CHẶT HƠN bản cũ: bản cũ chỉ chứng minh
+-- "không có quyền bảng". Bản này chứng minh **có quyền bảng mà vẫn không thấy dòng nào**
+-- ngoài phần của mình — tức là đo đúng hàng rào đang thật sự gánh việc. Chi tiết hai chốt
+-- (chỉ em mình · chỉ app đã mở cho vai mình) đo riêng ở `0056_thu_ve_dung_ho_so_tung_em_test.sql`.
 select test_support.login_as('90000000-0000-0000-0000-000000000005'); -- Minh
-select throws_ok(
+select lives_ok(
   'select * from ops.embedded_app_events',
-  '42501',
-  null,
-  'Người đăng nhập chạm ops.embedded_app_events → permission denied (payload tự do từ app ngoài, deny-by-default)'
+  'người đăng nhập nay CÓ quyền bảng — hàng rào chuyển sang RLS (ADR-033), không còn ở tầng GRANT'
+);
+select is(
+  (select count(*)::int from ops.embedded_app_events where student_id is null),
+  0,
+  'nhưng KHÔNG thấy dòng nào không gắn tên em — payload tự do vẫn deny-by-default với người dùng cuối'
 );
 select test_support.logout();
 

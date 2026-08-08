@@ -131,6 +131,11 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "ssoScopes",
 //       "ssoClientSecretEnv",
 //       "daCapSsoSecret",
+//       "daNhan",
+//       "daNhan.eventType",
+//       "daNhan.soSuKien",
+//       "daNhan.soEm",
+//       "daNhan.lanCuoi",
 //       "updatedAt"
 //     ],
 //     "CreateMiniAppInput": [

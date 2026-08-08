@@ -340,6 +340,38 @@ function TheApp({
         </Muc>
       </dl>
 
+      {/* DỮ LIỆU ĐÃ VỀ CHƯA — câu chủ đầu tư hỏi 08/08/2026, và trước hôm nay chỉ trả lời
+          được bằng một lời hứa. Bảng nhận không vai nào đọc được, không màn hình nào hiện.
+
+          Chỉ vẽ khi app CÓ khai webhook: app nhúng thuần (trang tin) không gửi gì về, nên
+          một khối "chưa nhận được gì" ở đó là một lời trách oan. */}
+      {app.webhookSecretEnv && (
+        <div className="mt-3 rounded-2xl border border-line bg-surface-alt p-3">
+          <div className="text-[10.5px] font-black uppercase tracking-wide text-muted">App đã gửi về</div>
+          {app.daNhan.length === 0 ? (
+            // Thể RỖNG phải nói ra, không để trống. Một app vừa khai chưa gửi gì là bình
+            // thường; một app đã bật ba tuần mà chưa gửi gì là chuyện cần biết — và hai ca
+            // đó chỉ phân biệt được khi màn hình chịu nói cả hai.
+            <p className="mt-1 text-[12.5px] font-semibold text-caption">
+              Chưa nhận được sự kiện nào.
+            </p>
+          ) : (
+            <dl className="mt-1.5 flex flex-col gap-1.5">
+              {app.daNhan.map((d) => (
+                <div key={d.eventType} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <dt className="font-mono text-[12px] font-bold text-ink">{d.eventType}</dt>
+                  <dd className="text-[12px] font-semibold text-cardtitle2">
+                    {d.soSuKien.toLocaleString("vi-VN")} sự kiện
+                    {d.soEm > 0 && ` · ${d.soEm} em`}
+                    <span className="text-caption"> · {d.lanCuoi.slice(0, 10)}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      )}
+
       {/* CẢNH BÁO THIẾU SECRET PHẢI LÀM ĐƯỢC GÌ ĐÓ (07/08/2026).
           Hai dòng đỏ ở trên nói ĐÚNG chuyện gì hỏng, rồi bỏ mặc người đọc: họ biết biến
           chưa đặt nhưng không biết đặt ở đâu, đặt cái gì, và đặt xong có phải khởi động lại

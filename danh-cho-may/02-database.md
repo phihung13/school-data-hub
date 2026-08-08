@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 31
+sync-version: 32
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -914,6 +914,70 @@ Cùng nguyên tắc mục 5 của `0052`: bảng thay một mảng đang có n�
 **Một sai đã bắt được ngay lượt chạy đầu, giữ lại vì nó nói đúng điều màn quản trị phải nói:** bản nháp khai `sso-du-bo` với `sso_enabled = true` rồi kiểm nó có mặt trong `v_oidc_clients` → **đỏ**. Không phải lỗi của view: `enabled` mặc định `false` (`0052`), nên **"khai xong" không bao giờ đồng nghĩa với "đang chạy"**.
 
 **Toàn bộ pgTAP sau đợt K: 999 assertion / 54 file**, mọi file khớp `plan(N)`, khớp mốc `tools/pgtap-moc.tsv`.
+
+## Đợt L (`0056`, 08/08/2026) — thư về đúng hồ sơ từng em, và có người đọc (ADR-033)
+
+Chủ đầu tư hỏi: *"các app mini nhúng vào bây giờ đổ dữ liệu của app về hết được chưa"*. Đợt K trả lời được câu "app nối vào được chưa"; đợt này trả lời câu **dữ liệu có về tới nơi không**.
+
+**Phép đo mở đầu (08/08/2026, một Mini App thử gửi sự kiện thật qua đường hầm công khai):**
+
+| Đo | Kết quả |
+|---|---|
+| `POST /api/embed/webhook` | `{"ok":true,"status":"promoted"}` |
+| Gửi lại y hệt | `already_promoted`, vẫn **đúng một dòng** |
+| Loại sự kiện chưa khai | **403** |
+| Secret sai | **401** |
+
+Mọi van an toàn đóng đúng. Nhưng dữ liệu hạ cánh thế này — và đó là chỗ hai khớp cuối còn hở:
+
+```
+ops.embedded_app_events
+app_id | event_type      | payload
+do-thu | ket_qua_the_luc | {"alias":"…","chay_30m":"5.8s","bat_xa":"1.6m"}
+```
+
+| Khớp hở | Đo được |
+|---|---|
+| **(a) Không cột nào nối về học sinh** | Mã em nằm CHÌM trong JSON. `promote_embedded_event` có đúng MỘT nhánh giải alias — `dear_log`. Không ai hỏi được "kết quả thể lực của em Minh cả năm" dù dữ liệu đã trong kho |
+| **(b) Không vai nào đọc được** | `has_table_privilege` cho `authenticated` · `connector` · `reporting` đều **false**. Bảng là kho chỉ ghi vào: không màn hình, không báo cáo. Dữ liệu về mà không ai đọc thì gần như chưa về |
+
+### Vì sao KHÔNG tách sang NoSQL — câu hỏi đã được đặt ra và đã trả lời bằng phép đo
+
+Chủ đầu tư hỏi thẳng *"nếu dữ liệu phân tán thì làm NoSQL thì sao?"*. Đo trước khi trả lời: kho **đã có 19 cột `jsonb` và 16 chỉ mục GIN** — mô hình tài liệu vốn đang chạy ở đây, và chính sự kiện thể lực ở trên hạ cánh nguyên si không cần khai lược đồ nào.
+
+Hai khớp hở **không phải vấn đề lược đồ**: một cái là nối khoá ngoại, một cái là phân quyền. Cả hai đều **khó hơn** khi tách kho — mất FK do máy canh (thành quy ước tầng ứng dụng, đúng loại hỏng câm mà `DEBT.md` đầy rẫy); toàn bộ RLS (`can_see_student`, `can_read_mood`, cụm/lớp) phải viết lại bằng tay trong mọi truy vấn; và xoá theo Luật 91/2025 từ **một transaction** thành xoá phân tán không transaction, khiến câu *"đã xoá hết chưa"* thành câu không trả lời chắc được. Quy mô cũng chưa tới ngưỡng xét lại của ADR-001 (5.000 user / 300.000 req/ngày so với >10.000 / >1.000.000).
+
+**Ranh giới đúng không phải SQL/NoSQL mà là trường nào được NHẤC LÊN thành cột.** File này nhấc đúng ba thứ mọi sự kiện đều cần — em nào · loại gì · lúc nào — phần còn lại ở lại trong `payload`. Đó chính là thiết kế `staging → promote` đã có sẵn, dùng đúng việc nó sinh ra để làm.
+
+### Bốn mảnh
+
+| Đối tượng | Vai trò |
+|---|---|
+| `ops.embedded_app_events.student_id` | FK `core.students`, **on delete cascade**. NULL = sự kiện không gắn em nào (thực đơn tuần) — hợp lệ. Cascade vì giữ hồ sơ trẻ em quá hạn dưới tên "dữ liệu app" là vi phạm Luật 91/2025, không phải cẩn thận |
+| `core.promote_embedded_event` (sửa) | Giải `payload.alias` → `student_id` cho **mọi** loại sự kiện. Nhánh `dear_log` giữ nguyên từng chữ — trộn hai việc vào một migration là không ai đối chiếu được về sau |
+| `ops.tg_su_kien_ro_xanh_khong_gan_em` | Rổ Xanh **không gắn được tên em**, kể cả ghi thẳng vào bảng không qua `promote`. Trigger chứ không CHECK vì điều kiện phải tra sang `core.embedded_apps`. Đây là chỗ lời hứa "rổ Xanh = không định danh" thành máy từ chối thay vì thành một dòng người ta đọc rồi quên (nợ #55 vừa dạy đúng bài này) |
+| `ops.v_mini_app_da_nhan` | `security_invoker` — app nào gửi loại gì, bao nhiêu, cho bao nhiêu em, lần cuối lúc nào. Quên `security_invoker` là view vượt mặt chính RLS vừa dựng, đúng lỗi `0024` đã phải vá một lượt cho các view của `report` |
+
+**`alias` KHÔNG phải `external_id`.** Hai mã hai việc: `external_id` là mã của **sự kiện** (chống ghi trùng, phải khác nhau giữa hai lần gửi); `alias` là mã của **em** (dùng đi dùng lại, giống nhau qua mọi sự kiện của em đó). Gộp hai vai vào một trường là mỗi em chỉ gửi được đúng một sự kiện trong đời. Alias do Hub sinh, app xin qua `POST /api/embed/alias` — endpoint này **đã tồn tại từ ADR-017 nhưng chưa từng được viết vào bản yêu cầu gửi đội làm app**, nên một app rổ Vàng đọc tài liệu đó sẽ không biết cách gọi tên một em. Đã bổ sung cùng đợt (`ban-yeu-cau.md` mục 4.2).
+
+**Alias không giải được thì vào hàng đợi lỗi, KHÔNG lưu null.** App gửi mã Hub không nhận ra là một lỗi thật — app tự bịa mã, hoặc dùng alias của app khác (mỗi app một dải riêng), hoặc em đã rời trường. Lưu null thì dòng ấy trông y hệt một sự kiện không gắn em nào, và từ đó không ai còn cách nào phân biệt.
+
+### Ai đọc được — quyết định của chủ đầu tư, và hai chốt đi kèm
+
+Được đưa ba lựa chọn, chủ đầu tư **chọn rộng nhất: thêm cả phụ huynh và học sinh**, sau khi đã được nói trước rằng đó là lựa chọn dễ lộ nhất nếu app con gửi nhầm thứ không nên gửi. Chính sách thi hành đúng quyết định đó, với hai điều kiện AND nhau:
+
+- **CHỐT 1** — `core.can_see_student(student_id)`, đúng hàm `evidence.dear_logs` đang dùng. Phụ huynh thấy con mình, không thấy danh sách lớp.
+- **CHỐT 2** — app phải `enabled` **và** `allowed_roles` chứa vai của chính người đang đọc. Từ nay `allowed_roles` là **trần của quyền đọc dữ liệu app đó**, không chỉ quyền bấm vào tile.
+
+Chốt 2 là chỗ đáng đọc kỹ: `can_see_student` là hợp của sáu nhánh, **rộng hơn** danh sách chủ đầu tư nêu (gồm cả giáo viên bộ môn đang dạy em và hiệu trưởng). Bắt nó AND với `allowed_roles` biến câu "ai đọc được dữ liệu app này" thành một ô tích trên màn quản trị — nhà trường quyết, cho từng app, đổi trong mười giây không cần deploy. `0056` có một assertion riêng chứng minh chốt 2 **gánh việc thật**: thầy giáo bộ môn `can_see_student` em Minh nhưng đọc ra **0 dòng** vì app không mở cho vai `teacher`.
+
+**Supersede một quyết định cũ, ghi rõ thay vì xoá:** `0024` từng đòi người đăng nhập chạm bảng này là `42501` (deny-by-default vì payload tự do từ app ngoài). Nay hàng rào chuyển từ tầng GRANT sang tầng RLS. Phép kiểm trong `0024_rls_gaps_test.sql` được viết lại **chặt hơn** bản cũ: bản cũ chỉ chứng minh "không có quyền bảng"; bản mới chứng minh **có quyền bảng mà vẫn 0 dòng** ngoài phần của mình — tức đo đúng hàng rào đang thật sự gánh việc.
+
+### Kiểm chứng
+
+`0056_thu_ve_dung_ho_so_tung_em_test.sql` — **34 assertion**, xanh trên database dựng lại từ số không. Đi qua đúng đường webhook đi (`ingest` → `promote`), không insert thẳng vào bảng đích. Các ca đáng kể: alias của app **khác** bị từ chối (hai app không ghép được dữ liệu em) · app rổ Xanh gửi kèm alias bị chặn **cả qua `promote` lẫn ghi thẳng** · tắt app là **cắt luôn đường đọc** · xoá em thì dữ liệu app đi theo.
+
+**Toàn bộ pgTAP sau đợt L: 1.034 assertion / 55 file**, khớp mốc.
 
 ## Quy tắc migration (§2)
 

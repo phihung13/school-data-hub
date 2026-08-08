@@ -1940,7 +1940,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="31">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="32">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -2469,6 +2469,44 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <h4>Nghiệm thu</h4>
         <p>39 phép kiểm ở tầng kho dữ liệu. Bài chính dựng <b>ba</b> loại app cùng lúc &mdash; đang bật và có đăng nhập · đã tắt nhưng vẫn khai đăng nhập · đang bật nhưng không khai đăng nhập &mdash; rồi đòi hệ chỉ bảo lãnh loại thứ nhất. Hai loại sau là hai kiểu &ldquo;không được bảo lãnh&rdquo; khác nhau, và nhầm loại nào cũng là một cánh cửa mở. Toàn bộ bộ kiểm tra ở tầng dữ liệu sau đợt này: <b>999 phép kiểm đạt trên 54 bài</b>, chạy trên một kho dựng lại từ số không.</p>
         <p>Một sai của chính chúng tôi, giữ lại vì nó nói đúng điều màn hình phải nói: bản nháp khai một app có đủ phần đăng nhập rồi đòi nó phải được bảo lãnh &mdash; và bài kiểm <b>đỏ</b>. Không phải lỗi của hệ: app vừa khai thì <b>mặc định vẫn đang tắt</b>. &ldquo;Khai xong&rdquo; không bao giờ đồng nghĩa với &ldquo;đang chạy&rdquo;.</p>
+
+        <h3>Đợt 08/08/2026: thư của app con về tới kho, nhưng chưa vào hồ sơ từng em</h3>
+        <p class="lede">Câu hỏi mở đầu đợt này rất ngắn: <b>các app nhỏ cắm vào Hub đã đổ được dữ liệu về chưa?</b> Chúng tôi không trả lời bằng suy đoán &mdash; dựng một app thử, cho nó gửi một bản ghi thật qua đường công khai, rồi đi theo xem nó nằm ở đâu.</p>
+
+        <p>Hình dung Hub là <b>phòng văn thư của trường</b>. App con gửi dữ liệu về giống như gửi thư tới đó. Kết quả đo:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Khâu</th><th>Trước đợt này</th></tr></thead>
+            <tbody>
+              <tr><td>Bảo vệ kiểm giấy tờ ở cổng</td><td>Chạy &mdash; sai dấu là chặn</td></tr>
+              <tr><td>Không nhận thư trùng</td><td>Chạy &mdash; gửi lại hai lần vẫn một lá</td></tr>
+              <tr><td>Không nhận loại thư chưa khai báo</td><td>Chạy &mdash; trả lại ngay</td></tr>
+              <tr><td>Thư vào tới kho</td><td>Chạy</td></tr>
+              <tr><td><b>Phân thư vào hồ sơ từng em</b></td><td><b>Chưa ai làm</b></td></tr>
+              <tr><td><b>Có chìa mở kho ra xem</b></td><td><b>Chưa ai có</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Nói cách khác: dữ liệu <b>về tới kho an toàn</b> &mdash; không mất, không trùng, không lẫn &mdash; nhưng nằm thành đống trong một cái kho khoá. Mã của em nằm chìm trong bản ghi, chưa ai giải ra; và khi chúng tôi thử xem ai mở được kho, câu trả lời là <b>không một ai</b>.</p>
+
+        <h4>Có nên chuyển sang một loại kho dữ liệu khác không</h4>
+        <p>Câu hỏi được đặt ra đúng lúc: dữ liệu mỗi app một kiểu thì có nên dùng loại kho &ldquo;tự do hình dạng&rdquo; không? Chúng tôi đi đo trước khi trả lời, và phép đo lật ngược tiền đề: <b>hệ đã đang dùng đúng kiểu lưu tự do đó</b>, ở 19 chỗ khác nhau. Bản ghi thể lực ở trên hạ cánh nguyên si, không phải khai trước một khuôn nào.</p>
+        <p>Còn hai chỗ hỏng thì <b>không phải chuyện hình dạng dữ liệu</b>: một là nối bản ghi với đúng em, hai là quyền được đọc. Tách sang kho riêng làm <b>cả hai khó hơn</b> &mdash; máy không còn tự canh được mối nối, toàn bộ luật &ldquo;ai được xem dữ liệu của em nào&rdquo; phải viết lại bằng tay ở từng chỗ, và việc xoá hồ sơ theo luật từ <b>một thao tác dứt điểm</b> thành nhiều thao tác rời rạc &mdash; khiến câu <i>&ldquo;đã xoá hết chưa&rdquo;</i> thành câu không ai dám trả lời chắc trước một đoàn thanh tra. Quy mô của trường cũng chưa tới ngưỡng cần đổi. <b>Kết luận: không thêm kho thứ hai.</b></p>
+
+        <h4>Nay thư được phân, và có người mở kho</h4>
+        <p>Làm <b>một lần cho mọi app</b>, không phải làm lại cho từng app: dữ liệu về là tự gắn vào đúng em. Hub cấp cho mỗi app một <b>mã riêng</b> cho từng học sinh &mdash; cùng một em nhưng app thể lực và app căn tin nhận hai mã khác nhau, nên hai app ngoài <b>không ghép được dữ liệu học sinh với nhau</b>; chỉ Hub ghép lại được.</p>
+        <p>Và một điều cấm lâu nay chỉ nằm trong tài liệu, nay nằm trong máy: app khai loại <b>&ldquo;không gắn tên em nào&rdquo;</b> mà lén gửi kèm mã học sinh thì <b>bị chặn</b> &mdash; kể cả khi đi đường vòng, ghi thẳng vào kho.</p>
+
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Ai được xem &mdash; quyết định của Chủ tịch, và hai chốt đi kèm</div>
+          <p>Chúng tôi đưa ba lựa chọn và nói trước lựa chọn nào dễ lộ nhất. <b>Chủ tịch chọn phương án rộng nhất: cả phụ huynh và học sinh đều xem được.</b> Chúng tôi thi hành đúng quyết định đó, kèm hai chốt để nó không thành một cái lỗ:</p>
+          <p><b>Chốt 1 &mdash; chỉ dữ liệu của chính mình.</b> Phụ huynh thấy con mình, không thấy danh sách lớp, không thấy em khác.</p>
+          <p><b>Chốt 2 &mdash; chỉ app mà trường đã mở cho vai đó.</b> Một app dành riêng cho giáo viên thì dữ liệu của nó không tới tay phụ huynh, dù bản ghi có mang tên chính con họ. Từ nay ô tích &ldquo;ai được mở app này&rdquo; trên màn quản trị cũng chính là ô quyết định &ldquo;ai được đọc dữ liệu app này&rdquo; &mdash; một chỗ, nhà trường tự đổi trong mười giây.</p>
+        </div>
+
+        <h4>Nghiệm thu</h4>
+        <p>34 phép kiểm tự động, chạy qua <b>đúng con đường mà app con thật sự đi</b> chứ không đi tắt. Đáng kể nhất: mã của app khác bị từ chối &middot; app &ldquo;không gắn tên em&rdquo; gửi kèm mã bị chặn cả hai đường &middot; <b>tắt một app là cắt luôn quyền đọc dữ liệu cũ của nó</b> &middot; xoá một em thì mọi dữ liệu app của em đi theo. Toàn bộ bộ kiểm tra ở tầng dữ liệu sau đợt này: <b>1.034 phép kiểm đạt trên 55 bài</b>.</p>
+        <p>Và một lỗi của chính chúng tôi, ghi lại: bản yêu cầu gửi đội làm app &mdash; viết hôm trước &mdash; <b>quên hẳn phần hướng dẫn cách hỏi Hub &ldquo;em này mã là gì&rdquo;</b>. Hub có sẵn đường đó từ lâu, nhưng một đội đọc tài liệu ấy sẽ không biết cách gọi tên một học sinh. Đã bổ sung.</p>
 
         <details class="details deep">
           <summary>Chi tiết kỹ thuật · khóa, System of Record và vòng đời</summary>

@@ -38,7 +38,7 @@
 0022_homeroom_teacher_name_clean_test.sql	4
 0023_principal_scope_test.sql	8
 0023_role_scope_guard_test.sql	9
-0024_rls_gaps_test.sql	14
+0024_rls_gaps_test.sql	15
 0025_checkins_column_grants_test.sql	13
 0026_care_router_test.sql	19
 0028_embed_hardening_test.sql	35
@@ -69,3 +69,4 @@
 0053_ket_luan_gui_muon_test.sql	27
 0054_sua_duoc_chu_ky_da_ky_test.sql	33
 0055_khai_sso_ngay_trong_so_test.sql	39
+0056_thu_ve_dung_ho_so_tung_em_test.sql	34

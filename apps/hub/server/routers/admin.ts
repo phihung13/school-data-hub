@@ -84,7 +84,15 @@ const CAU_TRUY_VAN = `
          to_char(a.updated_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as updated_at
     from core.embedded_apps a`;
 
-function doiHang(r: Dong) {
+interface DongDaNhan {
+  app_id: string;
+  event_type: string;
+  so_su_kien: number;
+  so_em: number;
+  lan_cuoi: string;
+}
+
+function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
   const env = r.webhook_secret_env ? process.env[r.webhook_secret_env] : undefined;
   const ssoEnv = r.sso_client_secret_env ? process.env[r.sso_client_secret_env] : undefined;
   return {
@@ -110,6 +118,16 @@ function doiHang(r: Dong) {
     ssoClientSecretEnv: r.sso_client_secret_env,
     // Cùng phép tính, cùng lý do với `daCapSecret` ngay trên — bảng chỉ biết TÊN biến.
     daCapSsoSecret: !!ssoEnv && ssoEnv.length > 0,
+    // Lọc ở đây thay vì một truy vấn con cho mỗi app: danh sách app ngắn (chục dòng), và
+    // một truy vấn phụ cho mỗi dòng là mẫu N+1 trên đúng màn mà quản trị mở nhiều nhất.
+    daNhan: daNhan
+      .filter((d) => d.app_id === r.app_id)
+      .map((d) => ({
+        eventType: d.event_type,
+        soSuKien: d.so_su_kien,
+        soEm: d.so_em,
+        lanCuoi: d.lan_cuoi,
+      })),
     updatedAt: r.updated_at,
   };
 }
@@ -119,9 +137,18 @@ async function docLai(
   runWithDb: <T>(fn: (c: { query: (q: string, p?: unknown[]) => Promise<{ rows: Dong[] }> }) => Promise<T>) => Promise<T>,
   appId: string,
 ) {
-  const rows = await runWithDb(async (client) => {
+  const { rows, daNhan } = await runWithDb(async (client) => {
     const { rows } = await client.query(`${CAU_TRUY_VAN} where a.app_id = $1`, [appId]);
-    return rows;
+    // Đọc luôn phần "đã nhận" ở đây thay vì để nó rỗng: một trường trả về mảng rỗng trong
+    // khi app đã gửi về hàng trăm sự kiện là một trường NÓI DỐI, và nó nói dối đúng vào
+    // phản hồi mà màn hình nhận ngay sau khi người ta bấm Lưu.
+    const { rows: daNhan } = await client.query(
+      `select app_id, event_type, so_su_kien, so_em,
+              to_char(lan_cuoi, 'YYYY-MM-DD"T"HH24:MI:SSOF') as lan_cuoi
+         from ops.v_mini_app_da_nhan where app_id = $1`,
+      [appId],
+    );
+    return { rows, daNhan };
   });
   const r = rows[0];
   if (!r) {
@@ -130,7 +157,7 @@ async function docLai(
       message: "Không đọc lại được app vừa ghi — tài khoản này có quyền quản trị không?",
     });
   }
-  return doiHang(r);
+  return doiHang(r, daNhan as unknown as DongDaNhan[]);
 }
 
 export const adminRouter = router({
@@ -138,7 +165,17 @@ export const adminRouter = router({
     list: adminProcedure.query(async ({ ctx }) => {
       return ctx.runWithDb(async (client) => {
         const { rows } = await client.query<Dong>(`${CAU_TRUY_VAN} order by a.enabled desc, a.display_name`);
-        const apps = rows.map(doiHang);
+        // `ops.v_mini_app_da_nhan` chạy `security_invoker` (0056) nên nó đi qua đúng RLS của
+        // người đang xem — quản trị thấy hết, vai khác thấy phần của mình. Không cần lớp
+        // kiểm quyền thứ hai ở đây, và cũng không được thêm: hai chỗ trả lời cùng một câu
+        // hỏi thì rồi sẽ lệch.
+        const { rows: daNhan } = await client.query<DongDaNhan>(
+          `select app_id, event_type, so_su_kien, so_em,
+                  to_char(lan_cuoi, 'YYYY-MM-DD"T"HH24:MI:SSOF') as lan_cuoi
+             from ops.v_mini_app_da_nhan
+            order by lan_cuoi desc`,
+        );
+        const apps = rows.map((r) => doiHang(r, daNhan));
         return ListMiniAppsOutput.parse({
           apps,
           // Đếm ở máy chủ, không để màn hình tự trừ ngày: "tới hạn rà" là luật nghiệp vụ

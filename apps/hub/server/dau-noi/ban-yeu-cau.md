@@ -130,7 +130,40 @@ Thân request:
 
 **Không có cửa thứ hai.** App không bao giờ nối thẳng vào cơ sở dữ liệu của Hub, không bao giờ được cấp `service_role`, không bao giờ gọi API nội bộ nào khác.
 
-### 4.2 `external_id` phải LẶP LẠI ĐƯỢC — đây là chỗ hay hỏng nhất
+### 4.2 GỌI TÊN MỘT EM HỌC SINH — đọc kỹ, đây là chỗ khác mọi hệ thống bạn từng nối
+
+App của bạn **không bao giờ biết mã học sinh thật của trường**, và không được tự đặt mã cho em. Thay vào đó Hub cấp cho app bạn một **mã riêng** (alias) cho từng em:
+
+```
+POST {{HUB_URL}}/api/embed/alias
+x-embed-app: <mã app của bạn>
+Authorization: Bearer <access_token của CHÍNH em đang dùng app>
+
+→ 200  { "alias": "…" }
+```
+
+**Bốn điều phải nắm:**
+
+1. **Mã do Hub sinh, app không tự khai.** Bạn gọi endpoint trên với token của em đang đăng nhập; Hub trả về mã. Không có đường nào khác để biết một em là ai.
+2. **Mỗi app một dải mã riêng.** Cùng một em, app thể lực và app căn tin nhận **hai chuỗi khác nhau**. Đây là chủ ý: hai app ngoài không ghép được dữ liệu học sinh với nhau, chỉ Hub ghép lại được. Dùng mã của app khác sẽ bị Hub từ chối.
+3. **Mã dùng đi dùng lại.** Nó là mã của **EM**, không phải của sự kiện — mọi sự kiện của em đó đều mang cùng một mã. Đừng nhầm với `external_id` ở mục 4.3, thứ phải **khác nhau** giữa hai lần gửi.
+4. **Chỉ học sinh mới có mã.** Gọi bằng token của giáo viên sẽ nhận `403`. Nếu app của bạn để giáo viên nhập hộ, thì token dùng để lấy mã vẫn phải là của em đó.
+
+**Đặt mã vào đâu khi gửi dữ liệu:** trường `alias` trong `payload`.
+
+```json
+{
+  "external_id": "the-luc-2026-08-08-em01",
+  "event_type": "ket_qua_the_luc",
+  "payload": { "alias": "<mã Hub cấp>", "chay_30m": "5.8s" }
+}
+```
+
+> **Gửi `alias` mà Hub không nhận ra thì sự kiện bị đẩy vào hàng đợi lỗi, không được lưu.** Cố ý: một mã sai lưu vào thành `null` sẽ trông y hệt một sự kiện không gắn em nào, và từ đó không ai còn cách nào phân biệt. Thà hỏng ngay, thấy được.
+>
+> **Không gửi `alias` cũng hợp lệ** — dùng cho sự kiện không thuộc về em nào (thực đơn tuần, lịch câu lạc bộ). Nhưng nếu app bạn khai rổ **Xanh** thì gửi `alias` sẽ **bị chặn**: rổ Xanh nghĩa là không gắn tên em nào, và Hub cưỡng chế điều đó chứ không chỉ ghi trong tài liệu.
+
+### 4.3 `external_id` phải LẶP LẠI ĐƯỢC — đây là chỗ hay hỏng nhất
 
 `external_id` là thứ Hub dùng để biết "sự kiện này mình nhận rồi". Nó phải được **tính ra** từ nội dung sự kiện, ví dụ:
 
@@ -142,7 +175,7 @@ sha256(ma-app + ma-em + ngay + loai-su-kien)
 
 **Tự kiểm:** gửi **đúng cùng một request hai lần**. Lần hai phải trả `status: "already_promoted"`. Nếu nó trả `"promoted"` thì `external_id` của bạn sai.
 
-### 4.3 Đọc đúng mã trả về
+### 4.4 Đọc đúng mã trả về
 
 | Mã | Nghĩa | App phải làm gì |
 |---|---|---|
@@ -153,13 +186,13 @@ sha256(ma-app + ma-em + ngay + loai-su-kien)
 | `403` | `event_type` này chưa được khai trong hồ sơ | Khai vào phiếu (mục 9) rồi xin duyệt |
 | `503` | Hub tạm trục trặc | Thử lại sau, có giãn cách tăng dần |
 
-### 4.4 Điều Hub KHÔNG hứa, nói trước để không ai hiểu nhầm
+### 4.5 Điều Hub KHÔNG hứa, nói trước để không ai hiểu nhầm
 
 Mọi loại sự kiện bạn gửi đều **vào kho và đọc được**. Nhưng chỉ những loại **đã được nhà trường viết luật ánh xạ riêng** mới trở thành dữ liệu nghiệp vụ (một buổi điểm danh, một khoá học). Loại khác nằm ở dạng JSON thô: tra cứu được, thống kê được, **không** tự biến thành hàng nghiệp vụ.
 
 Nếu app của bạn cần dữ liệu trở thành nghiệp vụ thật, **ghi rõ trong phiếu** ở khoá `webhook.cacLoaiSuKien` và nói với nhà trường — đó là một việc của kỹ sư Hub, không phải một ô tích trên màn hình.
 
-### 4.5 Chuỗi bí mật nằm ở đâu
+### 4.6 Chuỗi bí mật nằm ở đâu
 
 **Ở máy chủ của bạn, trong biến môi trường.** Không bao giờ trong mã nguồn phía trình duyệt, không trong biến `NEXT_PUBLIC_*`/`VITE_*`, không trong file cấu hình đẩy lên kho mã.
 

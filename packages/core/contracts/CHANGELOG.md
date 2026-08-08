@@ -19,6 +19,20 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ### Added
 
+- **`MiniAppRow.daNhan` — app này đã gửi về những gì** (08/08/2026, ADR-033, migration 0056).
+  Mảng một dòng mỗi loại sự kiện: `eventType` · `soSuKien` · `soEm` · `lanCuoi`.
+
+  **Vì sao:** chủ đầu tư hỏi *"các app mini nhúng vào bây giờ đổ dữ liệu của app về hết được
+  chưa"*, và câu đó trước hôm nay **chỉ trả lời được bằng một lời hứa** — bảng nhận
+  `ops.embedded_app_events` không vai nào đọc được và không màn hình nào hiện.
+
+  **Mảng rỗng là một trạng thái CÓ NGHĨA, client phải nói ra:** app chưa gửi về gì. Đó là
+  bình thường với một app vừa khai và **đáng ngờ** với một app đã bật ba tuần — hai ca đó
+  chỉ phân biệt được khi có con số đứng cạnh, nên đừng ẩn khối đó đi khi mảng rỗng.
+
+  `soEm = 0` nghĩa là loại sự kiện đó không gắn em nào (thực đơn tuần, lịch CLB) — hợp lệ,
+  không phải thiếu dữ liệu.
+
 - **Phiếu đấu nối — khuôn JSON đội làm app gửi về** (07/08/2026, chủ đầu tư yêu cầu trực tiếp:
   *"lần nào cần cắm app khác thì tôi download đưa file đó cho họ sửa, sau đó họ trả về … json
   theo đúng template thì copy paste vào đó phát là ra app, khỏi cần điền từng tí 1"*):
