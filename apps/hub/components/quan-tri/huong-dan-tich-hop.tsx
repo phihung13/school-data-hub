@@ -106,6 +106,18 @@ function ChuaXong({ children }: { children: ReactNode }) {
 export function HuongDanTichHop({ app, hubUrl, onDong }: { app: MiniAppRow; hubUrl: string; onDong: () => void }) {
   const uriCauNoi = `${hubUrl}/embed/relay`;
 
+  // Hai biến app này cần, kèm TRẠNG THÁI THẬT trên máy chủ đang phục vụ. `daCapSecret` và
+  // `daCapSsoSecret` do máy chủ tính — màn hình không đọc được `process.env`, nên nếu dựng
+  // lại phép kiểm này ở client thì nó chỉ là phỏng đoán.
+  const bienMoiTruong = [
+    app.webhookSecretEnv
+      ? { ten: app.webhookSecretEnv, viec: "Gửi dữ liệu về", daCo: app.daCapSecret }
+      : null,
+    app.ssoEnabled && app.ssoClientSecretEnv
+      ? { ten: app.ssoClientSecretEnv, viec: "Đăng nhập Hub", daCo: app.daCapSsoSecret }
+      : null,
+  ].filter((b): b is { ten: string; viec: string; daCo: boolean } => b !== null);
+
   return (
     <HopThoai
       tieuDe={`Đấu nối — ${app.displayName}`}
@@ -217,17 +229,53 @@ export function HuongDanTichHop({ app, hubUrl, onDong }: { app: MiniAppRow; hubU
       </Khoi>
 
       {/* ── Biến môi trường ───────────────────────────────────────────────── */}
-      <Khoi tieuDe="Người vận hành đặt trên máy chủ Hub">
-        <Dong
-          nhan="apps/hub/.env.local"
-          giaTri={[
-            app.webhookSecretEnv ? `${app.webhookSecretEnv}=<sinh ngẫu nhiên 32 byte>` : null,
-            app.ssoClientSecretEnv ? `${app.ssoClientSecretEnv}=<sinh ngẫu nhiên 32 byte>` : null,
-          ]
-            .filter(Boolean)
-            .join("\n") || "(app chưa khai biến nào)"}
-          ghiChu="Đặt xong phải khởi động lại Hub. Đây là bước DUY NHẤT còn cần chạm vào máy chủ — mọi thứ còn lại làm trên màn này."
-        />
+      {/* NÓI RÕ CÁI NÀO ĐÃ ĐẶT, CÁI NÀO CHƯA (sửa 08/08/2026).
+
+          Bản trước in cả hai dòng `<TÊN BIẾN>=<sinh ngẫu nhiên 32 byte>` VÔ ĐIỀU KIỆN — kể
+          cả khi biến đã đặt xong từ lâu. Chủ đầu tư đọc bản đấu nối của Factory rồi hỏi
+          thẳng: *"thế giờ cài không?"* — trong khi cả hai biến của Factory đã có, và thẻ app
+          ngay bên cạnh đang hiện "Sẵn sàng — không còn việc nào".
+
+          Một màn hình bảo người ta đi làm việc đã làm rồi thì tệ hơn một màn hình im lặng:
+          nó dạy người dùng rằng hướng dẫn ở đây không đáng tin, và lần sau họ sẽ bỏ qua cả
+          những dòng thật sự cần làm. `daCapSecret`/`daCapSsoSecret` là câu trả lời do MÁY
+          CHỦ tính (nó là bên duy nhất đọc được `process.env`) — sẵn có, chỉ là chưa dùng. */}
+      <Khoi tieuDe="Biến môi trường trên máy chủ Hub">
+        {bienMoiTruong.length === 0 ? (
+          <p className="py-2 text-[12px] font-semibold text-caption">
+            App chưa khai biến nào — không có gì phải đặt.
+          </p>
+        ) : (
+          <>
+            {bienMoiTruong.map((b) => (
+              <Dong
+                key={b.ten}
+                nhan={b.viec}
+                giaTri={b.daCo ? b.ten : `${b.ten}=<sinh ngẫu nhiên 32 byte>`}
+                ghiChu={
+                  b.daCo ? (
+                    <span className="flex items-center gap-1 font-bold text-successText">
+                      <span className="msr text-[15px]" aria-hidden>
+                        check_circle
+                      </span>
+                      Đã đặt trên máy chủ này — không phải làm gì
+                    </span>
+                  ) : (
+                    <span className="font-bold text-dangerText">
+                      CHƯA đặt — thêm vào apps/hub/.env.local rồi khởi động lại Hub
+                    </span>
+                  )
+                }
+              />
+            ))}
+            {bienMoiTruong.every((b) => b.daCo) && (
+              <p className="mt-2 rounded-xl bg-surface-success px-3 py-2 text-[12px] font-bold text-successText">
+                Không còn bước nào chạm vào máy chủ. Việc còn lại là đội làm app viết mã theo
+                bản này.
+              </p>
+            )}
+          </>
+        )}
       </Khoi>
     </HopThoai>
   );
