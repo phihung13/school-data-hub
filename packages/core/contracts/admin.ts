@@ -357,7 +357,18 @@ export function phieuThanhKhaiBao(phieu: PhieuDauNoi, ngayRaLai: string): Create
     iframeUrl: phieu.nhung?.urlIframe ?? null,
     iconImageUrl: null,
     intro: phieu.moTaMotCau ?? null,
-    webhookSecretEnv: phieu.webhook ? tenBienSecret("EMBED_WEBHOOK_SECRET", phieu.maApp) : null,
+    // LUÔN `null` từ 08/08/2026 — app dán từ phiếu dùng CHUỖI CHUNG của trường.
+    //
+    // Bản trước sinh sẵn `EMBED_WEBHOOK_SECRET_<MÃ>` cho mọi app. Sau khi chủ đầu tư chuyển
+    // sang một chuỗi dùng chung, dòng đó thành một cái bẫy: khai một tên biến RIÊNG nghĩa là
+    // "app này dùng khoá riêng", và `registry-db.ts` cố ý KHÔNG rơi về chuỗi chung khi khoá
+    // riêng chưa đặt. Đo được ngay lượt thử đầu: app vừa dán, đã cấp vai, đã bật, gửi bằng
+    // chuỗi chung → `{"error":"app_id/secret không hợp lệ"}`. Tức là phiếu tự tay dựng lại
+    // đúng cái bước mà cả gói này sinh ra để bỏ.
+    //
+    // Muốn một app có khoá riêng thì khai tay ở form Sửa cấu hình — đó là một quyết định
+    // hiếm và phải cố ý, không phải mặc định của mọi phiếu.
+    webhookSecretEnv: null,
     ssoEnabled: !!phieu.sso,
     ssoRedirectUris: phieu.sso?.redirectUris ?? [],
     ssoBackchannelLogoutUri: phieu.sso?.backchannelLogoutUri ?? null,

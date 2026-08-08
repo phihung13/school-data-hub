@@ -55,9 +55,26 @@ describe("phiếu đấu nối → khai báo app", () => {
     // Đây là chỗ phiếu KHÔNG được chạm tới: mã app viết thường có gạch ngang, tên biến viết
     // HOA có gạch dưới. Để đội ngoài tự khai là mở đường cho một ký tự gõ sai biến thành
     // `undefined` — cùng giá trị với "chưa đặt", không phân biệt được từ trong hệ.
-    expect(kb.webhookSecretEnv).toBe("EMBED_WEBHOOK_SECRET_THE_LUC");
     expect(kb.ssoClientSecretEnv).toBe("OIDC_CLIENT_SECRET_THE_LUC");
     expect(tenBienSecret("OIDC_CLIENT_SECRET", "a-b-c")).toBe("OIDC_CLIENT_SECRET_A_B_C");
+  });
+
+  it("dán phiếu KHÔNG BAO GIỜ khai khoá webhook riêng — mọi app dùng chuỗi chung", () => {
+    // Luật của chủ đầu tư 08/08/2026: một chuỗi webhook dùng chung cho mọi app, bỏ hẳn bước
+    // đặt biến môi trường cho từng app mới.
+    //
+    // Bài này là CỔNG CHẶN MỘT LỖI ĐÃ XẢY RA THẬT, không phải một khẳng định lý thuyết. Bản
+    // trước sinh sẵn `EMBED_WEBHOOK_SECRET_<MÃ>` cho mọi phiếu — mà khai một tên biến RIÊNG
+    // nghĩa là "app này dùng khoá riêng", và `registry-db.ts` cố ý KHÔNG rơi về chuỗi chung
+    // khi khoá riêng chưa đặt. Đo trên bản đang chạy 08/08: app vừa dán, đã cấp vai, đã bật,
+    // gửi bằng chuỗi chung → `{"error":"app_id/secret không hợp lệ"}`. Phiếu tự tay dựng lại
+    // đúng cái bước mà cả gói này sinh ra để bỏ.
+    for (const phieu of [PHIEU_DU, { ...PHIEU_DU, webhook: { cacLoaiSuKien: ["a", "b"] } }]) {
+      const kb = phieuThanhKhaiBao(PhieuDauNoi.parse(phieu), "2027-02-07");
+      expect(kb.webhookSecretEnv, "phiếu vừa khai một khoá webhook RIÊNG — app sẽ nhận 401").toBeNull();
+      // Cửa vẫn phải MỞ: khoá đến từ chuỗi chung, không phải từ chỗ trống này.
+      expect(kb.allowedEventTypes.length).toBeGreaterThan(0);
+    }
   });
 
   it("dán một phiếu KHÔNG BAO GIỜ cấp quyền cho ai — allowedRoles luôn rỗng", () => {

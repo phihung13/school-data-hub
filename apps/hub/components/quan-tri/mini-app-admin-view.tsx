@@ -557,11 +557,7 @@ function KhoiWebhook({
         <input
           type="checkbox"
           checked={bat}
-          onChange={(e) => {
-            const v = e.target.checked;
-            setBat(v);
-            if (v && !bien) setBien(tenBien("EMBED_WEBHOOK_SECRET", appId));
-          }}
+          onChange={(e) => setBat(e.target.checked)}
           className="h-4 w-4 accent-gold"
         />
         <span className="text-[12.5px] font-extrabold text-cardtitle2">App này gửi dữ liệu về Hub</span>
@@ -587,12 +583,18 @@ function KhoiWebhook({
               rà. Khai đúng tên từng loại thì Hub trả lại 403 cho thứ ngoài danh sách.
             </p>
           )}
-          <O nhan="Tên biến môi trường chứa secret webhook" goiY="CHỈ tên biến, không phải giá trị.">
+          {/* KHÔNG điền sẵn, KHÔNG bắt buộc (đổi 08/08/2026). Mặc định app dùng CHUỖI CHUNG
+              của trường — bỏ trống ô này là xong, không phải đặt gì trên máy chủ.
+              Điền vào đây là một quyết định HIẾM và phải cố ý: nó có nghĩa "app này dùng
+              khoá riêng", và khi đó chuỗi chung KHÔNG còn mở cửa cho nó nữa. */}
+          <O
+            nhan="Khoá riêng cho app này (bỏ trống = dùng chuỗi chung của trường)"
+            goiY="Chỉ điền khi app cần khoá riêng. Điền rồi thì phải đặt biến đó trên máy chủ, không thì webhook 401."
+          >
             <input
               value={bien}
               onChange={(e) => setBien(e.target.value.toUpperCase())}
-              required
-              placeholder="EMBED_WEBHOOK_SECRET_TENAPP"
+              placeholder="để trống"
               className={`${O_INPUT} font-mono`}
             />
           </O>
