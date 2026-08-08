@@ -8,12 +8,11 @@
 // quy trình riêng ở 0033) và một router gom sẵn là chỗ để người sau thả vào những thứ
 // chưa ai duyệt.
 //
-// ── Vì sao secret KHÔNG có mặt ở đây, kể cả để ghi ────────────────────────────────
-// Contract này không nhận `webhookSecret`, chỉ nhận `webhookSecretEnv` (TÊN biến môi
-// trường). Đó không phải là quên: giá trị secret không bao giờ vào database (xem khối
-// chú thích đầu migration 0052), nên cũng không có gì cho màn hình gửi lên. Màn quản trị
-// trả lời được "app này đã cấp secret chưa" nhờ trường `daCapSecret` do MÁY CHỦ tính —
-// và câu trả lời đó là một boolean, không phải một chuỗi.
+// ── Vì sao KHÔNG có trường nào về secret ở đây ───────────────────────────────────
+// Không nhận giá trị secret (không bao giờ vào database — xem đầu migration 0052), và từ
+// `0058` cũng không nhận cả TÊN biến: mọi app dùng MỘT chuỗi chung của trường, cho cả
+// webhook lẫn đăng nhập. Nên "app này đã cấp secret chưa" thôi là một câu hỏi — câu trả lời
+// luôn là rồi, và một trường boolean luôn `true` chỉ làm màn hình bận thêm.
 import { z } from "zod";
 
 /**
@@ -97,16 +96,11 @@ export const MiniAppRow = z.object({
   reviewDueOn: z.string(),
   /** Số ngày quá hạn rà (âm = còn hạn). Máy chủ tính, màn hình không tự trừ ngày. */
   overdueDays: z.number().int(),
-  webhookSecretEnv: z.string().nullable(),
-  /**
-   * Biến môi trường đó CÓ giá trị trên máy chủ này chưa. Máy chủ tính, không gửi giá trị.
-   *
-   * Đây là câu hỏi mà không màn hình nào tự trả lời được: bảng chỉ biết TÊN biến. Không
-   * có trường này thì quản trị khai `EMBED_WEBHOOK_SECRET_X`, thấy nó hiện lên đẹp đẽ, và
-   * tin rằng webhook đã sẵn sàng — trong khi biến chưa từng được đặt và mọi lời gọi từ
-   * app sẽ nhận 401. Đúng loại hỏng im lặng mà cả kho này tồn tại để chặn.
-   */
-  daCapSecret: z.boolean(),
+  // KHÔNG còn `webhookSecretEnv`/`daCapSecret` (0058, chủ đầu tư: *"thì bạn cứ yêu cầu app
+  // theo khoá của bạn"*). Mọi app dùng MỘT chuỗi chung của trường cho cả webhook lẫn đăng
+  // nhập, nên "app này đã cấp secret chưa" không còn là một câu hỏi — câu trả lời luôn là rồi.
+  // Hai cột tương ứng cũng đã bị xoá khỏi `core.embedded_apps`: một trường còn tồn tại là một
+  // trường còn khai được, và ngày có người khai mà quên đặt giá trị là ngày cổng đóng câm.
 
   // ── SSO (ADR-032, migration 0055) ────────────────────────────────────────────────
   // Trước 07/08/2026 những trường này nằm trong `apps/hub/server/oidc/clients.ts` — một
@@ -118,14 +112,6 @@ export const MiniAppRow = z.object({
   ssoRedirectUris: z.array(z.string()),
   ssoBackchannelLogoutUri: z.string().nullable(),
   ssoScopes: z.array(z.string()),
-  ssoClientSecretEnv: z.string().nullable(),
-  /**
-   * Biến secret OIDC đã có giá trị trên máy chủ này chưa. Cùng lý lẽ và cùng cách tính với
-   * `daCapSecret`: bảng chỉ biết TÊN biến, nên không màn hình nào tự trả lời được câu này,
-   * và không trả lời được nghĩa là quản trị tin app đã đăng nhập được trong khi RP đang
-   * nhận `invalid_client`.
-   */
-  daCapSsoSecret: z.boolean(),
 
   /**
    * CÒN THIẾU GÌ ĐỂ APP NÀY CHẠY — theo đúng thứ tự phải làm, rỗng nghĩa là sẵn sàng.
@@ -206,10 +192,6 @@ export const CreateMiniAppInput = z.object({
   iframeUrl: z.string().url().startsWith("https://").nullish(),
   iconImageUrl: z.string().nullish(),
   intro: z.string().max(200).nullish(),
-  webhookSecretEnv: z
-    .string()
-    .regex(/^[A-Z][A-Z0-9_]*$/, "Tên biến môi trường viết HOA, gạch dưới")
-    .nullish(),
 
   // ── SSO ──────────────────────────────────────────────────────────────────────────
   // Cùng nguyên tắc với `enabled`: KHÔNG suy `ssoEnabled` từ việc app có redirect_uri.
@@ -220,10 +202,6 @@ export const CreateMiniAppInput = z.object({
   ssoRedirectUris: z.array(MiniAppRedirectUri).default([]),
   ssoBackchannelLogoutUri: MiniAppRedirectUri.nullish(),
   ssoScopes: z.array(MiniAppScope).default(["openid", "profile"]),
-  ssoClientSecretEnv: z
-    .string()
-    .regex(/^[A-Z][A-Z0-9_]*$/, "Tên biến môi trường viết HOA, gạch dưới")
-    .nullish(),
 });
 export type CreateMiniAppInput = z.infer<typeof CreateMiniAppInput>;
 
@@ -247,7 +225,7 @@ export type UpdateMiniAppInput = z.infer<typeof UpdateMiniAppInput>;
 // quyết định của NHÀ TRƯỜNG chứ không của đội làm app:
 //   · `allowedRoles`     — ai được mở app
 //   · `reviewDueOn`      — nhịp rà lại của trường
-//   · `webhookSecretEnv` / `ssoClientSecretEnv` — quy ước đặt tên trên máy chủ Hub
+//   · khoá bí mật — nay là MỘT chuỗi chung của trường (`0058`), không app nào tự khai
 // Để đội ngoài điền bốn thứ đó là mời họ tự cấp quyền cho chính mình, và bằng một đường mà
 // người dán không đọc kỹ sẽ không thấy. Nên phiếu **cố ý hẹp hơn**, và `.strict()` ở dưới
 // biến "khai thừa" thành lỗi có tên chứ không thành một trường bị bỏ qua trong im lặng.
@@ -320,20 +298,10 @@ export const KHOA_NHA_TRUONG_QUYET: Record<string, string> = {
   enabled: "app bật hay tắt — app dán vào luôn TẮT cho tới khi có người có thẩm quyền bật",
   reviewDueOn: "ngày rà lại — nhà trường đặt, mặc định 6 tháng",
   ngayRaLai: "ngày rà lại — nhà trường đặt, mặc định 6 tháng",
-  webhookSecretEnv: "tên biến chứa chuỗi bí mật — Hub tự sinh theo mã app",
-  ssoClientSecretEnv: "tên biến chứa chuỗi bí mật — Hub tự sinh theo mã app",
+  webhookSecretEnv: "khoá riêng cho từng app — KHÔNG còn khái niệm đó, mọi app dùng chuỗi chung của trường",
+  ssoClientSecretEnv: "khoá riêng cho từng app — KHÔNG còn khái niệm đó, mọi app dùng chuỗi chung của trường",
   secret: "giá trị chuỗi bí mật — không bao giờ đi qua đường này",
 };
-
-/**
- * Tên biến môi trường theo quy ước của Hub: TIỀN_TỐ + mã app viết HOA.
- *
- * Sinh ở đây chứ không để đội làm app khai: tên biến gõ sai một ký tự cho ra `undefined`,
- * đúng cùng giá trị với "chưa đặt" — không có cách nào phân biệt hai ca đó từ trong hệ.
- */
-export function tenBienSecret(tienTo: "EMBED_WEBHOOK_SECRET" | "OIDC_CLIENT_SECRET", maApp: string): string {
-  return `${tienTo}_${maApp.trim().toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
-}
 
 /**
  * Phiếu → khai báo app. Hàm THUẦN, không đọc đồng hồ: `ngayRaLai` truyền vào.
@@ -357,28 +325,10 @@ export function phieuThanhKhaiBao(phieu: PhieuDauNoi, ngayRaLai: string): Create
     iframeUrl: phieu.nhung?.urlIframe ?? null,
     iconImageUrl: null,
     intro: phieu.moTaMotCau ?? null,
-    // LUÔN `null` từ 08/08/2026 — app dán từ phiếu dùng CHUỖI CHUNG của trường.
-    //
-    // Bản trước sinh sẵn `EMBED_WEBHOOK_SECRET_<MÃ>` cho mọi app. Sau khi chủ đầu tư chuyển
-    // sang một chuỗi dùng chung, dòng đó thành một cái bẫy: khai một tên biến RIÊNG nghĩa là
-    // "app này dùng khoá riêng", và `registry-db.ts` cố ý KHÔNG rơi về chuỗi chung khi khoá
-    // riêng chưa đặt. Đo được ngay lượt thử đầu: app vừa dán, đã cấp vai, đã bật, gửi bằng
-    // chuỗi chung → `{"error":"app_id/secret không hợp lệ"}`. Tức là phiếu tự tay dựng lại
-    // đúng cái bước mà cả gói này sinh ra để bỏ.
-    //
-    // Muốn một app có khoá riêng thì khai tay ở form Sửa cấu hình — đó là một quyết định
-    // hiếm và phải cố ý, không phải mặc định của mọi phiếu.
-    webhookSecretEnv: null,
     ssoEnabled: !!phieu.sso,
     ssoRedirectUris: phieu.sso?.redirectUris ?? [],
     ssoBackchannelLogoutUri: phieu.sso?.backchannelLogoutUri ?? null,
     ssoScopes: phieu.sso?.scopes ?? ["openid", "profile"],
-    // LUÔN `null` từ 08/08/2026 (*"gộp đi"*) — app dán từ phiếu dùng CHUỖI CHUNG cho cả
-    // đường đăng nhập, y như đường webhook ở trên. Cùng một cái bẫy, cùng một cách gỡ: khai
-    // một tên biến RIÊNG nghĩa là "app này dùng khoá riêng", và `clients.ts` cố ý KHÔNG rơi
-    // về chuỗi chung khi khoá riêng chưa đặt — nên sinh sẵn tên biến ở đây là dựng lại đúng
-    // bước "đặt biến trên máy chủ rồi khởi động lại" mà cả gói này sinh ra để bỏ.
-    ssoClientSecretEnv: null,
   };
 }
 

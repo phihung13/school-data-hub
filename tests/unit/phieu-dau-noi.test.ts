@@ -18,7 +18,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PhieuDauNoi, phieuThanhKhaiBao, tenBienSecret } from "@hub/core/contracts";
+import { PhieuDauNoi, phieuThanhKhaiBao } from "@hub/core/contracts";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 const banYeuCau = join(repoRoot, "apps", "hub", "server", "dau-noi", "ban-yeu-cau.md");
@@ -52,30 +52,24 @@ describe("phiếu đấu nối → khai báo app", () => {
     expect(kb.ssoEnabled).toBe(true);
     expect(kb.ssoScopes).toEqual(["openid", "profile", "hub_profile"]);
 
-    // `tenBienSecret` GIỮ LẠI dù phiếu không dùng nữa: nó vẫn là quy ước đặt tên cho ca một
-    // app CẦN khoá riêng (quản trị khai tay ở form Sửa cấu hình), và quy ước đó phải nằm ở
-    // một chỗ chứ không nằm trong đầu người gõ.
-    expect(tenBienSecret("OIDC_CLIENT_SECRET", "a-b-c")).toBe("OIDC_CLIENT_SECRET_A_B_C");
   });
 
-  it("dán phiếu KHÔNG BAO GIỜ khai khoá riêng — CẢ webhook LẪN đăng nhập dùng chuỗi chung", () => {
-    // Luật của chủ đầu tư 08/08/2026: một chuỗi webhook dùng chung cho mọi app, bỏ hẳn bước
-    // đặt biến môi trường cho từng app mới.
+  it("khai báo sinh ra KHÔNG có trường secret nào — khái niệm đó đã bị gỡ", () => {
+    // Cổng chặn một lỗi ĐÃ XẢY RA THẬT HAI LẦN trong ngày 08/08/2026, không phải một khẳng
+    // định lý thuyết. Bản trước sinh sẵn `EMBED_WEBHOOK_SECRET_<MÃ>` và
+    // `OIDC_CLIENT_SECRET_<MÃ>` cho mọi phiếu — mà khai một tên biến RIÊNG nghĩa là "app này
+    // dùng khoá riêng", và tầng nạp cố ý KHÔNG rơi về chuỗi chung khi khoá riêng chưa đặt.
+    // Đo trên bản đang chạy: app vừa dán, đã cấp vai, đã bật → webhook 401, đăng nhập
+    // invalid_client. Phiếu tự tay dựng lại đúng cái bước mà cả gói này sinh ra để bỏ.
     //
-    // Bài này là CỔNG CHẶN MỘT LỖI ĐÃ XẢY RA THẬT, không phải một khẳng định lý thuyết. Bản
-    // trước sinh sẵn `EMBED_WEBHOOK_SECRET_<MÃ>` cho mọi phiếu — mà khai một tên biến RIÊNG
-    // nghĩa là "app này dùng khoá riêng", và `registry-db.ts` cố ý KHÔNG rơi về chuỗi chung
-    // khi khoá riêng chưa đặt. Đo trên bản đang chạy 08/08: app vừa dán, đã cấp vai, đã bật,
-    // gửi bằng chuỗi chung → `{"error":"app_id/secret không hợp lệ"}`. Phiếu tự tay dựng lại
-    // đúng cái bước mà cả gói này sinh ra để bỏ.
+    // `0058` gỡ hẳn hai trường khỏi hợp đồng, nên bài này khẳng định bằng chính KHOÁ CỦA
+    // ĐỐI TƯỢNG: một trường secret quay lại là bài đỏ, dù nó mang tên gì.
     for (const phieu of [PHIEU_DU, { ...PHIEU_DU, webhook: { cacLoaiSuKien: ["a", "b"] } }]) {
-      const kb = phieuThanhKhaiBao(PhieuDauNoi.parse(phieu), "2027-02-07");
-      expect(kb.webhookSecretEnv, "phiếu vừa khai một khoá webhook RIÊNG — app sẽ nhận 401").toBeNull();
-      // Đăng nhập gộp cùng chuỗi từ 08/08/2026 (*"gộp đi"*, migration 0057). Cùng cái bẫy:
-      // khai tên biến riêng ⇒ `clients.ts` không rơi về chuỗi chung ⇒ `invalid_client`.
-      expect(kb.ssoClientSecretEnv, "phiếu vừa khai một khoá đăng nhập RIÊNG — RP sẽ invalid_client").toBeNull();
-      // Cửa vẫn phải MỞ: khoá đến từ chuỗi chung, không phải từ chỗ trống này.
-      expect(kb.allowedEventTypes.length).toBeGreaterThan(0);
+      const kb = phieuThanhKhaiBao(PhieuDauNoi.parse(phieu), "2027-02-07") as Record<string, unknown>;
+      const traiPhep = Object.keys(kb).filter((k) => /secret/i.test(k));
+      expect(traiPhep, "khai báo sinh ra một trường secret — khái niệm khoá riêng đã bị gỡ ở 0058").toEqual([]);
+      // Cửa vẫn phải MỞ: khoá đến từ chuỗi chung của trường, không từ một trường nào ở đây.
+      expect((kb.allowedEventTypes as string[]).length).toBeGreaterThan(0);
       expect(kb.ssoEnabled).toBe(true);
     }
   });
@@ -88,7 +82,7 @@ describe("phiếu đấu nối → khai báo app", () => {
     expect(kb.allowedRoles).toEqual([]);
   });
 
-  it("phiếu chỉ có nhúng thì KHÔNG bật SSO và KHÔNG khai biến secret nào", () => {
+  it("phiếu chỉ có nhúng thì KHÔNG bật SSO và không nhận loại sự kiện nào", () => {
     const phieu = PhieuDauNoi.parse({
       phienBan: 1,
       maApp: "thuc-don-tuan",
@@ -101,8 +95,6 @@ describe("phiếu đấu nối → khai báo app", () => {
     });
     const kb = phieuThanhKhaiBao(phieu, "2027-02-07");
     expect(kb.ssoEnabled).toBe(false);
-    expect(kb.ssoClientSecretEnv).toBeNull();
-    expect(kb.webhookSecretEnv).toBeNull();
     expect(kb.allowedEventTypes).toEqual([]);
   });
 });

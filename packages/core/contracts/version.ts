@@ -22,7 +22,7 @@ import { z } from "zod";
  * lẫn `tsc` của package lõi, mỗi nơi một luật về import JSON; thay vào đó
  * `tools/contracts-lint.mjs` kiểm hai giá trị bằng nhau và CI chặn merge khi lệch.
  */
-export const CONTRACTS_VERSION = "0.2.0";
+export const CONTRACTS_VERSION = "0.3.0";
 
 /**
  * Phiên bản contract cũ nhất mà server còn phục vụ. Tăng số này = chủ động cắt các client
@@ -91,11 +91,8 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 // tăng version → fail (expand–contract, `03-api.md` luật 6).
 // <contracts-surface>
 // {
-//   "version": "0.2.0",
+//   "version": "0.3.0",
 //   "schemas": {
-//     "tenBienSecret": [
-//       "#function#"
-//     ],
 //     "phieuThanhKhaiBao": [
 //       "#function#"
 //     ],
@@ -123,14 +120,10 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "owner",
 //       "reviewDueOn",
 //       "overdueDays",
-//       "webhookSecretEnv",
-//       "daCapSecret",
 //       "ssoEnabled",
 //       "ssoRedirectUris",
 //       "ssoBackchannelLogoutUri",
 //       "ssoScopes",
-//       "ssoClientSecretEnv",
-//       "daCapSsoSecret",
 //       "conThieu",
 //       "daNhan",
 //       "daNhan.eventType",
@@ -151,12 +144,10 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "iframeUrl",
 //       "iconImageUrl",
 //       "intro",
-//       "webhookSecretEnv",
 //       "ssoEnabled",
 //       "ssoRedirectUris",
 //       "ssoBackchannelLogoutUri",
-//       "ssoScopes",
-//       "ssoClientSecretEnv"
+//       "ssoScopes"
 //     ],
 //     "UpdateMiniAppInput": [
 //       "appId"
@@ -911,7 +902,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "#type#"
 //     ],
 //     "CONTRACTS_VERSION": [
-//       "#expr#\"0.2.0\""
+//       "#expr#\"0.3.0\""
 //     ],
 //     "MIN_SUPPORTED_CONTRACTS_VERSION": [
 //       "#expr#\"0.1.0\""

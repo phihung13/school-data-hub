@@ -997,6 +997,30 @@ Nới đúng MỘT vế của `embedded_apps_sso_du_bo`: bỏ `sso_client_secret
 
 **Toàn bộ pgTAP sau đợt M: 1.043 assertion / 56 file**, khớp mốc.
 
+## Đợt N (`0058`, 08/08/2026) — không còn khoá riêng cho app nào
+
+Xoá hai cột `webhook_secret_env` và `sso_client_secret_env` khỏi `core.embedded_apps`. Chủ đầu tư: *"thì bạn cứ yêu cầu app theo khoá của bạn"*.
+
+**Vì sao xoá cột chứ không chỉ "thôi dùng".** Đường rẻ hơn là để hai cột nằm im và tầng nạp thôi đọc chúng. Không làm, vì đó đúng là thứ `0052` đã viết ra một lời cảnh báo cho chính nó, ở chỗ giải thích vì sao rổ Đỏ không có mặt trong CHECK: *"để lộ ra một trạng thái hợp lệ trên giấy — và mọi thứ hợp lệ trên giấy rồi sẽ có người thử."*
+
+Một cột còn tồn tại nghĩa là còn khai được. Và khái niệm đó **đã cắn hai lần trong cùng một buổi**: phiếu dán tự sinh sẵn tên biến riêng cho mọi app, mà tầng nạp **cố ý không** rơi về chuỗi chung khi khoá riêng chưa đặt — nên mọi app mới nhận **401** và **invalid_client**, hai lần, vì đúng một dòng sinh tên biến.
+
+**Cái không rơi về chuỗi chung là CÓ CHỦ Ý và vẫn đúng:** nếu rơi thì một app được cấp khoá mạnh riêng vẫn chạy bằng chuỗi ai cũng đoán được, không tín hiệu nào. Nên đường sửa không phải là nới nó, mà là bỏ hẳn cái khái niệm đã sinh ra tình huống đó.
+
+| Mất | Không mất |
+|---|---|
+| Xoay khoá cho MỘT app mà không đụng app khác — từ nay xoay là xoay cho tất cả, đúng hệ quả đã nhận khi quyết dùng chung | **Thu hồi một app vẫn nguyên vẹn và vẫn nhanh hơn**: công tắc `enabled` cắt CẢ BA đường trong ≤10 giây, không chạm máy chủ, không đụng app nào khác. Khoá riêng chưa bao giờ là công cụ thu hồi thật — nó chỉ trông giống thế |
+
+**Một cái bẫy đã sập ngay lượt chạy đầu, ghi lại:** `create or replace view` **không bỏ bớt cột được** (`cannot drop columns from view`). Phải `drop view` rồi `create` — và `drop view` xoá luôn quyền đã cấp, nên câu `grant select … to authenticated` sau đó là bắt buộc chứ không phải chép cho đủ. Thiếu nó thì "bỏ khoá riêng" hoá ra "mọi app mất đăng nhập".
+
+**Kiểm chứng.** `0058_khong_con_khoa_rieng_test.sql` — **9 assertion**, hỏi hai câu: (A) khái niệm khoá riêng có THẬT SỰ biến mất không, kể cả với người vào bằng psql — và secret THẬT thì vẫn chưa bao giờ có mặt, lời hứa gốc của `0052` không được nới kèm theo lần dọn này; (B) cái KHÔNG được mất theo — Factory vẫn là RP, **vẫn có mặt trong `core.v_oidc_clients`**, và ràng buộc còn lại (`sso_enabled` đòi redirect_uri) vẫn chặn. Câu B quan trọng ngang câu A vì view từng SELECT đúng cột vừa xoá.
+
+Ba phép kiểm ở `0052`/`0055` đổi theo và **ghi rõ là bị supersede**, không sửa lặng. Bài test của `0057` gộp vào đây: nó nói về một cột mà `0058` vừa xoá, nên giữ riêng là giữ một bài đo một thứ không còn tồn tại.
+
+**Hợp đồng `@hub/core/contracts` lên 0.3.0** — có mục `Removed` thì phải tăng phiên bản, và `tools/contracts-lint.mjs` đã chặn đúng một lần trước khi tôi tăng. Sáu field bị gỡ đều sinh trong hai ngày 07–08/08 và chưa từng qua một bản phát hành nào, nên không đi expand–contract; lý do nêu tường minh trong chính mục đó.
+
+**Toàn bộ pgTAP sau đợt N: 1.041 assertion / 56 file**, khớp mốc.
+
 ## Quy tắc migration (§2)
 
 - Mọi thay đổi qua file trong `packages/core/db/migrations/`, đặt tên `NNNN_mo_ta.sql`. **Số phải duy nhất** — `tools/schema-lint.mjs` chặn trùng số từ 31/07/2026, sau khi trùng số xảy ra thật trong một phiên có nhiều agent làm song song (hai file cùng mang `0030`). Trước khi đặt tên file, `ls` thư mục migration một lần: "số trống" ghi trong một bản giao việc có thể đã bị lấp trong lúc bạn đọc nó.

@@ -50,7 +50,6 @@ interface Dong {
   iframe_url: string | null;
   icon_image_url: string | null;
   intro: string | null;
-  webhook_secret_env: string | null;
 }
 
 let dem: { luc: number; apps: EmbedAppConfig[] } | null = null;
@@ -87,13 +86,15 @@ export function xoaDem(): void {
  *   · KHÔNG đọc được gì — cổng này chỉ ghi, phản hồi chỉ có một mã trạng thái.
  *   · KHÔNG gắn được vào em nào — alias là chuỗi ngẫu nhiên 32 ký tự trong `id_mappings`,
  *     không đoán ra; alias sai thì `promote()` đẩy vào hàng đợi lỗi (0056).
- *   · KHÔNG chạm được tới đăng nhập — `OIDC_CLIENT_SECRET_*` vẫn riêng từng app, xem dưới.
+ *   · KHÔNG tự chế được token đăng nhập — chuỗi này dùng cho CẢ đường đăng nhập từ 08/08
+ *     (*"gộp đi"*, migration 0057), nhưng PKCE bắt buộc và `redirect_uri` khớp tuyệt đối
+ *     vẫn gác, và cả hai không đụng tới `client_secret`.
  * Nên thiệt hại là rác phải dọn, không phải lộ dữ liệu. Chấp nhận được khi kho còn 109 em
  * bịa tên; PHẢI đổi sang chuỗi không đoán được trước ngày nạp danh sách thật (nợ #65).
  *
- * SSO KHÔNG dùng chuỗi này. `client_secret` của OIDC canh đường ĐĂNG NHẬP — nó quyết định
- * ai được nhận token đại diện một người dùng thật, chứ không phải ai được ghi thêm một dòng.
- * Hai thứ khác hạng rủi ro nên không gộp; mỗi app vẫn giữ khoá đăng nhập riêng.
+ * KHÔNG CÒN KHOÁ RIÊNG cho từng app (0058, *"thì bạn cứ yêu cầu app theo khoá của bạn"*).
+ * Hai cột `webhook_secret_env`/`sso_client_secret_env` đã bị xoá khỏi bảng — một trường
+ * còn tồn tại là một trường còn khai được, và ngày có người khai là ngày nó hỏng câm.
  */
 const SECRET_CHUNG_MAC_DINH = "vietanh2026";
 
@@ -103,30 +104,18 @@ function secretChung(): string {
 }
 
 function doiHang(r: Dong): EmbedAppConfig {
-  // Secret KHÔNG nằm trong database (xem đầu 0052). Bảng chỉ nói tên biến; giá trị lấy từ
-  // môi trường tại đây.
+  // Secret KHÔNG nằm trong database (xem đầu 0052) — và từ 0058 thì cả TÊN biến cũng không.
   //
-  // Hai đường, và ranh giới là LỜI KHAI chứ không phải giá trị:
-  //   · App KHÔNG khai biến riêng  → dùng chuỗi chung. Đây là đường mặc định, mọi app mới.
-  //   · App CÓ khai biến riêng     → BẮT BUỘC dùng đúng biến đó. Khai mà chưa đặt giá trị
-  //                                   thì cổng ĐÓNG (undefined), không lặng lẽ rơi về chuỗi
-  //                                   chung.
-  //
-  // Vế thứ hai quan trọng hơn nó trông. Rơi về chuỗi chung khi biến riêng chưa đặt nghĩa là:
-  // một app được khai khoá riêng — thường vì nó cần mạnh hơn hoặc cần thu hồi riêng — vẫn
-  // chạy ngon lành bằng chuỗi ai cũng đoán được, và KHÔNG có tín hiệu nào cho biết. Đó là
-  // hạ cấp bảo mật trong im lặng, đúng loại lỗi cả kho này tồn tại để chặn.
+  // MỌI app dùng chuỗi chung — không còn nhánh nào khác (0058, chủ đầu tư: *"thì bạn cứ
+  // yêu cầu app theo khoá của bạn"*). Hai cột `webhook_secret_env`/`sso_client_secret_env`
+  // đã bị xoá khỏi bảng, nên ở đây không còn gì để tra và không còn ca nào để phân biệt.
   //
   // KHÔNG bao giờ rơi về chuỗi rỗng: `"" === ""` là true, và đó đúng là lỗ hổng đã có thật
-  // hồi 31/07/2026 (gửi header `x-embed-secret:` rỗng là qua được).
-  const rieng = r.webhook_secret_env ? process.env[r.webhook_secret_env] : undefined;
+  // hồi 31/07/2026 (gửi header `x-embed-secret:` rỗng là qua được). `secretChung()` luôn
+  // trả một chuỗi khác rỗng nên nhánh đó không tồn tại nữa.
   return {
     appId: r.app_id,
-    webhookSecret: r.webhook_secret_env
-      ? rieng && rieng.length > 0
-        ? rieng
-        : undefined // khai khoá riêng mà chưa đặt ⇒ đóng cổng, KHÔNG rơi về chuỗi chung
-      : secretChung(),
+    webhookSecret: secretChung(),
     basket: r.basket as EmbedAppConfig["basket"],
     allowedEventTypes: r.allowed_event_types,
     allowedRoles: r.allowed_roles as HubRole[],
@@ -159,7 +148,7 @@ export async function napApps(): Promise<EmbedAppConfig[]> {
   const rows = await withSystemContext(async (client) => {
     const { rows } = await client.query<Dong>(
       `select app_id, display_name, basket, allowed_roles, allowed_event_types,
-              origin, iframe_url, icon_image_url, intro, webhook_secret_env
+              origin, iframe_url, icon_image_url, intro
          from core.embedded_apps
         where enabled
         order by display_name`,

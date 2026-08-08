@@ -16,12 +16,12 @@
 // đường trong ≤10 giây, không cần deploy.
 //
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECRET VẪN KHÔNG NẰM TRONG DATABASE
+// SECRET KHÔNG NẰM TRONG DATABASE, VÀ TỪ 0058 CẢ TÊN BIẾN CŨNG KHÔNG
 // ═══════════════════════════════════════════════════════════════════════════════
-// Bảng giữ TÊN biến (`sso_client_secret_env`); giá trị đọc từ `process.env` tại đây, đúng
-// khuôn `webhook_secret_env` của migration 0052. Biến chưa đặt ⇒ client KHÔNG được nạp —
-// không rơi về chuỗi rỗng, không nạp "một client không có secret". Kèm một dòng log to,
-// vì đây là ca người khai app tin rằng mình đã xong.
+// Mọi app dùng MỘT chuỗi chung của trường, đọc từ `EMBED_WEBHOOK_SECRET_CHUNG` — cho cả
+// webhook lẫn đăng nhập (0057), và không app nào có khoá riêng (0058). Hai cột giữ tên biến
+// đã bị xoá khỏi bảng: một trường còn tồn tại là một trường còn khai được, và ngày có người
+// khai mà quên đặt giá trị là ngày cổng đóng câm — đã cắn hai lần trong ngày 08/08.
 import { withSystemContext } from "@hub/core/db";
 
 export interface OidcClientConfig {
@@ -31,9 +31,9 @@ export interface OidcClientConfig {
   backchannel_logout_uri?: string;
   scopes: string[];
   /**
-   * TÊN biến môi trường chứa secret. Cần ở đây (chứ không suy từ `client_id`) vì cửa sổ
-   * xoay khoá đọc `<tên biến>_PREVIOUS`, và từ 0055 tên biến do người khai app đặt chứ
-   * không còn là một quy ước viết trong code.
+   * TÊN biến môi trường chứa secret — nay LUÔN là `EMBED_WEBHOOK_SECRET_CHUNG` (0058).
+   * Giữ lại trường này chứ không viết chết chuỗi đó vào `loadPreviousSecretWindows`: cửa sổ
+   * xoay khoá đọc `<tên biến>_PREVIOUS`, và client chỉ-dev vẫn có tên biến riêng của nó.
    */
   secret_env: string;
 }
@@ -133,7 +133,6 @@ interface Dong {
   redirect_uris: string[];
   backchannel_logout_uri: string | null;
   scopes: string[];
-  client_secret_env: string | null;
   origin: string | null;
 }
 
@@ -185,47 +184,19 @@ function secretChung(): string {
   return v.length > 0 ? v : SECRET_CHUNG_MAC_DINH;
 }
 
-function doiHang(r: Dong): OidcClientConfig | null {
-  // Hai đường, ranh giới là LỜI KHAI chứ không phải giá trị — chép đúng ngữ nghĩa của
-  // `server/embed/registry-db.ts` để hai cửa của cùng một hệ không hành xử khác nhau:
-  //   · KHÔNG khai biến riêng → chuỗi chung. Đường mặc định, mọi app mới.
-  //   · CÓ khai biến riêng    → BẮT BUỘC đúng biến đó; chưa đặt thì KHÔNG nạp client.
-  // Vế hai giữ cho một app được cấp khoá riêng (vì cần mạnh hơn, hoặc cần thu hồi riêng)
-  // không lặng lẽ tụt xuống chạy bằng chuỗi ai cũng đoán được.
-  if (!r.client_secret_env) {
-    return {
-      client_id: r.client_id,
-      client_secret: secretChung(),
-      redirect_uris: themUriCauNoi(r.redirect_uris, !!r.origin),
-      backchannel_logout_uri: r.backchannel_logout_uri ?? undefined,
-      scopes: r.scopes,
-      // Cửa sổ xoay khoá đọc `<tên biến>_PREVIOUS`. Với chuỗi chung, tên đó là
-      // `EMBED_WEBHOOK_SECRET_CHUNG_PREVIOUS` — một cửa sổ cho TẤT CẢ app cùng lúc, đúng
-      // hệ quả của việc dùng chung mà chủ đầu tư đã nhận khi quyết.
-      secret_env: "EMBED_WEBHOOK_SECRET_CHUNG",
-    };
-  }
-
-  const secret = process.env[r.client_secret_env];
-  if (!secret || secret.length === 0) {
-    // KHÔNG nạp, và nói to. Đây đúng là ca người khai app điền xong form, thấy mọi thứ hiện
-    // lên đẹp đẽ, rồi RP nhận `invalid_client` mà không ai nối được hai việc đó với nhau.
-    // Màn `/quan-tri/mini-app` hiện đúng câu này cạnh app, nhưng log là thứ người vận hành
-    // đọc lúc 11 giờ đêm.
-    console.error(
-      `[oidc] RP "${r.client_id}" KHÔNG được nạp: biến môi trường ${r.client_secret_env} chưa đặt trên máy chủ này. ` +
-        `Mọi lượt đăng nhập qua app đó sẽ nhận invalid_client.`,
-    );
-    return null;
-  }
-
+function doiHang(r: Dong): OidcClientConfig {
+  // MỌI app dùng chuỗi chung — không còn nhánh khoá riêng (0058). Cột `sso_client_secret_env`
+  // đã bị xoá khỏi bảng; giữ lại một nhánh cho nó ở đây là giữ một trạng thái không biểu diễn
+  // được nữa. Hàm nay KHÔNG trả `null` được: không còn ca "chưa đặt secret" nào để loại.
   return {
     client_id: r.client_id,
-    client_secret: secret,
+    client_secret: secretChung(),
     redirect_uris: themUriCauNoi(r.redirect_uris, !!r.origin),
     backchannel_logout_uri: r.backchannel_logout_uri ?? undefined,
     scopes: r.scopes,
-    secret_env: r.client_secret_env,
+    // Cửa sổ xoay khoá đọc `<tên biến>_PREVIOUS` = `EMBED_WEBHOOK_SECRET_CHUNG_PREVIOUS` —
+    // một cửa sổ cho TẤT CẢ app cùng lúc, đúng hệ quả của việc dùng chung.
+    secret_env: "EMBED_WEBHOOK_SECRET_CHUNG",
   };
 }
 
@@ -242,14 +213,14 @@ export async function napOidcClients(): Promise<OidcClientConfig[]> {
 
   const rows = await withSystemContext(async (client) => {
     const { rows } = await client.query<Dong>(
-      `select client_id, redirect_uris, backchannel_logout_uri, scopes, client_secret_env, origin
+      `select client_id, redirect_uris, backchannel_logout_uri, scopes, origin
          from core.v_oidc_clients
         order by client_id`,
     );
     return rows;
   });
 
-  const clients = [...DEV_ONLY_CLIENTS, ...rows.map(doiHang).filter((c): c is OidcClientConfig => c !== null)];
+  const clients = [...DEV_ONLY_CLIENTS, ...rows.map(doiHang)];
   dem = { luc: now, clients };
   return clients;
 }

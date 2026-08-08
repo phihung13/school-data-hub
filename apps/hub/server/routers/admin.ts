@@ -56,12 +56,10 @@ interface Dong {
   owner: string;
   review_due_on: string;
   overdue_days: number;
-  webhook_secret_env: string | null;
   sso_enabled: boolean;
   sso_redirect_uris: string[];
   sso_backchannel_logout_uri: string | null;
   sso_scopes: string[];
-  sso_client_secret_env: string | null;
   updated_at: string;
 }
 
@@ -78,9 +76,7 @@ const CAU_TRUY_VAN = `
          a.origin, a.iframe_url, a.icon_image_url, a.intro, a.owner,
          to_char(a.review_due_on, 'YYYY-MM-DD') as review_due_on,
          (current_date - a.review_due_on)::int  as overdue_days,
-         a.webhook_secret_env,
-         a.sso_enabled, a.sso_redirect_uris, a.sso_backchannel_logout_uri,
-         a.sso_scopes, a.sso_client_secret_env,
+         a.sso_enabled, a.sso_redirect_uris, a.sso_backchannel_logout_uri, a.sso_scopes,
          to_char(a.updated_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as updated_at
     from core.embedded_apps a`;
 
@@ -92,24 +88,7 @@ interface DongDaNhan {
   lan_cuoi: string;
 }
 
-/**
- * Chuỗi webhook DÙNG CHUNG cho mọi app (quyết định chủ đầu tư 08/08/2026).
- * Lý lẽ, rủi ro và điều kiện đầy đủ ở đầu `server/embed/registry-db.ts` — chép giá trị mặc
- * định sang đây là tạo ra hai nguồn sự thật, nên chỉ đọc biến và so độ dài.
- */
-function coSecretChung(): boolean {
-  // Luôn có: `registry-db.ts` rơi về hằng số mặc định khi biến chưa đặt. Hàm này tồn tại để
-  // ngày ai đó bỏ mặc định đi thì màn quản trị đổi theo mà không phải sửa hai chỗ.
-  return true;
-}
-
 function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
-  const env = r.webhook_secret_env ? process.env[r.webhook_secret_env] : undefined;
-  // Cùng ranh giới với `registry-db.ts`: app khai khoá RIÊNG thì phải có đúng khoá đó; app
-  // không khai thì dùng chuỗi chung. Hai chỗ này phải nói cùng một câu, nếu không màn hình
-  // sẽ báo "sẵn sàng" cho một app mà cổng đang đóng.
-  const coKhoaWebhook = r.webhook_secret_env ? !!env && env.length > 0 : coSecretChung();
-  const ssoEnv = r.sso_client_secret_env ? process.env[r.sso_client_secret_env] : undefined;
   return {
     appId: r.app_id,
     displayName: r.display_name,
@@ -124,40 +103,18 @@ function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
     owner: r.owner,
     reviewDueOn: r.review_due_on,
     overdueDays: r.overdue_days,
-    webhookSecretEnv: r.webhook_secret_env,
-    // `daCapSecret` nay nghĩa là "app này CÓ khoá webhook dùng được", không còn là "biến
-    // riêng của app đã đặt chưa" — vì từ 08/08/2026 mọi app rơi về một chuỗi dùng chung.
-    // `webhookSecretEnv === null` là dấu để màn hình biết app đang dùng chuỗi chung hay
-    // khoá riêng; đó mới là thứ phân biệt hai ca.
-    daCapSecret: coKhoaWebhook,
     ssoEnabled: r.sso_enabled,
     ssoRedirectUris: r.sso_redirect_uris,
     ssoBackchannelLogoutUri: r.sso_backchannel_logout_uri,
     ssoScopes: r.sso_scopes,
-    ssoClientSecretEnv: r.sso_client_secret_env,
-    // Cùng phép tính, cùng lý do với `daCapSecret` ngay trên — bảng chỉ biết TÊN biến.
-    // Cùng ranh giới với `oidc/clients.ts`: khai khoá riêng thì phải có đúng khoá đó;
-    // không khai thì chuỗi chung luôn có sẵn.
-    daCapSsoSecret: r.sso_client_secret_env ? !!ssoEnv && ssoEnv.length > 0 : coSecretChung(),
     // Xem chú thích ở `MiniAppRow.conThieu`. Thứ tự CÓ NGHĨA: hai việc làm được ngay trên
     // màn hình đứng trước, việc phải nhờ người vận hành chạm vào máy chủ đứng cuối.
     conThieu: [
       r.allowed_roles.length === 0 ? "Chưa cấp cho vai nào — không ai mở được app" : null,
       !r.enabled ? "Đang tắt — bấm “Bật app”" : null,
-      // KHÔNG còn dòng "đặt khoá webhook trên máy chủ" — từ 08/08/2026 mọi app dùng một
-      // chuỗi chung nên khoá luôn có sẵn. Giữ lại một dòng bảo người ta đi làm việc không
-      // còn tồn tại là đúng cái lỗi vừa sửa ở bản đấu nối sáng nay.
-      // Khai một biến RIÊNG rồi bỏ trống thì vẫn phải nhắc: lúc đó app dùng khoá riêng, và
-      // khoá riêng chưa đặt nghĩa là 401 thật.
-      r.webhook_secret_env && !(env && env.length > 0)
-        ? `Đặt ${r.webhook_secret_env} trên máy chủ rồi khởi động lại — app này khai khoá RIÊNG, chưa đặt thì webhook trả 401`
-        : null,
-      // App KHÔNG khai khoá riêng thì dùng chuỗi chung — không còn việc gì phải làm.
-      // Chỉ app cố ý khai khoá riêng mà bỏ trống mới cần nhắc, và phải nói rõ vì sao nó
-      // không rơi về chuỗi chung, nếu không câu nhắc này đọc thành một lỗi của hệ.
-      r.sso_enabled && r.sso_client_secret_env && !(ssoEnv && ssoEnv.length > 0)
-        ? `Đặt ${r.sso_client_secret_env} trên máy chủ rồi khởi động lại — app này khai khoá RIÊNG, chưa đặt thì đăng nhập trả invalid_client`
-        : null,
+      // KHÔNG còn dòng nào về secret (0058): mọi app dùng chuỗi chung của trường, nên
+      // không có việc gì để làm trên máy chủ. Giữ lại một dòng bảo người ta đi đặt một biến
+      // không còn tồn tại là đúng cái lỗi đã sửa ở bản đấu nối — đừng dựng lại.
     ].filter((c): c is string => c !== null),
     // Lọc ở đây thay vì một truy vấn con cho mỗi app: danh sách app ngắn (chục dòng), và
     // một truy vấn phụ cho mỗi dòng là mẫu N+1 trên đúng màn mà quản trị mở nhiều nhất.
@@ -240,14 +197,14 @@ export const adminRouter = router({
           `insert into core.embedded_apps
              (app_id, display_name, basket, owner, review_due_on, allowed_roles,
               allowed_event_types, origin, iframe_url, icon_image_url, intro,
-              webhook_secret_env, sso_enabled, sso_redirect_uris,
-              sso_backchannel_logout_uri, sso_scopes, sso_client_secret_env, updated_by)
+              sso_enabled, sso_redirect_uris,
+              sso_backchannel_logout_uri, sso_scopes, updated_by)
            -- core.current_user_id() chứ không phải một tham số: đây là CSDL tự nói ai
            -- đang ghi, dựa trên chính bối cảnh RLS của phiên. Truyền id từ tầng ứng dụng
            -- là để tầng ứng dụng tự khai — và cột nhật ký khai được thì nó không còn là
            -- nhật ký nữa.
-           values ($1,$2,$3,$4,$5::date,$6::text[],$7::text[],$8,$9,$10,$11,$12,
-                   $13,$14::text[],$15,$16::text[],$17, core.current_user_id())
+           values ($1,$2,$3,$4,$5::date,$6::text[],$7::text[],$8,$9,$10,$11,
+                   $12,$13::text[],$14,$15::text[], core.current_user_id())
            on conflict (app_id) do nothing`,
           [
             input.appId,
@@ -261,12 +218,10 @@ export const adminRouter = router({
             input.iframeUrl ?? null,
             input.iconImageUrl ?? null,
             input.intro ?? null,
-            input.webhookSecretEnv ?? null,
             input.ssoEnabled,
             input.ssoRedirectUris,
             input.ssoBackchannelLogoutUri ?? null,
             input.ssoScopes,
-            input.ssoClientSecretEnv ?? null,
           ],
         );
       });
@@ -292,12 +247,10 @@ export const adminRouter = router({
           iframeUrl: "iframe_url",
           iconImageUrl: "icon_image_url",
           intro: "intro",
-          webhookSecretEnv: "webhook_secret_env",
           ssoEnabled: "sso_enabled",
           ssoRedirectUris: "sso_redirect_uris",
           ssoBackchannelLogoutUri: "sso_backchannel_logout_uri",
           ssoScopes: "sso_scopes",
-          ssoClientSecretEnv: "sso_client_secret_env",
         };
         const dat: string[] = [];
         const tham: unknown[] = [appId];

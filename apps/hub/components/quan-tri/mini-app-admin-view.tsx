@@ -174,13 +174,6 @@ function TheApp({
   const quaHan = app.overdueDays > 0;
   const sapHan = !quaHan && app.overdueDays >= -30;
 
-  // Biến đã KHAI TÊN mà CHƯA CÓ GIÁ TRỊ trên máy chủ này. Khai tên nhưng chưa đặt là trạng
-  // thái duy nhất màn hình bắt được mà người khai app không tự thấy — biến chưa khai tên thì
-  // đã có dòng "Chưa khai biến môi trường" nói hộ, và biến đã đặt thì không có gì phải làm.
-  const thieuBien = [
-    app.webhookSecretEnv && !app.daCapSecret ? app.webhookSecretEnv : null,
-    app.ssoEnabled && app.ssoClientSecretEnv && !app.daCapSsoSecret ? app.ssoClientSecretEnv : null,
-  ].filter((b): b is string => !!b);
 
   return (
     // TRẠNG THÁI TẮT NÓI BẰNG NỀN, KHÔNG BẰNG ĐỘ MỜ (sửa 05/08/2026).
@@ -269,29 +262,11 @@ function TheApp({
             <span className="text-caption">Không có UI nhúng — app chỉ đi đường webhook</span>
           )}
         </Muc>
-        <Muc nhan="Secret webhook">
-          {/* Ba ca từ 08/08/2026, không còn hai. `webhookSecretEnv === null` nay nghĩa là
-              "dùng chuỗi chung của trường" chứ không còn nghĩa "chưa khai" — mọi app đều có
-              khoá dùng được. Ca thứ ba (khai khoá riêng mà chưa đặt) vẫn phải nói to. */}
-          {!app.webhookSecretEnv ? (
-            <span className="font-bold text-successText">Chuỗi chung của trường</span>
-          ) : app.daCapSecret ? (
-            <span className="font-bold text-[#126B45]">
-              Đã cấp — <span className="font-mono text-[11.5px]">{app.webhookSecretEnv}</span>
-            </span>
-          ) : (
-            // Đây là ca mà cả màn hình này sinh ra để bắt: tên biến có, giá trị không.
-            // Không nói ra thì quản trị tin webhook đã sẵn sàng và app nhận 401 mãi mãi.
-            // RÚT NGẮN 06/08/2026: bỏ khung "Khai X nhưng biến này…". Tên biến đứng
-            // trước, hậu quả đứng sau — hai mảnh, không phải một câu kể.
-            <span className="flex items-center gap-1 font-bold text-dangerText">
-              <span className="msr text-[15px]" aria-hidden>
-                error
-              </span>
-              <span className="font-mono text-[11.5px]">{app.webhookSecretEnv}</span> chưa đặt — webhook 401 (app
-              khai khoá RIÊNG nên không rơi về chuỗi chung)
-            </span>
-          )}
+        <Muc nhan="Chuỗi bí mật">
+          {/* MỘT ca duy nhất từ 0058 — không còn khoá riêng cho app nào, nên không còn gì
+              để phân biệt. Giữ hàng này chứ không xoá: người quản trị vẫn cần biết app lấy
+              khoá ở đâu khi đọc cho đội làm app nghe. */}
+          <span className="font-bold text-successText">Chuỗi chung của trường</span>
         </Muc>
         {/* SSO đứng NGANG HÀNG với webhook, không nằm sau một nút "chi tiết" (07/08/2026).
             Từ ADR-032, "app này có đăng nhập được bằng tài khoản Hub không" là một trong ba
@@ -300,13 +275,6 @@ function TheApp({
         <Muc nhan="Đăng nhập (SSO)">
           {!app.ssoEnabled ? (
             <span className="text-caption">Không dùng — app không đăng nhập bằng tài khoản Hub</span>
-          ) : !app.daCapSsoSecret ? (
-            <span className="flex items-center gap-1 font-bold text-dangerText">
-              <span className="msr text-[15px]" aria-hidden>
-                error
-              </span>
-              <span className="font-mono text-[11.5px]">{app.ssoClientSecretEnv}</span> chưa đặt — invalid_client
-            </span>
           ) : (
             <span className="font-bold text-successText">
               Bật — client_id <span className="font-mono text-[11.5px]">{app.appId}</span>
@@ -408,11 +376,6 @@ function TheApp({
               <li key={c}>{c}</li>
             ))}
           </ol>
-          {thieuBien.length > 0 && (
-            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-white px-2.5 py-2 font-mono text-[11.5px] font-semibold text-ink">
-              {thieuBien.map((b) => `${b}=<sinh ngẫu nhiên 32 byte>`).join("\n")}
-            </pre>
-          )}
         </div>
       ) : (
         // Thể "xong" cũng phải nói ra. Không có nó thì "đã sẵn sàng" và "màn hình chưa kịp
@@ -486,18 +449,6 @@ function tachDong(s: string): string[] {
     .filter((d) => d.length > 0);
 }
 
-/**
- * Tên biến môi trường theo đúng quy ước đang dùng cho Factory: TIỀN_TỐ + mã app viết HOA.
- *
- * Điền sẵn không phải để tiết kiệm gõ. Tên biến gõ sai một ký tự là một app khai xong, hiện
- * lên đẹp đẽ trên màn này, và nhận `invalid_client` / `401` mãi mãi — vì `process.env[tên
- * sai]` là `undefined`, đúng cùng giá trị với "chưa đặt". Không có cách nào phân biệt hai ca
- * đó từ trong hệ.
- */
-function tenBien(tienTo: string, maApp: string): string {
-  return `${tienTo}_${maApp.trim().toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
-}
-
 const MOI_SCOPE: { ma: MiniAppScope; nhan: string }[] = [
   { ma: "openid", nhan: "openid — bắt buộc" },
   { ma: "profile", nhan: "profile — tên hiển thị" },
@@ -530,21 +481,15 @@ const MOI_SCOPE: { ma: MiniAppScope; nhan: string }[] = [
  * vòng đời: tạo được thì phải sửa được). Khối này lấp chỗ đó.
  */
 function KhoiWebhook({
-  appId,
   bat,
   setBat,
   loai,
   setLoai,
-  bien,
-  setBien,
 }: {
-  appId: string;
   bat: boolean;
   setBat: (v: boolean) => void;
   loai: string;
   setLoai: (v: string) => void;
-  bien: string;
-  setBien: (v: string) => void;
 }) {
   const coSao = tachDong(loai).includes("*");
   return (
@@ -583,21 +528,6 @@ function KhoiWebhook({
               rà. Khai đúng tên từng loại thì Hub trả lại 403 cho thứ ngoài danh sách.
             </p>
           )}
-          {/* KHÔNG điền sẵn, KHÔNG bắt buộc (đổi 08/08/2026). Mặc định app dùng CHUỖI CHUNG
-              của trường — bỏ trống ô này là xong, không phải đặt gì trên máy chủ.
-              Điền vào đây là một quyết định HIẾM và phải cố ý: nó có nghĩa "app này dùng
-              khoá riêng", và khi đó chuỗi chung KHÔNG còn mở cửa cho nó nữa. */}
-          <O
-            nhan="Khoá riêng cho app này (bỏ trống = dùng chuỗi chung của trường)"
-            goiY="Chỉ điền khi app cần khoá riêng. Điền rồi thì phải đặt biến đó trên máy chủ, không thì webhook 401."
-          >
-            <input
-              value={bien}
-              onChange={(e) => setBien(e.target.value.toUpperCase())}
-              placeholder="để trống"
-              className={`${O_INPUT} font-mono`}
-            />
-          </O>
         </div>
       )}
     </fieldset>
@@ -612,7 +542,6 @@ function KhoiWebhook({
  * đó chỉ tạo cảm giác form còn dở.
  */
 function KhoiSso({
-  appId,
   bat,
   setBat,
   uri,
@@ -621,10 +550,7 @@ function KhoiSso({
   setBcl,
   scope,
   setScope,
-  bien,
-  setBien,
 }: {
-  appId: string;
   bat: boolean;
   setBat: (v: boolean) => void;
   uri: string;
@@ -633,8 +559,6 @@ function KhoiSso({
   setBcl: (v: string) => void;
   scope: MiniAppScope[];
   setScope: (v: MiniAppScope[]) => void;
-  bien: string;
-  setBien: (v: string) => void;
 }) {
   return (
     <fieldset className="rounded-2xl border border-line bg-white p-3">
@@ -712,17 +636,6 @@ function KhoiSso({
               })}
             </div>
           </fieldset>
-          <O
-            nhan="Khoá riêng cho app này (bỏ trống = dùng chuỗi chung của trường)"
-            goiY="Chỉ điền khi app cần khoá riêng. Điền rồi thì phải đặt biến đó trên máy chủ, không thì đăng nhập trả invalid_client."
-          >
-            <input
-              value={bien}
-              onChange={(e) => setBien(e.target.value.toUpperCase())}
-              placeholder="để trống"
-              className={`${O_INPUT} font-mono`}
-            />
-          </O>
         </div>
       )}
     </fieldset>
@@ -742,7 +655,6 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
   // còn là dấu hiệu của "có webhook hay không".
   const [webhook, setWebhook] = useState(app.allowedEventTypes.length > 0);
   const [loaiSuKien, setLoaiSuKien] = useState(app.allowedEventTypes.join("\n"));
-  const [bienWebhook, setBienWebhook] = useState(app.webhookSecretEnv ?? "");
   const [sso, setSso] = useState(app.ssoEnabled);
   // Mỗi dòng một URI. Textarea chứ không phải một ô có dấu phẩy: URI đã dài sẵn, và một
   // danh sách ngăn bằng dấu phẩy thì không ai thấy được mình vừa dán thừa khoảng trắng vào
@@ -750,7 +662,6 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
   const [uri, setUri] = useState(app.ssoRedirectUris.join("\n"));
   const [bcl, setBcl] = useState(app.ssoBackchannelLogoutUri ?? "");
   const [scope, setScope] = useState<MiniAppScope[]>(app.ssoScopes as MiniAppScope[]);
-  const [bienSso, setBienSso] = useState(app.ssoClientSecretEnv ?? "");
 
   const sua = trpc.admin.miniApp.update.useMutation({ onSuccess: onXong });
 
@@ -766,15 +677,11 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
           reviewDueOn: ngayRa,
           allowedRoles: vai,
           intro: gioiThieu.trim() || null,
-          // Tắt webhook là DỌN CẢ HAI trường, không chỉ ẩn ô đi: để lại `allowedEventTypes`
-          // của một app không còn cửa webhook là để lại một giấy phép không ai thấy.
           allowedEventTypes: webhook ? tachDong(loaiSuKien) : [],
-          webhookSecretEnv: webhook ? bienWebhook.trim() || null : null,
           ssoEnabled: sso,
           ssoRedirectUris: tachDong(uri),
           ssoBackchannelLogoutUri: bcl.trim() || null,
           ssoScopes: scope,
-          ssoClientSecretEnv: bienSso.trim() || null,
         });
       }}
     >
@@ -854,29 +761,9 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
         )}
       </fieldset>
 
-      <KhoiWebhook
-        appId={app.appId}
-        bat={webhook}
-        setBat={setWebhook}
-        loai={loaiSuKien}
-        setLoai={setLoaiSuKien}
-        bien={bienWebhook}
-        setBien={setBienWebhook}
-      />
+      <KhoiWebhook bat={webhook} setBat={setWebhook} loai={loaiSuKien} setLoai={setLoaiSuKien} />
 
-      <KhoiSso
-        appId={app.appId}
-        bat={sso}
-        setBat={setSso}
-        uri={uri}
-        setUri={setUri}
-        bcl={bcl}
-        setBcl={setBcl}
-        scope={scope}
-        setScope={setScope}
-        bien={bienSso}
-        setBien={setBienSso}
-      />
+      <KhoiSso bat={sso} setBat={setSso} uri={uri} setUri={setUri} bcl={bcl} setBcl={setBcl} scope={scope} setScope={setScope} />
 
       {/* role="alert" + `dangerText` — cùng lý lẽ và cùng phép đo với khối lỗi ở TheApp. */}
       {sua.isError && (
@@ -931,7 +818,6 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
   const [ngayRa, setNgayRa] = useState("");
   const [origin, setOrigin] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
-  const [bienSecret, setBienSecret] = useState("");
   // MẶC ĐỊNH BẬT (08/08/2026). Luật của chủ đầu tư: *"tất cả mọi app phải đổ dữ liệu về"*.
   // Một luật mà mặc định của form đi ngược lại thì nó chỉ là một câu nói — người khai app
   // vội sẽ để nguyên mặc định, và mặc định phải là điều đúng. Tắt được, nhưng phải cố ý tắt.
@@ -941,7 +827,6 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
   const [uri, setUri] = useState("");
   const [bcl, setBcl] = useState("");
   const [scope, setScope] = useState<MiniAppScope[]>(["openid", "profile"]);
-  const [bienSso, setBienSso] = useState("");
 
   const them = trpc.admin.miniApp.create.useMutation({
     onSuccess: () => {
@@ -952,14 +837,12 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
       setNgayRa("");
       setOrigin("");
       setIframeUrl("");
-      setBienSecret("");
       setWebhook(true); // về đúng mặc định, không về "tắt" — xem lý lẽ ở khai báo state
       setLoaiSuKien("");
       setSso(false);
       setUri("");
       setBcl("");
       setScope(["openid", "profile"]);
-      setBienSso("");
       onXong();
     },
   });
@@ -1008,12 +891,10 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
           allowedEventTypes: webhook ? tachDong(loaiSuKien) : [],
           origin: origin.trim() || null,
           iframeUrl: iframeUrl.trim() || null,
-          webhookSecretEnv: webhook ? bienSecret.trim() || null : null,
           ssoEnabled: sso,
           ssoRedirectUris: tachDong(uri),
           ssoBackchannelLogoutUri: bcl.trim() || null,
           ssoScopes: scope,
-          ssoClientSecretEnv: bienSso.trim() || null,
         });
       }}
     >
@@ -1054,29 +935,9 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
           Bản cũ chỉ hỏi tên biến rồi gửi `allowedEventTypes: []` — tức là khai một app có
           cửa webhook mà cửa đó từ chối MỌI loại sự kiện. App im lặng không gửi được gì, và
           màn hình thì hiện một cảnh báo về secret, tức là chỉ sai chỗ. */}
-      <KhoiWebhook
-        appId={maApp.trim() || "tenapp"}
-        bat={webhook}
-        setBat={setWebhook}
-        loai={loaiSuKien}
-        setLoai={setLoaiSuKien}
-        bien={bienSecret}
-        setBien={setBienSecret}
-      />
+      <KhoiWebhook bat={webhook} setBat={setWebhook} loai={loaiSuKien} setLoai={setLoaiSuKien} />
 
-      <KhoiSso
-        appId={maApp.trim() || "tenapp"}
-        bat={sso}
-        setBat={setSso}
-        uri={uri}
-        setUri={setUri}
-        bcl={bcl}
-        setBcl={setBcl}
-        scope={scope}
-        setScope={setScope}
-        bien={bienSso}
-        setBien={setBienSso}
-      />
+      <KhoiSso bat={sso} setBat={setSso} uri={uri} setUri={setUri} bcl={bcl} setBcl={setBcl} scope={scope} setScope={setScope} />
 
       {/* role="alert" + `dangerText` — cùng lý lẽ và cùng phép đo với hai khối lỗi trên. */}
       {them.isError && (

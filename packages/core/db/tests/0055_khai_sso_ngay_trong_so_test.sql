@@ -18,7 +18,7 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
-select plan(40);
+select plan(37);
 select test_support.seed_basic();
 
 -- ---------------------------------------------------------------------------
@@ -29,8 +29,9 @@ select has_column('core', 'embedded_apps', 'sso_enabled', 'cột sso_enabled t�
 select has_column('core', 'embedded_apps', 'sso_redirect_uris', 'cột sso_redirect_uris tồn tại');
 select has_column('core', 'embedded_apps', 'sso_backchannel_logout_uri', 'cột sso_backchannel_logout_uri tồn tại');
 select has_column('core', 'embedded_apps', 'sso_scopes', 'cột sso_scopes tồn tại');
-select has_column('core', 'embedded_apps', 'sso_client_secret_env',
-  'cột giữ TÊN biến môi trường chứa secret OIDC');
+-- ĐỔI 08/08/2026 bởi `0058` — cùng lý lẽ với `webhook_secret_env` ở 0052.
+select hasnt_column('core', 'embedded_apps', 'sso_client_secret_env',
+  'KHÔNG còn cột tên biến secret riêng cho từng app (0058) — mọi app dùng chuỗi chung');
 
 -- Cùng phép kiểm, cùng lý lẽ với `hasnt_column('webhook_secret')` của 0052: một ngày có
 -- người thấy "tiện hơn nếu đổi được secret trên màn hình" thì bài này đỏ trước khi bản sao
@@ -64,9 +65,8 @@ select is(
 
 select throws_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
-                                    sso_enabled, sso_client_secret_env)
-    values ('sso-thieu-uri', 'Bật SSO không redirect', 'xanh', 'ai đó', current_date,
-            true, 'OIDC_CLIENT_SECRET_X')$$,
+                                    sso_enabled)
+    values ('sso-thieu-uri', 'Bật SSO không redirect', 'xanh', 'ai đó', current_date, true)$$,
   '23514', null,
   'bật SSO mà không redirect_uri thì bị chặn — RP sẽ nhận redirect_uri mismatch, một câu lỗi không chỉ về ô bỏ trống');
 
@@ -87,17 +87,12 @@ select lives_ok(
             true, array['https://a.vn/cb'])$$,
   'bật SSO mà KHÔNG khai tên biến secret thì khai được — NULL nghĩa là dùng chuỗi chung (0057)');
 
-select is(
-  (select sso_client_secret_env from core.embedded_apps where app_id = 'sso-thieu-secret'),
-  null,
-  'và cột đó để trống, đúng dấu hiệu "app này dùng chuỗi chung"');
-
 select lives_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
-                                    sso_enabled, sso_redirect_uris, sso_client_secret_env)
+                                    sso_enabled, sso_redirect_uris)
     values ('sso-du-bo', 'Bật SSO đủ bộ', 'xanh', 'ai đó', current_date + 200,
-            true, array['https://a.vn/cb'], 'OIDC_CLIENT_SECRET_A')$$,
-  'đủ redirect_uri và tên biến secret thì khai được');
+            true, array['https://a.vn/cb'])$$,
+  'đủ redirect_uri thì khai được — khoá lấy từ chuỗi chung của trường (0058)');
 
 select throws_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on, sso_redirect_uris)
@@ -127,32 +122,26 @@ select throws_ok(
   'backchannel_logout_uri http:// bị chặn — logout_token là một JWT ký, không gửi qua đường trần');
 
 select throws_ok(
-  $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on, sso_client_secret_env)
-    values ('env-thuong', 'Tên biến chữ thường', 'xanh', 'ai đó', current_date, 'oidc_secret_x')$$,
-  '23514', null,
-  'tên biến môi trường phải viết HOA — khớp đúng khuôn của webhook_secret_env');
-
-select throws_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
-                                    sso_enabled, sso_redirect_uris, sso_client_secret_env, sso_scopes)
+                                    sso_enabled, sso_redirect_uris, sso_scopes)
     values ('scope-la', 'Scope lạ', 'xanh', 'ai đó', current_date,
-            true, array['https://a.vn/cb'], 'OIDC_CLIENT_SECRET_B', array['openid','hub_profil'])$$,
+            true, array['https://a.vn/cb'], array['openid','hub_profil'])$$,
   '23514', null,
   'scope provider không biết bị chặn — oidc-provider im lặng bỏ qua nó, RP đăng nhập được mà không bao giờ nhận vai');
 
 select throws_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
-                                    sso_enabled, sso_redirect_uris, sso_client_secret_env, sso_scopes)
+                                    sso_enabled, sso_redirect_uris, sso_scopes)
     values ('scope-thieu-openid', 'Thiếu openid', 'xanh', 'ai đó', current_date,
-            true, array['https://a.vn/cb'], 'OIDC_CLIENT_SECRET_C', array['profile'])$$,
+            true, array['https://a.vn/cb'], array['profile'])$$,
   '23514', null,
   'thiếu scope openid bị chặn — không có nó thì đây là OAuth2 trần, không có id_token');
 
 select lives_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
-                                    sso_enabled, sso_redirect_uris, sso_client_secret_env, sso_scopes)
+                                    sso_enabled, sso_redirect_uris, sso_scopes)
     values ('scope-du', 'Scope đủ bốn', 'xanh', 'ai đó', current_date + 200,
-            true, array['https://a.vn/cb'], 'OIDC_CLIENT_SECRET_D',
+            true, array['https://a.vn/cb'],
             array['openid','profile','hub_profile','offline_access'])$$,
   'bốn scope provider công bố thì nhận hết');
 
@@ -173,9 +162,9 @@ select is(core.moi_uri_la_https(array['https://a.vn/cb', 'ftp://a.vn/cb']), fals
 
 -- Dựng loại thứ hai: có SSO đủ bộ nhưng app ĐANG TẮT (đúng tình huống vừa thu hồi).
 insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
-                                enabled, sso_enabled, sso_redirect_uris, sso_client_secret_env)
+                                enabled, sso_enabled, sso_redirect_uris)
 values ('sso-app-da-tat', 'App có SSO nhưng đã tắt', 'xanh', 'đội thử', current_date + 200,
-        false, true, array['https://tat.vn/cb'], 'OIDC_CLIENT_SECRET_TAT');
+        false, true, array['https://tat.vn/cb']);
 
 -- Loại thứ ba: app ĐANG BẬT nhưng không khai SSO (app nhúng thuần, ví dụ trang tin).
 update core.embedded_apps set enabled = true where app_id = 'app-khong-sso';
@@ -238,19 +227,6 @@ select is(
   (select sso_backchannel_logout_uri from core.embedded_apps where app_id = 'factory'),
   'https://factory.vietanh.org/api/auth/oidc/backchannel-logout',
   'backchannel_logout_uri của Factory giữ nguyên — ADR-016 "thoát Hub = thoát mọi RP" dựa vào nó');
--- ĐỔI 08/08/2026 bởi migration `0057` — ghi lại thay vì sửa lặng.
---
--- Khi `0055` viết ra, phép kiểm này khoá đúng một điều: tên biến secret của Factory không
--- được đổi, vì đổi là Factory mất đăng nhập lúc deploy. Nó đúng khi mỗi app một khoá.
---
--- `0057` chuyển Factory sang CHUỖI CHUNG của trường (quyết định chủ đầu tư), nên cột này
--- nay là `NULL` — và `NULL` chính là dấu hiệu "dùng chuỗi chung". Điều đáng khoá vẫn được
--- khoá, chỉ đổi giá trị: một thay đổi ngoài ý muốn ở cột này vẫn làm bài test đỏ.
--- Chi tiết đo riêng ở `0057_mot_chuoi_cho_ca_dang_nhap_test.sql`.
-select is(
-  (select sso_client_secret_env from core.embedded_apps where app_id = 'factory'),
-  null,
-  'Factory dùng CHUỖI CHUNG của trường (0057) — cột để trống là dấu hiệu của điều đó');
 select is(
   (select sso_scopes from core.embedded_apps where app_id = 'factory'),
   array['openid','profile']::text[],

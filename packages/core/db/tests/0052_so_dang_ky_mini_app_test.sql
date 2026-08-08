@@ -32,8 +32,13 @@ select col_is_pk('core', 'embedded_apps', 'app_id', 'app_id là khoá chính');
 -- Cột giữ TÊN biến môi trường, không giữ secret. Nếu một ngày ai đó đổi tên cột thành
 -- `webhook_secret` thì phép kiểm này đỏ — và đó chính là lúc cần một người đọc lại khối
 -- chú thích ở đầu migration trước khi tiếp tục.
-select has_column('core', 'embedded_apps', 'webhook_secret_env',
-  'cột giữ TÊN biến môi trường (không giữ giá trị secret — xem đầu 0052)');
+-- ĐỔI 08/08/2026 bởi `0058` — ghi lại thay vì xoá phép kiểm.
+-- Cột `webhook_secret_env` đã bị XOÁ: mọi app dùng một chuỗi chung của trường, không app
+-- nào có khoá riêng. Điều đáng khoá vẫn được khoá, và nay khoá CHẶT HƠN: bảng không giữ
+-- secret, VÀ không giữ cả tên biến secret — một trường còn tồn tại là một trường còn khai
+-- được, và ngày có người khai mà quên đặt giá trị là ngày cổng đóng câm.
+select hasnt_column('core', 'embedded_apps', 'webhook_secret_env',
+  'KHÔNG còn cột tên biến secret riêng cho từng app (0058)');
 select hasnt_column('core', 'embedded_apps', 'webhook_secret',
   'KHÔNG có cột chứa secret thật: bản sao lưu database không được mang secret đi theo');
 

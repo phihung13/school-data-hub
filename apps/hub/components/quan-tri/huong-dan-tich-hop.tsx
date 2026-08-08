@@ -106,17 +106,6 @@ function ChuaXong({ children }: { children: ReactNode }) {
 export function HuongDanTichHop({ app, hubUrl, onDong }: { app: MiniAppRow; hubUrl: string; onDong: () => void }) {
   const uriCauNoi = `${hubUrl}/embed/relay`;
 
-  // Hai biến app này cần, kèm TRẠNG THÁI THẬT trên máy chủ đang phục vụ. `daCapSecret` và
-  // `daCapSsoSecret` do máy chủ tính — màn hình không đọc được `process.env`, nên nếu dựng
-  // lại phép kiểm này ở client thì nó chỉ là phỏng đoán.
-  const bienMoiTruong = [
-    app.webhookSecretEnv
-      ? { ten: app.webhookSecretEnv, viec: "Gửi dữ liệu về", daCo: app.daCapSecret }
-      : null,
-    app.ssoEnabled && app.ssoClientSecretEnv
-      ? { ten: app.ssoClientSecretEnv, viec: "Đăng nhập Hub", daCo: app.daCapSsoSecret }
-      : null,
-  ].filter((b): b is { ten: string; viec: string; daCo: boolean } => b !== null);
 
   return (
     <HopThoai
@@ -153,8 +142,8 @@ export function HuongDanTichHop({ app, hubUrl, onDong }: { app: MiniAppRow; hubU
             <Dong nhan="client_id" giaTri={app.appId} />
             <Dong
               nhan="client_secret"
-              giaTri={app.ssoClientSecretEnv ?? "(chưa khai tên biến)"}
-              ghiChu="Đây là TÊN biến trên máy chủ Hub, không phải giá trị. Xin giá trị từ người vận hành — sổ đăng ký không giữ nó."
+              giaTri="chuỗi chung của trường"
+              ghiChu="CÙNG một chuỗi với phần gửi dữ liệu ở dưới. Xin giá trị từ nhà trường — sổ đăng ký không giữ nó."
             />
             <Dong
               nhan="Cách gửi secret"
@@ -182,12 +171,6 @@ export function HuongDanTichHop({ app, hubUrl, onDong }: { app: MiniAppRow; hubU
                 ghiChu="Hub POST logout_token tới đây khi người dùng thoát Hub. App phải kiểm chữ ký bằng JWKS ở bản khai trên."
               />
             )}
-            {!app.daCapSsoSecret && app.ssoClientSecretEnv && (
-              <ChuaXong>
-                <span className="font-mono">{app.ssoClientSecretEnv}</span> chưa đặt trên máy chủ — mọi lượt đăng nhập
-                nhận <span className="font-mono">invalid_client</span>.
-              </ChuaXong>
-            )}
             {!app.enabled && <ChuaXong>App đang TẮT — đăng nhập bị cắt cùng với nhúng và webhook.</ChuaXong>}
           </>
         ) : (
@@ -203,8 +186,8 @@ export function HuongDanTichHop({ app, hubUrl, onDong }: { app: MiniAppRow; hubU
         <Dong nhan="Header" giaTri={`x-embed-app: ${app.appId}`} />
         <Dong
           nhan="Header"
-          giaTri={`x-embed-secret: <giá trị ${app.webhookSecretEnv ?? "(chưa khai tên biến)"}>`}
-          ghiChu="Cũng là tên biến trên máy chủ Hub, không phải giá trị."
+          giaTri="x-embed-secret: <chuỗi chung của trường>"
+          ghiChu="Cùng chuỗi với client_secret ở trên. Nhà trường cấp một chuỗi cho mọi app; đổi chuỗi là mọi app đổi theo."
         />
         <Dong
           nhan="Thân JSON"
@@ -228,54 +211,20 @@ export function HuongDanTichHop({ app, hubUrl, onDong }: { app: MiniAppRow; hubU
         </p>
       </Khoi>
 
-      {/* ── Biến môi trường ───────────────────────────────────────────────── */}
-      {/* NÓI RÕ CÁI NÀO ĐÃ ĐẶT, CÁI NÀO CHƯA (sửa 08/08/2026).
-
-          Bản trước in cả hai dòng `<TÊN BIẾN>=<sinh ngẫu nhiên 32 byte>` VÔ ĐIỀU KIỆN — kể
-          cả khi biến đã đặt xong từ lâu. Chủ đầu tư đọc bản đấu nối của Factory rồi hỏi
-          thẳng: *"thế giờ cài không?"* — trong khi cả hai biến của Factory đã có, và thẻ app
-          ngay bên cạnh đang hiện "Sẵn sàng — không còn việc nào".
-
-          Một màn hình bảo người ta đi làm việc đã làm rồi thì tệ hơn một màn hình im lặng:
-          nó dạy người dùng rằng hướng dẫn ở đây không đáng tin, và lần sau họ sẽ bỏ qua cả
-          những dòng thật sự cần làm. `daCapSecret`/`daCapSsoSecret` là câu trả lời do MÁY
-          CHỦ tính (nó là bên duy nhất đọc được `process.env`) — sẵn có, chỉ là chưa dùng. */}
-      <Khoi tieuDe="Biến môi trường trên máy chủ Hub">
-        {bienMoiTruong.length === 0 ? (
-          <p className="py-2 text-[12px] font-semibold text-caption">
-            App chưa khai biến nào — không có gì phải đặt.
-          </p>
-        ) : (
-          <>
-            {bienMoiTruong.map((b) => (
-              <Dong
-                key={b.ten}
-                nhan={b.viec}
-                giaTri={b.daCo ? b.ten : `${b.ten}=<sinh ngẫu nhiên 32 byte>`}
-                ghiChu={
-                  b.daCo ? (
-                    <span className="flex items-center gap-1 font-bold text-successText">
-                      <span className="msr text-[15px]" aria-hidden>
-                        check_circle
-                      </span>
-                      Đã đặt trên máy chủ này — không phải làm gì
-                    </span>
-                  ) : (
-                    <span className="font-bold text-dangerText">
-                      CHƯA đặt — thêm vào apps/hub/.env.local rồi khởi động lại Hub
-                    </span>
-                  )
-                }
-              />
-            ))}
-            {bienMoiTruong.every((b) => b.daCo) && (
-              <p className="mt-2 rounded-xl bg-surface-success px-3 py-2 text-[12px] font-bold text-successText">
-                Không còn bước nào chạm vào máy chủ. Việc còn lại là đội làm app viết mã theo
-                bản này.
-              </p>
-            )}
-          </>
-        )}
+      {/* ── Chuỗi bí mật ──────────────────────────────────────────────────
+          Khối này từng liệt kê hai dòng biến môi trường phải đặt. Từ `0058` không còn khoá
+          riêng cho app nào, nên không còn việc gì để làm trên máy chủ — và một khối bảo người
+          ta đi làm việc không tồn tại thì tệ hơn không có khối nào (đã sửa đúng lỗi đó ở đây
+          hôm 08/08, đừng dựng lại). */}
+      <Khoi tieuDe="Chuỗi bí mật">
+        <p className="py-2 text-[12px] font-semibold text-cardtitle2">
+          Một chuỗi dùng chung cho mọi app, dùng cho <b>cả</b> gửi dữ liệu <b>lẫn</b> đăng nhập. Xin giá trị từ nhà
+          trường và đặt ở máy chủ của app — không bao giờ trong mã chạy trên trình duyệt.
+        </p>
+        <p className="mt-1 rounded-xl bg-surface-infoSoft px-3 py-2 text-[11.5px] font-semibold leading-relaxed text-cardtitle2">
+          Nhà trường đổi chuỗi lúc nào cũng được và khi đó <b>mọi app phải đổi theo cùng lúc</b>. Hãy đọc nó từ biến
+          môi trường lúc chạy — đừng ghi cứng vào mã, đừng nhúng vào bản build.
+        </p>
       </Khoi>
     </HopThoai>
   );

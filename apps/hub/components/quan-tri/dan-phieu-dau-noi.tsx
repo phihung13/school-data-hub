@@ -291,15 +291,10 @@ function XemTruoc({ phieu, khaiBao }: { phieu: PhieuDauNoi; khaiBao: CreateMiniA
           )}
         </Hang>
         <Hang nhan="Ngày rà lại">{khaiBao.reviewDueOn}</Hang>
-        {/* Chỉ còn khoá ĐĂNG NHẬP phải đặt trên máy chủ. Webhook dùng chuỗi chung của trường
-            từ 08/08/2026, nên liệt kê nó ở đây là bảo người ta đi làm một việc không tồn tại —
-            đúng lỗi vừa sửa ở bản đấu nối, đừng dựng lại. */}
-        <Hang nhan="Cần đặt trên máy chủ">
-          {khaiBao.ssoClientSecretEnv ? (
-            <span className="font-mono text-[11.5px]">{khaiBao.ssoClientSecretEnv}</span>
-          ) : (
-            <span className="font-semibold text-successText">Không có — app dùng chuỗi chung của trường</span>
-          )}
+        {/* Không còn hàng "biến cần đặt": từ `0058` mọi app dùng chuỗi chung của trường cho
+            cả webhook lẫn đăng nhập, nên dán phiếu xong KHÔNG còn bước nào chạm máy chủ. */}
+        <Hang nhan="Chuỗi bí mật">
+          <span className="font-semibold text-successText">Chuỗi chung của trường — không phải đặt gì</span>
         </Hang>
       </div>
 

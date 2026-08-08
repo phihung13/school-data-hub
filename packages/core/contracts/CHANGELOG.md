@@ -17,6 +17,42 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ## [Unreleased]
 
+## [0.3.0] — 08/08/2026
+
+**Phiên bản tăng vì có mục `Removed`.** Luật của kho (03-api.md luật 6) đòi expand–contract:
+thêm cái mới → client chuyển dần → mới gỡ cái cũ. Ngoại lệ ở đây được nêu tường minh trong
+chính mục `Removed` bên dưới, và `tools/contracts-lint.mjs` đã chặn đúng một lần trước khi
+tôi tăng số — cổng gánh việc thật.
+
+### Removed
+
+- **Bỏ hẳn khái niệm "khoá riêng cho từng app"** (08/08/2026, migration `0058`, chủ đầu tư:
+  *"thì bạn cứ yêu cầu app theo khoá của bạn"*). Gỡ khỏi bề mặt: `MiniAppRow.webhookSecretEnv`
+  · `MiniAppRow.daCapSecret` · `MiniAppRow.ssoClientSecretEnv` · `MiniAppRow.daCapSsoSecret` ·
+  `CreateMiniAppInput.webhookSecretEnv` · `CreateMiniAppInput.ssoClientSecretEnv` · hàm
+  `tenBienSecret`.
+
+  **Vì sao gỡ THẲNG chứ không đi expand–contract:** luật của kho đòi một field phải nằm ở
+  Deprecated ít nhất một phiên bản trước khi gỡ, và luật đó đúng vì nó bảo vệ **client cũ đã
+  cache**. Sáu field này không có client cũ nào: cả sáu **sinh ra trong hai ngày 07–08/08/2026**,
+  chưa từng qua một bản phát hành nào, và bề mặt duy nhất đọc chúng là `/quan-tri/mini-app` —
+  một màn chỉ quản trị mở, đi cùng máy chủ, không có bản PWA nào cache riêng. Giữ chúng một
+  vòng để "đúng quy trình" là giữ đúng cái bẫy vừa cắn hai lần trong ngày.
+
+  **Cái bẫy đó, ghi lại vì nó là lý do gỡ:** khai một *tên biến* riêng nghĩa là "app này dùng
+  khoá riêng", và tầng nạp **cố ý không** rơi về chuỗi chung khi khoá riêng chưa đặt — nếu rơi
+  thì một app được cấp khoá mạnh riêng vẫn chạy bằng chuỗi ai cũng đoán được, không tín hiệu
+  nào. Đúng vì thế mà phiếu dán tự sinh sẵn tên biến đã làm mọi app mới nhận **401** hai lần
+  trong một buổi. Một trường còn tồn tại là một trường còn khai được.
+
+  Hai cột tương ứng cũng đã bị **xoá khỏi `core.embedded_apps`** cùng migration — cùng lý lẽ
+  với việc rổ Đỏ không có mặt trong CHECK của `0052`: *"để lộ ra một trạng thái hợp lệ trên
+  giấy — và mọi thứ hợp lệ trên giấy rồi sẽ có người thử."*
+
+  **Client thay bằng gì:** không gì cả. Mọi app dùng MỘT chuỗi chung của trường cho cả webhook
+  lẫn đăng nhập, nên "app này đã cấp secret chưa" thôi là một câu hỏi. `conThieu` không còn
+  dòng nào về secret.
+
 ### Added
 
 - **`MiniAppRow.conThieu` — còn thiếu gì để app này chạy** (08/08/2026), mảng câu tiếng Việt
