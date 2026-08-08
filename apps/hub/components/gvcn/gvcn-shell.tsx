@@ -7,14 +7,41 @@
 //
 // Mã lớp trên sidebar KHÔNG lấy từ prop cứng mà từ chính lớp đang xem: sidebar nói
 // "GVCN · 6A2" trong khi nội dung là lớp 6A1 thì đó là nói dối ở ngay chỗ dễ tin nhất.
+//
+// ── 06/08/2026 · KHUNG NÀY NAY CHỞ THÊM VAI `teacher` ────────────────────────
+// Màn "Lớp tôi dạy" (`components/gv-bo-mon/teaching-view.tsx`) dùng lại đúng khung này
+// thay vì dựng khung thứ hai. Lý do là chính câu ở đầu file: chép khung ra hai bản là
+// bảo đảm sau ba lần sửa thì hai khung lệch nhau — mà ở đây "lệch" nghĩa là một vai mất
+// landmark <main>, mất <h1>, hoặc mất thanh tab dưới md, và không phép kiểm nào của
+// `a11y-man-nguoi-lon.test.ts` nhìn thấy vì nó liệt kê file bằng tay.
+//
+// Hai prop mới, cả hai đều có mặc định GIỮ NGUYÊN hành vi cũ của năm màn GVCN:
+//   · `roles`  — vai để dựng menu trái và thanh tab. Trước đây viết chết `["homeroom"]`;
+//                giáo viên bộ môn nhận bộ đó sẽ thấy nguyên menu GVCN, tức là bốn mục
+//                bấm vào là bị `page.tsx` đá về /home ("menu 404", lỗi kho này đã sửa
+//                ba lần).
+//   · `backTo` — thanh trên của điện thoại. Năm màn con GVCN là màn CON của buồng lái nên
+//                cần đường quay lại; "Lớp tôi dạy" là màn GỐC của vai bộ môn, không có
+//                buồng lái nào để quay về, nên nó truyền `null` và thanh đó biến mất.
+//                `null` chứ không phải bỏ trống: bỏ trống là "chưa nghĩ tới", `null` là
+//                "đã nghĩ và câu trả lời là không có".
 "use client";
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { HubRole } from "@hub/core/contracts";
 import { HubSidebar } from "../hub-sidebar";
 import { MainContent } from "../page-shell";
 import { HubTabBar } from "../tab-bar";
 import { StaffVoice } from "../ui/query-state";
+
+/** Thanh trên của điện thoại: đường quay lại màn cha. `null` = màn này KHÔNG có màn cha. */
+export interface DuongQuayLai {
+  href: string;
+  label: string;
+}
+
+const QUAY_VE_BUONG_LAI: DuongQuayLai = { href: "/gvcn", label: "Bảng điều khiển" };
 
 export function GvcnShell({
   active,
@@ -24,9 +51,11 @@ export function GvcnShell({
   email,
   classCode,
   toolbar,
+  roles = ["homeroom"],
+  backTo = QUAY_VE_BUONG_LAI,
   children,
 }: {
-  /** Khớp `key` trong TEACHER_ITEMS (hub-sidebar.tsx) để mục đang xem sáng lên. */
+  /** Khớp `key` trong bản khai màn (lib/man-hinh.ts) để mục đang xem sáng lên. */
   active: string;
   title: string;
   subtitle?: ReactNode;
@@ -36,6 +65,10 @@ export function GvcnShell({
   classCode?: string | null;
   /** Bộ chọn lớp / nút hành động của riêng từng màn. */
   toolbar?: ReactNode;
+  /** Vai THẬT của người đang xem — quyết định menu trái và thanh tab. Mặc định: GVCN. */
+  roles?: HubRole[];
+  /** Bỏ trống = quay về buồng lái (năm màn con GVCN). `null` = màn gốc, không có đường lên. */
+  backTo?: DuongQuayLai | null;
   children: ReactNode;
 }) {
   return (
@@ -52,7 +85,7 @@ export function GvcnShell({
             /home và /ho-so (nơi có nút Đăng xuất), đúng vai trò sidebar làm ở md. */}
         <div className="hidden w-[240px] flex-none md:flex">
           <HubSidebar
-            roles={["homeroom"]}
+            roles={roles}
             active={active}
             fullName={displayName}
             email={email}
@@ -67,18 +100,20 @@ export function GvcnShell({
               người dùng trình đọc màn hình chứ không cứu người nhìn thấy nó.
               min-h-[44px] (§11, WCAG 2.5.5) — trước 01/08/2026 là h-9 w-9 = đúng 36px,
               mà đây là đường ra DUY NHẤT của năm màn con trên điện thoại. */}
-          <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 py-3 md:hidden">
-            <Link
-              href="/gvcn"
-              aria-label="Về buồng lái"
-              className="flex min-h-[44px] flex-none items-center gap-1.5 rounded-xl bg-chip px-3"
-            >
-              <span className="msr text-[20px] text-navy" aria-hidden>
-                arrow_back
-              </span>
-              <span className="text-[12.5px] font-extrabold text-navy">Bảng điều khiển</span>
-            </Link>
-          </div>
+          {backTo && (
+            <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 py-3 md:hidden">
+              <Link
+                href={backTo.href}
+                aria-label={`Về ${backTo.label}`}
+                className="flex min-h-[44px] flex-none items-center gap-1.5 rounded-xl bg-chip px-3"
+              >
+                <span className="msr text-[20px] text-navy" aria-hidden>
+                  arrow_back
+                </span>
+                <span className="text-[12.5px] font-extrabold text-navy">{backTo.label}</span>
+              </Link>
+            </div>
+          )}
 
           {/* LANDMARK <main id="noi-dung"> — thêm 02/08/2026, gói "audit-giao-dien-chay-tron".
               Đo trên bản đang chạy: `curl /gvcn/diem-danh` và `curl /gvcn/hoc-sinh/<id>` với
@@ -119,10 +154,12 @@ export function GvcnShell({
             </div>
           </MainContent>
 
-          {/* Bốn màn con luôn thuộc vai GVCN (page.tsx của chúng chặn `homeroom` rồi
-              mới render), nên bộ tab ở đây là bộ GVCN — không suy từ prop nào cả. */}
+          {/* Thanh tab đi theo VAI THẬT của người đang xem, cùng nguồn với menu trái ở
+              trên. Trước 06/08/2026 chỗ này viết chết `["homeroom"]` vì mọi màn dùng
+              khung đều là màn GVCN; nay giáo viên bộ môn cũng vào đây, và đưa cho họ bộ
+              tab GVCN là dựng một thanh điều hướng gồm toàn đích họ không mở được. */}
           <div className="md:hidden">
-            <HubTabBar roles={["homeroom"]} fullName={displayName} email={email} />
+            <HubTabBar roles={roles} fullName={displayName} email={email} />
           </div>
         </div>
       </div>

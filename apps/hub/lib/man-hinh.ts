@@ -177,6 +177,30 @@ export const MAN_HINH: ManHinh[] = [
     luoi: { thuTu: 30, nhan: "Điểm danh của con · sắp" },
   },
 
+  // ── Giáo viên bộ môn ───────────────────────────────────────────────────────
+  {
+    key: "teaching",
+    href: "/lop-toi-day",
+    icon: "school",
+    nhan: "Lớp tôi dạy",
+    // Vai `teacher` cho tới 06/08/2026 chỉ có `/home` và không màn nào khác — chủ đầu tư
+    // hỏi thẳng: "họ không có gì ngoài trang chủ?". `homeroom` cũng có mặt vì
+    // `core.class_assignments` ghi cả hai vai trò phân công cho cùng một người: một cô
+    // chủ nhiệm 6A1 mà dạy Toán 6A2/6A3 thì hai lớp kia không có đường nào tới.
+    vai: ["teacher", "homeroom"],
+    menu: { thuTu: 15 },
+    // THANH TAB CHỈ CHO `teacher`, và đây là một trong những lý do `BeMat.vai` tồn tại.
+    // Dưới md không có menu trái. GVCN vẫn tới được lớp mình qua buồng lái (/gvcn đã có
+    // tab riêng); giáo viên bộ môn thì KHÔNG có buồng lái nào — bỏ tab là màn này chỉ
+    // sống trên máy tính, đúng cảnh "Cô Mai mở Hub trên điện thoại thì không thấy đâu
+    // cả" mà khối chú thích đầu file kể lại. Mở cho cả `homeroom` thì thanh tab của GVCN
+    // chạm đúng trần 4 ô của DESIGN-GUIDELINES §6, không còn chỗ cho màn thứ năm.
+    tab: { thuTu: 15, vai: ["teacher"] },
+    // KHÔNG có `luoi`: lưới trang chủ đang là nơi đặt các mini app theo miền. Một ô
+    // "Lớp tôi dạy" cạnh Điểm danh / Học tập / Y tế đọc như một mini app thứ bảy, trong
+    // khi đây là màn của chính Hub.
+  },
+
   // ── Chủ nhiệm ──────────────────────────────────────────────────────────────
   {
     key: "cockpit",

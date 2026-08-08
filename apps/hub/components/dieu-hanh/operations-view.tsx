@@ -202,6 +202,10 @@ export function OperationsView({
         event
       </span>
       <span className="text-[11.5px] font-black text-muted">Ngày</span>
+      {/* min-h-[44px] trên CHÍNH ô nhập, không chỉ trên nhãn bọc ngoài (sửa 05/08/2026):
+          `input type="date"` đo được 21px trên Chrome — vùng chạm thật của ngón tay là ô
+          nhập chứ không phải cái viền quanh nó, nên 44px của nhãn không cứu được cú bấm
+          trượt. §11 đòi 44px cho MỌI đích bấm. */}
       <input
         type="date"
         value={onDate}
@@ -209,7 +213,7 @@ export function OperationsView({
         max={today}
         onChange={(e) => setOnDate(e.target.value || today)}
         aria-label="Ngày xem số liệu"
-        className="bg-transparent text-[12.5px] font-extrabold text-ink outline-none"
+        className="min-h-[44px] bg-transparent text-[12.5px] font-extrabold text-ink outline-none"
       />
     </label>
   );
@@ -225,6 +229,7 @@ export function OperationsView({
       displayName={displayName}
       email={email}
       roles={roles}
+      active="operations"
       toolbar={toolbar}
     >
       {/* Lời hứa §9, in trước cả số liệu. */}
@@ -232,11 +237,14 @@ export function OperationsView({
         <span className="msr mt-0.5 text-[18px] text-navy" aria-hidden>
           lock
         </span>
+        {/* CẮT câu thứ hai (06/08/2026): "Nhóm dưới N em không hiện số, vì ở quy mô đó
+            con số của lớp chính là dữ liệu của một em." Nguyên văn ý đó đã đứng ở chú
+            giải dưới bảng, ngay cạnh chính KÝ HIỆU nó giải thích — tức là ở chỗ người ta
+            đi tìm nó, thay vì ở đầu màn trước khi có ô nào bị che.
+            GIỮ câu một: DESIGN-GUIDELINES §9 đòi màn BGH ghi rõ "không tra cứu học sinh
+            cá nhân", và đó là LỜI HỨA chứ không phải chú thích. */}
         <p className="text-[12px] font-semibold leading-relaxed text-muted">
-          Màn hình này chỉ hiện <strong className="text-ink">số tổng hợp theo lô</strong> — không tra cứu học
-          sinh cá nhân. Nhóm dưới{" "}
-          <strong className="text-ink">{data ? data.minCohort : "ngưỡng"}</strong> em không hiện số, vì ở quy mô
-          đó con số của lớp chính là dữ liệu của một em.
+          Chỉ <strong className="text-ink">số tổng hợp theo lô</strong> — không tra cứu học sinh cá nhân.
         </p>
       </div>
 
@@ -248,7 +256,8 @@ export function OperationsView({
         <EmptyState
           icon="school"
           title="Chưa có lớp nào trong phạm vi của bạn"
-          hint="Danh sách lớp đến từ sổ ghi danh của trường. Trống ở đây nghĩa là sổ chưa có lớp nào, không phải lỗi tải dữ liệu."
+          // CẮT vế "không phải lỗi tải dữ liệu": nhánh lỗi có ErrorState riêng ngay trên.
+          hint="Sổ ghi danh của trường chưa có lớp nào."
         />
       ) : (
         <>
@@ -278,7 +287,11 @@ export function OperationsView({
                       const rate = checkinRate(g.checkedInCount, g.rosterCount);
                       return rate.kind === "ok" ? (
                         <div className="flex items-end gap-2">
-                          <span className="text-[26px] font-black leading-none text-navy tabular-nums">
+                          {/* 24px chứ không phải 26px: DESIGN.md chốt trần thang chữ ở
+                              24px, và con số này là chỗ duy nhất trong app vượt trần. Một
+                              cỡ ngoài thang không làm thẻ nổi hơn — nó làm thang chữ thôi
+                              là thang. */}
+                          <span className="text-[24px] font-black leading-none text-navy tabular-nums">
                             {rate.text}
                           </span>
                           <span className="pb-1 text-[11.5px] font-bold text-muted">đã check-in</span>
@@ -318,7 +331,74 @@ export function OperationsView({
           {/* ── Theo LỚP ──────────────────────────────────────────────────── */}
           <section className="flex flex-col gap-2.5">
             <h2 className="text-[13px] font-black text-cardtitle">Theo lớp</h2>
-            <Card className="p-0 md:p-0">
+            {/* Dưới `md`: MỖI LỚP MỘT THẺ (đổi 05/08/2026). Bảng 8 cột `min-w-[720px]` ở
+                360px nghĩa là kéo ngang, và khi kéo tới cột "Vắng / có phép" thì tên lớp
+                đã trôi khỏi màn — người đọc thấy một con số không còn biết của lớp nào.
+                Đúng cái lỗi mà sổ Mini App đã tránh bằng thẻ (xem khối chú thích đầu
+                mini-app-admin-view.tsx), và hiệu trưởng đứng ngoài sân trường cầm điện
+                thoại là tình huống thật của chính màn này.
+                Từ `md` trở lên giữ nguyên bảng: ở đó 720px vừa màn, và bảng vẫn là cách so
+                mười mấy lớp với nhau nhanh nhất. Hai nhánh đọc CÙNG một mảng và không
+                nhánh nào giữ state riêng, nên chúng không lệch nhau được — khác hẳn ca
+                `{toolbar}` render hai lần ở operations-shell.tsx. */}
+            <div className="flex flex-col gap-2.5 md:hidden">
+              {data.classes.map((c) => (
+                <Card key={c.classId} className="flex flex-col gap-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[14px] font-black text-ink">{c.classCode}</span>
+                    <span className="text-[11px] font-semibold text-muted">
+                      Khối {c.grade} · {c.rosterCount} em
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-muted">Đã check-in</span>
+                    {c.cohortTooSmall ? (
+                      <Num value={null} />
+                    ) : (
+                      (() => {
+                        const rate = checkinRate(c.checkedInCount, c.rosterCount);
+                        return (
+                          <span className="text-right text-[13px] font-black tabular-nums text-ink">
+                            {c.checkedInCount}{" "}
+                            <span className="text-[10.5px] font-bold text-muted">
+                              {rate.kind === "ok" ? `(${rate.text})` : `(${rateReason(rate.kind)})`}
+                            </span>
+                          </span>
+                        );
+                      })()
+                    )}
+                  </div>
+
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    <Stat label="Chờ xác nhận" value={c.pendingLateCount} tone="warn" />
+                    <Stat label="Vắng / có phép" value={c.absentCount} tone="danger" />
+                    {/* Cùng luật với thẻ khối: khoảng trống dữ liệu KHÔNG mang màu cảnh báo. */}
+                    <Stat label="Chưa có dữ liệu" value={c.noRecordCount} tone="muted" />
+                    <Stat label="Hồ sơ mở" value={c.openCareCount} tone="ink" />
+                  </dl>
+
+                  {c.cohortTooSmall ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted">
+                      <span className="msr text-[14px]" aria-hidden>
+                        visibility_off
+                      </span>
+                      Lớp dưới {data.minCohort} em — chưa đủ số em để hiện
+                    </span>
+                  ) : (
+                    <MoodBar
+                      happy={c.moodHappy}
+                      normal={c.moodNormal}
+                      tired={c.moodTired}
+                      sad={c.moodSad}
+                      reported={c.moodReported}
+                    />
+                  )}
+                </Card>
+              ))}
+            </div>
+
+            <Card className="hidden p-0 md:block md:p-0">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px] border-collapse text-left">
                   <thead>
@@ -395,20 +475,24 @@ export function OperationsView({
             </Card>
             {/* Chú giải NHÌN THẤY ĐƯỢC cho ký hiệu ô bị che. Trước 01/08/2026 lời giải
                 thích này chỉ nằm trong `title=`, tức là chỉ tồn tại trên máy có chuột. */}
-            <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 text-[11px] leading-relaxed text-muted">
+            {/* HAI CHÚ GIẢI, MỖI CÁI MỘT DÒNG (06/08/2026).
+                Cắt khỏi chú giải thứ nhất: vế "vì con số của lớp chính là dữ liệu của một
+                em" (lý lẽ đứng sau ngưỡng — đã in ở lời hứa §9 đầu màn, không cần lặp) và
+                vế "Đây KHÔNG phải lỗi tải — lỗi tải thì cả bảng biến mất…", vốn là một câu
+                dạy người đọc cách phân biệt hai màn hình mà họ không bao giờ thấy cùng lúc.
+                Chú giải thứ hai là [QĐ-3] ("chưa điểm danh ≠ vắng") — NGHĨA ở lại, hình
+                thức đổi từ hai câu sang một vế đối. */}
+            <p className="flex flex-wrap items-center gap-x-1.5 px-1 text-[11px] text-muted">
               <span className="msr text-[14px]" aria-hidden>
                 visibility_off
               </span>
               <span aria-hidden>—</span>
               <span>
-                nghĩa là <strong className="text-ink">chưa đủ số em để hiện</strong>: nhóm dưới{" "}
-                {data.minCohort} em thì con số của lớp chính là dữ liệu của một em. Đây KHÔNG phải lỗi tải —
-                lỗi tải thì cả bảng biến mất và màn hình nói ra là hỏng.
+                <strong className="text-ink">chưa đủ số em để hiện</strong> · nhóm dưới {data.minCohort} em
               </span>
             </p>
-            <p className="px-1 text-[11px] leading-relaxed text-muted">
-              "Chưa có dữ liệu" là số em chưa có dòng điểm danh nào trong ngày — <strong>không</strong> phải số
-              em vắng. Hai cột tách riêng có chủ đích.
+            <p className="px-1 text-[11px] text-muted">
+              “Chưa có dữ liệu” <strong className="text-ink">≠</strong> “Vắng / có phép” — hai cột tách riêng
             </p>
           </section>
         </>

@@ -5,8 +5,10 @@ export * from "./auth.ts";
 export * from "./checkin.ts";
 export * from "./consent.ts";
 export * from "./care.ts";
+export * from "./teaching.ts";
 export * from "./report.ts";
 export * from "./admin.ts";
+export * from "./session.ts";
 
 // Xuất TƯỜNG MINH, đặt sau các `export *` là có chủ đích: `contracts/checkin.ts` còn giữ
 // một `CONTRACTS_VERSION` cũ từ thời hằng số này nằm lạc trong contract của một router

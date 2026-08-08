@@ -59,6 +59,39 @@ read -r -a PSQL <<<"${HUB_PSQL:-psql}"
 psql_file() { "${PSQL[@]}" "$DB_URL" -v ON_ERROR_STOP=1 -q <"$1"; }
 psql_c() { "${PSQL[@]}" "$DB_URL" -v ON_ERROR_STOP=1 -q -c "$1"; }
 
+# ── 0. DỰNG LẠI DATABASE TỪ SỐ KHÔNG ─────────────────────────────────────────
+#
+# Thêm 07/08/2026 sau khi TÁI HIỆN ĐƯỢC một lỗi đã nhiều lần bị gọi là "test bập bênh".
+# Sự thật: HAI bộ chạy test dùng CHUNG `hub_test`, và mỗi bộ tin rằng nó sở hữu dữ liệu.
+#
+#   · `tests/helpers/chuan-bi-db-test.ts` (vitest) dựng đầy đủ migration + seed, rồi ghim
+#     một "dấu vân" vào `test_meta.dau_van` để lượt sau khỏi dựng lại.
+#   · Script này thì giả định database RỖNG và replay từng migration.
+#
+# Hai chiều va nhau, cả hai đều cho ra một màu đỏ không nói gì về mã nguồn:
+#   vitest ➜ pgTAP : script chết ở `0002` với `relation "school_networks" already exists`,
+#                    thoát mã 3, trước khi chạy một assertion nào.
+#   pgTAP ➜ vitest : script nạp fixture và các bài pgTAP ghi vào database; lượt vitest kế
+#                    tiếp thấy dấu vân KHỚP nên dùng lại, rồi đếm ra những con số không
+#                    phải của nó. Đo được 07/08/2026: `tests/db/perf.test.ts` đòi 0 lượt
+#                    tra `core.users` và nhận **3.547** — một phép đo cache trở thành vô
+#                    nghĩa vì bảng đã bị người khác cày qua.
+#
+# Dựng lại từ số không chữa CẢ HAI chiều bằng một việc: `hub_test` biến mất kéo theo
+# `test_meta.dau_van`, nên lượt vitest kế tiếp thấy "dấu vân lệch" và tự dựng lại phần của
+# nó. Không cần hai bộ biết về nhau.
+#
+# Cái giá: mỗi lượt chạy thêm ~30 giây replay migration. Rẻ hơn nhiều so với một lượt đỏ
+# giả — thứ đắt không phải 30 giây máy, mà là nửa giờ người đi tìm một lỗi không tồn tại.
+#
+# An toàn: cổng #41 ở trên đã chặn mọi tên database không kết thúc bằng `_test`, và câu
+# `drop` dưới đây nằm SAU cổng đó. `with (force)` để không kẹt vì một kết nối bỏ quên.
+DB_ADMIN_URL="${DB_URL%/*}/postgres"
+echo "── 0. Dựng lại $DB_NAME từ số không (xem chú thích: hai bộ test dùng chung database)"
+"${PSQL[@]}" "$DB_ADMIN_URL" -v ON_ERROR_STOP=1 -q \
+  -c "drop database if exists $DB_NAME with (force);" \
+  -c "create database $DB_NAME;"
+
 echo "── 1. Cài pgTAP"
 psql_c "create extension if not exists pgtap;"
 

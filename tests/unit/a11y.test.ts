@@ -220,6 +220,35 @@ describe("font cắt gọn phủ đủ icon app đang dùng", () => {
 // Playwright. Bộ đo bằng iframe dùng hôm nay nằm ở scratchpad và cách chạy ghi trong
 // CACH-CHAY-AGENT.md — chạy lại nó là việc của người rà, không phải của CI.
 
+/**
+ * Cắt trọn thẻ MỞ `<ten …>` — đếm ngoặc nhọn thay vì dừng ở dấu `>` đầu tiên.
+ *
+ * `/<button\b[\s\S]*?>/` là cách viết hiển nhiên, và nó SAI theo một kiểu tự làm mình xanh:
+ * `onClick={() => …}` có một dấu `>` ngay trong mũi tên, nên biểu thức lười dừng ở đó và
+ * thẻ bị cắt cụt TRƯỚC `className`. Kết quả: mọi nút có handler nội tuyến đều "thiếu 44px"
+ * — bản đầu của phép kiểm dưới đỏ đúng vì lý do đó, chứ không vì mã sai.
+ *
+ * Ở đây chỉ cần đếm `{}`: mọi biểu thức JS trong JSX đều nằm trong ngoặc nhọn, nên dấu `>`
+ * đóng thẻ là dấu `>` đầu tiên ở độ sâu 0.
+ */
+function theTagMo(src: string, ten: string): string[] {
+  const ra: string[] = [];
+  const mo = new RegExp(`<${ten}\\b`, "g");
+  for (const m of src.matchAll(mo)) {
+    let sau = 0;
+    for (let i = m.index!; i < src.length; i++) {
+      const c = src[i]!;
+      if (c === "{") sau++;
+      else if (c === "}") sau--;
+      else if (c === ">" && sau === 0) {
+        ra.push(src.slice(m.index!, i + 1));
+        break;
+      }
+    }
+  }
+  return ra;
+}
+
 describe("vùng chạm 44px: hai chỗ đo được đã sửa", () => {
   it("đường tắt “Bỏ qua menu” cao đủ 44px", () => {
     // Đo thật: 257×41 — thiếu 3px, và nó là phần tử ĐẦU TIÊN người dùng bàn phím chạm tới
@@ -230,14 +259,43 @@ describe("vùng chạm 44px: hai chỗ đo được đã sửa", () => {
   });
 
   it("link “Về trang chủ” trên màn KHÔNG có thanh tab đều có vùng chạm 44px", () => {
-    // Hai màn này cố ý toàn màn (không thanh tab): luồng check-in của em, và hồ sơ của
-    // người lớn. Ở đó link "Về trang chủ" là đường ra DUY NHẤT — đo được 81×19.
-    for (const f of ["checkin-view.tsx", "profile-view.tsx"]) {
+    // Màn nào cố ý toàn màn (không thanh tab) thì link "Về trang chủ" là đường ra DUY NHẤT,
+    // nên nó phải đủ 44px — đo được 81×19 hồi 02/08/2026.
+    //
+    // `checkin-view.tsx` ĐÃ RỜI danh sách này ngày 05/08/2026, và lý do là tiền đề đã đổi
+    // chứ không phải luật bị nới: /checkin thôi mặc vỏ mini app, nay có menu trái từ `md`
+    // và thanh tab học sinh dưới `md` như mọi trang Hub khác. Link riêng về trang chủ trở
+    // thành đường ra thứ ba cho cùng một chỗ — chủ đầu tư nhìn ra ngay là nó lạc kiểu — nên
+    // đã bỏ hẳn. Bài test này canh "màn KHÔNG có thanh tab", mà /checkin nay CÓ.
+    //
+    // Nếu mai kia có màn toàn màn mới, thêm tên file vào đây; đừng nới điều kiện.
+    for (const f of ["profile-view.tsx"]) {
       const src = readCode(join(componentsDir, f));
       const chỗ = [...src.matchAll(/<(?:a|Link)[^>]*href="\/home"[^>]*>/g)].map((m) => m[0]);
       expect(chỗ.length, `${f}: không tìm thấy link về trang chủ`).toBeGreaterThan(0);
       const thieu = chỗ.filter((t) => !/min-h-\[44px\]/.test(t));
       expect(thieu, `${f}: link về trang chủ thiếu min-h-[44px]`).toEqual([]);
+    }
+  });
+
+  it("nút trong lớp nổi quản trị đều ≥44px — kể cả nút lặp lại hai chục lần", () => {
+    // Thêm 07/08/2026 sau khi ĐO trên bản đang chạy ở 375px, không phải sau khi đọc mã.
+    //
+    // Bản đấu nối của Factory (`huong-dan-tich-hop.tsx`) có 19 nút "Chép", và bản đầu viết
+    // `h-9` = 36px. Một nút 36px lọt qua mọi cổng hiện có: nó không nằm trên "đường điều
+    // hướng" mà hai phép kiểm ở trên canh, và nó không phải mục thanh tab. Nhưng đây đúng
+    // là nút người ta bấm bằng ngón cái trên điện thoại, trong lúc đọc cấu hình cho đội làm
+    // app nghe — và sai một lần thì sai mười chín lần trên cùng một màn.
+    //
+    // Quét bằng LỚP CSS chứ không dựng DOM: trần của cách này là nó tin Tailwind nói thật.
+    // Đổi lại nó chạy được trong CI không cần trình duyệt, và nó bắt đúng lỗi đã có.
+    for (const f of ["ui/hop-thoai.tsx", "quan-tri/huong-dan-tich-hop.tsx", "quan-tri/mini-app-admin-view.tsx"]) {
+      const src = readCode(join(componentsDir, f));
+      const nut = theTagMo(src, "button");
+      expect(nut.length, `${f}: không tìm thấy <button> nào — bài test này đang canh cái gì?`).toBeGreaterThan(0);
+      // `h-11` = 44px chẵn, dùng cho nút vuông (nút ✕ của hộp thoại) nơi min-h là thừa.
+      const thieu = nut.filter((t) => !/min-h-\[44px\]|\bh-11\b/.test(t)).map((t) => t.replace(/\s+/g, " ").slice(0, 90));
+      expect(thieu, `${f}: có nút thiếu vùng chạm 44px`).toEqual([]);
     }
   });
 });
@@ -511,10 +569,13 @@ describe("tương phản chữ ≥ 4,5:1 trong các file thuộc gói này", () 
     for (const token of ["muted", "muted2", "caption", "caption2"]) {
       const hex = colors[token];
       expect(hex, `không đọc được token ${token} từ tailwind.config.ts`).toBeTruthy();
-      // muted2 (#6B7789) đạt 4,54:1 trên trắng nhưng chỉ 4,12:1 trên chip #F1F4F8 — đúng
-      // lý do phép đo này lấy mặt nền TỆ NHẤT chứ không lấy nền trắng: một token chữ phải
-      // đọc được ở mọi chỗ nó có thể bị dán vào, không phải ở chỗ may mắn.
-      const floor = token === "muted2" ? 4.0 : 4.5;
+      // NGOẠI LỆ ĐÃ GỠ 05/08/2026. Dòng này từng là `token === "muted2" ? 4.0 : 4.5` —
+      // một cái sàn hạ riêng cho đúng một token, tức là một cái nợ được ghi sổ chứ không
+      // phải một chỗ đạt. Đợt rà 05/08 tìm ra `muted2` (#6B7789) đang chở chữ thật dưới
+      // chuẩn ở bản báo cáo phụ huynh đọc từ link Zalo (4,33–4,42:1 trên ba nền thẻ Glow),
+      // nên token đã nâng lên #5F6B7D và ngoại lệ này không còn lý do tồn tại. Một thước
+      // cho cả bốn token: hạ bất kỳ token nào xuống dưới 4,5:1 trên nền tệ nhất là CI đỏ.
+      const floor = 4.5;
       expect(
         worst(hex!),
         `${token} (${hex}) chỉ đạt ${worst(hex!).toFixed(2)}:1 trên nền tệ nhất`,

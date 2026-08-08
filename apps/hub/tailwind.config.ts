@@ -22,7 +22,19 @@ const config: Config = {
         ink: "#0F172A",
         cardtitle: "#0A2A5E",
         muted: "#66707D",
-        muted2: "#6B7789",
+        // muted2 #6B7789 → #5F6B7D (05/08/2026, đợt rà impeccable).
+        //
+        // Mã cũ là mã mà chính chú thích ngay dưới đây đã gọi tên là "đạt chuẩn do may mắn":
+        // 4,54:1 trên trắng nhưng 4,12:1 trên chip #F1F4F8. Nó sống thêm được một đợt vì
+        // tests/unit/a11y.test.ts hạ sàn riêng cho nó xuống 4,0 — một ngoại lệ có tên, tức
+        // là một cái nợ được ghi sổ chứ không phải một chỗ đạt.
+        //
+        // Đợt đo 05/08/2026 tìm ra nó đang chở chữ THẬT dưới chuẩn ở đúng bản mà phụ huynh
+        // mở từ link Zalo lúc tối: chi tiết Glow trong growth-report-view trên ba nền thẻ
+        // #F6FAFF / #FFFBF2 / #F6FEF9 chỉ đạt 4,33 · 4,40 · 4,42:1. Đổi một dòng ở đây sửa
+        // luôn ~50 chỗ dùng, và sàn ngoại lệ trong bài test đã bị gỡ cùng lượt — từ nay
+        // MỌI token chữ xám đo cùng một thước 4,5:1 trên mặt nền tệ nhất.
+        muted2: "#5F6B7D",
         // NÂNG TOKEN 01/08/2026 (gói "tuong-phan-man-hoc-sinh"), không vá từng chỗ.
         //
         // Đo thật trên DOM ở 360px, phiên học sinh Minh: caption cũ #8A94A6 = 3,06:1 và
@@ -51,6 +63,39 @@ const config: Config = {
         caption2: "#66707D",
         line: "#E4E9F0",
         chip: "#F1F4F8",
+        // SÁU TOKEN THÊM 05/08/2026 (đợt rà impeccable) — không phải màu mới, chỉ là những
+        // mã ĐÃ CHẠY khắp nơi bằng cách viết tay. Ba đợt đo đếm được ~290 mã hex viết thẳng
+        // trong component, và cái giá của chúng đã hiện ra thật: lần sửa #E8940D hôm 01/08
+        // chỉ chạm được 1 trong 7 chỗ, vì sáu chỗ kia người sửa không mở file ra.
+        //   subtle     #5B6B80 — chữ phụ đậm hơn caption (5,73:1 trên trắng)
+        //   cardtitle2 #33507C — tiêu đề thẻ cấp hai ở màn người lớn (8,17:1)
+        //   link       #1D4E8F — chữ liên kết trong thân trang (7,66:1)
+        //   successText#00693F — chữ trên nền xanh nhạt (6,12:1 trên trắng)
+        //   dangerText #C7333A — chữ đỏ trên nền hồng #FFF5F5 (4,94:1; mã cũ #D2383E chỉ 4,49)
+        //   line2      #C9D2DE — viền/chevron nhạt, KHÔNG dùng cho chữ
+        subtle: "#5B6B80",
+        cardtitle2: "#33507C",
+        link: "#1D4E8F",
+        successText: "#00693F",
+        dangerText: "#C7333A",
+        line2: "#C9D2DE",
+        // NỀN TRẠNG THÁI — cùng đợt, cùng lý do, khác vai trò: đây là các MẶT NỀN mà chữ
+        // ở trên phải đo tương phản với. Chúng đã chạy sẵn ở 100+ chỗ dưới dạng mã hex viết
+        // tay, nên mỗi lần ai đó hỏi "chữ này có đọc được không" thì phải đi tìm nền bằng mắt.
+        // Giá trị GIỮ NGUYÊN từng mã một — đợt này chỉ đặt tên, không đổi một pixel màu nào.
+        surface: {
+          success: "#E3F8ED", // nền xanh: đã xong, đã tới nơi
+          warn: "#FFF1C9", // nền vàng đậm: đang chờ xử lý
+          warnSoft: "#FFF7E0", // nền vàng nhạt: nhắc nhẹ, số liệu
+          gold: "#FFFBEE", // nền nút phụ viền vàng
+          danger: "#FFF5F5", // nền hồng: lỗi, đăng xuất
+          danger2: "#FFF0F0", // nền hồng đậm hơn một nấc (pill khẩn)
+          info: "#E2F0FC", // nền lam: thông tin trung tính
+          infoSoft: "#F0F7FF", // nền lam nhạt: thẻ giải thích
+          alt: "#F5F8FC", // nền xen kẽ trong danh sách
+          shell: "#EAEFF6", // nền ngoài khung thẻ
+          muted: "#E9ECF2", // nền ô app chưa mở, thanh tiến trình
+        },
         pagebg: "#F7F9FC",
         pagebgDesktop: "#F5F7FA",
         mood: {
@@ -102,12 +147,12 @@ const config: Config = {
           "62%": { transform: "scale(1.07)" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
-        dust: {
-          "0%": { transform: "translate3d(0,14px,0)", opacity: "0" },
-          "18%": { opacity: ".75" },
-          "70%": { opacity: ".5" },
-          "100%": { transform: "translate3d(18px,-84px,0)", opacity: "0" },
-        },
+        // Keyframes `dust` (8 đốm sáng bay ở nền đăng nhập) đã XOÁ 05/08/2026 cùng lượt với
+        // khối render trong login-parallax-bg.tsx — chủ đầu tư bỏ hiệu ứng. Xoá cả hai đầu
+        // cùng lúc là có chủ ý: giữ keyframes mà không ai gọi, hoặc giữ class mà không có
+        // keyframes, đều là mã chết — và vế thứ hai chính là thứ đã im lặng suốt (class
+        // `animate-dust` chưa từng tồn tại vì thiếu mục trong `animation`, nên 8 đốm đứng
+        // im mà không ai biết).
       },
       animation: {
         floaty: "floaty 4s ease-in-out infinite",

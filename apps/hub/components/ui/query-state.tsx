@@ -72,10 +72,14 @@ const MESSAGES: Record<HubVoice, { network: string; generic: string; server: str
     generic: "Chưa tải được dữ liệu. Thử lại giúp nhé.",
     server: "Máy chủ của trường đang trục trặc. Thử lại sau ít phút nhé.",
   },
+  // RÚT NGẮN bản `staff` 06/08/2026 (§8: người lớn gọn, nghiệp vụ). Ba câu này vẫn là
+  // CÂU BÁO LỖI của một hành động vừa hỏng nên không được bỏ — chỉ bỏ phần chủ ngữ dài
+  // ("Máy chưa nối được với trường" → "Mất kết nối"), giữ nguyên: hỏng ở đâu, làm gì tiếp.
+  // Bản `student` không đụng tới: nó thuộc nhóm màn học sinh, phạm vi của gói khác.
   staff: {
-    network: "Máy chưa nối được với trường. Kiểm tra mạng rồi thử lại.",
+    network: "Mất kết nối. Kiểm tra mạng rồi thử lại.",
     generic: "Chưa tải được dữ liệu. Thử lại.",
-    server: "Máy chủ của trường đang trục trặc. Thử lại sau ít phút.",
+    server: "Máy chủ trục trặc. Thử lại sau ít phút.",
   },
 };
 
@@ -142,7 +146,7 @@ export function errorPresentation(error: unknown, label?: string): ErrorPresenta
       kind: "expired",
       icon: "lock_clock",
       title: "Phiên đăng nhập đã hết hạn",
-      iconClass: "text-[#E8940D]",
+      iconClass: "text-gold-textDark",
     };
   }
   // Kiểm lỗi mạng TRƯỚC mọi mã số: không có phản hồi thì không có mã số nào để đọc.
@@ -151,7 +155,7 @@ export function errorPresentation(error: unknown, label?: string): ErrorPresenta
       kind: "network",
       icon: "wifi_off",
       title: of("Chưa tải được"),
-      iconClass: "text-[#5B6B80]",
+      iconClass: "text-subtle",
     };
   }
 
@@ -163,7 +167,7 @@ export function errorPresentation(error: unknown, label?: string): ErrorPresenta
       // KHÔNG nói "không tải được": dữ liệu vẫn ở đó và vẫn khoẻ, chỉ là tài khoản
       // này không được mở. Nói sai chỗ này đẩy người dùng đi sửa mạng.
       title: label ? `Tài khoản này không mở được ${label}` : "Tài khoản này không có quyền xem phần đó",
-      iconClass: "text-[#5B6B80]",
+      iconClass: "text-subtle",
     };
   }
   if (status === 404) {
@@ -171,7 +175,7 @@ export function errorPresentation(error: unknown, label?: string): ErrorPresenta
       kind: "notfound",
       icon: "search",
       title: of("Không tìm thấy"),
-      iconClass: "text-[#5B6B80]",
+      iconClass: "text-subtle",
     };
   }
   if (status !== null && status >= 500) {
@@ -179,14 +183,14 @@ export function errorPresentation(error: unknown, label?: string): ErrorPresenta
       kind: "server",
       icon: "cloud_off",
       title: of("Máy chủ chưa trả được"),
-      iconClass: "text-[#D2383E]",
+      iconClass: "text-dangerText",
     };
   }
   return {
     kind: "unknown",
     icon: "error",
     title: of("Không tải được"),
-    iconClass: "text-[#D2383E]",
+    iconClass: "text-dangerText",
   };
 }
 
@@ -199,7 +203,7 @@ export function LoadingState({ label = "Đang tải…" }: { label?: string }) {
       aria-live="polite"
       className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center"
     >
-      <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-[#E4E9F0] border-t-navy" aria-hidden />
+      <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-line border-t-navy" aria-hidden />
       <p className="text-[13px] font-semibold text-muted">{label}</p>
     </div>
   );
@@ -265,7 +269,7 @@ export function ErrorState({
         )}
         <a
           href="/home"
-          className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-[#5B6B80]"
+          className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-line bg-white px-5 py-3 text-[12.5px] font-extrabold text-subtle"
         >
           Về trang chủ
         </a>
@@ -300,7 +304,7 @@ export function EmptyState({
       aria-live="polite"
       className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center"
     >
-      <span className="msr text-[34px] text-[#C9D2DE]" aria-hidden>
+      <span className="msr text-[34px] text-line2" aria-hidden>
         {icon}
       </span>
       <p className="text-[13.5px] font-black text-ink">{title}</p>
@@ -319,7 +323,7 @@ export function MutationError({ error, onRetry }: { error: unknown; onRetry?: ()
   const voice = useHubVoice();
   if (!error) return null;
   return (
-    <span role="alert" className="flex flex-wrap items-center gap-2 text-[12px] font-bold text-[#D2383E]">
+    <span role="alert" className="flex flex-wrap items-center gap-2 text-[12px] font-bold text-dangerText">
       {/* Cùng bảng icon với ErrorState: 403 không được vẽ thành sự cố máy chủ. */}
       <span className="msr text-[16px]" aria-hidden>
         {errorPresentation(error).icon}
@@ -337,7 +341,7 @@ export function MutationError({ error, onRetry }: { error: unknown; onRetry?: ()
 /** Xác nhận ngắn sau khi ghi thành công — không có nó thì nút chỉ hết mờ, không ai biết đã lưu. */
 export function MutationSuccess({ children }: { children: ReactNode }) {
   return (
-    <span role="status" className="flex items-center gap-1.5 text-[12px] font-bold text-[#00693F]">
+    <span role="status" className="flex items-center gap-1.5 text-[12px] font-bold text-successText">
       <span className="msr text-[16px]" aria-hidden>
         check_circle
       </span>

@@ -5,9 +5,10 @@
 // Bridge KHÔNG tự giữ mật khẩu: interaction bridge (interaction-bridge.ts) đọc session
 // Hub hiện có (packages/core/auth-adapter) — không import SDK Supabase ở đây.
 //
-// Adapter lưu trữ: mặc định (in-memory) — đủ cho GĐ1/demo một tiến trình Node duy nhất
-// (đúng kiến trúc modular monolith). KHÔNG dùng được nếu chạy nhiều instance — ghi DEBT
-// khi cần scale ngang thật (05-capacity-ops.md bậc 2).
+// Adapter lưu trữ: in-memory cho mọi model (đủ cho GĐ1/demo một tiến trình Node duy nhất,
+// đúng kiến trúc modular monolith) — TRỪ model `Client`, đọc thẳng từ `core.v_oidc_clients`
+// (ADR-032). KHÔNG dùng được nếu chạy nhiều instance — ghi DEBT khi cần scale ngang thật
+// (05-capacity-ops.md bậc 2).
 // Khai báo kiểu cho `oidc-provider` (package thuần JS) đi KÈM file này thay vì chỉ nằm
 // trong thư mục — `tsconfig.tests.json` chỉ include `tests/**`, nên khi test import
 // provider.ts thì file .d.ts cạnh bên KHÔNG được nạp và tsc báo TS7016. Tham chiếu tường
@@ -16,7 +17,14 @@
 /// <reference path="./oidc-provider.d.ts" />
 import { createHash, timingSafeEqual } from "node:crypto";
 import Provider from "oidc-provider";
-import { REGISTERED_CLIENTS, loadPreviousSecretWindows, type PreviousSecretWindow } from "./clients.ts";
+import MemoryAdapter from "oidc-provider/lib/adapters/memory_adapter.js";
+import {
+  loadPreviousSecretWindows,
+  napOidcClients,
+  sangMetadata,
+  timOidcClient,
+  type OidcClientConfig,
+} from "./clients.ts";
 import { resolveHubProfileClaims } from "./claims.ts";
 import { loadSigningKeys, type SigningKeySet } from "./keys.ts";
 import { oidcCookieKeys } from "./secrets.ts";
@@ -55,9 +63,7 @@ function secretEquals(a: string, b: string): boolean {
  *
  * Mỗi lần khóa cũ được dùng đều ghi cảnh báo ra log, để biết còn ai chưa đổi trước khi hết hạn.
  */
-function acceptPreviousSecrets(provider: Provider, windows: PreviousSecretWindow[]): void {
-  if (windows.length === 0) return;
-
+function acceptPreviousSecrets(provider: Provider): void {
   provider.use(async (ctx: any, next: () => Promise<void>) => {
     const header: string | undefined = ctx.req.headers?.authorization;
     if (header?.startsWith("Basic ")) {
@@ -67,8 +73,14 @@ function acceptPreviousSecrets(provider: Provider, windows: PreviousSecretWindow
         // RFC 6749 §2.3.1: hai phần được urlencode trước khi base64 — phải giải mã đúng thứ tự đó.
         const clientId = decodeURIComponent(decoded.slice(0, sep));
         const givenSecret = decodeURIComponent(decoded.slice(sep + 1));
-        const window = windows.find((w) => w.client_id === clientId);
-        const current = REGISTERED_CLIENTS.find((c) => c.client_id === clientId);
+        // TRA LẠI MỖI LƯỢT, không chụp một lần lúc dựng provider (sửa 07/08/2026 cùng ADR-032).
+        // Bản cũ tính danh sách cửa sổ ĐÚNG MỘT LẦN ở `buildProvider()`, nên mở một cửa sổ xoay
+        // khoá đòi khởi động lại máy chủ — mà cả gói này tồn tại để bỏ đúng cái ràng buộc đó.
+        // Giá phải trả là một lượt đọc bộ đệm 10 giây trên mỗi request có Basic auth.
+        const current = await timOidcClient(clientId);
+        const window = current
+          ? loadPreviousSecretWindows([current]).find((w) => w.client_id === clientId)
+          : undefined;
 
         if (window && current && window.until.getTime() > Date.now() && secretEquals(givenSecret, window.secret)) {
           const swapped = `${encodeURIComponent(clientId)}:${encodeURIComponent(current.client_secret)}`;
@@ -84,6 +96,61 @@ function acceptPreviousSecrets(provider: Provider, windows: PreviousSecretWindow
   });
 }
 
+/**
+ * Adapter: model `Client` đọc từ sổ đăng ký, mọi model còn lại giữ nguyên bộ nhớ trong.
+ *
+ * ─── Vì sao đây là đường đúng, không phải "dựng lại provider mỗi lần sửa" ───────────────
+ * Cám dỗ đơn giản hơn là giữ danh sách client tĩnh rồi `providerPromise = null` sau mỗi lần
+ * quản trị bấm Lưu. KHÔNG làm, vì mọi thứ oidc-provider đang giữ trong RAM sẽ đi theo:
+ * interaction đang dở, session, và toàn bộ refresh_token đã cấp. Đổi một ô "ngày rà lại"
+ * của một app sẽ đá văng mọi người đang đăng nhập ở MỌI app khác.
+ *
+ * Đường của thư viện thì sạch hơn nhiều: `Client.find()` tra danh sách tĩnh trước, không có
+ * thì gọi `adapter('Client').find(id)`, rồi cache theo BĂM của chính metadata trả về
+ * (`lib/models/client.js`). Nghĩa là dòng trong CSDL đổi ⇒ băm đổi ⇒ client dựng lại; dòng
+ * không đổi ⇒ dùng lại bản đã cache, không tốn gì. Thu hồi có hiệu lực trong ≤10 giây (trần
+ * bộ đệm của `clients.ts`) mà không đụng tới một token nào của app khác.
+ *
+ * `adapter` khai bằng ARROW FUNCTION là có chủ ý: `initializeAdapter` phân biệt "constructor"
+ * với "factory" bằng cách xem có `prototype` không (`lib/helpers/type_validators.js`). Arrow
+ * function không có prototype nên nó đi nhánh factory — đúng nhánh cho phép trả về hai loại
+ * adapter khác nhau tuỳ tên model. Viết thành `class` hay `function` thường là rơi vào nhánh
+ * constructor và cả cơ chế này im lặng không chạy.
+ */
+class ClientAdapterSoDangKy {
+  async find(id: string): Promise<Record<string, unknown> | undefined> {
+    try {
+      const c = await timOidcClient(id);
+      return c ? sangMetadata(c) : undefined;
+    } catch (err) {
+      // Database trục trặc ⇒ không dựng được client ⇒ RP nhận `invalid_client`. Fail-closed,
+      // và thực tế không mất gì thêm: `findAccount` cũng đọc `core.users`, nên CSDL chết là
+      // không ai đăng nhập được dù client có dựng lên hay không. Điều KHÔNG được làm ở đây là
+      // nuốt lỗi im lặng — một app biến mất khỏi hệ vì lý do hạ tầng phải để lại dấu vết.
+      console.error(`[oidc] Không đọc được sổ đăng ký RP cho client "${id}":`, err);
+      return undefined;
+    }
+  }
+
+  // Ba phương thức dưới chỉ được gọi khi bật Dynamic Client Registration (RFC 7591) —
+  // `features.registration` đang TẮT và không có kế hoạch bật: đăng ký RP là việc của một
+  // người có quyền quản trị ngồi trước màn `/quan-tri/mini-app`, không phải của một request
+  // ẩn danh. Ném lỗi thay vì lặng lẽ không làm gì, để hôm nào có người bật tính năng đó thì
+  // họ gặp một câu nói rõ chuyện gì thiếu.
+  async upsert(): Promise<never> {
+    throw new Error("Sổ đăng ký RP chỉ ghi qua /quan-tri/mini-app — không qua Dynamic Client Registration.");
+  }
+  async destroy(): Promise<never> {
+    throw new Error("Thu hồi RP bằng công tắc trên /quan-tri/mini-app (enabled hoặc sso_enabled).");
+  }
+  async revokeByGrantId(): Promise<void> {
+    // Model Client không có grant để thu — no-op đúng nghĩa, không phải một chỗ chưa làm.
+  }
+}
+
+const chonAdapter = (name: string) =>
+  name === "Client" ? new ClientAdapterSoDangKy() : new MemoryAdapter(name);
+
 async function buildProvider(): Promise<Provider> {
   // Khoá ký CỐ ĐỊNH, `kid` = thumbprint RFC 7638 (xem keys.ts để biết vì sao `kid` mới
   // là chi tiết chết người, chứ không phải việc khoá đổi). Ở production thiếu khoá thì
@@ -93,24 +160,25 @@ async function buildProvider(): Promise<Provider> {
   signingKeys = keys;
   console.log(`[oidc] khoá ký: nguồn=${keys.source}, kid=${keys.activeKid}, số khoá công bố=${keys.jwks.length}`);
 
+  // Đếm trước khi dựng: một máy chủ lên với 0 RP là một máy chủ mà mọi lượt đăng nhập từ app
+  // ngoài sẽ nhận `invalid_client`, và đó là thứ phải thấy ngay ở dòng log khởi động chứ
+  // không phải sau cuộc gọi đầu tiên của đối tác. (Cũng là phép đo duy nhất chứng minh
+  // migration 0055 đã áp trên máy chủ này.)
+  const rpDangCo = await napOidcClients().catch((err) => {
+    console.error("[oidc] Không đọc được sổ đăng ký RP lúc khởi động:", err);
+    return [] as OidcClientConfig[];
+  });
+  console.log(
+    `[oidc] RP nạp từ sổ đăng ký: ${rpDangCo.length}` +
+      (rpDangCo.length ? ` (${rpDangCo.map((c) => c.client_id).join(", ")})` : " — chưa app nào bật SSO"),
+  );
+
   const provider = new Provider(getIssuer(), {
-    clients: REGISTERED_CLIENTS.map((c) => ({
-      client_id: c.client_id,
-      client_secret: c.client_secret,
-      redirect_uris: c.redirect_uris,
-      backchannel_logout_uri: c.backchannel_logout_uri,
-      // `refresh_token` bật ở đây để CHẤM DỨT mâu thuẫn tài liệu/code: `03-api.md:68,116`
-      // hứa có refresh và dựa vào chính nó để thực thi "khoá là cắt" (ADR-016), trong khi
-      // `grant_types` cũ chỉ có `authorization_code` — nghĩa là dòng `ttl.RefreshToken`
-      // bên dưới là cấu hình chết, và điểm thực thi "khoá là cắt" thật ra không tồn tại.
-      // Bật rồi thì mỗi lần RP đổi refresh_token, thư viện gọi lại `findAccount` — hàm đó
-      // trả `undefined` khi `core.users.status <> 'active'` → grant bị từ chối. Đó chính
-      // là chỗ "khoá tài khoản trong Hub = cắt app ngoài trong ≤15 phút".
-      // Tương thích ngược: RP không xin scope `offline_access` thì không có gì đổi.
-      grant_types: ["authorization_code", "refresh_token"],
-      response_types: ["code"],
-      token_endpoint_auth_method: "client_secret_basic",
-    })),
+    // RỖNG là đúng: không còn client nào viết cứng. Mọi client đi qua `adapter('Client')`,
+    // nên sửa một dòng trong sổ có hiệu lực mà không cần dựng lại provider — xem khối chú
+    // thích ở `ClientAdapterSoDangKy`.
+    clients: [],
+    adapter: chonAdapter,
     jwks: { keys: keys.jwks },
     // server.mjs chỉ chuyển tiếp path bắt đầu bằng /oidc/* sang provider — mọi endpoint
     // (kể cả mặc định của thư viện như /auth, /token) phải nằm dưới /oidc/ để khớp routing đó.
@@ -219,7 +287,7 @@ async function buildProvider(): Promise<Provider> {
 
   // Cửa sổ chồng lấn khi xoay secret (yêu cầu Factory 30/07/2026) — đặt TRƯỚC mọi thứ khác
   // của thư viện, xem acceptPreviousSecrets.
-  acceptPreviousSecrets(provider, loadPreviousSecretWindows(REGISTERED_CLIENTS));
+  acceptPreviousSecrets(provider);
 
   // LỚP BẢO ĐẢM của đăng xuất chiều ngược: gắn `Set-Cookie` xoá `hub_session` cho MỌI
   // phản hồi trên đường `/oidc/session/end*`, không phụ thuộc nhánh nào của thư viện chạy.
@@ -243,6 +311,31 @@ async function buildProvider(): Promise<Provider> {
         client.query("select core.link_identity($1, $2, $3)", [`embed-login:${clientId}`, accountId, accountId]),
       ).catch(() => {}); // đã có (idempotent) hay lỗi tạm — không chặn luồng cấp token
     }
+  });
+
+  // ── Ghi SCOPE ĐÃ XIN, ở đúng chỗ nó tồn tại (thêm 07/08/2026, trả nợ #61) ──────
+  //
+  // ADR-032 nối `sso_scopes` xuống thư viện thật, nên từ nay RP xin ngoài phần đã khai sẽ
+  // nhận `invalid_scope`. Câu hỏi đi kèm — "RP nào đang xin scope nào?" — hệ KHÔNG trả lời
+  // được: audit duy nhất có scope nằm ở `grant.success` (endpoint token), mà ở đó
+  // `params.scope` thường VẮNG MẶT. Đo trên hub_dev 07/08/2026: 3 dòng `oidc_token_issued`
+  // cho `factory`, cột scope của cả ba đều rỗng.
+  //
+  // `authorization.success` là chỗ scope thật sự có: nó phát ở `lib/actions/authorization/
+  // respond.js`, sau khi người dùng đã đồng ý, và `ctx.oidc.params.scope` là nguyên văn
+  // chuỗi RP gửi lên. Ghi ở đây thì tuần sau đối chiếu được với `sso_scopes` của từng app:
+  // lệch chỗ nào thì hoặc RP xin thừa, hoặc sổ khai thiếu — và biết được điều đó TRƯỚC khi
+  // một siết chặt làm gãy ai.
+  provider.on("authorization.success", (ctx: any) => {
+    const clientId = ctx.oidc?.client?.clientId ?? "unknown";
+    const accountId = ctx.oidc?.account?.accountId ?? ctx.oidc?.session?.accountId ?? null;
+    void withSystemContext((client) =>
+      client.query(
+        `insert into ops.audit_log (actor_id, action, object_type, object_id, scope)
+         values ($1, 'oidc_scope_requested', 'oidc_client', $2, $3)`,
+        [accountId, clientId, JSON.stringify({ scope: ctx.oidc?.params?.scope ?? null })],
+      ),
+    ).catch(() => {}); // audit không được chặn đường đăng nhập nếu DB tạm trục trặc
   });
 
   // Audit log mọi lần cấp token (03-api.md "bảo mật bắt buộc").
@@ -301,7 +394,10 @@ export async function notifyBackchannelLogout(userId: string): Promise<Backchann
 
   const issuer = getIssuer();
   for (const clientId of linkedClients) {
-    const rp = REGISTERED_CLIENTS.find((c) => c.client_id === clientId);
+    // Tra sổ đăng ký thay vì một mảng viết cứng (ADR-032). Hệ quả đáng nói: app đã TẮT không
+    // còn trong sổ, nên Hub không POST logout_token tới nó nữa — đúng, vì phiên bên đó không
+    // còn được Hub công nhận từ giây bấm nút thu hồi.
+    const rp = await timOidcClient(clientId);
     if (!rp?.backchannel_logout_uri) continue;
 
     try {

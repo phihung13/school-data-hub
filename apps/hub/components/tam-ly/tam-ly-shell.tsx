@@ -108,14 +108,23 @@ export function ScopeNotice() {
             hiệu "bấm được" mà ai cũng đọc ra, và ẩn nó thì Chrome ẩn còn Safari vẫn hiện
             (Safari cần thêm ::-webkit-details-marker) — hai trình duyệt hai kiểu. Chữ
             "vì sao?" là lớp thứ hai, không phải lớp duy nhất. */}
-        <summary className="cursor-pointer">
-          Trang này KHÔNG hiện tâm trạng và KHÔNG hiện lời em viết
+        {/* min-h-[44px] (05/08/2026): đo thật ở 375px được 268×37, ở 1440px được 984×19 —
+            dưới mốc 44px của §11/WCAG 2.5.5. Đây là phần tử BẤM ĐƯỢC duy nhất của cả khối
+            cảnh báo quyền riêng tư, tức là đường duy nhất để thầy cô mở ra đọc VÌ SAO màn
+            này thiếu dữ liệu. `flex items-center` để chiều cao mới không đẩy chữ lệch lên. */}
+        {/* RÚT GỌN THÊM 06/08/2026, KHÔNG BỎ. Khối này là một trong số ít chỗ luật cắt
+            giữ lại nguyên trách nhiệm: nó nói ra HAI thứ màn cố tình không hiện, và người
+            có nghề PHẢI biết mình đang nhìn bản không đầy đủ. Cái bị cắt là ĐỘ DÀI —
+            dòng tóm tắt cũ 55 ký tự nên vẫn xuống hai dòng ở 360px, và đoạn trong
+            <details> có ba câu thì câu giữa kể quy trình chuyển tuyến (cơ chế) chứ không
+            nói thêm gì về phạm vi đang nhìn. */}
+        <summary className="flex min-h-[44px] cursor-pointer items-center">
+          KHÔNG hiện tâm trạng và lời em viết
           <span className="ml-1 font-black text-domain-counselor">— vì sao?</span>
         </summary>
         <p className="mt-1.5">
-          Thầy cô thấy loại tín hiệu và ngày, không thấy lời kể. Muốn đọc nội dung thì GVCN phải hỏi ý em
-          rồi chuyển tuyến — Hub chưa có đường đó. Vì vậy "không thấy gì bất thường" ở đây KHÔNG đọc được
-          thành "em không có gì bất thường": im lặng vì bị che khác im lặng vì yên ổn.
+          Thầy cô thấy loại tín hiệu và ngày, không thấy lời kể. Nên "không thấy gì bất thường" ở đây KHÔNG
+          đọc được thành "em không có gì bất thường": im lặng vì bị che khác im lặng vì yên ổn.
         </p>
       </details>
     </div>

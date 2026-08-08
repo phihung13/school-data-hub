@@ -320,6 +320,76 @@ Hai gói cùng đợt gieo dữ liệu, và con số một gói đo lúc 14:00 �
 con số trong tự khai phải kèm **thời điểm đo**, và nghiệm thu phải đo lại chứ không
 đối chiếu.
 
+### 6.8 Hai agent cùng dùng `hub_test` — một bên xoá database dưới chân bên kia
+
+Đo thật 06/08/2026, đợt ADR-031: gói viết migration `0054` chạy pgTAP thì **`hub_test` bị
+drop giữa chừng hai lần** — lượt một chết ở `0007`, lượt hai ở `0011` với
+`FATAL: database "hub_test" does not exist`. Nguyên nhân: `tests/helpers/chuan-bi-db-test.ts`
+**dựng lại `hub_test` từ số không** mỗi khi "dấu vân" (bộ migration + seed) lệch, mà lúc đó có
+gói khác đang chạy `vitest run tests/db` trên chính database ấy.
+
+Cùng ngày, cùng cơ chế, một triệu chứng khác đã ghi ở `DEBT.md` #54: lượt chạy **đầu tiên**
+sau khi thêm migration làm đỏ vài file test không liên quan, với thông báo trỏ sai hoàn toàn
+(`function care.resolve_threshold does not exist` — một hàm đang tồn tại).
+
+**Luật cho agent, cho tới khi nợ #54 được trả:**
+
+- Gói nào **thêm migration** thì đừng chạy `vitest run tests/db` song song với gói khác. Chạy
+  pgTAP trên **database riêng tự dựng tự xoá** (`hub_<tên-gói>_test`), rồi dựng lại `hub_test`
+  đầy đủ ở cuối phiên — đúng cách gói `0054` đã làm sau khi vấp.
+- Người điều phối: đừng giao hai gói chạm CSDL cùng lúc nếu một trong hai thêm migration.
+- Thấy `database "hub_test" does not exist` giữa một lượt test thì **đừng đi tìm lỗi trong mã
+  của mình** — đọc mục này trước.
+
+### 6.9 HAI bộ chạy test dùng chung `hub_test`, và một bài xanh nhờ rác của bài khác
+
+Đo và **tái hiện được** 07/08/2026, đợt ADR-032. Bắt đầu từ một triệu chứng dễ gạt đi: `vitest run`
+đỏ 2 bài, chạy lại xanh, chạy lại nữa xanh. Ba nguyên nhân KHÁC NHAU chồng lên nhau, và gạt đi
+ở bất kỳ tầng nào cũng bỏ lọt hai tầng còn lại.
+
+**(a) `tools/run-db-tests.sh` giả định `hub_test` RỖNG.** Nó replay từng migration từ `0001`.
+Nhưng `tests/helpers/chuan-bi-db-test.ts` để lại một `hub_test` đã migrate đầy đủ. Chạy pgTAP
+ngay sau vitest ⇒ chết ở `0002` với `relation "school_networks" already exists`, **thoát mã 3**,
+trước khi chạy một assertion nào. Một màu đỏ không nói gì về mã nguồn.
+
+**(b) Chiều ngược lại tệ hơn vì nó KHÔNG đỏ ngay.** `run-db-tests.sh` nạp fixture và các bài pgTAP
+ghi vào `hub_test`. Lượt `vitest` kế tiếp thấy "dấu vân" (bộ migration + seed) **vẫn khớp** nên
+dùng lại database — rồi đếm ra những con số không phải của nó. Đo được: `tests/db/perf.test.ts`
+đòi **0** lượt tra `core.users` và nhận **3.547**. Một phép đo bộ đệm trở thành vô nghĩa vì bảng
+đã bị người khác cày qua.
+
+> **Đã sửa:** `run-db-tests.sh` nay **drop + create `hub_test`** ở bước 0 (sau cổng #41 chặn mọi
+> tên không kết thúc bằng `_test`). Một việc chữa cả hai chiều: database biến mất kéo theo
+> `test_meta.dau_van`, nên lượt vitest kế tiếp thấy "dấu vân lệch" và tự dựng lại phần của nó.
+> Hai bộ không cần biết về nhau. Giá: ~30 giây replay mỗi lượt — rẻ hơn nửa giờ người đi tìm một
+> lỗi không tồn tại.
+
+**(c) Và bên dưới cả hai: một bài test XANH VÌ RÁC CỦA BÀI KHÁC.** Sau khi sửa (a)+(b), mỗi lượt
+pgTAP lại buộc vitest dựng lại `hub_test` — và thế là hai bài trong `tests/db/chuong-viec-cho.test.ts`
+đỏ **đều đặn**. Đo thẳng vào seed: `select status, count(*) from care.care_cases` trên một
+database vừa dựng trả về **0 dòng**. Hai bài đó khẳng định `counselor.open_cases` phải có mặt,
+mà chúng **không tự tạo ca nào** — chúng chỉ xanh khi một FILE TEST KHÁC chạy trước và để lại
+một ca đang mở.
+
+Nghĩa là hai phép kiểm đã xanh suốt nhiều ngày **vì một lý do không liên quan gì tới thứ chúng
+tưởng mình đo**, và chúng sẽ đỏ ở đúng chỗ đắt nhất: lượt CI đầu tiên trên một database trắng,
+hoặc ngày ai đó đổi thứ tự file. Cùng họ với nợ #41 ("bộ test bịa được lịch sử chạy máy") — chỉ
+khác là ở đây bộ test **mượn dữ liệu của người khác** thay vì tự bịa. Đã sửa: hai bài tự dựng ca
+của mình và dọn trong `finally`.
+
+**Luật rút ra, áp cho mọi bài test chạm CSDL:**
+
+- **Không bài nào được khẳng định trên dữ liệu nó không tự dựng ra.** Seed chỉ bảo đảm những gì
+  `seed.mjs` viết ra; mọi thứ khác là rác của người khác.
+- **Nghiệm thu một bài test = chạy nó MỘT MÌNH trên một database vừa dựng từ số không.** Xanh
+  trong bộ đầy đủ không chứng minh gì:
+  ```
+  docker exec -i pg_hub psql .../postgres -c "drop database if exists hub_test with (force);"
+  DATABASE_URL=... npx vitest run tests/db/<file>.test.ts
+  ```
+- Thấy "chạy lại là xanh" thì **đó là một phát hiện, không phải một lời bào chữa**. Ba lần chạy
+  lại ở đây đã giấu ba lỗi thật.
+
 ---
 
 ## 7. Còn phải làm gì

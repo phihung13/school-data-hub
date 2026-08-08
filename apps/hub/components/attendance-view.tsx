@@ -86,7 +86,10 @@ export function AttendanceView({
         {query.data && (
           <div className="flex-1 p-4 md:overflow-y-auto md:p-7">
             <div className="flex flex-wrap gap-3 md:gap-4">
-              <StatCard icon="local_fire_department" iconBg="bg-[#FFF7E0]" iconColor="text-[#F58F00]" label="Chuỗi hiện tại" value={String(query.data.streakDays)} sub="ngày liên tiếp" />
+              {/* Icon lửa đổi #F58F00 → #8A5A00 (token gold-textDark): #F58F00 trên nền
+                  #FFF7E0 chỉ 2,23:1, dưới mốc 3:1 cho thành phần phi văn bản (WCAG 1.4.11).
+                  Đây đúng loại lỗi mà đợt 01/08 chỉ vá được một chỗ trong bảy. (05/08/2026) */}
+              <StatCard icon="local_fire_department" iconBg="bg-[#FFF7E0]" iconColor="text-gold-textDark" label="Chuỗi hiện tại" value={String(query.data.streakDays)} sub="ngày liên tiếp" />
               <StatCard icon="military_tech" iconBg="bg-[#F0E9FD]" iconColor="text-[#7434E8]" label="Kỷ lục" value={String(query.data.longestStreakDays)} sub="chuỗi dài nhất" />
               <StatCard icon="event_available" iconBg="bg-[#E3F8ED]" iconColor="text-[#00A05F]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
               {/* Phụ đề cũ là "cô đã xác nhận" — nói ngược với chính con số: câu SQL đếm
@@ -203,22 +206,38 @@ export function AttendanceView({
                   <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">rule</span>
                   Điểm danh tính thế nào?
                 </h2>
-                <RuleRow n={1} bg="bg-[#00D97A]" color="text-white">
-                  <b>Check-in trước 8:00</b> → tự tính là đã điểm danh, không cần làm gì thêm.
+                {/* Số "1" trắng trên #00D97A chỉ 1,87:1 — chính chú thích của khối DayMark
+                    ở cuối file này đã đo ra con số đó và ghi "KHÔNG dùng lại", rồi hàng chữ
+                    ngay đây vẫn dùng. Nay lấy đúng màu file này đã chọn cho dấu tick:
+                    #003D24 = 6,62:1 trên #00D97A. (05/08/2026) */}
+                {/* RÚT NGẮN cả bốn dòng 06/08/2026 (§1.5 "caption tối đa 1 dòng"). Khối này
+                    là BẢNG LUẬT, nên cái phải ở lại là mệnh đề luật — nhất là hai vế "không
+                    phải vắng" của QĐ-3 (gửi muộn ≠ vắng, chưa điểm danh ≠ vắng), giữ nguyên
+                    chữ. Cái bị cắt là phần trấn an và dặn dò bám theo sau mỗi luật. */}
+                {/* Bỏ "không cần làm gì thêm" — "tự tính" đã nói đúng chừng đó. */}
+                <RuleRow n={1} bg="bg-[#00D97A]" color="text-[#003D24]">
+                  <b>Check-in trước 8:00</b> → tự tính là đã điểm danh.
                 </RuleRow>
-                <RuleRow n={2} bg="bg-[#FFB01F]" color="text-[#6B4A00]">
-                  <b>Gửi sau 8:00</b> → chờ cô xác nhận. Đây <b>không phải</b> vắng.
+                {/* Nền #FFB01F → gold #FFC629: #6B4A00 trên #FFB01F là 4,41:1, hụt mốc 4,5:1
+                    của chữ; trên #FFC629 thành 5,13:1. Đổi nền (không đổi chữ) vì #FFC629 là
+                    token vàng chuẩn của app, còn #FFB01F là mã viết tay. (05/08/2026) */}
+                <RuleRow n={2} bg="bg-gold" color="text-gold-text">
+                  <b>Gửi sau 8:00</b> → chờ cô xác nhận. <b>Không phải</b> vắng.
                 </RuleRow>
+                {/* Bỏ "giờ ghi là giờ con chạm" — kể cơ chế bên trong máy. Câu còn lại dùng
+                    đúng lời hứa offline chuẩn của §8 ("Offline vẫn lưu — tự gửi sau"), câu mà
+                    /checkin và trang chủ cũng in. */}
                 <RuleRow n={3} bg="bg-[#5B6B80]" color="text-white">
-                  <b>Mất mạng</b> → máy vẫn lưu và tự gửi khi có mạng, giờ ghi là giờ con chạm.
+                  <b>Mất mạng</b> → vẫn lưu, tự gửi sau.
                 </RuleRow>
                 {/* Dòng thứ tư thêm 01/08/2026 cùng với `dayCaptionText`. Không thêm nó thì
                     khối "Điểm danh tính thế nào?" chỉ kể ba đường có kết quả, và ô "chưa
                     điểm danh" trong lưới tuần trở thành thứ duy nhất trên trang không được
                     giải thích — đúng chỗ em sẽ tự đoán ra tin xấu về mình. */}
+                {/* Bỏ "— con hỏi thầy cô nếu thấy lạ nhé": lời dặn dò, và nó còn đẩy việc
+                    của trường sang cho em. Vế QĐ-3 ("không phải vắng") giữ nguyên chữ. */}
                 <RuleRow n={4} bg="bg-[#B9C4D4]" color="text-[#33507C]">
-                  <b>Ô để trống</b> → hôm đó chưa ai điểm danh cả. Đây <b>không phải</b> vắng — con
-                  hỏi thầy cô nếu thấy lạ nhé.
+                  <b>Ô để trống</b> → chưa ai điểm danh. <b>Không phải</b> vắng.
                 </RuleRow>
               </div>
             </div>

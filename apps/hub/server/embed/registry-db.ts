@@ -33,6 +33,7 @@
 // chính là bộ đệm toàn hệ. Ngày nào chạy nhiều instance thì mỗi instance ôm bản riêng và
 // trần 10 giây là thứ duy nhất còn bảo đảm — ghi ra đây để hôm đó không ai phải đoán.
 import { withSystemContext } from "@hub/core/db";
+import { xoaDemOidc } from "../oidc/clients";
 import type { EmbedAppConfig } from "./registry";
 import { DEV_ONLY_APPS } from "./registry";
 import type { HubRole } from "@hub/core/contracts";
@@ -54,9 +55,18 @@ interface Dong {
 
 let dem: { luc: number; apps: EmbedAppConfig[] } | null = null;
 
-/** Xoá bộ đệm ngay — gọi sau mọi lần màn quản trị sửa bảng. */
+/**
+ * Xoá bộ đệm ngay — gọi sau mọi lần màn quản trị sửa bảng.
+ *
+ * Xoá CẢ HAI bộ đệm đang đọc `core.embedded_apps`: bộ này (nhúng + webhook) và bộ RP OIDC
+ * trong `oidc/clients.ts`. Một bảng, hai người đọc, nên "xoá đệm sổ đăng ký" phải là MỘT
+ * lời gọi — bắt bốn chỗ trong `routers/admin.ts` nhớ gọi hai hàm là thiết kế ra đúng cái
+ * lỗi sẽ xảy ra: chỗ thứ năm quên hàm thứ hai, và app vừa thu hồi vẫn đăng nhập được thêm
+ * mười giây nữa mà không ai giải thích nổi vì sao.
+ */
 export function xoaDem(): void {
   dem = null;
+  xoaDemOidc();
 }
 
 function doiHang(r: Dong): EmbedAppConfig {

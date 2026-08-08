@@ -225,17 +225,21 @@ describe("sidebar: menu chọn theo vai thật", () => {
     expect(nav.roleLabel).not.toContain("GVCN");
   });
 
-  it("giáo viên bộ môn nhận menu nhân viên tối thiểu, không phải menu GVCN", () => {
-    // Danh sách này rụng dần theo đúng nhịp các vai có màn hình thật, và đó là chủ ý:
+  it("giáo viên bộ môn có màn của mình, và KHÔNG phải menu GVCN", () => {
+    // Danh sách "nhân viên tối thiểu" rụng dần theo đúng nhịp các vai có màn hình thật,
+    // và đó là chủ ý:
     //   · 31/07/2026 — `counselor` rời đi (có /tam-ly), ca riêng nằm ngay dưới;
     //   · 01/08/2026 — `principal`/`board` rời đi (có /dieu-hanh), ca riêng nằm dưới nữa.
     //   · 02/08/2026 — `admin` rời đi (có /quan-tri/mini-app), ca riêng nằm ngay dưới.
-    // Còn lại đúng `teacher`: giáo viên bộ môn GĐ1 chưa có màn nghiệp vụ nào, nên hai
-    // mục vào được thật vẫn tốt hơn một mục dẫn tới trang chặn quyền rồi đá ngược.
-    for (const roles of [["teacher"]] as HubRole[][]) {
-      const nav = resolveNav(roles);
-      expect(nav.items, `vai ${roles.join("+")}`).toEqual(STAFF_ITEMS);
-      expect(nav.roleLabel).not.toBe("GVCN");
+    //   · 06/08/2026 — `teacher` rời đi (có /lop-toi-day). Danh sách nay RỖNG: không còn
+    //     vai nào của trường chỉ có mỗi "Trang chủ".
+    const nav = resolveNav(["teacher"]);
+    expect(nav.items.map((i) => i.href)).toContain("/lop-toi-day");
+    expect(nav.roleLabel).not.toBe("GVCN");
+    // Và không được vớ luôn menu GVCN: bốn màn /gvcn/* chặn `homeroom` ở page.tsx, nên
+    // một mục hiện ra cho vai này là một mục bấm vào bị đá ngược về /home.
+    for (const href of ["/gvcn", "/gvcn/lop", "/gvcn/diem-danh", "/gvcn/duyet-bao-cao", "/gvcn/ghi-chu"]) {
+      expect(nav.items.map((i) => i.href), `giáo viên bộ môn không được thấy ${href}`).not.toContain(href);
     }
   });
 
@@ -291,9 +295,23 @@ describe("sidebar: menu chọn theo vai thật", () => {
   });
 
   it("tài khoản chưa được gán vai nào không rơi vào menu của ai cả", () => {
+    // ĐỔI CÁCH CHỨNG MINH, KHÔNG HẠ CHUẨN (06/08/2026).
+    //
+    // Câu cũ ở đây là `expect(nav.items).toEqual(STAFF_ITEMS)` — và nó xanh chỉ vì một sự
+    // TRÙNG HỢP: chừng nào vai `teacher` chưa có màn nghiệp vụ nào thì menu của nó đúng
+    // bằng phần chung cho mọi người. Ngày `teacher` có màn thật (/lop-toi-day), phép so
+    // ấy đỏ — mà tính chất nó định canh thì không hề đổi.
+    //
+    // Tính chất thật: người chưa có vai chỉ thấy những màn khai `vai: "moi-nguoi"`, không
+    // dính một mục nào của một vai cụ thể. Nay khẳng định thẳng điều đó.
     const nav = resolveNav([]);
-    expect(nav.items).toEqual(STAFF_ITEMS);
     expect(nav.roleLabel).toBe("TÀI KHOẢN TRƯỜNG");
+    expect(nav.items.map((i) => i.href)).toEqual(["/home"]);
+    for (const roles of [["student"], ["guardian"], ["teacher"], ["homeroom"], ["counselor"], ["principal"], ["admin"]] as HubRole[][]) {
+      const rieng = resolveNav(roles).items.map((i) => i.href).filter((h) => h !== "/home");
+      const lot = nav.items.map((i) => i.href).filter((h) => rieng.includes(h));
+      expect(lot, `tài khoản chưa có vai lại thấy mục của ${roles.join("+")}`).toEqual([]);
+    }
   });
 
   it("người vừa là GVCN vừa là phụ huynh nhận CẢ HAI, không phải một bộ ưu tiên", () => {

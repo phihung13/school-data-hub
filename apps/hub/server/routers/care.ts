@@ -80,6 +80,44 @@
 //     r.help_requested ? "E_URGENT" : "E_MOOD"` bên dưới), nên chuyển bên đọc là làm GVCN
 //     lần đầu thấy cờ chuyên cần và hành vi. Đó là MỞ RỘNG PHẠM VI, phải có người quyết,
 //     không phải một lần đổi câu SQL. Ba chỗ chặn khác đã ghi đủ trong DEBT.md #32.
+//
+// ── 06/08/2026 · ADR-029, khối "gửi muộn" của buồng lái ──────────────────────
+//
+// Trước hôm nay khối đó có ĐÚNG một nút: "Xác nhận cả N". Không giờ gửi, không chọn từng
+// em, không chỗ ghi vì sao — và đúng một kết luận khả dĩ là `present`. Cô nhìn thấy chỗ
+// ngồi trống mà không có đường nào ghi lại điều đó ngoài việc mở CSDL sửa tay.
+//
+// Ba thay đổi ở file này, và chúng phải đi cùng nhau:
+//   1. `getDashboard` trả `occurredAtTime` — giờ em bấm, đọc từ `attendance.checkins.
+//      occurred_at` (cột có từ 0004, chưa màn nào đọc). Đó là dữ kiện để quyết.
+//   2. `decideLateCheckins` — ba kết luận, lý do bắt buộc khi khác `present`, mỗi lượt ghi
+//      để lại một dòng `attendance.late_decisions`. Gọi hàm `attendance.
+//      decide_late_checkins` (0053), KHÔNG tự viết UPDATE.
+//   3. `acknowledgeLate` thành lối tắt của (2) với `decision: 'present'` — deprecated,
+//      giữ cho client cũ, nhưng nay cũng để lại vết như mọi đường ghi khác.
+//
+// ADR-007 KHÔNG bị lật: máy vẫn không được tự suy ra vắng từ một lần gửi muộn. Thứ mở ra
+// là quyền của một CON NGƯỜI biết chuyện gì đã xảy ra trong lớp mình — và mở quyền thì mở
+// kèm sổ.
+//
+// ── 06/08/2026 · `decideReports`, cùng hình dạng cho màn Duyệt báo cáo ───────
+//
+// Chủ đầu tư cùng ngày: "báo cáo thì cũng có thể gửi hàng loạt, hoặc sửa, hoặc trả lại gì
+// đó hàng loạt". `decideReports` nhận mảng `studentIds` và trả `{updated, skipped}` — đúng
+// hình dạng `decideLateCheckins`, cố ý, vì đó là cùng một thao tác của cùng một người.
+//
+// ── 06/08/2026 · ADR-031, đường SỬA một quyết định đã ký ────────────────────
+//
+// Bản đầu của `decideReports` dừng ở "chỉ chạm dòng chưa ai quyết" và BÁO LẠI thay vì tự
+// mở đường sửa, vì đo được rằng tầng dữ liệu không có chỗ ghi vết: sổ duyệt có
+// `unique (student_id, week_start)` nên một lượt đè XOÁ cả bốn dữ kiện của chữ ký trước,
+// còn `ops.audit_log` thì vai `authenticated` không có quyền ghi (0024 khai thẳng).
+//
+// ADR-031 (chủ đầu tư duyệt cùng ngày) trả lời bằng `0054`: bảng `report.report_decisions`
+// sao khuôn `attendance.late_decisions`, và hàm `report.decide_reports(...)` invoker làm
+// upsert + ghi sổ trong MỘT câu lệnh. Từ đây router KHÔNG còn câu `insert into
+// report.growth_report_approvals` nào của riêng nó ở đường hàng loạt — một đường ghi bỏ
+// qua hàm là một đường ghi không để lại vết.
 import { TRPCError } from "@trpc/server";
 import {
   AcknowledgeHelpRequestInput,
@@ -89,6 +127,10 @@ import {
   ApproveReportOutput,
   CloseCaseInput,
   CloseCaseOutput,
+  DecideLateCheckinsInput,
+  DecideLateCheckinsOutput,
+  DecideReportsInput,
+  DecideReportsOutput,
   GetClassRosterInput,
   GetClassRosterOutput,
   GetClusterCaseDetailInput,
@@ -624,13 +666,32 @@ export const careRouter = router({
         student_id: string;
         student_name: string;
         occurred_on: string;
+        occurred_at_time: string;
       }>(
-        `select c.id as checkin_id, s.id as student_id, s.full_name as student_name, c.occurred_on::text
+        // GIỜ GỬI đi ra màn hình (ADR-029, 06/08/2026). `attendance.checkins.occurred_at` có
+        // từ 0004 mà buồng lái chưa bao giờ đọc: cô chỉ thấy "1 check-in gửi muộn" và không
+        // có dữ kiện nào để quyết — mà bấm lúc 07:55 khác hẳn bấm lúc 10:20.
+        //
+        // `to_char(..., 'HH24:MI')` chứ KHÔNG phải `occurred_at::text`: đường thứ hai trả về
+        // cả micro giây lẫn offset (`"2026-08-01 00:41:49.075267+07"` — đo thật 01/08/2026,
+        // xem `ClassRosterEntry.checkedInAt`). Đổi múi giờ làm ở TẦNG KẾT NỐI: mọi phiên đều
+        // `set time zone 'Asia/Ho_Chi_Minh'` (packages/core/db/client.ts:67, cưỡng chế bằng
+        // tests/unit/mui-gio.test.ts), nên `to_char` trên timestamptz đã là giờ địa phương —
+        // đúng cách `getClassRoster` và `getStudentDetail` đang làm, không thêm cách thứ ba.
+        //
+        // KHÔNG lọc `source = 'app'` như hai chỗ kia: ở đó giờ chỉ có nghĩa khi CHÍNH EM bấm,
+        // còn dòng `queued_late` thì theo định nghĩa là dòng em gửi (hàng đợi offline hoặc
+        // ngoài dải IP trường) — cô ghi hộ không bao giờ sinh ra trạng thái này (0032 cấm
+        // GVCN ghi `queued_late`). Nên ở đây `occurred_at` LUÔN là giờ máy chủ nhận lượt bấm
+        // của em, và trường trong hợp đồng là `z.string()` không nullable đúng vì thế.
+        `select c.id as checkin_id, s.id as student_id, s.full_name as student_name,
+                c.occurred_on::text,
+                to_char(c.occurred_at, 'HH24:MI') as occurred_at_time
            from attendance.checkins c
            join core.students s on s.id = c.student_id
            join core.enrollments e on e.student_id = c.student_id and e.valid_to is null
           where e.class_id = $1 and c.status = 'queued_late'
-          order by c.occurred_on`,
+          order by c.occurred_on, c.occurred_at`,
         [classId],
       );
 
@@ -862,6 +923,7 @@ export const careRouter = router({
           studentId: r.student_id,
           studentName: r.student_name,
           occurredOn: r.occurred_on,
+          occurredAtTime: r.occurred_at_time,
         })),
         recentActions: recentActionsRes.rows.map((r) => ({
           studentName: r.student_name,
@@ -873,20 +935,102 @@ export const careRouter = router({
   }),
 
   /**
-   * Xác nhận check-in gửi muộn. `homeroomProcedure` là lớp gác THỨ HAI — lớp thứ nhất
-   * là grant theo cột + trigger ở 0025. Bỏ một trong hai là lỗ leo quyền quay lại.
+   * Kết luận một hoặc nhiều check-in gửi muộn: `present` · `late` · `absent` (ADR-029).
+   *
+   * ── VÌ SAO `homeroomProcedure`, KHÔNG PHẢI `protectedProcedure` ────────────────
+   * Lỗi số 1 ở đầu file này là LEO QUYỀN, và nó xảy ra ở đúng đường ghi mà thủ tục này
+   * thay thế: `acknowledgeLate` từng là `protectedProcedure` — chỉ hỏi "đã đăng nhập
+   * chưa" — nên học sinh gọi thẳng với id dòng `queued_late` của CHÍNH MÌNH là tự duyệt
+   * được mình thành `present` và ký tên mình vào `confirmed_by` (tái hiện được, xem đầu
+   * migration 0025). Thủ tục mới mở RỘNG HƠN cũ (nay ghi được cả `absent`, tức là chạm
+   * thẳng vào số chuyên cần), nên nó phải gác CHẶT HƠN chứ không được bằng:
+   *
+   *   · tầng vai   — `homeroomProcedure`: chỉ người đang chủ nhiệm một lớp mới gọi được.
+   *   · tầng RLS   — policy trên `attendance.checkins` (0025, nới cho `absent` ở 0053):
+   *                  cô chỉ động được vào dòng `queued_late` của lớp MÌNH chủ nhiệm.
+   *   · tầng sổ    — `attendance.decide_late_checkins` ghi `attendance.late_decisions`
+   *                  trong CÙNG giao dịch với lần đổi trạng thái.
+   *
+   * Ba tầng, không tầng nào tin tầng kia tử tế. Và KHÔNG có đường ghi thứ hai: router
+   * này không còn câu `update attendance.checkins ... set status` nào của riêng nó — một
+   * đường ghi trạng thái bỏ qua hàm là một đường ghi không để lại vết, mà "quyền không
+   * có vết là quyền không ai soát được" (ADR-029).
+   *
+   * ── VÌ SAO GỌI HÀM SQL, KHÔNG VIẾT LẠI UPDATE Ở ĐÂY ──────────────────────────
+   * Đổi trạng thái và ghi sổ phải là MỘT hành động nguyên tử. Viết hai câu lệnh ở tầng
+   * này thì có một khoảnh khắc trạng thái đã đổi mà sổ chưa ghi, và mọi lỗi mạng rơi vào
+   * đúng khoảnh khắc đó sinh ra thứ tệ nhất: một số chuyên cần đã đổi mà không ai biết ai
+   * đổi. Hàm `attendance.decide_late_checkins` (0053) làm cả hai trong một giao dịch và
+   * là nơi duy nhất biết cách làm việc đó.
+   *
+   * ── LÝ DO BẮT BUỘC, KIỂM Ở CẢ BA TẦNG ────────────────────────────────────────
+   * ADR-029 đổi lấy quyền ghi `absent` bằng đúng một điều kiện: kết luận khác `present`
+   * thì phải nói vì sao. Chặn ở `DecideLateCheckinsInput.refine` (hợp đồng), ở đây (một
+   * màn khác gọi thẳng, hoặc hợp đồng bị nới sau này mà không ai để ý), và ở ràng buộc
+   * trong 0053. Ba tầng CỐ Ý chồng nhau: tầng dưới không được suy ra rằng tầng trên đã
+   * kiểm hộ mình rồi.
+   *
+   * §9 — idempotency nằm ở `clientMutationId`: gửi lại cùng mã là CÙNG một quyết định,
+   * không phải quyết định thứ hai. Lần hai trả `updated = 0` và sổ KHÔNG thêm dòng.
+   */
+  decideLateCheckins: homeroomProcedure
+    .input(DecideLateCheckinsInput)
+    .mutation(async ({ ctx, input }) => {
+      const reason = input.reason?.trim() ?? null;
+      if (input.decision !== "present" && (reason === null || reason.length < 3)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Phải ghi lý do khi kết luận khác “Có mặt”.",
+        });
+      }
+
+      return ctx.runWithDb(async (client) => {
+        const { rows } = await client
+          .query<{ updated: number; skipped: number }>(
+            `select updated, skipped
+               from attendance.decide_late_checkins($1::uuid[], $2::text, $3::text, $4::uuid)`,
+            [input.checkinIds, input.decision, reason, input.clientMutationId ?? null],
+          )
+          .catch(asScopeError);
+
+        // Hàm luôn trả đúng một dòng; `?? 0` chỉ để TypeScript không phải đoán, không
+        // phải để nuốt một ca rỗng — rỗng ở đây là lỗi hàm, và nó sẽ lộ ra ở test.
+        return DecideLateCheckinsOutput.parse({
+          updated: rows[0]?.updated ?? 0,
+          skipped: rows[0]?.skipped ?? 0,
+        });
+      });
+    }),
+
+  /**
+   * @deprecated ADR-029 (06/08/2026) — dùng `decideLateCheckins` với
+   * `{ decision: 'present' }`. Giữ lại vì client cũ (bản PWA đã cài trên máy thầy cô,
+   * chưa cập nhật) vẫn đang gọi tên này; gỡ được khi không còn phiên bản nào gọi.
+   *
+   * Nay là LỐI TẮT, không phải đường ghi thứ hai: nó gọi ĐÚNG hàm SQL mà
+   * `decideLateCheckins` gọi, nên mỗi cú bấm của client cũ cũng để lại một dòng
+   * `attendance.late_decisions` như mọi quyết định khác. Trước ADR-029 nút này chạy một
+   * câu `update` trần — tức là đường ghi duy nhất KHÔNG có vết, và là đúng thứ mà một
+   * client cũ chưa cập nhật sẽ còn dùng lâu nhất.
+   *
+   * `homeroomProcedure` giữ nguyên: đây vẫn là lớp gác thứ hai bên cạnh RLS 0025.
    */
   acknowledgeLate: homeroomProcedure.input(AcknowledgeLateInput).mutation(async ({ ctx, input }) => {
     return ctx.runWithDb(async (client) => {
-      const { rowCount } = await client.query(
-        `update attendance.checkins
-            set status = 'present', confirmed_by = core.current_user_id()
-          where id = any($1::uuid[]) and status = 'queued_late'`,
-        [input.checkinIds],
-      );
-      // Gọi lại lần hai: điều kiện `status = 'queued_late'` không còn khớp → 0 dòng,
-      // không lỗi. Idempotent tự nhiên (§9).
-      return { updated: rowCount ?? 0 };
+      const { rows } = await client
+        .query<{ updated: number; skipped: number }>(
+          // `p_reason = null` hợp lệ vì `p_to_status = 'present'` — đúng điều kiện duy
+          // nhất mà ADR-029 cho phép bỏ trống lý do.
+          `select updated, skipped
+             from attendance.decide_late_checkins($1::uuid[], 'present', null, null)`,
+          [input.checkinIds],
+        )
+        .catch(asScopeError);
+
+      // Hình dạng trả về giữ nguyên `{ updated }` — client cũ đọc đúng khoá đó, thêm
+      // khoá mới thì không sao nhưng đổi khoá cũ là làm hỏng màn hình đang chạy.
+      // Gọi lại lần hai: dòng không còn `queued_late` → 0, không lỗi (§9).
+      return { updated: rows[0]?.updated ?? 0 };
     });
   }),
 
@@ -1366,7 +1510,110 @@ export const careRouter = router({
     }),
 
   /**
+   * Duyệt (hoặc trả lại) báo cáo của NHIỀU em trong một lời gọi (06/08/2026).
+   *
+   * Chủ đầu tư, cùng ngày với ADR-029: "báo cáo thì cũng có thể gửi hàng loạt, hoặc sửa,
+   * hoặc trả lại gì đó hàng loạt". Màn duyệt bắt cô ký từng em một — một lớp 40 em là 40
+   * cú bấm cho một quyết định cô đã ra từ lúc đọc xong danh sách.
+   *
+   * ── MẶC ĐỊNH KHÔNG GHI ĐÈ; SỬA LÀ MỘT ĐƯỜNG RIÊNG (ADR-031) ──────────────────
+   * `p_ghi_de = false` (mặc định): hàm chỉ chạm dòng `status = 'pending'`. Đó là hàng rào,
+   * không phải hạn chế tạm — "Chọn tất cả" trên một màn đã cũ vài phút sẽ ôm theo cả những
+   * em vừa được đồng nghiệp (hoặc chính cô ở tab khác) TRẢ LẠI, và một cú bấm "Duyệt gửi
+   * phụ huynh" không được lật ngược chữ ký người khác mà không ai thấy. Cùng ngữ nghĩa mà
+   * `attendance.decide_late_checkins` (0053) đã chốt cho khối gửi muộn.
+   *
+   * `p_ghi_de = true`: đè được lên `approved`/`rejected`, và cái giá là lý do BẮT BUỘC —
+   * kể cả khi đổi sang `approved` — cộng một dòng `report.report_decisions` cho mỗi lượt
+   * (`from_status · to_status · decided_by · decided_at · reason · client_mutation_id`).
+   * Cờ phải do người gọi khai tường minh: một mặc định "đè cho tiện" là đúng thứ ADR-031
+   * sinh ra để chặn.
+   *
+   * ADR-031 ghi thẳng giới hạn, và không chỗ nào trong mã này được nói khác: sổ vết trả
+   * lời được "ai đổi, lúc nào, vì sao", KHÔNG trả lời được "phụ huynh đã đọc bản nào".
+   *
+   * ── VÌ SAO GỌI HÀM SQL, KHÔNG VIẾT LẠI UPSERT Ở ĐÂY ──────────────────────────
+   * Đổi trạng thái và ghi sổ phải là MỘT hành động nguyên tử. Viết hai câu ở tầng này thì
+   * có một khoảnh khắc chữ ký đã đổi mà sổ chưa ghi, và mọi lỗi mạng rơi vào đúng khoảnh
+   * khắc đó sinh ra thứ tệ nhất: một báo cáo đã đổi quyết định mà không ai biết ai đổi.
+   * `report.decide_reports` (0054) làm cả hai trong một câu lệnh và là nơi DUY NHẤT biết
+   * cách làm việc đó — y hệt vai trò `attendance.decide_late_checkins` ở ADR-029.
+   *
+   * Hàm là invoker (KHÔNG `security definer`), nên nó đi qua đúng RLS của người gọi:
+   * `growth_report_approvals_write/_revise` (0032) và policy của sổ vết (0054). Phạm vi
+   * TỪNG EM do `core.is_homeroom_of` trong chính hàm canh, không do một mệnh đề JOIN ở
+   * tầng này — nên `classId` dưới đây KHÔNG còn là bộ lọc dòng, nó là lời khai của người
+   * gọi và `requireMyClass` bác lời khai sai bằng FORBIDDEN. Em không thuộc lớp chủ nhiệm
+   * nào của người gọi rơi vào `skipped`, KHÔNG ném lỗi: ném lỗi là dựng một kênh dò xem
+   * một id có tồn tại và thuộc lớp nào.
+   *
+   * ── §9 ────────────────────────────────────────────────────────────────────────
+   * `clientMutationId` NAY được lưu (0054: cột + unique một phần theo `(student_id,
+   * week_start, client_mutation_id)`), nên gửi lại cùng mã là cùng MỘT quyết định trên cả
+   * hai đường. Điều đó bắt buộc phải có trước đường ghi đè: ở đó không còn điều kiện
+   * `status = 'pending'` nào để biến lượt thứ hai thành no-op.
+   */
+  decideReports: homeroomProcedure.input(DecideReportsInput).mutation(async ({ ctx, input }) => {
+    // Không dùng giá trị trả về làm bộ lọc dòng (xem trên) — gọi để BÁC lời khai sai: một
+    // GVCN khai lớp không phải của mình phải nhận FORBIDDEN rõ ràng, không phải một danh
+    // sách rỗng trông như "lớp đó không có em nào".
+    requireMyClass(ctx.homeroomClassIds, input.classId);
+    const weekStart = mondayIso(input.weekStart);
+    const note = input.note?.trim() || null;
+
+    // Tầng chặn thứ hai của "phải có lý do" (tầng một là `.refine` trong hợp đồng, tầng ba
+    // là chính hàm 0054). Cố ý chồng lên nhau: hợp đồng bị nới sau này mà không ai để ý thì
+    // đây vẫn giữ. `ghiDeQuyetDinhDaCo` nằm trong điều kiện vì đổi một chữ ký ĐÃ GỬI sang
+    // "đã duyệt" cũng là đổi — miễn lý do cho nhánh đó là mở lại đúng cửa vừa đóng.
+    if ((input.decision === "rejected" || input.ghiDeQuyetDinhDaCo) && (note === null || note.length < 3)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: input.ghiDeQuyetDinhDaCo
+          ? "Đổi một quyết định đã ký thì cần ghi lý do."
+          : "Trả lại báo cáo thì cần ghi lý do để tuần sau sửa được.",
+      });
+    }
+
+    // Bỏ id trùng TRƯỚC khi gọi hàm: `skipped` tính theo mảng thô sẽ dương một cách vô
+    // nghĩa, và màn hình sẽ nói "bỏ qua 1 em" khi không có em nào bị bỏ (cùng lý lẽ với
+    // `count(distinct)` ở 0053).
+    const studentIds = [...new Set(input.studentIds)];
+
+    return ctx.runWithDb(async (client) => {
+      const { rows } = await client
+        .query<{ updated: number; skipped: number }>(
+          `select updated, skipped
+             from report.decide_reports($1::uuid[], $2::date, $3::text, $4::text, $5::boolean, $6::uuid)`,
+          [
+            studentIds,
+            weekStart,
+            input.decision,
+            note,
+            input.ghiDeQuyetDinhDaCo,
+            input.clientMutationId ?? null,
+          ],
+        )
+        .catch(asScopeError);
+
+      // Hàm luôn trả đúng một dòng; `?? 0` chỉ để TypeScript không phải đoán, không phải
+      // để nuốt một ca rỗng — rỗng ở đây là lỗi hàm, và nó sẽ lộ ra ở test.
+      return DecideReportsOutput.parse({
+        updated: rows[0]?.updated ?? 0,
+        skipped: rows[0]?.skipped ?? 0,
+      });
+    });
+  }),
+
+  /**
    * Duyệt (hoặc trả lại) báo cáo một tuần của một em.
+   *
+   * @deprecated 06/08/2026 — dùng `decideReports` (nhận mảng, kể cả mảng một phần tử).
+   * Giữ lại vì client cũ (PWA đã cài trên máy thầy cô, chưa cập nhật) vẫn gọi tên này; gỡ
+   * được khi không còn phiên bản nào gọi.
+   *
+   * KHÁC `decideReports` ở đúng một điểm, và điểm đó là lý do nó chưa gỡ được ngay: thủ
+   * tục này GHI ĐÈ lên quyết định đã có, nên hôm nay nó là đường duy nhất sửa được một
+   * chữ ký đã ký nhầm.
    *
    * §9 — upsert theo `(student_id, week_start)`. Nhánh DO UPDATE có điều kiện
    * `is distinct from`: bấm lại đúng quyết định cũ thì KHÔNG ghi đè `reviewed_at`, nên

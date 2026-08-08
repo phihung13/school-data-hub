@@ -39,12 +39,31 @@ const read = (rel: string) => stripComments(readFileSync(join(repoRoot, rel), "u
 const count = (src: string, re: RegExp) => (src.match(re) ?? []).length;
 
 /** Các màn thuộc gói này: đủ landmark, đủ tiêu đề, mở được bằng điện thoại. */
+// DANH SÁCH NÀY LÀ CÁI CỔNG, NÊN NÓ PHẢI LỚN LÊN THEO SỐ MÀN ĐÃ SỬA.
+//
+// Bốn màn đầu vào đây ngày 31/07/2026. Đợt rà 05/08/2026 đo lại bằng trình duyệt và tìm
+// ra ba màn NGOÀI danh sách đang thiếu đúng những thứ danh sách này canh: `/home` (không
+// landmark, không một heading nào — mà đây là màn mọi vai đi qua sau khi đăng nhập),
+// `/bao-cao` bản desktop (nhánh desktop tự dựng <div> trần nên đường tắt bàn phím chết
+// im lặng, trong khi bản mobile có), và `/login` (phần tử Tab đầu tiên của trang đầu tiên
+// mọi người gặp là một link không đi tới đâu).
+//
+// Bài học một dòng: một luật chỉ có hiệu lực trên những file được liệt kê. Sửa xong một
+// màn mà không thêm nó vào đây thì lần trôi sau không ai bắt được.
 const OWNED_VIEWS = [
   "apps/hub/components/attendance-view.tsx",
   "apps/hub/components/this-week-view.tsx",
   "apps/hub/components/profile-view.tsx",
   "apps/hub/components/help-request-view.tsx",
+  "apps/hub/components/checkin-view.tsx",
+  "apps/hub/components/home-view.tsx",
 ];
+// KHÔNG có growth-report-view.tsx trong danh sách trên, và đây là lý do — không phải bỏ sót:
+// màn đó dựng bằng HAI loại vỏ khác nhau (bản điện thoại đi qua <PageShell>, bản máy tính
+// dùng <MainContent>), nên phép đếm "số <h1> phải bằng số vùng <MainContent>" ở dưới sẽ đếm
+// 2 <h1> cho 1 vùng và đỏ, dù cả hai nhánh đều đúng. Cả hai nhánh đã có landmark và <h1>
+// riêng (đo bằng trình duyệt 05/08/2026). Muốn kéo nó vào cổng thì phải dạy phép đếm biết
+// <PageShell> cũng là một vùng nội dung — việc đó lớn hơn một dòng và chưa làm.
 
 /**
  * Cắt ra phần JSX nằm GIỮA <MainContent …> và </MainContent>. Một file có thể có nhiều
@@ -60,6 +79,30 @@ function mainRegions(src: string): string[] {
     out.push(end === -1 ? rest : rest.slice(0, end));
   }
   return out;
+}
+
+/**
+ * Vùng nội dung + thân của những component con ĐƯỢC GỌI TRONG vùng đó và ĐƯỢC ĐỊNH NGHĨA
+ * TRONG CÙNG FILE.
+ *
+ * Vì sao cần (05/08/2026): phép cắt thô ở trên chỉ nhìn thấy chữ nằm giữa hai thẻ, nên một
+ * vùng viết là `<MainContent><DesktopHome /></MainContent>` trông như một vùng RỖNG — không
+ * `<h1>` nào cả — dù `<h1>` nằm ngay trong `function DesktopHome` cách đó 200 dòng. Bài test
+ * đã đỏ đúng như vậy khi home-view.tsx được đưa vào cổng, và đó là dương tính giả: trình
+ * duyệt đo được đúng một `<h1>` trong landmark.
+ *
+ * Đi ĐÚNG MỘT tầng, và chỉ trong cùng file — đủ cho kiểu tách `MobileHome`/`DesktopHome` mà
+ * repo đang dùng, mà không biến bài test thành một trình phân tích JSX.
+ */
+function mainRegionsDeep(src: string): string[] {
+  return mainRegions(src).map((region) => {
+    let expanded = region;
+    for (const tag of new Set([...region.matchAll(/<([A-Z][A-Za-z0-9]*)\b/g)].map((m) => m[1]))) {
+      const def = src.match(new RegExp(`function ${tag}\\(([\\s\\S]*?)\\n\\}`));
+      if (def) expanded += def[0];
+    }
+    return expanded;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -138,7 +181,10 @@ describe("mỗi màn có đúng một <h1>", () => {
   });
 
   it.each(OWNED_VIEWS)("%s: <h1> nằm TRONG vùng nội dung", (file) => {
-    for (const region of mainRegions(read(file))) {
+    // mainRegionsDeep: đi thêm một tầng vào component con định nghĩa cùng file — xem lý lẽ
+    // ở chính hàm đó. Không có nó thì `<MainContent><DesktopHome /></MainContent>` bị đọc
+    // thành một vùng rỗng.
+    for (const region of mainRegionsDeep(read(file))) {
       expect(region, `${file}: một vùng <MainContent> không chứa <h1> nào`).toMatch(/<h1[\s>]/);
     }
   });

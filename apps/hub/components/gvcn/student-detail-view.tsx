@@ -34,7 +34,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import {
-  ARRIVAL_BAND_UNAVAILABLE_NOTE,
   ATTENDANCE_STATUS_ICON,
   ATTENDANCE_STATUS_LABEL,
   ATTENDANCE_UNKNOWN_ICON,
@@ -189,7 +188,7 @@ export function StudentDetailView({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/gvcn/lop"
-            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#F5F8FC]"
           >
             <span className="msr text-[17px]" aria-hidden>
               arrow_back
@@ -206,7 +205,7 @@ export function StudentDetailView({
                 className={
                   days === choice
                     ? "min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                    : "min-h-[44px] rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
+                    : "min-h-[44px] rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#F5F8FC]"
                 }
               >
                 {choice} ngày
@@ -229,7 +228,7 @@ export function StudentDetailView({
           // "em" ở đây trùng với chữ "em" chỉ HỌC SINH dùng khắp cùng màn ("Em chưa bấm
           // "cần gặp thầy cô" lần nào", "ghi cho riêng em"), nên câu đó đọc thành "báo
           // quản trị giúp học sinh". Người lớn: gọn, nghiệp vụ.
-          hint="Thử tải lại trang. Nếu vẫn không được, báo quản trị hệ thống."
+          hint="Tải lại trang. Vẫn lỗi thì báo quản trị hệ thống."
         />
       ) : (
         <div className="flex flex-col gap-4">
@@ -257,6 +256,8 @@ function CheckinStrip({
   window: { days: number; fromDate: string; toDate: string };
   checkins: StudentCheckinDay[];
 }) {
+  // Ngày cô vừa chạm vào. Xem `DayCell` bên dưới để biết vì sao một ô lịch phải bấm được.
+  const [dayDaChon, setDayDaChon] = useState<string | null>(null);
   const byDate = new Map(checkins.map((c) => [c.occurredOn, c]));
   const allDays = daysBetween(win.fromDate, win.toDate);
   const leadingBlanks = allDays.length > 0 ? weekdayIndex(allDays[0]!) : 0;
@@ -283,9 +284,26 @@ function CheckinStrip({
           <span key={`blank-${i}`} aria-hidden />
         ))}
         {allDays.map((iso) => (
-          <DayCell key={iso} iso={iso} entry={byDate.get(iso) ?? null} />
+          <DayCell
+            key={iso}
+            iso={iso}
+            entry={byDate.get(iso) ?? null}
+            daChon={dayDaChon === iso}
+            onChon={() => setDayDaChon((cu) => (cu === iso ? null : iso))}
+          />
         ))}
       </div>
+
+      {/* DÒNG CHI TIẾT — chỗ hạ cánh của cú bấm vào một ô ngày.
+          Vùng aria-live có mặt SẴN kể cả khi chưa chọn ngày nào: một vùng vừa được tạo
+          ra thì trình đọc màn hình thường không đọc nội dung đầu tiên của nó. `min-h`
+          giữ chỗ để lưới 7 cột không nhảy lên xuống mỗi lần cô chạm vào một ngày. */}
+      <p
+        aria-live="polite"
+        className="mt-2 min-h-[18px] text-[11.5px] font-semibold leading-relaxed text-cardtitle2"
+      >
+        {dayDaChon ? dayCellLabel(dayDaChon, byDate.get(dayDaChon) ?? null) : ""}
+      </p>
 
       {/* Chú giải: màu KHÔNG bao giờ là tín hiệu duy nhất (§11).
           Đổi 01/08/2026 — chấm tròn thành CHÍNH icon mà ô ngày đang dùng. Chú giải bằng
@@ -293,7 +311,7 @@ function CheckinStrip({
           đúng bài toán vừa đặt ra. Nay ô ngày và chú giải nói cùng một ngôn ngữ. */}
       <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[#F1F4F8] pt-3">
         {LEGEND_ORDER.map((st) => (
-          <span key={st} className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
+          <span key={st} className="flex items-center gap-1 text-[11px] font-bold text-subtle">
             <span
               aria-hidden
               className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md"
@@ -307,10 +325,10 @@ function CheckinStrip({
         {/* Ô thứ SÁU, và là ô quan trọng nhất của cả chú giải: "chưa ai ghi" phải có
             hình dạng riêng, khác hẳn "vắng". Một đằng là chưa biết, một đằng là đã biết
             và biết là em không có mặt. */}
-        <span className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
+        <span className="flex items-center gap-1 text-[11px] font-bold text-subtle">
           <span
             aria-hidden
-            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border border-dashed border-[#C9D2DE] bg-white text-[#5B6B80]"
+            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border border-dashed border-line2 bg-white text-subtle"
           >
             <span className="msr text-[13px]">{ATTENDANCE_UNKNOWN_ICON}</span>
           </span>
@@ -321,27 +339,40 @@ function CheckinStrip({
             "không phải ngày học" hay "màn hình lỗi". Ô mẫu để rỗng đúng như trong lưới,
             không vẽ một icon riêng: vẽ icon cho cuối tuần là quay lại đúng chuyện vừa
             sửa — bịa một tín hiệu cho một ngày không có tín hiệu nào. */}
-        <span className="flex items-center gap-1 text-[11px] font-bold text-[#5B6B80]">
+        <span className="flex items-center gap-1 text-[11px] font-bold text-subtle">
           <span aria-hidden className="h-[18px] w-[18px] flex-none rounded-md bg-[#F7F9FC]" />
           Cuối tuần
         </span>
       </div>
 
-      {/*
-        Câu này là cả lý do khối trên tồn tại. "Chưa có dữ liệu" ≠ "em vắng" và cũng
-        ≠ "em ổn": hai cách đọc sai đó đã xuất hiện bốn lần trong repo này.
-      */}
-      <p className="mt-2.5 text-[11.5px] leading-relaxed text-muted">
-        {missingSchoolDays === 0
-          ? "Mọi ngày học trong khoảng này đều có dữ liệu."
-          : `${missingSchoolDays} ngày học chưa có dòng điểm danh nào — nghĩa là chưa ai ghi, không phải là em vắng.`}
-      </p>
-      {/* Lịch này từng tô màu theo TÂM TRẠNG. Sau ADR-026 cô không đọc được cột đó nữa,
-          nên nói ra chỗ đổi thay vì để cô tự đoán tại sao màu khác đi. */}
-      <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted">
-        Lịch này nói về điểm danh. Nhật ký cảm xúc từng ngày chỉ thầy cô tâm lý đọc được.{" "}
-        {ARRIVAL_BAND_UNAVAILABLE_NOTE}
-      </p>
+      {/* HAI CHIP THAY HAI CÂU (06/08/2026).
+          [QĐ-3] "chưa điểm danh ≠ vắng" là luật, nên NGHĨA ở lại; nhưng nó không cần một
+          câu 96 ký tự — chú giải ngay trên đã cho "Chưa điểm danh" và "Vắng" hai icon,
+          hai màu nền, hai cái tên khác nhau. Chip chỉ còn nói phần chú giải không nói
+          được: hôm nay có bao nhiêu ngày như thế.
+          Chip thứ hai là NHÃN QUYỀN RIÊNG TƯ (ADR-026 · §9) — giữ, kèm icon `lock`. Chữ
+          "điểm danh" phải đứng ngay trước nó: `a11y-man-nguoi-lon.test.ts` đo rằng câu
+          này nằm đúng chỗ lịch điểm danh, chứ không trôi sang một khối khác. */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-full bg-chip px-2.5 py-1 text-[10.5px] font-black text-subtle">
+          <span className="msr text-[14px]" aria-hidden>
+            {missingSchoolDays === 0 ? "task_alt" : ATTENDANCE_UNKNOWN_ICON}
+          </span>
+          {missingSchoolDays === 0
+            ? "Đủ dữ liệu mọi ngày học"
+            : `${missingSchoolDays} ngày chưa ai ghi ≠ vắng`}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-chip px-2.5 py-1 text-[10.5px] font-black text-subtle">
+          <span className="msr text-[14px]" aria-hidden>
+            lock
+          </span>
+          Lịch điểm danh · cảm xúc chỉ thầy cô tâm lý đọc được
+        </span>
+      </div>
+      {/* GỠ `ARRIVAL_BAND_UNAVAILABLE_NOTE` khỏi màn này (06/08/2026). Hai câu 187 ký tự
+          đó nói về CỘT GIỜ của bảng danh sách lớp, và chúng vẫn đứng ở đó — nay gấp trong
+          `<details>` (xem `GhiChuGioBam` ở class-roster-view.tsx). Lịch này không có cột
+          giờ nào để mà thiếu nhãn "đi sớm", nên bản thứ hai ở đây chỉ là chữ thừa. */}
     </Card>
   );
 }
@@ -374,7 +405,31 @@ export function dayCellLabel(iso: string, entry: StudentCheckinDay | null): stri
     .join(" · ");
 }
 
-function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null }) {
+/**
+ * Một ô = một ngày. Là <button>, không phải <span> (05/08/2026).
+ *
+ * Ô này chở đúng ba thứ mà số ngày + icon KHÔNG nói ra: nguồn của dòng điểm danh (em tự
+ * bấm · thầy cô ghi hộ · gửi bù), giờ em bấm, và sự khác nhau giữa "cuối tuần" với "chưa
+ * ai ghi". Trước hôm nay cả ba chỉ nằm trong `title=` — tức là chỉ tới được bằng CHUỘT.
+ * GVCN cầm iPhone là bối cảnh dùng thật của màn này (xem `formatDateTime` cùng file), mà
+ * cảm ứng không có hover: trên điện thoại ba thứ đó không tồn tại. Bàn phím cũng không
+ * tới được vì <span> không nằm trong thứ tự Tab.
+ *
+ * Nay bấm (hoặc Tab + Enter) vào một ngày là câu đầy đủ hiện ra ngay dưới lưới. `title=`
+ * giữ nguyên cho người dùng chuột — nó không còn là đường DUY NHẤT nữa.
+ * `min-h-[44px]` đã có sẵn từ trước (§11, WCAG 2.5.5); ô rộng ~46px ở khổ 360px.
+ */
+function DayCell({
+  iso,
+  entry,
+  daChon,
+  onChon,
+}: {
+  iso: string;
+  entry: StudentCheckinDay | null;
+  daChon: boolean;
+  onChon: () => void;
+}) {
   const weekend = weekdayIndex(iso) >= 5;
   // Đổi 01/08/2026: `tone` bám vào TRẠNG THÁI ĐIỂM DANH, không còn bám vào tâm trạng.
   // Và điều kiện viền nét đứt đổi từ "không có tone" sang "KHÔNG CÓ DÒNG NÀO" — nét đứt
@@ -383,9 +438,15 @@ function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null 
   const label = dayCellLabel(iso, entry);
 
   return (
-    <span
+    <button
+      type="button"
       title={label}
-      className={`flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center ${
+      aria-label={label}
+      aria-pressed={daChon}
+      onClick={onChon}
+      className={`flex min-h-[44px] w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center ${
+        daChon ? "ring-2 ring-navy" : ""
+      } ${
         entry
           ? ""
           : weekend
@@ -402,7 +463,7 @@ function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null 
         {dayNumber(iso)}
       </span>
       {/* Hàng icon — thứ biến ô này từ "chỉ có màu" thành đọc được không cần màu.
-          `aria-hidden` vì `sr-only` bên dưới đã đọc nguyên câu đầy đủ, có cả ngày lẫn giờ.
+          `aria-hidden` vì `aria-label` của nút đã đọc nguyên câu đầy đủ, có cả ngày lẫn giờ.
 
           Ô CUỐI TUẦN KHÔNG CÓ ICON (sửa 02/08/2026). Trước đó nó in `remove` — đúng cái
           icon mà chú giải ngay dưới lưới gọi tên là "Chưa điểm danh". Thứ Bảy không phải
@@ -418,8 +479,11 @@ function DayCell({ iso, entry }: { iso: string; entry: StudentCheckinDay | null 
           </span>
         )}
       </span>
-      <span className="sr-only">{label}</span>
-    </span>
+      {/* `sr-only` cũ đã bỏ: `aria-label` trên chính nút ĐÈ nội dung, nên câu đó không
+          bao giờ được đọc ra nữa — để lại là một dòng chết mà lần sửa sau sẽ tưởng là
+          đường đọc thật. Câu đầy đủ vẫn tới tai qua aria-label, và tới MẮT qua dòng chi
+          tiết dưới lưới. */}
+    </button>
   );
 }
 
@@ -486,15 +550,17 @@ function SignalCard({
         </div>
       ) : careCases.length > 0 ? (
         <p className="mt-3 text-[12px] text-muted">
-          Không có hồ sơ chăm sóc nào đang mở. Gần nhất đã đóng{" "}
-          {careCases[0]?.closedAt ? formatDateTime(careCases[0].closedAt) : "trước đó"}.
+          Không hồ sơ nào đang mở · đóng gần nhất{" "}
+          {careCases[0]?.closedAt ? formatDateTime(careCases[0].closedAt) : "trước đó"}
         </p>
       ) : null}
 
       {helpRequests.length === 0 ? (
+        // CẮT vế "Đây là một sự thật về nút bấm đó, không phải một kết luận về em."
+        // (06/08/2026): câu đầu ĐÃ nói đúng phạm vi của mình — nó nói về nút bấm, trong
+        // {days} ngày. Vế hai chỉ dặn người đọc đừng suy diễn, tức là dạy cách đọc.
         <p className="mt-3 text-[12px] leading-relaxed text-muted">
-          Em chưa bấm "cần gặp thầy cô" lần nào trong {days} ngày qua. Đây là một sự thật về{" "}
-          <b>nút bấm đó</b>, không phải một kết luận về em.
+          Chưa bấm “cần gặp thầy cô” lần nào trong {days} ngày qua.
         </p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2.5">
@@ -509,12 +575,12 @@ function SignalCard({
                 </span>
                 <span className="text-[12px] font-extrabold text-ink">{formatDate(h.requestedOn)}</span>
                 {h.urgency && (
-                  <span className="text-[11.5px] font-bold text-[#5B6B80]">
+                  <span className="text-[11.5px] font-bold text-subtle">
                     {HELP_REQUEST_URGENCY_LABEL[h.urgency as keyof typeof HELP_REQUEST_URGENCY_LABEL]}
                   </span>
                 )}
                 {h.topic && (
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#33507C]">
+                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-cardtitle2">
                     {HELP_REQUEST_TOPIC_LABEL[h.topic as keyof typeof HELP_REQUEST_TOPIC_LABEL]}
                   </span>
                 )}
@@ -534,7 +600,7 @@ function SignalCard({
 
               <div className="mt-2.5 text-[11.5px] font-bold">
                 {h.handledAt ? (
-                  <span className="text-[#00693F]">Đã đánh dấu “cô đã gặp em” {formatDateTime(h.handledAt)}</span>
+                  <span className="text-successText">Đã đánh dấu “cô đã gặp em” {formatDateTime(h.handledAt)}</span>
                 ) : (
                   <span className="text-[#B02A30]">Chưa ai đánh dấu đã gặp em</span>
                 )}
@@ -567,7 +633,7 @@ function InterventionCard({
       <h2 className="text-[15px] font-black text-navy">Nhật ký can thiệp của em</h2>
       {rows.length === 0 ? (
         <p className="mt-3 text-[12px] leading-relaxed text-muted">
-          Chưa có hành động nào được ghi cho riêng em. Ghi can thiệp ở buồng lái, tại thẻ cờ của em.
+          Chưa ai ghi hành động nào — ghi ở buồng lái.
         </p>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
@@ -576,12 +642,12 @@ function InterventionCard({
               <span
                 aria-hidden
                 className={`mt-[6px] h-[9px] w-[9px] flex-none rounded-full ${
-                  r.caseStatus === "open" ? "bg-[#2C7BF2]" : "bg-[#C9D2DE]"
+                  r.caseStatus === "open" ? "bg-[#2C7BF2]" : "bg-line2"
                 }`}
               />
               <div className="min-w-0 flex-1">
                 <div className="text-[12.5px] font-extrabold text-ink">{r.action}</div>
-                {r.note && <div className="mt-0.5 text-[12px] leading-relaxed text-[#5B6B80]">{r.note}</div>}
+                {r.note && <div className="mt-0.5 text-[12px] leading-relaxed text-subtle">{r.note}</div>}
                 <div className="mt-0.5 text-[11px] text-muted">
                   {r.actorName} · {formatDateTime(r.occurredAt)}
                   {r.caseStatus === "closed" && " · hồ sơ đã đóng"}
@@ -599,9 +665,9 @@ function InterventionCard({
 // 4. Trạng thái duyệt Báo cáo Trưởng thành.
 // ---------------------------------------------------------------------------
 const APPROVAL_TONE: Record<string, { bg: string; fg: string; icon: string; label: string }> = {
-  approved: { bg: "bg-[#E3F8ED]", fg: "text-[#00693F]", icon: "task_alt", label: "Đã duyệt" },
+  approved: { bg: "bg-[#E3F8ED]", fg: "text-successText", icon: "task_alt", label: "Đã duyệt" },
   rejected: { bg: "bg-[#FFF0F0]", fg: "text-[#C0272D]", icon: "undo", label: "Đã trả lại" },
-  pending: { bg: "bg-chip", fg: "text-[#5B6B80]", icon: "hourglass_top", label: "Chưa quyết định" },
+  pending: { bg: "bg-chip", fg: "text-subtle", icon: "hourglass_top", label: "Chưa quyết định" },
 };
 
 function ApprovalCard({
@@ -615,15 +681,17 @@ function ApprovalCard({
         <h2 className="text-[15px] font-black text-navy">Duyệt Báo cáo Trưởng thành</h2>
         <Link
           href="/gvcn/duyet-bao-cao"
-          className="inline-flex min-h-[44px] items-center text-[11.5px] font-black text-[#1D4E8F] underline underline-offset-2"
+          className="inline-flex min-h-[44px] items-center text-[11.5px] font-black text-link underline underline-offset-2"
         >
           Mở màn duyệt
         </Link>
       </div>
       {rows.length === 0 ? (
+        // RÚT NGẮN 06/08/2026. Vế "Sổ duyệt chỉ ghi việc con người đã quyết" là mô tả cơ
+        // chế; vế phân biệt "chưa ai ký ≠ đã từ chối" thì GIỮ, vì nó là chỗ dễ đọc ngược
+        // nhất của khối này (chú giải trạng thái ngay dưới có riêng chip "Đã trả lại").
         <p className="mt-3 text-[12px] leading-relaxed text-muted">
-          Chưa tuần nào của em được quyết định. Sổ duyệt chỉ ghi việc con người đã quyết — không có dòng nào
-          nghĩa là chưa ai ký, không phải là đã từ chối.
+          Chưa ai ký tuần nào — không phải đã từ chối.
         </p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
@@ -643,7 +711,7 @@ function ApprovalCard({
                   {tone.label}
                 </span>
                 {r.reviewedAt && <span className="text-[11px] text-muted">{formatDateTime(r.reviewedAt)}</span>}
-                {r.note && <span className="basis-full text-[11.5px] leading-relaxed text-[#5B6B80]">{r.note}</span>}
+                {r.note && <span className="basis-full text-[11.5px] leading-relaxed text-subtle">{r.note}</span>}
               </li>
             );
           })}

@@ -24,13 +24,13 @@ export function EmbedFloatingMenu({ appOrigin, onReload }: { appOrigin: string; 
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label="Tùy chọn"
-          className="flex items-center justify-center px-2.5 py-2"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center px-2.5 py-2"
         >
-          <span className="msr text-[18px] text-muted">more_horiz</span>
+          <span aria-hidden className="msr text-[18px] text-muted">more_horiz</span>
         </button>
         <span className="h-4 w-px bg-line" />
-        <a href="/home" aria-label="Thoát về Hub" className="flex items-center justify-center px-2.5 py-2">
-          <span className="msr text-[17px] text-muted">close</span>
+        <a href="/home" aria-label="Thoát về Hub" className="flex min-h-[44px] min-w-[44px] items-center justify-center px-2.5 py-2">
+          <span aria-hidden className="msr text-[17px] text-muted">close</span>
         </a>
       </div>
 
@@ -42,18 +42,18 @@ export function EmbedFloatingMenu({ appOrigin, onReload }: { appOrigin: string; 
               onReload();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-[13px] font-bold text-navy hover:bg-[#F2F5FA]"
+            className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-3 text-left text-[13px] font-bold text-navy hover:bg-chip"
           >
-            <span className="msr text-[18px] text-caption">refresh</span>
+            <span aria-hidden className="msr text-[18px] text-caption">refresh</span>
             Tải lại
           </button>
           <a
             href={appOrigin}
             target="_blank"
             rel="noreferrer"
-            className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-[13px] font-bold text-navy hover:bg-[#F2F5FA]"
+            className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-[13px] font-bold text-navy hover:bg-chip"
           >
-            <span className="msr text-[18px] text-caption">open_in_new</span>
+            <span aria-hidden className="msr text-[18px] text-caption">open_in_new</span>
             Mở trong tab mới
           </a>
         </div>

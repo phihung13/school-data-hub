@@ -268,6 +268,34 @@ describe("cửa được mắc đúng chỗ trong route", () => {
     expect(devLogin).toMatch(/status: 401/);
   });
 
+  it("HAI cửa vào cùng một ổ khoá phải tiêu CHUNG một ngân sách đoán", () => {
+    // Đo thật trên bản đang chạy 07/08/2026, TRƯỚC bản vá:
+    //   8 lượt mã sai vào /api/auth/dev-gate  → 401 ×5 rồi 429  (hàng rào có thật)
+    //   7 lượt mã sai vào /api/auth/dev-login → 401 ×7          (đi vòng qua nó)
+    // Cả hai route đều nhận `DEV_LOGIN_SECRET` qua header `x-hub-dev-secret` và cùng cấp
+    // phiên khi mã đúng, nên "5 lượt/phút" chỉ đúng cho một trong hai cửa — hàng rào tồn
+    // tại nhưng không canh được, và không phép thử nào nhìn thấy điều đó.
+    const devGate = read("apps/hub/app/api/auth/dev-gate/route.ts");
+    for (const [ten, src] of [
+      ["dev-gate", devGate],
+      ["dev-login", devLogin],
+    ] as const) {
+      expect(src, `${ten} không đếm lượt đoán`).toMatch(/checkRateLimit\(\s*`dev-gate:\$\{ip\}`/);
+      expect(src, `${ten} không dùng chung cách đọc IP`).toContain("clientIpFrom");
+    }
+    // Khoá đếm phải là CÙNG MỘT chuỗi. Hai tiền tố khác nhau = hai xô riêng = gấp đôi số
+    // lượt đoán, mà mã HTTP trả về vẫn trông y hệt.
+    expect(devLogin).toContain("DEV_GATE_ATTEMPTS_PER_MINUTE");
+  });
+
+  it("CHỈ đếm khi người gọi có đưa mã và mã sai", () => {
+    // Người chưa từng nhập mã là người dùng bình thường vừa mở trang. Tính họ vào hạn mức
+    // là khoá cửa đúng vào lúc họ sắp gõ mã đúng — và họ không có cách nào hiểu vì sao.
+    const khoi = devLogin.slice(devLogin.indexOf('gate === "locked"'));
+    expect(khoi).toMatch(/DEV_GATE_HEADER|DEV_GATE_COOKIE_NAME/);
+    expect(khoi, "phải có điều kiện 'có đưa mã' trước khi trừ hạn mức").toMatch(/if\s*\(\s*coDuaMa\s*\)/);
+  });
+
   it(".env.example khai biến nhưng ĐỂ TRỐNG giá trị", () => {
     const example = read("apps/hub/.env.example");
     expect(example).toMatch(/^DEV_LOGIN_SECRET=\s*$/m);

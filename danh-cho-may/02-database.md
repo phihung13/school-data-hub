@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 28
+sync-version: 31
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -14,7 +14,7 @@ Dữ liệu lõi (người dùng, học sinh, giáo viên, phụ huynh, cơ sở
 | Schema | Loại | Bảng chính |
 |---|---|---|
 | `core` | **Nền tảng — SSOT** | `users`, `students`, `teachers`, `parents`, `schools` (cơ sở), `classes`, `class_assignments`, `enrollments`, `roles`, `permissions`, `id_mappings`, `identity_links`, `school_networks`, `parent_invite_codes`, `terms_versions` + `consent_records` (bản điều khoản + sổ đồng ý của phụ huynh, ADR-027/`0046` — sổ chỉ thêm, đường ghi duy nhất là hàm) |
-| `attendance` | Mini App | `checkins` (mood + điểm danh — dữ liệu cảm xúc lưu như dữ liệu thường, ADR-002), `checkin_rules` (khung giờ + dải IP theo cơ sở), `help_requests`, `mood_trends` (xu hướng tổng hợp giữ lại sau khi xóa chi tiết 12 tháng) |
+| `attendance` | Mini App | `checkins` (mood + điểm danh — dữ liệu cảm xúc lưu như dữ liệu thường, ADR-002), `checkin_rules` (khung giờ + dải IP theo cơ sở), `help_requests`, `mood_trends` (xu hướng tổng hợp giữ lại sau khi xóa chi tiết 12 tháng), `late_decisions` (sổ kết luận gửi muộn của GVCN — ADR-029/`0053`, sổ chỉ thêm) |
 | `care` | Mini App (lõi) | `rules` (sổ đăng ký mã luật cờ), `flags`, `care_cases`, `care_case_flags`, `interventions`, `thresholds`, `escalations`, `counselor_notes` |
 | `health` | Mini App (lõi) | `logs` (y tế bán trú — ADR-009), `meal_sleep_logs` |
 | `evidence` | Mini App | `value_behaviors` (25 hành vi), `event_roles`, `pdr_reflections`, `dear_logs`, `rubric_scores`, `fitness_tests`, `club_attendance`, `survey_responses` |
@@ -24,7 +24,7 @@ Dữ liệu lõi (người dùng, học sinh, giáo viên, phụ huynh, cơ sở
 | `ai` | Mini App (đặt chỗ) | `conversations`, `prompts` — chưa xây; mọi lời gọi model vẫn qua pii-stripper (§7) |
 | `staging` | Nền tảng | `raw_tutor_events`, `raw_moodle`, `raw_cor_imports`, `raw_embedded_events` (webhook từ Mini App nhúng ngoài, ADR-015), `import_errors`, `import_limits` (ngưỡng dừng lô theo nguồn, mệnh lệnh 7 — `0045`) |
 | `ops` | Nền tảng | `job_runs`, `heartbeats`, `outbox_messages`, `source_freshness`, `audit_log`, `embedded_app_events` (cổng nhận sự kiện rổ Xanh từ app nhúng — **không FK `core.students`**, RLS deny-by-default), `rls_exemptions` (danh sách bảng cố ý không có RLS, có tên và có lý do), `schema_migrations` (sổ ghi migration đã áp trên chính database này — `0050`, xem đợt F) |
-| `report` | Nền tảng | `v_campus_trends`, `v_vaar_indicators` (đã có), `growth_report_approvals` (sổ duyệt Báo cáo Trưởng thành, 0032). **Chưa xây:** `v_cohort_mastery`, `mv_growth_reports` — hai tên này từng nằm ở đây như thể đã có; giữ lại chỉ để đặt chỗ tên miền dữ liệu, không có migration nào tạo chúng. |
+| `report` | Nền tảng | `v_campus_trends`, `v_vaar_indicators` (đã có), `growth_report_approvals` (sổ duyệt Báo cáo Trưởng thành, 0032), `report_decisions` (sổ vết mọi lượt quyết định duyệt/trả lại — ADR-031/`0054`, sổ chỉ thêm, đường ghi duy nhất là hàm `report.decide_reports`). **Chưa xây:** `v_cohort_mastery`, `mv_growth_reports` — hai tên này từng nằm ở đây như thể đã có; giữ lại chỉ để đặt chỗ tên miền dữ liệu, không có migration nào tạo chúng. |
 
 ## Auth indirection (ADR-012)
 
@@ -65,13 +65,14 @@ Luật đọc bảng này (siết lại 31/07/2026): **ô nào không ghi `GĐ2`
 | care.thresholds | read | read | read | read | read+propose | read | write (qua Hội đồng DL) |
 | attendance.checkin_rules (dải IP, khung giờ) | — | — | — | — | — | — | read (cùng `admin`) |
 | report.growth_report_approvals (sổ duyệt) | — | — | — | read+write (ký tên mình) | read | — | — |
+| report.report_decisions (sổ vết quyết định, `0054`) | — | — | — | read + **insert** (ký tên mình, không sửa không xoá) | read | — | — |
 
 **`GĐ2` nghĩa là gì:** chưa có đường nào ở tầng DB, và **không** được coi là đã có khi viết màn hình. Bốn ô này đã đối chiếu với migration thật ngày 31/07/2026:
 
 - `principal` / `board` trên `core/tutor/evidence/attendance`: `core.can_see_student` (0009) cố ý không gồm `board`; `principal_of` có nhưng chỉ dùng cho hàng 1 ở mức campus — phần `aggregate-only` của board chưa có view nào phục vụ.
 - `teacher` trên `care.flags`: `core.can_see_care` (0009) chỉ gồm `is_homeroom_of` + `in_my_cluster`. Không có nhánh "own-created" nào. Giáo viên bộ môn không thấy cờ, kể cả cờ do chính mình tạo.
 - `principal` trên `care`: cột "count-only" chưa có view đếm nào, và **cố ý chưa mở** — mở kiểu tra cứu tự do sẽ vi phạm tinh thần §5. Màn hình care team có audit log là hình thức đúng, chưa xây.
-- Hàng `report`: hai view `report.v_campus_trends` / `v_vaar_indicators` được tạo ở 0009 **sau** câu `grant … to authenticated` cùng file, nên **chưa ai có quyền SELECT** — cả hàng là code chết cho tới khi có grant + policy. 0024 đã bịt lỗ ngược lại (đặt `security_invoker` để view không vượt mặt §5); phần cấp quyền là việc của sprint BGH. Ngoại lệ duy nhất đang sống trong schema `report` là `growth_report_approvals` (0032) — có grant, có policy, có RLS, và **không** cấp cho role `reporting` (§5).
+- Hàng `report`: hai view `report.v_campus_trends` / `v_vaar_indicators` được tạo ở 0009 **sau** câu `grant … to authenticated` cùng file, nên **chưa ai có quyền SELECT** — cả hàng là code chết cho tới khi có grant + policy. 0024 đã bịt lỗ ngược lại (đặt `security_invoker` để view không vượt mặt §5); phần cấp quyền là việc của sprint BGH. Hai ngoại lệ đang sống trong schema `report` là `growth_report_approvals` (0032) và `report_decisions` (`0054`) — đều có grant, có policy, có RLS, và **không** cấp cho role `reporting` (§5). Với `report_decisions`, §5 còn được tháo tường minh bằng `revoke all … from reporting`, vì `reporting` **vẫn giữ** `usage` trên schema `report` (`0009:264`) nên ở đây quyền bảng là lớp hàng rào duy nhất — khác `attendance`, nơi `usage` đã bị thu hồi.
 
 **Hàng `health.logs` đọc kỹ hơn từ 0034:** RLS vẫn đúng như ô ghi (GVCN của em, tâm lý cụm, phụ huynh của em), nhưng quyền cột đã bị thu — `category` và `detail` (nội dung y tế thật) **không SELECT thẳng được nữa**, phải đi qua `health.read_logs(student_id, from, to)`, và mỗi lượt gọi ghi một dòng `ops.audit_log` kể cả lượt bị từ chối. Nói cho chính xác điều mà comment cũ trên bảng đã hứa suông từ 0007: **audit hiện phủ nội dung y tế đọc qua hàm, chưa phủ mọi màn hình có hiển thị dữ liệu y tế.** Câu "hiệu trưởng xem qua màn hình care team có audit log" là mô tả hình thức mong muốn, chưa phải mô tả thứ đang chạy.
 
@@ -721,6 +722,198 @@ Kiểm chứng: `0051_kenh_bao_dong_test.sql` **39 assertion** + `tests/db/kenh-
 Cách cắm một app mới: `danh-cho-may/09-cam-mini-app.md`. Bản mẫu phía app con: `tools/mini-app-mau/index.html`.
 
 Kiểm chứng: `0052_so_dang_ky_mini_app_test.sql` **29 assertion** + `tests/db/mini-app-so-dang-ky.test.ts` **15 phép** qua router thật. **Toàn bộ pgTAP sau đợt H: 900 assertion / 51 file**, mọi file khớp `plan(N)`.
+
+## Đợt I (`0053`, 06/08/2026) — kết luận gửi muộn có tên người, có giờ, có lý do (ADR-029)
+
+ADR-029 sửa ADR-007 ở **đúng một điểm**: GVCN được kết luận một check-in gửi muộn thành `absent`, nhưng chỉ khi ghi lý do, và mỗi lượt để lại một dòng sổ. Lý lẽ gốc của ADR-007 giữ nguyên — **MÁY** không được tự suy ra "vắng" từ một lần gửi muộn; cái đổi là vế **con người** nhìn thấy chỗ ngồi trống của lớp mình.
+
+### Phép đo lật ngược giả định của chính bản giao việc
+
+Giả định lúc nhận việc: "database đang CẤM `queued_late → absent` vì `checkins_confirm_late` (`0014`) khai `with check (status in ('present','late'))`". Đo trên hub_dev 06/08/2026, dưới đúng danh tính Cô Vân (GVCN 6A3), trên một dòng `queued_late` thật:
+
+```
+set request.jwt.claim.sub = '…0008'; set local role authenticated;
+update attendance.checkins set status='absent', confirmed_by=core.current_user_id()
+ where id='cd0e54e9-…' and status='queued_late';        → UPDATE 1
+```
+
+**Giả định sai.** Cửa `absent` đã mở từ `0032`: `checkins_update_by_homeroom` là PERMISSIVE, Postgres **OR** mọi policy permissive cùng lệnh, nên `with check` thật của bảng là `('present','late') ∨ (is_homeroom_of ∧ ('present','late','absent','excused')) ∨ (is_me ∧ …)`. Câu `comment on policy` của `0014` ("không tự ý sang absent") **đã sai suốt từ `0032` tới nay** — một lời hứa an toàn sống trong chú thích mà cưỡng chế thật không còn. Cùng loại bẫy `0025` đã gỡ ("app chỉ UPDATE cột mood" là niềm tin, không phải hàng rào), và là lần thứ hai phép OR của policy permissive lừa được người đọc tài liệu.
+
+**Hệ quả cho cách đọc `0053`:** nó KHÔNG thêm quyền ghi `absent` — quyền đó đã có. Nó thêm **cái giá** của quyền đó. Trước file này, đổi một ngày chuyên cần thành "vắng" chỉ để lại đúng cột `confirmed_by`: không giờ, không lý do, không trạng thái cũ ⇒ không hậu kiểm được.
+
+### `attendance.late_decisions` — sổ chỉ thêm
+
+| Cột | Ghi chú |
+|---|---|
+| `checkin_id` → `attendance.checkins` **on delete cascade** | Lời giải thích không sống lâu hơn sự kiện nó giải thích: bản ghi điểm danh gốc bị xoá (xoá học sinh, dọn dữ liệu quá hạn) thì dòng sổ đi theo |
+| `student_id` → `core.students` (§1, **NO ACTION**) | Chép lại để truy vấn sổ khỏi join ngược và để RLS của chính sổ có cột phạm vi. NO ACTION kiểm ở **cuối câu lệnh**, sau khi cascade qua `checkin_id` đã chạy ⇒ không chặn đường xoá học sinh |
+| `from_status` / `to_status` | `to_status ∈ {present, late, absent}`. **Không có `excused`**: "có phép" là quyết định giấy tờ, đi đường điểm danh `0032` |
+| `reason` | Bắt buộc `>= 3` ký tự **sau `btrim`** khi `to_status <> 'present'` (`late_decisions_reason_chk`) |
+| `decided_by` → `core.users`, `decided_at` | Policy ghi cưỡng chế `decided_by = core.current_user_id()` — không ai ký tên người khác |
+| `client_mutation_id` | §9. Unique một phần `(checkin_id, client_mutation_id) where client_mutation_id is not null` |
+
+**RLS.** Đọc = `core.can_see_care` (GVCN của em ∪ tâm lý cụm) — học sinh, phụ huynh, giáo viên bộ môn, hiệu trưởng đọc ra **0 dòng**: đây là hồ sơ nội bộ về thao tác của giáo viên, không phải thông báo cho gia đình. Ghi = `core.is_homeroom_of ∧ decided_by = current_user_id`. **Không có policy update/delete và không cấp grant update/delete** — sửa được sổ vết thì sổ vết hết nghĩa. Không cấp cho `reporting` (§5). `backup_reader` có grant **và** policy riêng (ADR-006: bật RLS mà quên policy cho vai đó là để bản sao lưu thủng bảng **trong im lặng** — cái bẫy `0050` đã ghi).
+
+### Policy `checkins_confirm_late` — nới vế `with check`, giữ nguyên vế `using`
+
+```
+using      (core.is_homeroom_of(student_id) and status = 'queued_late')   -- NGUYÊN VĂN 0014
+with check (status in ('present', 'late', 'absent'))                      -- thêm 'absent'
+```
+
+Vế `using` là phần ADR-029 **cố ý không đụng**: chỉ GVCN của chính em, chỉ trên dòng còn `queued_late`. Chú thích cũ bị **thay** chứ không sửa chữ — một chú thích sai về an toàn nguy hiểm hơn không có chú thích.
+
+Hai assertion của `0053` đo riêng policy này, và chúng phải **bỏ `checkins_update_by_homeroom` đi trong chính transaction của bài test** mới đo được: khi cả hai policy còn nguyên thì phép OR làm "GVCN đổi được sang absent" không chứng minh được nhánh nào cho phép.
+
+### `attendance.decide_late_checkins(uuid[], text, text, uuid) → (updated int, skipped int)`
+
+Đường ghi **hợp lệ duy nhất**. Đổi `attendance.checkins` và ghi `late_decisions` trong **một câu lệnh** (CTE ghi dữ liệu) — viết thành hai câu thì câu thứ hai phải chép tay điều kiện chọn dòng, và điều kiện chép tay là chỗ hai câu bắt đầu kể hai chuyện khác nhau.
+
+- **Không `security definer`.** Hàm definer chạy bằng quyền chủ schema ⇒ bỏ qua cả RLS lẫn grant theo cột của `0025`. Hàm invoker giữ ba lớp chồng lên nhau: policy (dòng) + trigger `checkins_guard_confirmation` (cột `status`/`confirmed_by`) + `core.is_homeroom_of` viết thẳng trong `WHERE`. Điều kiện cuối **lặp lại RLS có chủ ý**: policy permissive mới thêm vào ngày mai (đúng thứ `0032` đã làm) không kéo hàm này ra khỏi phạm vi nó tự khai.
+- **Ba tầng canh lý do:** Zod `.refine` (`packages/core/contracts/care.ts`) → `raise exception 22023` trong hàm → `late_decisions_reason_chk` trên bảng. Hàm **không tin tầng trên**; bảng **không tin tầng hàm**.
+- **§9:** cổng sớm — có `client_mutation_id` đã nằm trong sổ thì trả `updated = 0` **êm**, không phải lỗi đỏ trên màn hình của cô. Chỉ mục duy nhất là lớp sau, bắt ca hiếm (hai transaction song song cùng mã).
+- **Dòng không còn `queued_late` hoặc không thuộc lớp người gọi → `skipped`, KHÔNG ném lỗi.** Ném lỗi ở đây là dựng một kênh dò: gửi một id lạ rồi đọc thông báo lỗi để biết dòng đó có tồn tại và thuộc lớp nào. Đúng ngữ nghĩa `0014`/`0025` đã chốt cho cả bảng `attendance.checkins`.
+- `skipped` đếm theo **id phân biệt**: client gửi trùng id trong một lô thì đếm theo mảng thô sẽ nói "bỏ qua 1 em" khi không em nào bị bỏ.
+
+### Khe còn hở — đo được, KHÔNG vá trong `0053`, và vì sao viết ra thay vì im
+
+Sổ `late_decisions` là đối trọng của quyền ghi `absent` **chỉ khi nó là đường duy nhất**. Nó chưa phải. Đo trên hub_dev sau khi `0053` đã áp, dưới đúng danh tính Cô Vân:
+
+```
+update attendance.checkins set status='absent', confirmed_by=core.current_user_id()
+ where id='cd0e54e9-…' and status='queued_late';        → UPDATE 1
+select count(*) from attendance.late_decisions where checkin_id='cd0e54e9-…';  → 0
+```
+
+`checkins_update_by_homeroom` (`0032`) cho GVCN sửa **mọi** dòng của lớp mình sang `present/late/absent/excused`, không phân biệt dòng đó có còn `queued_late` hay không — nên câu UPDATE thẳng vẫn đi được, **không lý do, không dòng sổ**. Nghĩa là hôm nay `decide_late_checkins` là đường ghi hợp lệ duy nhất **theo quy ước**, chưa phải theo cưỡng chế.
+
+Không vá trong `0053` vì vá đúng chỗ này là đổi hành vi của màn "Điểm danh lớp" (`0032`) — sửa lại điểm danh đã ghi là việc hàng ngày của cô và không thuộc phạm vi ADR-029. Ba đường ra, cả ba đều cần một quyết định riêng: (a) thu `checkins_update_by_homeroom` xuống `using (status <> 'queued_late')` để hai đường không chồng nhau; (b) trigger `BEFORE UPDATE` bắt buộc mọi lượt rời `queued_late` phải đi kèm một dòng sổ; (c) chấp nhận và ghi vào `DEBT.md`. Viết ra đây thay vì im, vì một đối trọng chỉ đúng một nửa mà tài liệu kể như đúng cả là đúng cái bẫy mà chính đợt này vừa gỡ ở chú thích của `0014`.
+
+### Kiểm chứng
+
+`0053_ket_luan_gui_muon_test.sql` — **27 assertion**, xanh trên database dựng lại từ số không. Sáu câu hỏi của ADR-029 mỗi câu một assertion đọc được thành lời: ba trạng thái đổi được (a) · thiếu lý do → lỗi ở cả tầng hàm lẫn tầng bảng (b) · GVCN lớp khác 0 dòng (c) · học sinh 0 dòng, không có chữ ký giả (d) · gọi lại cùng `client_mutation_id` → `updated = 0` và sổ vẫn đúng một dòng (e) · dòng đã xử bị bỏ qua, lô trộn trả `1/1` (f).
+
+**Thử ngược đã chạy thật 06/08/2026:** bỏ `late_decisions_reason_chk` ra khỏi migration, dựng lại `hub_test` từ số không, chạy lại bài → `not ok 14 — (b4) chèn thẳng vào sổ thiếu lý do` và **chỉ dòng đó đỏ** (26/27 còn xanh, vì tầng hàm vẫn ném lỗi). Cắm lại → 27/27 xanh. Nghĩa là assertion (b4) đang đo chính ràng buộc bảng chứ không đo hộ tầng hàm.
+
+**Toàn bộ pgTAP sau đợt I: 927 assertion / 52 file**, mọi file khớp `plan(N)`, khớp mốc `tools/pgtap-moc.tsv`.
+
+## Đợt J (`0054`, 06/08/2026) — sửa được một chữ ký ĐÃ KÝ, có cờ, có lý do, có vết (ADR-031)
+
+Gói này là **bản sao cùng hình dạng của `0053` cho miền báo cáo**: một sổ chỉ thêm, một hàm invoker ghi sổ và đổi trạng thái trong một câu lệnh, cùng ngữ nghĩa `skipped`. Chép hình dạng là có chủ ý — hai màn của cùng một cô chủ nhiệm mà hành xử khác nhau ở cùng một thao tác (chọn hàng loạt, bấm lại, em ngoài lớp) là chỗ người dùng học sai một lần rồi mang cái sai sang màn kia.
+
+### Phép đo: ghi đè hôm nay XOÁ TRẮNG lượt ký trước
+
+Đo trên hub_dev 06/08/2026, dưới danh tính Cô Lan (GVCN 6A1), em Nguyễn Văn Minh, tuần `2026-08-03`, bằng đúng câu lệnh `care.approveReport` đang gửi:
+
+```
+lượt ký thứ nhất → {status: approved, reviewer_id: 4000…0001, note: null}
+lượt ghi đè      → UPDATE 1 → {status: rejected, reviewer_id: 4000…0001, note: 'doi y'}
+select count(*) from report.growth_report_approvals where …;   → 1
+```
+
+**Một dòng trước, một dòng sau.** Chuỗi `approved` của lượt ký đầu không còn tồn tại ở đâu trong database: `growth_report_approvals` có `unique (student_id, week_start)` (`0032`) nên một lượt ghi đè xoá **cả bốn** dữ kiện của chữ ký trước (`status`, `reviewer_id`, `reviewed_at`, `note`). Đường thoát duy nhất không cần migration là `ops.audit_log`; đo tiếp cùng phiên: `has_table_privilege('authenticated','ops.audit_log','insert')` → **false** (`0024` khai thẳng). Nghĩa là trước `0054` hệ **không có chỗ nào** ghi được "ai đổi chữ ký của ai, lúc nào, vì sao". Đường còn lại — nhét chữ "đổi từ Đã duyệt" vào ô ghi chú — bị loại: nó vẫn xoá dấu vết lượt ký đầu và không tra cứu được. **Ghi đè có vết giả tệ hơn không ghi đè.**
+
+### `report.report_decisions` — sổ chỉ thêm
+
+| Cột | Ghi chú |
+|---|---|
+| `student_id` → `core.students` (§1, **on delete cascade**) | Khác `late_decisions` (`0053`, NO ACTION) và khác có lý do: sổ đó đi theo `checkins` qua `checkin_id` nên không cần đường xoá thứ hai; sổ này không có FK nào khác về phía dữ liệu học sinh, để NO ACTION là tự biến nó thành cái chặn đường xoá một học sinh — giữ hồ sơ trẻ em quá hạn dưới tên "sổ vết" là vi phạm Luật 91/2025 chứ không phải cẩn thận |
+| `week_start` | Thứ Hai của tuần, cùng đơn vị với `growth_report_approvals.week_start`. **Cố ý KHÔNG có CHECK `isodow`** ở tầng bảng — hàm canh trước bằng `22023` nói thành lời, thay vì để `growth_report_approvals_monday_chk` của `0032` ném một `23514` mang tên ràng buộc mà tầng trên phải đoán ngược |
+| `from_status` / `to_status` | `to_status ∈ {approved, rejected}` (`report_decisions_to_status_chk`). `from_status` nhận thêm `pending`. **`from_status` là cả lý do tồn tại của cuốn sổ** — đó đúng là dữ kiện mà một lượt ghi đè xoá mất ở sổ duyệt |
+| `reason` | Bắt buộc `>= 3` ký tự **sau `btrim`** ở mọi lượt **trừ** lượt ký đầu mang quyết định `approved` (`report_decisions_reason_chk`). Một ràng buộc gộp hai luật: ghi đè phải có lý do (ADR-031) **và** trả lại phải có lý do (luật màn hiện hành, trước file này chỉ sống trong TypeScript) |
+| `decided_by` → `core.users`, `decided_at` | Policy ghi cưỡng chế `decided_by = core.current_user_id()` |
+| `client_mutation_id` | §9. Unique một phần `(student_id, week_start, client_mutation_id) where client_mutation_id is not null` — khoá gồm cả `student_id` vì **một lượt bấm phủ nhiều em**: mã lượt bấm không duy nhất theo dòng, nó duy nhất theo (em, tuần) trong phạm vi một lượt bấm |
+
+**Trả nốt một khe hở đã có tên.** `packages/core/contracts/CHANGELOG.md` (mục `care.decideReports`, ý 3) ghi: hợp đồng nhận `clientMutationId` nhưng máy chủ **không lưu**, vì `growth_report_approvals` chưa có cột chống trùng. §9 của thủ tục đó vì thế phải đứng nhờ trên khoá `(student_id, week_start)` + mệnh đề `status = 'pending'` — đủ cho ca thường, thủng đúng một ca: một lượt gửi lại tới **muộn**, sau khi ai đó đã lật dòng sang quyết định khác, rơi vào `skipped` mà không được nhận ra là bản sao. Cột + chỉ mục ở trên là chỗ trả nốt: từ nay câu hỏi "lượt này đã ghi chưa" trả lời bằng chính mã lượt bấm, không phải bằng cách suy ra từ trạng thái hiện tại của dòng.
+
+**RLS.** Đọc = `core.can_see_care` — **đúng tập** của `growth_report_approvals_read` (`0032`). Sổ vết không được rộng hơn thứ nó ghi vết: cấp rộng hơn là để một người đọc được lịch sử quyết định về một em mà chính quyết định hiện hành thì họ không đọc được. Ghi = `core.is_homeroom_of ∧ decided_by = current_user_id`. **Không có policy update/delete và không grant update/delete.** `backup_reader` có grant + policy riêng (ADR-006).
+
+**§5 ở đây cần một câu `revoke` tường minh, khác `0053`.** Khác biệt đo được: `reporting` bị `revoke usage on schema attendance` (`0009:274`) nên sổ của `0053` nằm ngoài tầm với ngay từ schema; còn `grant usage on schema report to reporting` (`0009:264`) **vẫn còn**, vì vai đó phải đọc các view tổng hợp trong chính schema này. Hàng rào §5 cho bảng này vì thế chỉ còn **một lớp** là quyền bảng — nên `0054` tháo tường minh (`revoke all … from reporting`) và pgTAP đo riêng một assertion cho nó.
+
+### `report.decide_reports(uuid[], date, text, text, boolean, uuid) → (updated int, skipped int)`
+
+Đường ghi **hợp lệ duy nhất**. Upsert `report.growth_report_approvals` và ghi `report_decisions` trong **một câu lệnh** (CTE ghi dữ liệu). Ở đây hậu quả của việc tách hai câu nặng hơn `0053`: câu thứ hai còn phải đọc lại **trạng thái cũ**, mà trạng thái cũ thì câu thứ nhất vừa xoá.
+
+- **`p_ghi_de = false` (mặc định): hành vi hiện hành, không đổi** — chỉ chạm dòng `status = 'pending'`, đúng ngữ nghĩa `care.decideReports` đã chốt.
+- **`p_ghi_de = true`:** đè được lên `approved`/`rejected`, và hàm **tự ép có lý do** (`raise … 22023`) chứ không tin tầng trên. Ép cả lượt chứ không từng dòng, vì lúc canh hàm chưa đọc dòng nào — và nó không làm hỏng ca nào: bật cờ ghi đè mà không định ghi đè gì thì cũng nên nói được vì sao mình bật.
+- **Điều kiện cờ canh HAI lần, không thừa:** một lần trên ảnh chụp `truoc` (lọc nguồn), một lần trong `on conflict … where` trên giá trị **thật** của dòng. Giữa lúc chụp ảnh và lúc ghi, một transaction khác có thể đã ký xong dòng đó — ảnh chụp nói `pending`, sự thật thì không, và ca đó phải là `skipped` chứ không phải một lượt ghi đè lén.
+- **CTE `truoc as materialized` là bắt buộc về ngữ nghĩa, không phải để tối ưu:** nó giữ ảnh chụp TRƯỚC và là nguồn **duy nhất** của `from_status` — `RETURNING` của một câu ghi dữ liệu chỉ đưa ra giá trị MỚI.
+- **Không `security definer`**, cùng lý lẽ `0053`: RLS là toàn bộ thứ giữ cho một cô chủ nhiệm không ký lên báo cáo lớp khác. `core.is_homeroom_of` viết thẳng trong `WHERE` còn làm một việc RLS không làm được: **RLS trên INSERT ném `42501`, còn `skipped` đòi bỏ qua êm** — lọc ở nguồn là cách duy nhất để em ngoài lớp không làm cả lô đổ.
+- **§9:** cổng sớm — mã lượt bấm đã nằm trong sổ thì trả `updated = 0` **êm**. Chỉ mục duy nhất là lớp sau, bắt ca hiếm (hai transaction song song cùng mã).
+- `skipped` đếm theo **id phân biệt** (cũng là điều kiện chạy: Postgres từ chối `on conflict do update` chạm cùng một dòng hai lần trong một câu lệnh).
+
+### Giới hạn thật — sổ vết KHÔNG phải bảo hiểm
+
+Đây là sửa một thứ **đã gửi ra ngoài nhà trường**. Phụ huynh có thể đã đọc bản cũ, và hệ không có cách nào thu hồi thứ đã đọc. Sổ `report_decisions` trả lời được **"ai đổi, lúc nào, vì sao"**; nó **không** trả lời được **"phụ huynh đã đọc bản nào"**. Nguyên văn ADR-031, chép lại ở đây vì người đọc tài liệu database thường không mở ADR — và vì một hồ sơ kể sổ vết như thể nó đóng luôn được rủi ro kia là đúng loại lời hứa an toàn mà đợt `0053` vừa phải gỡ khỏi một câu chú thích.
+
+Ngày có đường báo cho phụ huynh biết bản báo cáo đã đổi (mục "xem lại khi" của ADR-031), câu hỏi tiếp theo mới là có nên chặn sửa sau N ngày không.
+
+### Kiểm chứng
+
+`0054_sua_duoc_chu_ky_da_ky_test.sql` — **33 assertion**, xanh trên database dựng lại từ số không. Sáu câu hỏi của ADR-031, mỗi câu đọc được thành lời: lượt ký đầu vẫn đi như cũ và để lại một dòng sổ đủ dữ kiện (a) · không bật cờ thì **không** đè (b) · bật cờ mà thiếu lý do → lỗi ở cả tầng hàm lẫn tầng bảng (c) · bật cờ kèm lý do → đè được, sổ giữ lại `from_status` mà sổ duyệt vừa xoá (d) · GVCN lớp khác `0/1`, không ném lỗi (e) · gọi lại cùng `client_mutation_id` → sổ vẫn đúng một dòng, kể cả lượt gửi lại tới muộn có kèm cờ ghi đè (f).
+
+**Một cái bẫy đã gặp khi viết bài test, ghi lại:** pgTAP chạy trọn một file trong MỘT transaction nên `decided_at` của mọi dòng sổ do bài sinh ra **bằng nhau**. Bản nháp đầu dùng `string_agg(… order by decided_at)` để kiểm hai dòng theo thứ tự thời gian — thứ tự đó không xác định, bài sẽ xanh/đỏ theo tâm trạng trình tối ưu. Bài hiện tại chỉ tay vào từng dòng bằng một điều kiện xác định (`from_status = 'approved'`) và đếm số dòng riêng. Cùng họ với cái bẫy "bộ test bịa được lịch sử chạy máy" (nợ #41).
+
+**Thử ngược đã chạy thật 06/08/2026:** thay `report_decisions_reason_chk` bằng `check (true)`, dựng lại một database từ số không, chạy lại → `not ok 18 — (c4)` và `not ok 19 — (c5)`, **chỉ hai dòng đó đỏ** (31/33 còn xanh, vì tầng hàm vẫn ném lỗi). Cắm lại → 33/33 xanh. Nghĩa là (c4)/(c5) đang đo chính ràng buộc bảng chứ không đo hộ tầng hàm.
+
+**Đo lại trên hub_dev sau khi áp**, dưới danh tính Cô Lan, cùng em và cùng tuần của phép đo đầu mục: lượt ký đầu `{updated: 1, skipped: 0}` → đổi mà **không** bật cờ `{0, 1}` → đổi **có** bật cờ `{1, 0}`; sổ duyệt còn một dòng `rejected`, còn sổ vết có **hai** dòng — `pending→approved` (không lý do) và `approved→rejected|Thieu phan nhan xet`, cùng `decided_by`. Đúng dữ kiện mà phép đo đầu mục cho thấy đã bốc hơi.
+
+**Toàn bộ pgTAP sau đợt J: 960 assertion / 53 file**, mọi file khớp `plan(N)`, khớp mốc `tools/pgtap-moc.tsv`.
+
+## Đợt K (`0055`, 07/08/2026) — đăng ký SSO rời khỏi mã nguồn (ADR-032)
+
+Gói này làm cho miền **đăng nhập** đúng việc mà `0052` đã làm cho miền **nhúng**: gỡ một danh sách khỏi mảng TypeScript, đưa vào bảng, và nhờ thế biến một lần deploy thành một cái công tắc.
+
+**Phép đo mở đầu (06/08/2026, trên bản đang chạy, bằng chính API của `/quan-tri/mini-app`).** Khai một app thử (`tin-truong`), cấp vai, bật:
+
+| Đường | Kết quả |
+|---|---|
+| `/embed/tin-truong` | **404** khi tắt → **200** khi bật. Nhúng chạy, không deploy |
+| Tile trên lưới trang chủ | Hiện đúng vai |
+| `POST /api/embed/webhook` sai secret | **401** |
+| SSO | **Không có gì** — khai app không sinh ra client OIDC nào |
+
+**Vế nguy hiểm không phải "thêm app phải deploy" mà là "thu hồi cũng phải deploy".** Trước `0055`, tắt một app trong sổ cắt nhúng và webhook, nhưng client OIDC vẫn sống trong `apps/hub/server/oidc/clients.ts` và vẫn đổi được `authorization_code` lấy token. Công tắc thu hồi thu hồi được **hai phần ba**, và không chỗ nào trong hệ nói ra điều đó.
+
+### Năm cột, một khung nhìn, một hàm — trên chính `core.embedded_apps`
+
+**Không thêm bảng `core.oidc_clients`.** Mini App và RP không phải hai thực thể: Factory là cùng một app, nhúng bằng iframe **và** đăng nhập bằng tài khoản Hub. Hai bảng nghĩa là hai sổ cho một app, hai ngày rà lại, hai người chịu trách nhiệm, và một ngày có người tắt bảng này mà quên bảng kia. **`client_id` chính là `app_id`** — ràng buộc mạnh nhất có thể có cho việc đó, vì nó không phải hai cột nên không thể lệch.
+
+| Đối tượng | Vai trò |
+|---|---|
+| `sso_enabled` | Công tắc RIÊNG, không suy ra từ `enabled`. Có app nhúng mà không cần đăng nhập (trang tin), có app đăng nhập mà không nhúng (Đường A). Suy ra thì mọi app nhúng tự nhiên thành RP xin được token — cấp quyền bằng cách quên không khai |
+| `sso_redirect_uris text[]` | So khớp tuyệt đối theo OIDC. **Không** chứa `/embed/relay`: URI đó thuộc về Hub, `clients.ts` tự thêm từ `HUB_URL` cho app có nhúng — nạp vào bảng là ghi cứng một tên miền của chính mình vào dữ liệu |
+| `sso_backchannel_logout_uri` | ADR-016 "thoát Hub = thoát mọi RP" dựa vào cột này |
+| `sso_scopes text[]` | Bốn scope `provider.ts` công bố, bắt buộc có `openid` |
+| `sso_client_secret_env` | **TÊN** biến môi trường, không phải giá trị — y hệt `webhook_secret_env`. Ba lý do ở đầu `0052` không đổi một chữ khi đối tượng là secret OIDC: bản sao lưu đi ra khỏi máy chủ, `pg_dump` nhân bản secret thật, người được đọc bảng quản trị ≠ người được biết secret |
+| `core.v_oidc_clients` (view) | Phép lọc `enabled and sso_enabled` nằm ở **đúng một chỗ**. Đây chính là chỗ vế nguy hiểm ở trên hỏng lần trước: một tầng quên một điều kiện thì app đã thu hồi vẫn cấp được token |
+| `core.moi_uri_la_https(text[])` (immutable) | CHECK trong Postgres **không nhận subquery**, mà điều cần kiểm là "mọi phần tử của mảng đều thoả" — thứ chỉ viết được bằng `unnest`. Bọc vào hàm là đường duy nhất còn lại, và hai ràng buộc dùng chung một định nghĩa "URI hợp lệ" nên chúng không thể lệch nhau về sau |
+
+**Năm ràng buộc, mỗi cái chặn một ca hỏng câm** (`0055_khai_sso_ngay_trong_so_test.sql`, 39 assertion — cả năm đều dựng dòng vi phạm và đo database từ chối):
+
+| Ràng buộc | Ca nó chặn |
+|---|---|
+| `embedded_apps_sso_du_bo` | Bật SSO mà thiếu redirect_uri hoặc thiếu tên biến secret → client dựng lên hỏng câm; RP nhận `invalid_client` / `redirect_uri mismatch`, hai câu lỗi không nói được rằng nguyên nhân là một ô bỏ trống trên màn quản trị |
+| `embedded_apps_sso_redirect_https` | `http://` (authorization_code đi qua đường không mã hoá) và `#` (fragment — OIDC Core 3.1.2.1). Đo trên **từng phần tử**: một URI hỏng lẫn giữa hai URI tốt vẫn bị chặn |
+| `embedded_apps_sso_backchannel_https` | `logout_token` là JWT ký — không gửi qua đường trần |
+| `embedded_apps_sso_secret_env_hoa` | Tên biến sai khuôn |
+| `embedded_apps_sso_scope_biet_truoc` | Scope provider không biết. oidc-provider **im lặng bỏ qua** scope lạ: RP xin `hub_profil` (thiếu chữ e) vẫn đăng nhập được nhưng không bao giờ nhận được vai |
+
+### Chuyển Factory một-đổi-một
+
+Cùng nguyên tắc mục 5 của `0052`: bảng thay một mảng đang có nội dung cụ thể, nên bước chuyển phải là một-đổi-một — sai một ký tự là Factory mất đăng nhập. Bốn assertion đối chiếu đúng bốn dòng đang nằm trong `clients.ts` trước gói này (redirect_uri, backchannel, tên biến secret, scope `{openid, profile}`). `test-external-app` **không** nạp — nó ở sau hàng rào `NODE_ENV` và secret ghi trần trong kho; chỗ đúng của nó vẫn là mã nguồn.
+
+### Một siết chặt thật, ghi ra để không ai tưởng là dọn dẹp
+
+`OidcClientConfig.scopes` trước nay được khai rồi **không bao giờ truyền xuống thư viện** — dòng chú thích "chỉ cho phép khai `hub_profile` nếu app thật sự cần vai trò" mô tả một hàng rào **chưa từng tồn tại**: mọi RP xin được cả bốn scope, kể cả `hub_profile` (vai + cơ sở + lớp) và `offline_access`. Từ `0055` nó đi xuống thật, và RP xin ngoài danh sách nhận `invalid_scope` tại `/oidc/auth`. Đây có thể làm gãy một RP đang xin nhiều hơn phần đã khai — nên nó nằm ở đây thay vì trong một dòng chú thích. Cái giá của việc siết nhầm nay là **một ô tích trên màn quản trị**, không phải một lần deploy: đó chính là thứ gói này mua được.
+
+### Kiểm chứng
+
+`0055_khai_sso_ngay_trong_so_test.sql` — **39 assertion**, xanh trên database dựng lại từ số không. Bài chính là mục 4: dựng đủ **ba** loại app (bật+SSO · tắt+SSO · bật+không SSO) rồi đòi `v_oidc_clients` chỉ chứa loại thứ nhất — hai loại sau là hai kiểu "không được cấp token" khác nhau, và nhầm loại nào cũng là một cánh cửa mở. Mỗi phủ định có một mẫu số đứng trước (`>= 1` dòng của từng loại), theo đúng luật tự áp của `0052`.
+
+**Một sai đã bắt được ngay lượt chạy đầu, giữ lại vì nó nói đúng điều màn quản trị phải nói:** bản nháp khai `sso-du-bo` với `sso_enabled = true` rồi kiểm nó có mặt trong `v_oidc_clients` → **đỏ**. Không phải lỗi của view: `enabled` mặc định `false` (`0052`), nên **"khai xong" không bao giờ đồng nghĩa với "đang chạy"**.
+
+**Toàn bộ pgTAP sau đợt K: 999 assertion / 54 file**, mọi file khớp `plan(N)`, khớp mốc `tools/pgtap-moc.tsv`.
 
 ## Quy tắc migration (§2)
 

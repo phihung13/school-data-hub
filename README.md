@@ -51,11 +51,16 @@ buồng lái GVCN thôi cố định một lớp.
    `evidence` — hôm nay đổi ngưỡng cảnh báo vẫn là một câu UPDATE chạy tay.
 6. Luật **C_CEFR**: 5/6 luật cờ đã cài; C_CEFR chưa có nguồn dữ liệu nên engine bỏ qua **kèm
    lý do ghi vào metrics**, không chấm bằng dữ liệu không tồn tại (`DEBT.md` #35).
-7. **Layout desktop riêng cho check-in/báo cáo/hồ sơ** — chỉ responsive đơn giản (co giãn
+7. **Layout desktop riêng cho báo cáo/hồ sơ** — chỉ responsive đơn giản (co giãn
    max-width trong khung thẻ). **Đăng nhập và trang chủ đã có layout desktop riêng thật**
    (29/07/2026, xem mục ngay dưới) vì `Hub Desktop.dc.html` có bản thiết kế desktop cho 2 màn
-   này (D1, D2); check-in/báo cáo/hồ sơ thì KHÔNG có bản D-series tương ứng trong nguồn thiết
+   này (D1, D2); báo cáo/hồ sơ thì KHÔNG có bản D-series tương ứng trong nguồn thiết
    kế nên giữ nguyên responsive đơn giản, không tự bịa layout desktop cho chúng.
+   **`/checkin` đã rời danh sách này ngày 05/08/2026:** nó không thiếu bản thiết kế desktop mà
+   đang mặc nhầm vỏ — `<PageShell>` + `<MiniAppHeader>` (capsule ⋯│✕) khiến một TRANG của Hub
+   trông như mini app ngoài ở cả hai khổ màn. Nay dùng đúng khung của `/diem-danh` và
+   `/tuan-nay`: menu trái 240px từ `md`, thanh tab học sinh dưới `md`, nội dung một cột trong
+   thẻ trắng 620px căn giữa. Không bịa bố cục desktop mới — chỉ thôi mượn vỏ mini app.
 
 ## Đăng nhập + Trang chủ: layout desktop riêng, không phải mobile phóng to (29/07/2026)
 

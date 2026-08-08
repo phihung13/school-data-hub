@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 9
+sync-version: 10
 ---
 
 # RULES — 10 điều khoản hợp đồng kiến trúc (luật cứng, máy cưỡng chế)
@@ -115,5 +115,6 @@ Chốt 27/07/2026. Chi tiết: `08-embedded-apps.md` mục 0–1, `03-api.md` m�
 5. **`postMessage` bắt buộc kiểm `event.origin`** khớp Manifest, có schema trong `packages/core/contracts` và có timeout. Cấm trao mã/token qua query string của `iframe src`.
 6. **Sổ đăng nhập tách khỏi sổ dữ liệu:** `core.identity_links(system, external_id, user_id)` cho định danh, `core.id_mappings(system, external_id, student_id)` cho dữ liệu học sinh. Cả hai chiều đều `UNIQUE`.
 7. **Đăng nhập chung phải kèm đăng xuất chung:** `end_session_endpoint` + back-channel logout; token ≤15 phút; mỗi lần refresh kiểm `core.users.status`. RP đăng ký mới mà không khai `backchannel_logout_uri` → từ chối.
-8. **Không suy tin tốt từ im lặng — mức nguồn tín hiệu:** flag engine bỏ qua rule có nguồn quá hạn tươi (`ops.source_freshness`), ghi `degraded_sources`, buồng lái hiện băng vàng. Cờ sinh từ nạp bù mang `origin='backfill'`: không tạo case, không leo thang.
+8. **Không suy tin tốt từ im lặng — mức nguồn tín hiệu:** flag engine bỏ qua rule có nguồn quá hạn tươi (`ops.source_freshness`), ghi `degraded_sources`, và **ô số nào phụ thuộc lượt quét thì chính ô đó phải nói ra mình đang là số cũ** (dòng phụ ghi giờ + ngày của lượt quét gần nhất). Cờ sinh từ nạp bù mang `origin='backfill'`: không tạo case, không leo thang.
+   *Sửa lời 06/08/2026 (ADR-030).* Câu cũ đòi "buồng lái hiện băng vàng" — một khối cảnh báo riêng chiếm cả dải ngang phía trên năm ô số, trong khi thứ nó cảnh báo chỉ ảnh hưởng đúng một ô. Chủ đầu tư yêu cầu bỏ băng; điều khoản đổi CHỖ NÓI chứ không bỏ nghĩa vụ nói: cấm để một con số cũ hiện ra như số hôm nay vẫn nguyên. Bỏ cả dòng phụ mới là vi phạm.
 9. **Một tên cho sổ nhật ký máy: `ops.job_runs`.** Mọi tài liệu và code dùng đúng tên này (trước đây tồn tại song song `ops.ops_job_runs`, `care.ops_job_runs`).

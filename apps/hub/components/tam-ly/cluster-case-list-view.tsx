@@ -127,13 +127,19 @@ export function ClusterCaseListView() {
         <EmptyState
           icon="apartment"
           title="Tài khoản chưa được gán cơ sở nào cho vai tâm lý cụm"
-          hint="Danh sách trống ở đây KHÔNG có nghĩa là cụm đang yên — nghĩa là hệ thống chưa biết cụm của thầy cô gồm những cơ sở nào. Nhờ quản trị gán phạm vi rồi mở lại."
+          // RÚT NGẮN 06/08/2026. Vế giữa của câu cũ ("hệ thống chưa biết cụm của thầy cô
+          // gồm những cơ sở nào") diễn giải lại tiêu đề. Hai vế PHẢI giữ: trống ≠ cụm yên
+          // (im lặng không phải kết luận), và việc phải làm tiếp theo.
+          hint="Trống ≠ cụm đang yên. Nhờ quản trị gán phạm vi."
         />
       ) : rows.length === 0 ? (
         <EmptyState
           icon="task_alt"
-          title="Chưa có hồ sơ nào đang mở và chưa có cờ khẩn nào chờ xử lý"
-          hint={`Tính trên ${schools.length > 1 ? "các cơ sở" : "cơ sở"} trong cụm, nhìn lại ${data?.urgentWindowDays ?? 0} ngày. Trống ở đây nghĩa là chưa có tín hiệu nào được ghi — không phải đã quét xong và kết luận mọi em đều ổn.`}
+          title="Chưa có hồ sơ mở và chưa có cờ khẩn"
+          // RÚT NGẮN 06/08/2026: bỏ vế "Tính trên các cơ sở trong cụm" (tiêu đề app đã
+          // liệt kê đúng tên các cơ sở) và vế "không phải đã quét xong và kết luận…".
+          // GIỮ: khoảng thời gian, và mệnh đề trống-không-phải-kết-luận rút thành một vế.
+          hint={`Nhìn lại ${data?.urgentWindowDays ?? 0} ngày · trống ≠ mọi em đều ổn`}
         />
       ) : (
         <>
@@ -203,10 +209,14 @@ export function ClusterCaseListView() {
             ))}
           </ul>
 
+          {/* RÚT NGẮN 06/08/2026. Câu cuối ("Ngưỡng N ngày đọc từ bảng ngưỡng của cơ sở,
+              không viết trong mã") là lời hứa của người VIẾT PHẦN MỀM với người viết phần
+              mềm — mệnh lệnh 7 được thi hành ở `care.thresholds` và ở CI, không phải bằng
+              một dòng chữ trên màn cán bộ tư vấn. Con số ngưỡng vẫn hiện, ở đúng chỗ nó
+              có nghĩa: nhãn ô "Quá N ngày chưa có hành động".
+              GIỮ nguồn của danh sách: nó phân biệt "chưa có tín hiệu" với "chưa ai quét". */}
           <p className="text-[11px] leading-relaxed text-muted">
-            Danh sách dựng trực tiếp từ tín hiệu thô (hồ sơ chăm sóc, "cần gặp thầy cô"), không phải từ
-            một lượt quét đêm — bộ quét cờ tự động chưa chạy. Ngưỡng {data!.quietDays} ngày đọc từ bảng
-            ngưỡng của cơ sở, không viết trong mã.
+            Dựng từ tín hiệu thô, không từ lượt quét đêm.
           </p>
         </>
       )}

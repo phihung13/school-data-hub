@@ -14,11 +14,24 @@ export const DEV = {
   student: "90000000-0000-0000-0000-000000000005", // Học sinh Minh
   gvcn2: "90000000-0000-0000-0000-000000000006", // Cô Hạnh, GVCN 6A2
   admin: "90000000-0000-0000-0000-000000000007", // Hùng, quản trị
+  /**
+   * Thầy Nam — giáo viên BỘ MÔN Toán, dạy 6A1/6A2/6A3 và KHÔNG dạy 6A4/6A5.
+   *
+   * Chỗ trống đó là mẫu số của mọi khẳng định "không thấy lớp mình không dạy": thầy dạy
+   * hết khối thì câu đó xanh vì rỗng, không phải vì policy chặn (seed.mjs ghi rõ điều này
+   * ở khối phân công bộ môn). Thêm vào đây 06/08/2026 cùng gói dựng màn "Lớp tôi dạy".
+   */
+  gvbomon: "90000000-0000-0000-0000-000000000002",
+  /** Cô Diệp — bộ môn Ngữ văn, dạy 6A3/6A4/6A5. Cặp đối xứng của Thầy Nam. */
+  gvbomon2: "90000000-0000-0000-0000-00000000000a",
 } as const;
 
 export const FIXTURE = {
   classA: "30000000-0000-0000-0000-000000000001", // 6A1
   classB: "30000000-0000-0000-0000-000000000002", // 6A2
+  classC: "30000000-0000-0000-0000-000000000003", // 6A3 — Thầy Nam dạy, Cô Vân chủ nhiệm
+  classD: "30000000-0000-0000-0000-000000000004", // 6A4 — Thầy Nam KHÔNG dạy
+  classE: "30000000-0000-0000-0000-000000000005", // 6A5 — Thầy Nam KHÔNG dạy
   studentMinh: "70000000-0000-0000-0000-000000000001", // lớp 6A1
   studentBinh: "70000000-0000-0000-0000-000000000002", // lớp 6A2
   schoolQ7: "20000000-0000-0000-0000-000000000001",

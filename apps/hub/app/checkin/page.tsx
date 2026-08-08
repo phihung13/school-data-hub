@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/lib/session";
+import { resolveIdentity } from "@hub/core/auth-adapter";
 import { CheckinView } from "@/components/checkin-view";
 
 export default async function CheckinPage() {
@@ -9,5 +10,16 @@ export default async function CheckinPage() {
   if (!session) redirect("/login?then=%2Fcheckin");
   if (!session.roles.includes("student")) redirect("/home");
 
-  return <CheckinView />;
+  // Danh tính chỉ để DỰNG KHUNG (menu trái + thanh tab + nhãn lớp) — không màn nào của
+  // /checkin đọc dữ liệu từ đây. Cùng đường mà /can-gap-thay-co và /diem-danh đang đi.
+  const identity = await resolveIdentity(session.authUid);
+
+  return (
+    <CheckinView
+      displayName={session.displayName}
+      email={identity?.email ?? ""}
+      roles={session.roles}
+      classCode={identity?.className ?? null}
+    />
+  );
 }

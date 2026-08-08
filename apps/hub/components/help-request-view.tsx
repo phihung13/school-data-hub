@@ -119,11 +119,13 @@ export function HelpRequestView({
   // KHÔNG chặn em gửi — máy chủ tự tìm GVCN từ phiên, không cần client biết tên.
   // "GVCN" là từ vựng vận hành — DESIGN-GUIDELINES §8 chỉ cho nó sống ở buồng lái, tâm
   // lý cụm và điều hành. Trên màn của học sinh thì nói như người ta nói: "cô chủ nhiệm".
+  // RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — nhánh cuối là câu báo một thứ đã hỏng. Bỏ vế
+  // "thầy cô vẫn nhận được" (nói lại đúng điều mà "con vẫn gửi được" đã nói).
   const teacherSubtitle = teacher.data
     ? `Gửi riêng cho ${teacherFirstWord} — chủ nhiệm lớp ${teacher.data.class_code}`
     : teacher.isPending
       ? "…"
-      : "Chưa tải được tên thầy cô chủ nhiệm — con vẫn gửi được, thầy cô vẫn nhận được.";
+      : "Chưa tải được tên thầy cô — con vẫn gửi được.";
 
   return (
     <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
@@ -151,12 +153,19 @@ export function HelpRequestView({
             là thật. Một cái duy nhất, luôn có mặt, luôn đúng. */}
         <h1 className="sr-only">Mình cần gặp thầy cô</h1>
         <div className="hidden flex-none items-center gap-3 border-b border-[#E9ECF2] bg-white px-7 py-3.5 md:flex">
+            {/* VÙNG CHẠM 44px mà KHÔNG phóng to phần nhìn thấy — cùng mẫu mini-app-header.tsx
+                đã dựng: `min-h-[44px] px-1` nằm trên chính phần tử bấm được, vòng tròn 36×36
+                và nền hover vẫn nguyên kích thước cũ vì chúng nằm ở lớp trong. Nút này 36×36
+                là 8px hụt mốc §11/WCAG 2.5.5, và nó là đường lùi khỏi một màn em vừa gõ
+                chuyện riêng vào. (05/08/2026) */}
             <button
               onClick={() => router.back()}
               aria-label="Quay lại"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#4E5F78] hover:bg-[#F1F4F8]"
+              className="flex min-h-[44px] items-center justify-center px-1"
             >
-              <span aria-hidden="true" className="msr text-[21px]">arrow_back</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full text-[#4E5F78] hover:bg-[#F1F4F8]">
+                <span aria-hidden="true" className="msr text-[21px]">arrow_back</span>
+              </span>
             </button>
             <div className="flex-1">
               <div className="text-[16px] font-black text-ink">Mình cần gặp thầy cô</div>
@@ -200,10 +209,14 @@ export function HelpRequestView({
                             type="button"
                             aria-pressed={active}
                             onClick={() => setTopic(key)}
+                            // min-h-[44px]: đo ra ~42px (py-3 + dòng chữ 13,5px), hụt mốc 44px
+                            // của §11/WCAG 2.5.5. Năm nút này là bước 1 bắt buộc — không chạm
+                            // trúng một nút ở đây thì không có đường nào gửi được lời. Chỉ nới
+                            // sàn chiều cao, không đổi padding nên hình dạng giữ nguyên.
                             className={
                               active
-                                ? "flex items-center gap-2 rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-[18px] py-3 text-[13.5px] font-extrabold text-navy shadow-[0_0_0_3px_rgba(30,95,184,.1)]"
-                                : "flex items-center gap-2 rounded-2xl border-[1.5px] border-[#E4E9F0] px-[18px] py-3 text-[13.5px] font-bold text-[#33507C] hover:border-[#C9D6E6]"
+                                ? "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-[18px] py-3 text-[13.5px] font-extrabold text-navy shadow-[0_0_0_3px_rgba(30,95,184,.1)]"
+                                : "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.5px] border-[#E4E9F0] px-[18px] py-3 text-[13.5px] font-bold text-[#33507C] hover:border-[#C9D6E6]"
                             }
                           >
                             <span
@@ -236,9 +249,12 @@ export function HelpRequestView({
                             className={
                               active
                                 ? isUrgent
-                                  ? "flex-1 basis-[150px] rounded-2xl border-[1.7px] border-[#F0474D] bg-[#FFF5F5] px-3.5 py-3.5 text-center text-[13px] font-black text-[#D2383E]"
+                                  // dangerText (#C7333A) chứ không phải #D2383E: đúng cặp
+                                  // chữ-đỏ-trên-nền-hồng đo được 4,49:1 — hụt chuẩn 0,01 và
+                                  // chỉ lộ ra khi đo trên nền thật (#FFF5F5) thay vì nền trắng.
+                                  ? "flex-1 basis-[150px] rounded-2xl border-[1.7px] border-[#F0474D] bg-[#FFF5F5] px-3.5 py-3.5 text-center text-[13px] font-black text-dangerText"
                                   : "flex-1 basis-[150px] rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-3.5 py-3.5 text-center text-[13px] font-black text-navy"
-                                : "flex-1 basis-[150px] rounded-2xl border-[1.5px] border-[#E4E9F0] px-3.5 py-3.5 text-center text-[13px] font-bold text-[#33507C] hover:border-[#C9D6E6]"
+                                : "flex-1 basis-[150px] rounded-2xl border-[1.5px] border-line px-3.5 py-3.5 text-center text-[13px] font-bold text-cardtitle2 hover:border-[#C9D6E6]"
                             }
                           >
                             {HELP_REQUEST_URGENCY_LABEL[key]}
@@ -287,7 +303,17 @@ export function HelpRequestView({
                     <button
                       onClick={handleSubmit}
                       disabled={!canSubmit}
-                      className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-navy to-[#1E5FB8] px-7 py-4 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.28)] disabled:opacity-40"
+                      // `disabled:opacity-40` trộn nút xanh với nền trắng thành ~#9DAABF, và
+                      // chữ trắng trên đó chỉ 2,35:1 — nút "Gửi cho cô" ở trạng thái CHƯA chọn
+                      // đủ là thứ em nhìn đầu tiên, mà nó lại là thứ mờ nhất màn hình.
+                      //
+                      // Bản sửa đầu ngày 05/08 đổi sang nền #8A97AB giữ chữ trắng và ghi "≈4,6:1"
+                      // — phép tính bằng tay đó SAI: đo trên DOM thật được 2,96:1. Đây đúng là lý
+                      // do repo đòi đo chứ không đòi tính. Nay đảo hẳn cặp màu: nền chip xám nhạt
+                      // + chữ `caption` (4,90:1 trên chính nền đó, số đã đo sẵn ở tailwind.config).
+                      // Nút xám nhạt cũng nói "chưa bấm được" đúng hơn một nút xám đậm — xám đậm
+                      // trông như một nút bấm được nhưng đổi màu. (05/08/2026)
+                      className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-navy to-[#1E5FB8] px-7 py-4 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.28)] disabled:cursor-not-allowed disabled:bg-none disabled:bg-chip disabled:text-caption disabled:shadow-none disabled:opacity-100"
                     >
                       <span aria-hidden="true" className="msr text-[20px]">send</span>
                       Gửi cho {teacherFirstWord}
@@ -342,19 +368,37 @@ export function HelpRequestView({
                         đo đúng điều đó (1 dòng dưới phiên cô Mai). Nói thiếu một vai đọc được
                         cũng là nói dối, chỉ khó bắt hơn — và ở đúng ô em gõ chuyện riêng nhất
                         thì đây là kiểu nói dối tệ nhất. */}
+                    {/* RÚT NGẮN 06/08/2026 (§1.5): bỏ "để giúp khi chuyện cần người chuyên
+                        môn" — biện minh cho quyền đọc. Danh sách này trả lời đúng một câu
+                        hỏi ("ai đọc được?"), nên mỗi dòng chỉ cần một cái tên. */}
                     <div className="flex items-start gap-2">
                       <span aria-hidden="true" className="msr flex-none text-[17px] text-[#00A05F]">check_circle</span>
                       <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-                        Thầy cô tâm lý của trường — đọc cùng {teacherFirstWord}, để giúp khi chuyện
-                        cần người chuyên môn
+                        Thầy cô tâm lý của trường — đọc cùng {teacherFirstWord}
                       </span>
                     </div>
+                    {/* ĐỔI HÌNH 06/08/2026 (§1.5). Dòng cũ là một câu 78 ký tự vắt hai dòng
+                        ở khổ 390px, mà nội dung thật của nó là MỘT nhãn ("không nhìn thấy")
+                        + một DANH SÁCH bốn vai. Danh sách thì mắt đọc bằng chip nhanh hơn
+                        bằng dấu chấm giữa câu. Không vai nào bị bỏ: nói thiếu một vai đọc
+                        được hay không đọc được đều là nói sai (§9). Icon `cancel` + chữ
+                        "Không nhìn thấy" giữ nguyên vai trò tín hiệu kép của §11 — màu một
+                        mình không bao giờ đủ. */}
                     <div className="flex items-start gap-2">
                       <span aria-hidden="true" className="msr flex-none text-[17px] text-[#D2383E]">cancel</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-                        Bạn cùng lớp · thầy cô dạy môn · thầy cô lớp khác · bố mẹ — <b>không</b> nhìn
-                        thấy
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[12.5px] font-black text-[#1D4E8F]">Không nhìn thấy</div>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {["Bạn cùng lớp", "Thầy cô dạy môn", "Thầy cô lớp khác", "Bố mẹ"].map((ai) => (
+                            <span
+                              key={ai}
+                              className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#1D4E8F]"
+                            >
+                              {ai}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     {/* Câu cũ ở chỗ này ("{cô} sẽ hỏi ý con trước khi chuyển tới phòng tâm lý")
                         đã bỏ, vì nó sai hai lần: thầy cô tâm lý ĐÃ đọc được từ đầu, không cần
@@ -362,18 +406,25 @@ export function HelpRequestView({
                         thao tác không tồn tại là hứa suông đúng chỗ em đang cân nhắc có nên kể
                         hay không. Thay bằng một câu vừa thật vừa dùng được: ô lời nhắn không bắt
                         buộc, bỏ trống vẫn gửi được. */}
-                    <div className="border-t border-[#CFE4FB] pt-2.5 text-[11.5px] leading-relaxed text-[#4E7BB0]">
-                      Con viết bao nhiêu cũng được. Không viết gì cũng gửi được — thầy cô vẫn biết là
-                      con muốn gặp.
+                    {/* Chữ đổi #4E7BB0 → #1D4E8F (token link): trên nền thẻ #F0F7FF, #4E7BB0
+                        chỉ 4,07:1, dưới mốc 4,5:1 — và đây là câu duy nhất nói cho em biết
+                        ô lời nhắn KHÔNG bắt buộc, tức câu quyết định em bấm gửi hay bỏ dở.
+                        #1D4E8F = 7,66:1, cũng là màu ba dòng ngay trên đã dùng. (05/08/2026) */}
+                    {/* RÚT NGẮN 06/08/2026 (§1.5). Ba mệnh đề cũ nói cùng MỘT điều theo ba
+                        cách ("viết bao nhiêu cũng được" · "không viết gì cũng gửi được" ·
+                        "thầy cô vẫn biết là con muốn gặp"). Giữ cách nói thẳng nhất, vì đây
+                        vẫn là câu quyết định em bấm gửi hay bỏ dở. */}
+                    <div className="border-t border-[#CFE4FB] pt-2.5 text-[11.5px] text-link">
+                      Không viết gì cũng gửi được.
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                    <Mascot pose="think" width={44} />
-                    <p className="text-[12.5px] font-semibold leading-relaxed text-[#33507C]">
-                      Nói ra là bước dũng cảm. Không có câu trả lời nào là sai cả!
-                    </p>
-                  </div>
+                  {/* BỎ HẲN 06/08/2026 (§1.5) — thẻ mascot + câu "Nói ra là bước dũng cảm.
+                      Không có câu trả lời nào là sai cả!". Đây là lời động viên đặt TRƯỚC khi
+                      em làm gì: không mang dữ liệu, không mở đường nào, và nó chiếm chỗ ngay
+                      dưới khối "Ai đọc được lời con?" — thứ em thật sự cần đọc trước khi gõ.
+                      Lời ghi nhận vẫn còn, ở đúng chỗ nó có nghĩa: `SentSuccessPanel`, tức
+                      SAU khi em đã mở lời. Một lần, không phải hai. */}
                 </div>
               </div>
             )}
@@ -419,9 +470,10 @@ function SentSuccessPanel({ teacherName, onGoHome }: { teacherName: string; onGo
       <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-navy">
         Đã gửi cho {teacherName} rồi!
       </h2>
-      <p className="text-[13.5px] leading-relaxed text-caption">
-        {teacherName} sẽ đọc và tìm con sớm. Đây là một bước dũng cảm.
-      </p>
+      {/* RÚT NGẮN 06/08/2026 (§1.5): bỏ "Đây là một bước dũng cảm." Lời ghi nhận đó nay do
+          HÌNH nói — sư tử `celebrate` ngay trên tiêu đề — đúng cách §1.5 muốn, và nó không
+          chiếm dòng chữ nào. Câu còn lại là thứ duy nhất em chưa biết: chuyện gì tiếp theo. */}
+      <p className="text-[13.5px] text-caption">{teacherName} sẽ đọc và tìm con sớm.</p>
       <button
         onClick={onGoHome}
         className="min-h-[44px] rounded-[15px] bg-gradient-to-r from-navy to-[#1E5FB8] px-7 py-3.5 text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.28)]"
@@ -468,13 +520,25 @@ function NotDeliveredPanel({ teacherName, onGoHome }: { teacherName: string; onG
       <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-navy">
         Lời này chưa vào sổ của {teacherName}
       </h2>
+      {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — khối này báo "lời chưa vào sổ", tức là lúc
+          em CẦN chữ. Ba việc của nó (xem docstring) còn nguyên ba, chỉ ngắn lại:
+            1. Chưa vào sổ  → tiêu đề <h2> ngay trên đã nói.
+            2. Vì sao       → một câu, bằng chuyện em nhớ được.
+            3. Đường đi     → một câu.
+          Cắt: "nên lời vừa rồi chưa được ghi thêm" (tiêu đề đã nói) và "Ngày mai con gửi ở
+          đây được như bình thường" (suy ra được từ "mỗi ngày một lời", và không phải việc
+          em làm hôm nay). Luật "mỗi ngày một lời" thành chip vì nó là luật, không phải câu. */}
       <p className="text-[13.5px] leading-relaxed text-[#8A5A00]">
-        Hôm nay con đã gửi một lần rồi, và {teacherName} đã đánh dấu là cô gặp con về lời đó. Mỗi
-        ngày sổ chỉ giữ một lời, nên lời vừa rồi chưa được ghi thêm.
+        Hôm nay con đã gửi một lần, và {teacherName} đã gặp con về lời đó.
       </p>
+      <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11.5px] font-black text-[#8A5A00]">
+        {/* `info` chứ không phải `looks_one`: font đã cắt gọn theo public/fonts/icon-names.txt
+            — tên ngoài danh sách đó hiện ra ô trống, không báo lỗi, không ai biết. */}
+        <span aria-hidden="true" className="msr text-[14px]">info</span>
+        Mỗi ngày một lời
+      </span>
       <p className="text-[12.5px] leading-relaxed text-[#8A5A00]">
-        Nếu con còn chuyện muốn nói <b>hôm nay</b>, con tìm {teacherName} nói trực tiếp nhé. Ngày mai
-        con gửi ở đây được như bình thường.
+        Còn chuyện <b>hôm nay</b>: con tìm {teacherName} nói trực tiếp nhé.
       </p>
       <button
         onClick={onGoHome}
@@ -571,7 +635,11 @@ function SentStatusStrip({
         role="alert"
         className="mb-4 flex flex-wrap items-center gap-2 rounded-[18px] bg-white px-4 py-3 shadow-[0_3px_14px_rgba(10,42,94,.06)]"
       >
-        <span className="msr text-[18px] text-[#E8940D]" aria-hidden>
+        {/* #E8940D trên nền trắng = 2,42:1, dưới mốc 3:1 của WCAG 1.4.11 — và đây là icon
+            duy nhất của một dải role="alert" nói "chưa xem được những lần con đã gửi".
+            #8A5A00 (gold-textDark) = 5,93:1 trên trắng, cùng màu đã dùng cho ba chỗ khác trong
+            đợt này. (05/08/2026) */}
+        <span className="msr text-[18px] text-gold-textDark" aria-hidden>
           cloud_off
         </span>
         <span className="text-[12.5px] font-semibold text-[#5B6B80]">
@@ -631,9 +699,13 @@ function SentStatusStrip({
         suy thêm bất cứ điều gì — dù là tin tốt ("cô đang xử lý") hay tin xấu ("cô chưa
         đọc") — đều là bịa, và bịa ở đây thì đứa trẻ lãnh.
       */}
+      {/* RÚT NGẮN 06/08/2026 (§1.5). Mệnh đề trung tâm — "chưa xác nhận ≠ chưa đọc" — KHÔNG
+          đổi một chữ, vì suy thêm bất cứ điều gì ở đây thì đứa trẻ lãnh. Cắt vế đuôi
+          "{cô} sẽ tìm con": đó đúng là một suy đoán về việc cô sẽ làm, tức là chính thứ câu
+          này sinh ra để cấm. */}
       {waiting && (
         <p className="text-[11.5px] leading-relaxed text-caption">
-          Chưa có dấu xác nhận. Chưa xác nhận không có nghĩa là chưa ai đọc — {teacherName} sẽ tìm con.
+          Chưa có dấu xác nhận — không có nghĩa là chưa ai đọc.
         </p>
       )}
 

@@ -57,6 +57,11 @@ interface Dong {
   review_due_on: string;
   overdue_days: number;
   webhook_secret_env: string | null;
+  sso_enabled: boolean;
+  sso_redirect_uris: string[];
+  sso_backchannel_logout_uri: string | null;
+  sso_scopes: string[];
+  sso_client_secret_env: string | null;
   updated_at: string;
 }
 
@@ -74,11 +79,14 @@ const CAU_TRUY_VAN = `
          to_char(a.review_due_on, 'YYYY-MM-DD') as review_due_on,
          (current_date - a.review_due_on)::int  as overdue_days,
          a.webhook_secret_env,
+         a.sso_enabled, a.sso_redirect_uris, a.sso_backchannel_logout_uri,
+         a.sso_scopes, a.sso_client_secret_env,
          to_char(a.updated_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as updated_at
     from core.embedded_apps a`;
 
 function doiHang(r: Dong) {
   const env = r.webhook_secret_env ? process.env[r.webhook_secret_env] : undefined;
+  const ssoEnv = r.sso_client_secret_env ? process.env[r.sso_client_secret_env] : undefined;
   return {
     appId: r.app_id,
     displayName: r.display_name,
@@ -95,6 +103,13 @@ function doiHang(r: Dong) {
     overdueDays: r.overdue_days,
     webhookSecretEnv: r.webhook_secret_env,
     daCapSecret: !!env && env.length > 0,
+    ssoEnabled: r.sso_enabled,
+    ssoRedirectUris: r.sso_redirect_uris,
+    ssoBackchannelLogoutUri: r.sso_backchannel_logout_uri,
+    ssoScopes: r.sso_scopes,
+    ssoClientSecretEnv: r.sso_client_secret_env,
+    // Cùng phép tính, cùng lý do với `daCapSecret` ngay trên — bảng chỉ biết TÊN biến.
+    daCapSsoSecret: !!ssoEnv && ssoEnv.length > 0,
     updatedAt: r.updated_at,
   };
 }
@@ -129,6 +144,9 @@ export const adminRouter = router({
           // Đếm ở máy chủ, không để màn hình tự trừ ngày: "tới hạn rà" là luật nghiệp vụ
           // (mục 5), và luật nghiệp vụ tính ở tầng hiển thị thì mỗi màn tính một kiểu.
           soAppCanRaLai: apps.filter((a) => a.overdueDays >= -30).length,
+          // Địa chỉ THẬT của Hub, không phải cửa mà quản trị đang vào. Xem chú thích ở
+          // `ListMiniAppsOutput`: bản hướng dẫn chép cho đối tác phải mang issuer thật.
+          hubUrl: process.env.HUB_URL ?? "http://localhost:3000",
         });
       });
     }),
@@ -144,12 +162,14 @@ export const adminRouter = router({
           `insert into core.embedded_apps
              (app_id, display_name, basket, owner, review_due_on, allowed_roles,
               allowed_event_types, origin, iframe_url, icon_image_url, intro,
-              webhook_secret_env, updated_by)
+              webhook_secret_env, sso_enabled, sso_redirect_uris,
+              sso_backchannel_logout_uri, sso_scopes, sso_client_secret_env, updated_by)
            -- core.current_user_id() chứ không phải một tham số: đây là CSDL tự nói ai
            -- đang ghi, dựa trên chính bối cảnh RLS của phiên. Truyền id từ tầng ứng dụng
            -- là để tầng ứng dụng tự khai — và cột nhật ký khai được thì nó không còn là
            -- nhật ký nữa.
-           values ($1,$2,$3,$4,$5::date,$6::text[],$7::text[],$8,$9,$10,$11,$12, core.current_user_id())
+           values ($1,$2,$3,$4,$5::date,$6::text[],$7::text[],$8,$9,$10,$11,$12,
+                   $13,$14::text[],$15,$16::text[],$17, core.current_user_id())
            on conflict (app_id) do nothing`,
           [
             input.appId,
@@ -164,6 +184,11 @@ export const adminRouter = router({
             input.iconImageUrl ?? null,
             input.intro ?? null,
             input.webhookSecretEnv ?? null,
+            input.ssoEnabled,
+            input.ssoRedirectUris,
+            input.ssoBackchannelLogoutUri ?? null,
+            input.ssoScopes,
+            input.ssoClientSecretEnv ?? null,
           ],
         );
       });
@@ -190,6 +215,11 @@ export const adminRouter = router({
           iconImageUrl: "icon_image_url",
           intro: "intro",
           webhookSecretEnv: "webhook_secret_env",
+          ssoEnabled: "sso_enabled",
+          ssoRedirectUris: "sso_redirect_uris",
+          ssoBackchannelLogoutUri: "sso_backchannel_logout_uri",
+          ssoScopes: "sso_scopes",
+          ssoClientSecretEnv: "sso_client_secret_env",
         };
         const dat: string[] = [];
         const tham: unknown[] = [appId];

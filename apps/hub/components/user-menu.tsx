@@ -21,6 +21,23 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type RefObject } from "react";
 
+/**
+ * Vì sao lớp nổi này KHÔNG có mục "Cài đặt" và "Trợ giúp" như ảnh mẫu (06/08/2026):
+ *
+ *  · **Cài đặt** — không có trang nào sau nó. Ba thứ ảnh mẫu xếp vào Cài đặt (ngôn ngữ,
+ *    nhắc check-in buổi sáng, thiết bị đang đăng nhập) đều chưa có gì phía sau; lý do
+ *    từng thứ ghi ở đầu `profile-view.tsx`. Một mục menu dẫn tới hư không tệ hơn không
+ *    có mục (điều 20: không liên kết chết).
+ *  · **Trợ giúp** — trang trợ giúp có thật là `/can-gap-thay-co`, nhưng nó CHỈ dành cho
+ *    học sinh (page.tsx của nó đá vai khác về /home). Lớp nổi này dựng chung cho tám vai
+ *    và không nhận `roles`, nên thêm mục ở đây là đưa bảy vai còn lại vào một cú bấm dội
+ *    ngược. Đường tới nó đã có ĐÚNG chỗ cần: một hàng trong thẻ "Tài khoản" ở /ho-so của
+ *    học sinh, và nút "Mình cần gặp thầy cô" ở /home và /checkin.
+ *
+ * Muốn thêm hai mục đó thì việc phải làm là dựng trang trước, không phải dựng mục trước.
+ * Cổng canh: tests/unit/ho-so-khong-bia-so.test.ts.
+ */
+
 export interface UserMenuProps {
   fullName: string;
   email?: string | null;
@@ -125,7 +142,7 @@ export function UserMenu({ fullName, email, roleTag, variant, placement = "duoi"
         {variant === "sidebar" && (
           <>
             <div className="min-w-0 flex-1 text-left">
-              <div className="truncate text-[12.5px] font-extrabold text-[#0F172A]">{fullName}</div>
+              <div className="truncate text-[12.5px] font-extrabold text-ink">{fullName}</div>
               <div className="truncate text-[10px] text-muted">{email}</div>
             </div>
             <span className="msr text-[18px] text-caption" aria-hidden>
@@ -161,15 +178,15 @@ export function UserMenu({ fullName, email, roleTag, variant, placement = "duoi"
                   thông báo dùng chung (desktop-only-notice) dựng thanh tab mà không có
                   danh tính trong tay. Một hộp có ô trống trông như dữ liệu bị mất. */}
               <div className={fullName.trim() ? "px-2.5 pb-2 pt-1.5" : "hidden"}>
-                <div className="truncate text-[13px] font-extrabold text-[#0F172A]">{fullName}</div>
+                <div className="truncate text-[13px] font-extrabold text-ink">{fullName}</div>
                 {email ? <div className="truncate text-[11px] text-muted">{email}</div> : null}
                 {roleTag ? (
-                  <div className="mt-1 inline-flex rounded-full bg-[#F1F4F8] px-2 py-0.5 text-[9.5px] font-black tracking-wide text-muted">
+                  <div className="mt-1 inline-flex rounded-full bg-chip px-2 py-0.5 text-[9.5px] font-black tracking-wide text-muted">
                     {roleTag}
                   </div>
                 ) : null}
               </div>
-              <div className="mx-0.5 mb-1 h-px bg-[#F1F4F8]" />
+              <div className="mx-0.5 mb-1 h-px bg-chip" />
             </>
           )}
           <MenuLink href="/ho-so" icon="person" onNavigate={() => setOpen(false)}>
@@ -186,7 +203,7 @@ export function UserMenu({ fullName, email, roleTag, variant, placement = "duoi"
           <MenuLink href="/dieu-khoan" icon="shield_person" onNavigate={() => setOpen(false)}>
             Điều khoản &amp; quyền riêng tư
           </MenuLink>
-          <div className="mx-0.5 my-1 h-px bg-[#F1F4F8]" />
+          <div className="mx-0.5 my-1 h-px bg-chip" />
           <LogoutMenuItem />
         </div>
       )}
@@ -209,7 +226,7 @@ function MenuLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-[12.5px] font-bold text-[#1F2A3A] hover:bg-[#F7F9FC]"
+      className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-[12.5px] font-bold text-[#1F2A3A] hover:bg-pagebg"
     >
       <span className="msr text-[18px] text-caption" aria-hidden>
         {icon}
@@ -219,21 +236,80 @@ function MenuLink({
   );
 }
 
+/**
+ * Đăng xuất — hành động KHÔNG LÙI ĐƯỢC, nên hỏi lại (điều 15 hiến pháp UI).
+ *
+ * Chỗ này nguy hơn nút trong /ho-so: mục "Đăng xuất" nằm ngay dưới "Hồ sơ của tôi" và
+ * "Điều khoản" trong một lớp nổi cao chưa tới 160px, và trên điện thoại lớp nổi đó mở ra
+ * từ một nút 44px ở sát mép. Trượt tay một hàng là mất phiên.
+ *
+ * Hỏi lại NGAY TRONG lớp nổi chứ không mở thêm một hộp thoại thứ hai: chồng hai lớp nổi
+ * lên nhau thì `useDismissable` của lớp ngoài sẽ đóng cả hai khi bấm vào lớp trong. Khối
+ * hỏi lại thay chỗ chính mục vừa bấm, và con trỏ bàn phím được đặt vào nút xác nhận nên
+ * trình đọc màn hình đọc ra câu hỏi ngay khi nó hiện. Escape = "Ở lại" (phím thoát phải
+ * trả về trạng thái an toàn) — và vì `useDismissable` cũng bắt Escape, `stopPropagation`
+ * giữ cho một lần bấm Escape chỉ lùi một bước, không đóng luôn cả lớp nổi.
+ */
 function LogoutMenuItem() {
+  const [hoiLai, setHoiLai] = useState(false);
+  const nutXacNhan = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (hoiLai) nutXacNhan.current?.focus();
+  }, [hoiLai]);
+
+  if (!hoiLai) {
+    return (
+      <button
+        type="button"
+        onClick={() => setHoiLai(true)}
+        className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-left text-[12.5px] font-extrabold text-dangerText hover:bg-[#FFF3F3]"
+      >
+        <span className="msr text-[18px] text-dangerText" aria-hidden>
+          logout
+        </span>
+        Đăng xuất
+      </button>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => {
-        fetch("/api/auth/logout", { method: "POST" }).finally(() => {
-          window.location.href = "/login";
-        });
+    <div
+      role="group"
+      aria-label="Xác nhận đăng xuất"
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        e.stopPropagation();
+        setHoiLai(false);
       }}
-      className="flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-left text-[12.5px] font-extrabold text-[#D2383E] hover:bg-[#FFF3F3]"
+      className="flex flex-col gap-1.5 rounded-[10px] bg-surface-danger p-2"
     >
-      <span className="msr text-[18px] text-[#D2383E]" aria-hidden>
-        logout
-      </span>
-      Đăng xuất
-    </button>
+      <p className="px-1 text-[11.5px] font-black text-dangerText">Đăng xuất khỏi tài khoản này?</p>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          ref={nutXacNhan}
+          onClick={() => {
+            fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+              window.location.href = "/login";
+            });
+          }}
+          // Trắng trên #C7333A (token dangerText) = 6,03:1.
+          className="min-h-[44px] flex-1 rounded-[9px] bg-dangerText px-3 text-[12px] font-black text-white"
+        >
+          Đăng xuất
+        </button>
+        <button
+          type="button"
+          onClick={() => setHoiLai(false)}
+          // Viền `subtle` (#5B6B80 = 5,09:1 trên nền hồng) chứ không phải `line` (1,22:1):
+          // nút trắng trên nền hồng #FFF5F5 cách nhau 1,03:1, nên viền là thứ DUY NHẤT vẽ
+          // ra ranh giới của nó. Đường lùi phải nhìn thấy rõ ít nhất bằng đường đi tiếp.
+          className="min-h-[44px] flex-1 rounded-[9px] border border-subtle bg-white px-3 text-[12px] font-extrabold text-cardtitle2"
+        >
+          Ở lại
+        </button>
+      </div>
+    </div>
   );
 }

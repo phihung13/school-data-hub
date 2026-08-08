@@ -214,12 +214,34 @@ describe("quét mã nguồn: đường ghi của QĐ-2", () => {
     expect(source).toContain("result.moodSaved === false");
     // Câu "Con đã ghi: X" phải đứng sau điều kiện, không đứng trần.
     expect(source).toMatch(/lastMood !== null && !moodBlocked/);
+
     // Và phải nói cả cái KHÔNG mất, nếu không em đọc ra "app hỏng rồi" và thôi mở app.
-    expect(source).toMatch(/Mình cần gặp thầy cô/);
+    //
+    // SIẾT 06/08/2026 (gói cắt chữ §1.5). LUẬT không đổi một chữ — cái đổi là HÌNH THỨC nó
+    // được nói: câu "Lượt điểm danh hôm nay của con vẫn được ghi, và nút “Mình cần gặp thầy
+    // cô” của con vẫn dùng được như thường" nay là HAI CHIP icon + nhãn ngắn.
+    //
+    // Phép kiểm cũ (`toMatch(/Mình cần gặp thầy cô/)`) phải sửa, và không phải vì nó đỏ —
+    // nó XANH, và đó mới là vấn đề: "Mình cần gặp thầy cô" còn là nhãn của hai cái nút ở
+    // chỗ khác trong cùng file, nên cổng này vẫn xanh kể cả khi khối moodBlocked bị xoá
+    // sạch. Một cổng bắt được chuỗi ở bất kỳ đâu trong file là một cổng không bắt được gì.
+    // Nay đo đúng hai mệnh đề, và đo TRONG khối moodBlocked.
+    const khoiMoodBlocked = source.slice(
+      source.indexOf("{moodBlocked && ("),
+      source.indexOf("{savedAt !== null && ("),
+    );
+    expect(khoiMoodBlocked.length, "không cắt được khối moodBlocked (mốc trong file đã đổi)").toBeGreaterThan(0);
+    expect(khoiMoodBlocked, "không nói lượt điểm danh vẫn được ghi").toMatch(/Điểm danh vẫn ghi/);
+    expect(khoiMoodBlocked, "không nói nút cần gặp vẫn dùng được").toMatch(/Nút cần gặp vẫn dùng được/);
   });
 
   it("nói “đã tới chỗ thầy cô”, KHÔNG nói “thầy cô đã đọc”", () => {
     // Máy chỉ biết vế đầu. Vế sau là suy đoán, và suy đoán ở đây thì đứa trẻ lãnh.
+    //
+    // KHÔNG SỬA trong đợt cắt chữ 06/08/2026, và ghi ra để lần sau không ai tưởng là sót:
+    // cổng này canh đúng một MỆNH ĐỀ ("đã tới" ≠ "đã đọc"), không canh một câu văn. Câu chở
+    // mệnh đề đó đã ngắn lại — "Lời “Mình cần gặp thầy cô” của con đã tới chỗ thầy cô rồi."
+    // → chip "Lời cần gặp đã tới chỗ thầy cô" — mà cổng vẫn đo đúng thứ nó sinh ra để đo.
     const source = withoutComments(viewSource);
     expect(source).toContain("đã tới chỗ thầy cô");
     expect(source).not.toMatch(/thầy cô đã đọc/);

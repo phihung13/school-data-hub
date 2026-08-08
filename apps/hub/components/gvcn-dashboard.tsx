@@ -68,6 +68,28 @@
 //       ngay trên nó ghi "Đã check-in 25/30". Hai con số đến từ HAI truy vấn khác nhau
 //       (xem `MoodEmpty` bên dưới) — nay ba nhánh, mỗi nhánh một sự thật.
 //
+// 10. (06/08/2026, ADR-029 + ADR-030) HAI VIỆC CHỦ ĐẦU TƯ QUYẾT TRỰC TIẾP SAU KHI MỞ
+//     BUỒNG LÁI THẬT:
+//
+//     · KHỐI GỬI MUỘN KHÔNG LÀM ĐƯỢC VIỆC. Nó là MỘT dòng "N check-in gửi muộn — chờ
+//       cô xác nhận" cộng một nút "Xác nhận cả N": không giờ gửi, không chọn từng em,
+//       không chỗ ghi vì sao. Mà giờ gửi CHÍNH LÀ dữ kiện để quyết định — em bấm lúc
+//       07:55 khác hẳn em bấm lúc 10:20 — và cột `attendance.checkins.occurred_at` có
+//       từ migration 0004 mà chưa màn nào đọc. Nay: mỗi em một dòng có giờ gửi và ô
+//       chọn, chọn hàng loạt được, và ba kết luận `present`/`late`/`absent` theo
+//       `LATE_DECISION_LABEL` — trong đó `absent` là quyền MỚI mà ADR-029 mở cho một
+//       CON NGƯỜI biết chuyện gì đã xảy ra trong lớp mình (ADR-007 vẫn cấm MÁY tự suy).
+//       Đối trọng của quyền đó nằm ngay trên màn: lý do bắt buộc khi kết luận khác
+//       "Có mặt", và kết quả `{updated, skipped}` được đọc ra thành câu chứ không nuốt.
+//
+//     · BỎ `ScanBanner` (băng vàng "Bộ quét cờ quá hạn"). Nó chiếm cả một dải ngang
+//       phía trên năm ô số, trong khi thứ nó cảnh báo chỉ ảnh hưởng ĐÚNG MỘT ô — ô
+//       "Em cần để ý", con số duy nhất trong năm ô sinh ra từ lượt quét. RULES.md Rev F
+//       điều 8 đổi CHỖ NÓI chứ không bỏ nghĩa vụ nói: dòng phụ của chính ô đó nay ghi
+//       mốc lượt quét gần nhất thay cho "chưa em nào" (`dongPhuEmCanDeY`). Bỏ băng mà
+//       không chuyển sự thật đi đâu thì "0 — chưa em nào" thành lời nói dối đúng vào
+//       lúc bộ quét chết.
+//
 //  7. (31/07/2026, gói "gvcn-nhieu-lop") BUỒNG LÁI CỐ ĐỊNH Ở LỚP ĐẦU TIÊN. Trang gọi
 //     `care.getDashboard()` không tham số, máy chủ lấy lớp chủ nhiệm đầu tiên, và màn
 //     hình không có bộ chọn lớp nào. Cô chủ nhiệm hai lớp mở buồng lái chỉ thấy lớp
@@ -79,7 +101,14 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
-import type { FlagSummary, HubRole } from "@hub/core/contracts";
+import {
+  LATE_DECISIONS,
+  LATE_DECISION_LABEL,
+  type FlagSummary,
+  type HubRole,
+  type LateDecision,
+  type PendingLateCheckin,
+} from "@hub/core/contracts";
 import Link from "next/link";
 import { HubSidebar } from "./hub-sidebar";
 import { MainContent } from "./page-shell";
@@ -88,8 +117,9 @@ import { Mascot } from "./mascot";
 import { ClassPicker, useSelectedClass } from "./gvcn/class-picker";
 import {
   boardEmptyPresentation,
-  scanBannerPresentation,
-  type ScanBannerPresentation,
+  dongPhuEmCanDeY,
+  scanPresentation,
+  type ScanPresentation,
 } from "./gvcn/scan-status";
 import {
   EmptyState,
@@ -147,9 +177,14 @@ export interface UrgencyPresentation {
 
 export function urgencyPresentation(flag: Pick<FlagSummary, "ruleCode">): UrgencyPresentation {
   if (flag.ruleCode === "E_URGENT") {
+    // CẮT 06/08/2026: nhãn cũ là "KHẨN · EM ĐÃ BẤM “CẦN GẶP THẦY CÔ”" — 33 ký tự trên một
+    // huy hiệu 10px, và vế sau lặp lại NGUYÊN VĂN dòng tiêu đề ngay dưới nó ("Em cần gặp
+    // thầy cô · <tên em>"). Huy hiệu chỉ có một việc: nói MỨC. Icon `priority_high` + viền
+    // đỏ + chữ "KHẨN" đã đủ, và `frontend-trang-thai.test.ts` vẫn đo đủ hai mức khác nhau
+    // ở cả chữ lẫn icon.
     return {
       level: "urgent",
-      label: "KHẨN · EM ĐÃ BẤM “CẦN GẶP THẦY CÔ”",
+      label: "KHẨN",
       icon: "priority_high",
       borderClass: "border-l-[5px] border-[#F0474D]",
       badgeClass: "bg-[#FFE9E9] text-[#B02A30]",
@@ -191,10 +226,21 @@ export function absentSubtitle(absentCount: number, notCheckedInCount: number): 
   return absentCount === 0 ? "cả lớp đã điểm danh, không ai vắng" : "học sinh";
 }
 
+/**
+ * CẮT 06/08/2026 (chủ đầu tư: "ngôn ngữ phải được thể hiện qua thiết kế chứ không phải
+ * chữ viết"). Hai CÂU cũ nói ra CƠ CHẾ chạy của bộ quét:
+ *
+ *   "Hiện ngay khi em bấm — không chờ lượt quét đêm."
+ *   "Do lượt quét đêm tìm ra — dấu hiệu của hôm nay phải chờ lượt quét kế tiếp."
+ *
+ * [QĐ-2] KHÔNG bị bỏ: luật là "hai nhịp phải phân biệt được trên màn", không phải "phải
+ * giải thích cơ chế bằng hai câu". Nay là NHÃN CHIP hai–bốn từ, đứng cạnh icon `bolt` /
+ * `nightlight` đã có sẵn — đúng cách §1.5 đòi (1 icon + 5 từ thì không viết 2 câu).
+ * `a11y-man-nguoi-lon.test.ts` giữ nguyên phép đo: hai nhãn khác hẳn nhau, bản tức thì
+ * chứa "ngay", bản quét đêm chứa "quét" và "chờ".
+ */
 export function cadenceNote(cadence: FlagSummary["detail"]["cadence"]): string {
-  return cadence === "tuc_thi"
-    ? "Hiện ngay khi em bấm — không chờ lượt quét đêm."
-    : "Do lượt quét đêm tìm ra — dấu hiệu của hôm nay phải chờ lượt quét kế tiếp.";
+  return cadence === "tuc_thi" ? "Ngay khi em bấm" : "Quét đêm · chờ lượt sau";
 }
 
 /**
@@ -205,15 +251,25 @@ export function cadenceNote(cadence: FlagSummary["detail"]["cadence"]): string {
  * ngày, và (qua hai chữ "buồn/mệt") nội dung em đã ghi. Nay `FlagDetail` không còn chở
  * con số nào nữa — cắt tại contract, nên hàm này KHÔNG THỂ in ra chúng kể cả nếu ai đó
  * quên mất luật. Đó là cả điểm của việc cắt ở đó thay vì ẩn bằng CSS.
+ *
+ * CẮT 06/08/2026 — chủ đầu tư chỉ đích danh câu "Em đã bấm “cần gặp thầy cô” và chưa ai
+ * đánh dấu đã gặp." Trên một thẻ cờ, LOẠI TÍN HIỆU đã được nói HAI lần phía trên dòng
+ * này: huy hiệu mức khẩn, rồi tiêu đề "Em cần gặp thầy cô · <tên em>". Dòng mô tả là bản
+ * thứ ba. Thứ duy nhất nó nói thêm là VIỆC CÒN LẠI — chưa ai đánh dấu đã gặp — nên chỉ
+ * còn đúng chừng đó.
+ *
+ * Nhánh cảm xúc: vế "Hệ thấy em có dấu hiệu cần được để ý" cũng đã nằm nguyên trong tiêu
+ * đề ("Em cần được để ý"). Giữ lại NHÃN QUYỀN RIÊNG TƯ (ADR-026 · §9) vì đó là thứ duy
+ * nhất không màn nào khác nói: cô biết CÓ chuyện, không đọc được CHUYỆN GÌ.
  */
 export function describeFlag(detail: FlagSummary["detail"]): string {
   const open = detail.openHelpRequests.length;
   if (open > 0) {
     return open === 1
-      ? "Em đã bấm “cần gặp thầy cô” và chưa ai đánh dấu đã gặp."
-      : `Em đã bấm “cần gặp thầy cô” ${open} lần, chưa ai đánh dấu đã gặp.`;
+      ? "Chưa ai đánh dấu đã gặp"
+      : `${open} lời nhắn · chưa ai đánh dấu đã gặp`;
   }
-  return "Hệ thấy em có dấu hiệu cần được để ý. Nội dung em ghi chỉ thầy cô tâm lý đọc được.";
+  return "Nội dung em ghi chỉ thầy cô tâm lý đọc được";
 }
 
 /**
@@ -262,21 +318,86 @@ export function acknowledgeHelpText(r: {
     }
   }
 
+  // RÚT NGẮN 06/08/2026: bỏ vế "màn hình có thể đã cũ" ở hai câu dưới — nó ĐOÁN hộ lý do
+  // rồi mới nói việc phải làm, mà việc phải làm ("tải lại") thì giống nhau ở mọi lý do.
   if (r.notFound > 0) {
     parts.push(
       r.notFound === 1
-        ? "Có 1 lời nhắn không tìm thấy — màn hình có thể đã cũ, hãy tải lại."
-        : `Có ${r.notFound} lời nhắn không tìm thấy — màn hình có thể đã cũ, hãy tải lại.`,
+        ? "1 lời nhắn không tìm thấy — tải lại."
+        : `${r.notFound} lời nhắn không tìm thấy — tải lại.`,
     );
   }
 
   if (r.remainingOpen > 0) {
-    parts.push(`Em này còn ${r.remainingOpen} lời nhắn chưa xử lý — hãy xem lại.`);
+    parts.push(`Còn ${r.remainingOpen} lời nhắn chưa xử lý.`);
   }
 
   // Không rơi vào ca rỗng được (ba rổ cộng lại luôn bằng số id đã gửi, mà input đòi
   // `.min(1)`), nhưng nếu máy chủ đổi mà quên chỗ này thì im lặng vẫn là hỏng tệ nhất.
-  return parts.length > 0 ? parts.join(" ") : "Đã gửi, nhưng máy chủ không nói rõ kết quả — hãy tải lại màn hình.";
+  return parts.length > 0 ? parts.join(" ") : "Đã gửi, chưa rõ kết quả — tải lại màn hình.";
+}
+
+// ---------------------------------------------------------------------------
+// Khối "check-in gửi muộn" — ba hàm thuần, tách khỏi React để test được (ADR-029).
+// ---------------------------------------------------------------------------
+
+/**
+ * Vì sao nút gửi đang vô hiệu — hoặc `null` khi nó bấm được.
+ *
+ * Một nút xám không kèm chữ là nút CHẾT CÂM: người dùng nhìn thấy thứ mình cần bấm,
+ * bấm không được, và màn hình không nói vì sao. Ở đây nó còn tệ hơn mức thường vì cái
+ * chặn không nằm ở nút mà nằm ở một ô nhập cách đó vài dòng — không ai tự nối hai thứ
+ * đó lại nếu màn hình không nói.
+ *
+ * Ngưỡng 3 ký tự KHÔNG phải con số chọn ở đây: nó là `reason: z.string().trim().min(3)`
+ * trong `DecideLateCheckinsInput`, và còn được database canh lần nữa (0053). Câu chữ
+ * dưới đây chỉ nói ra sớm điều mà máy chủ sẽ từ chối muộn.
+ */
+export function lyDoChuaGuiDuoc(
+  decision: LateDecision | null,
+  selectedCount: number,
+  reason: string,
+): string | null {
+  if (selectedCount === 0) return "Chọn ít nhất một em trước khi ghi kết luận.";
+  if (decision === null) return "Chọn một kết luận: Có mặt, Đi muộn hoặc Vắng.";
+  if (decision === "present") return null;
+  const du = reason.trim().length;
+  if (du === 0) {
+    return `Kết luận “${LATE_DECISION_LABEL[decision]}” bắt buộc có lý do — ghi ít nhất 3 ký tự thì nút gửi mở.`;
+  }
+  if (du < 3) return `Lý do còn ${3 - du} ký tự nữa mới đủ 3 ký tự.`;
+  return null;
+}
+
+/**
+ * Đọc `{updated, skipped}` thành câu — KHÔNG được im lặng ở vế `skipped`.
+ *
+ * `skipped > 0` nghĩa là những dòng đó không còn ở `queued_late` lúc máy chủ ghi: hoặc
+ * một đồng nghiệp đã kết luận trước, hoặc chính màn hình này đã cũ. Cả hai đều là tin
+ * mà cô cần biết — nuốt nó đi thì cô đếm "đã xử 5 em" trong khi hệ chỉ đổi 3.
+ *
+ * `updated = 0 && skipped = 0` không rơi vào được (input đòi `.min(1)`), nhưng nếu máy
+ * chủ đổi mà quên chỗ này thì im lặng vẫn là hỏng tệ nhất.
+ */
+export function ketQuaGhiKetLuan(
+  r: { updated: number; skipped: number },
+  decision: LateDecision,
+): string {
+  const nhan = LATE_DECISION_LABEL[decision];
+  const parts: string[] = [];
+  if (r.updated > 0) parts.push(`Đã ghi “${nhan}” cho ${r.updated} check-in.`);
+  // RÚT NGẮN 06/08/2026: hai câu cũ kể HAI nguyên nhân có thể ("người khác kết luận
+  // trước" / "màn hình đã cũ") rồi mới tới việc phải làm. Con số `skipped` là thứ bắt
+  // buộc phải nói (nuốt nó đi là cô đếm 5 trong khi hệ đổi 3); nguyên nhân thì không —
+  // cô không phân biệt được hai nguyên nhân đó, và cách xử giống hệt nhau.
+  if (r.skipped > 0) {
+    parts.push(
+      r.updated > 0
+        ? `${r.skipped} dòng bỏ qua — đã có kết luận trước.`
+        : `Không dòng nào đổi: cả ${r.skipped} dòng đã có kết luận. Tải lại.`,
+    );
+  }
+  return parts.length > 0 ? parts.join(" ") : "Đã gửi, chưa rõ kết quả — tải lại màn hình.";
 }
 
 /** "2026-08-01T09:12:33+07" → "09:12". Không parse được thì trả nguyên văn, KHÔNG bịa giờ. */
@@ -320,9 +441,10 @@ export function GvcnDashboard({
     { classId: classId ?? undefined },
     { enabled: classId !== null },
   );
-  const acknowledgeLate = trpc.care.acknowledgeLate.useMutation({
-    onSuccess: () => utils.care.getDashboard.invalidate(),
-  });
+  // `care.acknowledgeLate` không còn được gọi từ đây (ADR-029): nó chỉ biết đổi sang
+  // `present` và không để lại dòng sổ nào. `care.decideLateCheckins` thay nó ở cả ba
+  // kết luận và ghi `attendance.late_decisions`. Procedure cũ vẫn sống trên máy chủ cho
+  // client cũ — bỏ nó là việc của gói khác, không phải một dòng sửa kèm.
 
   const greetName = personName(displayName) || displayName;
   // Lớp thật ưu tiên lấy từ chính buồng lái (đúng lớp đang xem); mã lớp vừa chọn rồi tới
@@ -390,7 +512,9 @@ export function GvcnDashboard({
       <EmptyState
         icon="school"
         title="Thầy cô chưa được phân công chủ nhiệm lớp nào"
-        hint="Phân công chủ nhiệm do văn phòng nhập. Khi có lớp, buồng lái sẽ tự hiện tình hình lớp đó."
+        // CẮT vế "Khi có lớp, buồng lái sẽ tự hiện tình hình lớp đó" (06/08/2026): nó tả
+        // lại hành vi hiển nhiên của phần mềm, không nói thêm gì cho người đang đọc.
+        hint="Phân công chủ nhiệm do văn phòng nhập."
       />,
     );
   }
@@ -401,17 +525,14 @@ export function GvcnDashboard({
   //   · Nút sáng theo `classId` của BỘ CHỌN, không theo lớp trong `dashboard.data`. Đổi
   //     lớp làm đổi khoá truy vấn nên có một nhịp đang tải; nút phải sáng ngay tại cú
   //     bấm, nếu không người ta bấm lần hai vì tưởng hụt.
-  //   · Câu dưới nút không phải trang trí: bốn thẻ số, biểu đồ cảm xúc và mọi thẻ cờ bên
-  //     dưới đều là của MỘT lớp, và một con số không nói rõ của lớp nào là một con số
-  //     dùng được mà sai.
+  //   · CẮT 06/08/2026 câu đứng cạnh bộ chọn ("Thầy cô chủ nhiệm N lớp — buồng lái đang
+  //     xem lớp X."). Nó dạy người dùng cách đọc chính màn hình của họ: nút lớp đang chọn
+  //     ĐÃ sáng navy, có `aria-pressed`, và mang sẵn sĩ số. Sự thật "số này của lớp nào"
+  //     do THIẾT KẾ nói, không cần một câu đứng bên cạnh nói lại.
   const picker =
     myClasses.length > 1 ? (
       <div className="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <ClassPicker classes={myClasses} selectedId={classId} onSelect={select} />
-        <span className="text-[11.5px] font-semibold text-muted">
-          Thầy cô chủ nhiệm {myClasses.length} lớp — buồng lái đang xem{" "}
-          <b className="font-black text-[#33507C]">lớp {pickedCode}</b>.
-        </span>
       </div>
     ) : null;
 
@@ -438,7 +559,7 @@ export function GvcnDashboard({
   const d = dashboard.data;
   // Tính MỘT LẦN ở đây rồi truyền xuống: dải trạng thái và ô "hết việc" phải nói cùng một
   // câu chuyện. Gọi hai lần ở hai chỗ là mở đường cho hai câu mâu thuẫn trên cùng màn.
-  const scan = scanBannerPresentation(d.scanHealth, d.asOfDate);
+  const scan = scanPresentation(d.scanHealth, d.asOfDate);
 
   return frame(
     // `key` là lớp do MÁY CHỦ chốt (không phải lớp client vừa bấm): đổi lớp thì cả bảng
@@ -453,27 +574,57 @@ export function GvcnDashboard({
               /gvcn không có cách nào biết đây là trang gì ngoài đọc tuần tự từ đầu — đúng
               lỗi mà tests/unit/a11y-nen.test.ts đã gọi tên cho nhóm màn học sinh. Cỡ chữ,
               màu, khoảng cách giữ nguyên từng pixel: đây là đổi THẺ, không đổi thiết kế. */}
-          <h1 className="text-[20px] font-black text-navy md:text-[24px]">Chào {greetName} 👋</h1>
-          <div className="mt-1 text-[13px] font-semibold text-[#5B6B80]">
+          {/* 👋 đã bỏ 05/08/2026. DESIGN-GUIDELINES §4 cho emoji trong lời chào HỌC SINH,
+              và `tests/unit/giong-noi.test.ts` khoá đúng một chỗ được phép có nó (lời chào
+              của trang chủ, sau điều kiện về vai học sinh). Đây là buồng lái nghiệp vụ của
+              người lớn — cùng luật hai giọng (§8) đã bắt màn này bỏ "nhé". */}
+          <h1 className="text-[20px] font-black text-navy md:text-[24px]">Chào {greetName}</h1>
+          <div className="mt-1 text-[13px] font-semibold text-subtle">
             GVCN {classLabel(d.className)} · {d.totals.totalStudents} học sinh
           </div>
         </div>
-        <span className="flex items-center gap-1.5 rounded-full border border-[#E9ECF2] bg-white px-[15px] py-2.5">
-          <span className="msr text-[17px] text-[#E8940D]">folder_open</span>
-          <span className="text-[12px] font-extrabold text-[#33507C]">
-            {d.totals.openCareCases} hồ sơ chăm sóc đang mở
+        {/* CON SỐ NÀY PHẢI DẪN ĐI ĐÂU ĐÓ (sửa 05/08/2026, chủ đầu tư: "không ấn được thì
+            hiện lên làm gì").
+            Nó vốn là một <span> trơ: nói với cô rằng lớp có hồ sơ chăm sóc đang mở, rồi để
+            cô tự đi tìm xem hồ sơ của EM NÀO. Danh sách lớp là chỗ duy nhất trả lời được câu
+            đó — cột "Chăm sóc" ở đó hiện chip `hasOpenCase` cho từng em.
+            Khi con số bằng 0 thì KHÔNG bọc link: một cái nút dẫn tới danh sách không có gì
+            để xem cũng là một lời hứa suông, chỉ khác là hứa nhỏ hơn. */}
+        {d.totals.openCareCases > 0 ? (
+          <Link
+            href="/gvcn/lop"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#E9ECF2] bg-white px-[15px] py-2.5 hover:border-navy"
+          >
+            {/* aria-hidden: chữ ngay cạnh đã nói đủ. 10 icon khác trong file này đã khai
+                đúng; thiếu ở đây thì trình đọc màn hình đọc thành "folder_open 2 hồ sơ…". */}
+            <span className="msr text-[17px] text-gold-textDark" aria-hidden>
+              folder_open
+            </span>
+            <span className="text-[12px] font-extrabold text-cardtitle2">
+              {d.totals.openCareCases} hồ sơ chăm sóc đang mở
+            </span>
+            <span aria-hidden className="msr text-[16px] text-subtle">chevron_right</span>
+          </Link>
+        ) : (
+          <span className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#E9ECF2] bg-white px-[15px] py-2.5">
+            <span className="msr text-[17px] text-subtle" aria-hidden>
+              folder_open
+            </span>
+            <span className="text-[12px] font-extrabold text-cardtitle2">Chưa có hồ sơ chăm sóc nào đang mở</span>
           </span>
-        </span>
+        )}
       </div>
 
       {picker}
 
-      {/* Dải trạng thái bộ quét — HIỆN MỌI LÚC, ngay dưới đầu trang và TRƯỚC mọi con số.
-          Trước 01/08/2026 mốc quét chỉ xuất hiện ở nhánh bảng trống, nên có một cờ là
-          nó biến mất: đúng lúc GVCN đang đọc số thì màn hình thôi nói số đó cũ hay mới.
-          Vị trí này cũng có chủ ý — đứng TRƯỚC bốn thẻ số, vì nó là câu trả lời cho
-          "bốn con số này đáng tin tới đâu", không phải một ghi chú cuối trang. */}
-      <ScanBanner scan={scan} />
+      {/* GỠ 06/08/2026 (ADR-030) — dải trạng thái bộ quét `<ScanBanner scan={scan} />`
+          đứng ở đúng chỗ này từ 01/08. Nó chiếm cả một hàng ngang trên đầu năm ô số để
+          cảnh báo một thứ chỉ ảnh hưởng ĐÚNG MỘT ô trong năm.
+          Sự thật KHÔNG mất, chỉ đổi chỗ đứng: dòng phụ của ô "Em cần để ý" nay tự nói
+          nó đang là số của lượt quét nào (`dongPhuEmCanDeY`), và ô "hết việc" mang câu
+          của từng trạng thái quét (`boardEmptyPresentation`). `scan` vẫn được tính một
+          lần ở trên và truyền xuống cả hai — hai chỗ đọc cùng một phép tính thì không
+          thể nói ngược nhau. */}
 
       {/* GỠ 02/08/2026 — dải "Nguồn dữ liệu chưa tươi: <tên nguồn kỹ thuật>". Nó nói với
           cô giáo bằng tên bảng dữ liệu ("Dấu chân hoạt động") về một thứ cô không sửa
@@ -487,7 +638,24 @@ export function GvcnDashboard({
           gì thì nó bằng 0 và phụ đề in "không có ai vắng" — một kết luận dựng từ im lặng,
           đúng thứ Rev F điều 3 cấm. Nay phụ đề của thẻ Vắng phụ thuộc vào thẻ bên cạnh:
           còn em chưa điểm danh thì nó nói thẳng là chưa kết luận được. */}
-      <div className="mt-[18px] flex flex-wrap gap-3 md:gap-4">
+      {/* DƯỚI md: MỘT HÀNG CUỘN NGANG, không phải ba hàng xếp chồng (sửa 05/08/2026).
+          Đo trên máy 390px: năm thẻ `basis-[150px]` gói thành 3 hàng ≈ 330px, cộng đầu
+          trang và dải trạng thái thì khối "Việc cần làm sáng nay" bắt đầu ở khoảng 560px —
+          tức là DƯỚI mép màn hình đầu. PRODUCT.md ghi ràng buộc của vai này là "thông tin
+          quan trọng nhất nằm trên màn hình đầu, không cần cuộn", mà cô mở buồng lái lúc
+          7h sáng để biết PHẢI LÀM GÌ, không phải để đọc năm con số.
+          Chọn dải cuộn thay vì đảo thứ tự hai khối: năm con số là câu trả lời cho "hôm nay
+          lớp thế nào", nên chúng vẫn phải đứng TRƯỚC danh sách việc — đảo xuống dưới là
+          đổi thứ tự đọc ở cả DOM lẫn màn hình, và cô sẽ tìm chúng ở chỗ chúng không còn
+          nữa. Một hàng cao ~118px thì việc-cần-làm lên tới ~350px: nằm gọn trên màn đầu.
+          `tabIndex` + `role=group`: một vùng cuộn không có chỗ đứng cho bàn phím thì phần
+          nội dung nằm ngoài mép phải chỉ tới được bằng ngón tay. */}
+      <div
+        role="group"
+        aria-label="Số liệu lớp hôm nay"
+        tabIndex={0}
+        className="mt-[18px] -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:gap-4 md:overflow-visible md:px-0 md:pb-0"
+      >
         <StatCard label="Đã check-in" icon="how_to_reg" iconBg="bg-[#E3F8ED]" iconColor="text-[#00A05F]" value={`${d.totals.checkinCount}/${d.totals.totalStudents}`} sub="tính đến giờ" />
         <StatCard label="Chờ xác nhận" icon="hourglass_top" iconBg="bg-[#FFF1C9]" iconColor="text-[#E8940D]" value={String(d.totals.pendingLateCount)} sub="gửi muộn — chưa phải vắng" accentTop="#FFC629" />
         {/* "Cờ đang mở" → "Em cần để ý" (02/08/2026). Chủ đầu tư mở trang và hỏi thẳng:
@@ -495,7 +663,13 @@ export function GvcnDashboard({
             từ của người làm hệ thống; con số này đếm SỐ EM mà bộ quét thấy có dấu hiệu
             cần xem. Nhãn mới nói đúng thứ đang đếm, và trùng với từ "cần để ý" mà em học
             sinh và phụ huynh đã đọc ở các màn khác — một khái niệm, một từ. */}
-        <StatCard label="Em cần để ý" icon="flag" iconBg="bg-[#FFF0F0]" iconColor="text-[#D2383E]" value={String(d.priorityFlags.length)} sub={d.priorityFlags.length > 0 ? "cần xem hôm nay" : "chưa em nào"} accentTop={d.priorityFlags.length > 0 ? "#F0474D" : undefined} />
+        {/* DÒNG PHỤ CỦA Ô NÀY LÀ CHỖ NÓI SỰ THẬT VỀ LƯỢT QUÉT (06/08/2026, ADR-030 +
+            Rev F điều 8). Bốn ô kia đếm thẳng từ `attendance.checkins` trong chính lượt
+            gọi nên chúng tươi bằng lúc mở trang; chỉ ô này đếm cờ do BỘ QUÉT sinh, tức
+            chỉ nó có thể là số của hôm kia mà trông như số của sáng nay.
+            Câu "chưa em nào" vì thế KHÔNG còn được in vô điều kiện — `dongPhuEmCanDeY`
+            chỉ trả về nó khi có phép đo của hôm nay đứng sau. */}
+        <StatCard label="Em cần để ý" icon="flag" iconBg="bg-[#FFF0F0]" iconColor="text-dangerText" value={String(d.priorityFlags.length)} sub={dongPhuEmCanDeY(scan, d.priorityFlags.length)} accentTop={d.priorityFlags.length > 0 ? "#F0474D" : undefined} />
         <StatCard
           label="Vắng"
           icon="person_off"
@@ -508,7 +682,7 @@ export function GvcnDashboard({
           label="Chưa điểm danh"
           icon="remove"
           iconBg="bg-[#F1F4F8]"
-          iconColor="text-[#5B6B80]"
+          iconColor="text-subtle"
           value={String(d.totals.notCheckedInCount)}
           sub={
             d.totals.notCheckedInCount === 0
@@ -533,46 +707,30 @@ export function GvcnDashboard({
             >
               <span className="msr text-[25px] text-white">{screen.icon}</span>
             </span>
-            <span className="text-center text-[10px] font-bold leading-tight text-[#33507C]">{screen.label}</span>
+            <span className="text-center text-[10px] font-bold leading-tight text-cardtitle2">{screen.label}</span>
           </Link>
         ))}
       </nav>
 
       <div className="mt-[18px] flex flex-wrap items-start gap-[18px]">
         <div className="min-w-0 flex-[2_1_320px] flex flex-col gap-4 md:flex-[2_1_540px]">
-          <div className="text-[16px] font-black text-navy">Việc cần làm sáng nay</div>
+          {/* <h2> chứ không phải <div> (05/08/2026). Trang có <h1> "Chào …" ở đầu, rồi hai
+              cột này là hai mục ngang cấp — mà trước hôm nay cả hai đều là <div>, nên
+              trình đọc màn hình mở buồng lái chỉ có ĐÚNG MỘT mốc cho cả trang: không nhảy
+              được tới danh sách việc, phải nghe tuần tự qua năm thẻ số.
+              Class giữ nguyên từng ký tự — đổi THẺ, không đổi thiết kế. */}
+          <h2 className="text-[16px] font-black text-navy">Việc cần làm sáng nay</h2>
 
           {d.priorityFlags.map((flag) => (
             <FlagCard key={flag.flagId} flag={flag} />
           ))}
 
-          {d.pendingLateCheckins.length > 0 && (
-            <div className="flex flex-wrap items-center gap-4 rounded-[20px] border-l-[5px] border-[#2C7BF2] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-[#E2F0FC]">
-                <span className="msr text-[22px] text-[#2C7BF2]">schedule</span>
-              </span>
-              <div className="min-w-0 flex-1 basis-[220px]">
-                <div className="text-[14.5px] font-black text-ink">
-                  {d.pendingLateCheckins.length} check-in gửi muộn — chờ cô xác nhận
-                </div>
-                <div className="mt-0.5 text-[12.5px] text-[#5B6B80]">
-                  {d.pendingLateCheckins.map((c) => c.studentName).join(" · ")}
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={acknowledgeLate.isPending}
-                onClick={() => acknowledgeLate.mutate({ checkinIds: d.pendingLateCheckins.map((c) => c.checkinId) })}
-                className="min-h-[44px] flex-none rounded-xl border-[1.6px] border-[#2C7BF2] bg-[#E2F0FC] px-5 py-3 text-[12.5px] font-black text-[#1D4E8F] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
-              >
-                {acknowledgeLate.isPending ? "Đang ghi…" : `Xác nhận cả ${d.pendingLateCheckins.length}`}
-              </button>
-              {/* Trước đây thất bại chỉ làm nút hết mờ — cô tin là đã duyệt. */}
-              <div className="basis-full">
-                <MutationError error={acknowledgeLate.error} />
-              </div>
-            </div>
-          )}
+          {/* KHÔNG bọc trong `{length > 0 && …}` nữa (06/08/2026): khối tự quyết định
+              khi nào biến mất. Ghi xong lượt cuối thì `getDashboard` được làm mới, danh
+              sách rỗng, và nếu điều kiện nằm ở đây thì khối bị tháo NGAY cùng lúc với
+              câu trả lời của máy chủ — cô bấm "Vắng" cho 3 em rồi màn hình sạch trơn,
+              không một chữ nào nói đã ghi được mấy dòng. */}
+          <LateCheckinBoard items={d.pendingLateCheckins} />
 
           {d.priorityFlags.length === 0 && d.pendingLateCheckins.length === 0 && (
             <BoardEmpty scan={scan} openCareCases={d.totals.openCareCases} />
@@ -589,7 +747,7 @@ export function GvcnDashboard({
               đi tìm cảm xúc của một em — `gvcn/student-detail-view.tsx`, ngay dưới lịch
               điểm danh. Nói một lần ở đúng chỗ, thay vì nói mọi lúc ở chỗ không liên quan. */}
           <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-            <div className="text-[15px] font-black text-navy">Hành động gần đây</div>
+            <h2 className="text-[15px] font-black text-navy">Hành động gần đây</h2>
             <div className="mt-3.5 flex flex-col gap-3">
               {d.recentActions.length === 0 && (
                 // "Chưa ai ghi" chứ không phải "chưa có hành động nào": sổ can thiệp chỉ
@@ -602,7 +760,7 @@ export function GvcnDashboard({
               )}
               {d.recentActions.map((a, i) => (
                 <div key={i} className="flex items-start gap-2.5">
-                  <span className={`mt-[5px] h-[9px] w-[9px] flex-none rounded-full ${i === 0 ? "bg-[#2C7BF2]" : "bg-[#C9D2DE]"}`} />
+                  <span className={`mt-[5px] h-[9px] w-[9px] flex-none rounded-full ${i === 0 ? "bg-[#2C7BF2]" : "bg-line2"}`} />
                   <span className="text-[12.5px] leading-relaxed text-[#4A5460]">
                     {a.action} — {a.studentName} · {timeAgo(a.occurredAt)}
                   </span>
@@ -622,37 +780,17 @@ export function GvcnDashboard({
   );
 }
 
-/**
- * Dải trạng thái bộ quét — một dòng duy nhất trả lời "màn hình này đứng sau phép đo nào".
- *
- * `role="status"` chứ không phải `role="alert"`: đây là thông tin thường trực chứ không
- * phải một cảnh báo vừa nổ ra, nên trình đọc màn hình đọc nó khi tới lượt thay vì cắt
- * ngang câu đang đọc dở. Icon mang `aria-hidden` — chữ đã nói đủ, đúng luật đã dùng cho
- * thẻ cờ: màu và icon không bao giờ là tín hiệu duy nhất.
- */
-function ScanBanner({ scan }: { scan: ScanBannerPresentation }) {
-  return (
-    <div
-      role="status"
-      data-scan-state={scan.state}
-      className={`mt-3.5 flex items-start gap-2.5 rounded-xl px-4 py-2.5 ${scan.boxClass}`}
-    >
-      <span className={`msr mt-[1px] flex-none text-[16px] ${scan.titleClass}`} aria-hidden>
-        {scan.icon}
-      </span>
-      <div className="min-w-0">
-        <div className={`text-[11.5px] font-black ${scan.titleClass}`}>{scan.title}</div>
-        {/* Detail rỗng thì KHÔNG dựng thẻ — một <div> rỗng vẫn ăn khoảng cách dòng, và
-            sau khi cắt chữ (02/08/2026) trạng thái bình thường không còn detail nào. */}
-        {scan.detail ? (
-          <div className={`mt-0.5 text-[11.5px] font-semibold leading-relaxed ${scan.bodyClass}`}>
-            {scan.detail}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
+/* Ở đây từng có `ScanBanner` — dải trạng thái bộ quét chạy suốt bề ngang, ngay trên năm
+   ô số. Gỡ 06/08/2026 theo ADR-030 (chủ đầu tư quyết trực tiếp).
+
+   KHÔNG để lại component "phòng khi cần", cùng lý do đã ghi hai lần trong file này khi
+   cắt bảng tra cảm xúc và `MoodClosedCard`: một thành phần không ai gọi là lời mời cho
+   lần sửa sau nối lại đúng thứ vừa cắt.
+
+   Nghĩa vụ nói thì KHÔNG gỡ — Rev F điều 8 chỉ đổi chỗ nói. Hai chỗ nhận lại nó, và cả
+   hai đều đã dựng: dòng phụ của ô "Em cần để ý" (`dongPhuEmCanDeY`, hiện MỌI LÚC ngay
+   cạnh con số nó nói về) và ô "hết việc" (`boardEmptyPresentation`, nay mang câu riêng
+   của từng trạng thái quét thay vì một câu chung). */
 
 /* Ở đây từng có `moodClosedText()` + `MoodClosedCard` — ô "Cảm xúc lớp hôm nay" chỉ để
    nói vì sao nó không còn nội dung. Gỡ 02/08/2026 (chủ đầu tư: "nếu bị khoá rồi thì hiển
@@ -671,7 +809,7 @@ function ScanBanner({ scan }: { scan: ScanBannerPresentation }) {
  * khi có phép đo của hôm nay VÀ không còn hồ sơ chăm sóc nào đang mở — xem
  * `boardEmptyPresentation` trong components/gvcn/scan-status.ts.
  */
-function BoardEmpty({ scan, openCareCases }: { scan: ScanBannerPresentation; openCareCases: number }) {
+function BoardEmpty({ scan, openCareCases }: { scan: ScanPresentation; openCareCases: number }) {
   const look = boardEmptyPresentation(scan, openCareCases);
   return (
     <div className={`flex items-center gap-3.5 rounded-[20px] px-5 py-[18px] ${look.boxClass}`}>
@@ -679,7 +817,7 @@ function BoardEmpty({ scan, openCareCases }: { scan: ScanBannerPresentation; ope
         <Mascot pose="thumbsup" width={44} />
       ) : (
         <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white">
-          <span className="msr text-[22px] text-[#5B6B80]" aria-hidden>
+          <span className="msr text-[22px] text-subtle" aria-hidden>
             {look.icon}
           </span>
         </span>
@@ -691,6 +829,301 @@ function BoardEmpty({ scan, openCareCases }: { scan: ScanBannerPresentation; ope
     </div>
   );
 }
+
+/**
+ * Khối "check-in gửi muộn" — ADR-029, dựng lại 06/08/2026.
+ *
+ * Bản cũ: MỘT dòng "N check-in gửi muộn — chờ cô xác nhận" + một nút "Xác nhận cả N".
+ * Nó hỏng ở ba chỗ cùng lúc, và cả ba đều do chủ đầu tư chỉ ra khi mở buồng lái thật:
+ *   · không có GIỜ GỬI, mà đó chính là dữ kiện quyết định (07:55 khác hẳn 10:20);
+ *   · không chọn được từng em — hoặc duyệt cả lớp, hoặc không làm gì;
+ *   · chỉ có một kết luận (`present`), nên cô nhìn thấy chỗ ngồi trống mà đường duy
+ *     nhất để ghi lại điều đó là mở CSDL sửa tay.
+ *
+ * BA THỨ CỐ Ý trong bản này:
+ *
+ *   1. `items` KHÔNG được coi là danh sách cố định. Mỗi lần render, phần đã chọn được
+ *      lọc lại theo danh sách đang có — một em vừa bị đồng nghiệp kết luận trước sẽ rời
+ *      danh sách, và id của em đó không được lẳng lặng đi theo lượt gửi kế tiếp.
+ *   2. Khối tự quyết định khi nào biến mất (`items` rỗng VÀ chưa có kết quả nào để nói),
+ *      thay vì để nơi gọi tháo nó ngay lúc máy chủ vừa trả lời. Ghi xong mà màn hình
+ *      sạch trơn không một chữ nào là kiểu im lặng tệ nhất: cô không biết đã ghi mấy dòng.
+ *   3. `clientMutationId` sinh một lần mỗi lượt soạn (§9): bấm hai lần vì mạng chậm là
+ *      CÙNG một quyết định, không phải hai. Sinh mã mới chỉ sau khi ghi xong một lượt thật.
+ */
+function LateCheckinBoard({ items }: { items: PendingLateCheckin[] }) {
+  const utils = trpc.useUtils();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [decision, setDecision] = useState<LateDecision | null>(null);
+  const [reason, setReason] = useState("");
+  const [mutationId, setMutationId] = useState(newMutationId);
+  // Kết luận của lượt VỪA GỬI, giữ riêng: `onSuccess` xoá `decision` để màn hình sạch cho
+  // lượt sau, nên câu xác nhận không đọc được nhãn từ đó nữa. Đọc `decide.variables` thì
+  // đúng dữ liệu nhưng sai kiểu (nó là `… | undefined` với mọi lượt render trước lượt gửi
+  // đầu tiên), và một `?? "Có mặt"` để chiều kiểu là bịa nhãn cho một dòng đã ghi vào sổ.
+  const [daGui, setDaGui] = useState<LateDecision | null>(null);
+
+  const decide = trpc.care.decideLateCheckins.useMutation({
+    onSuccess: () => {
+      setSelectedIds([]);
+      setDecision(null);
+      setReason("");
+      setMutationId(newMutationId());
+      void utils.care.getDashboard.invalidate();
+    },
+  });
+
+  // Lọc theo danh sách ĐANG CÓ, không tin vào state cũ — xem ghi chú 1 ở trên.
+  const conTrenMan = new Set(items.map((c) => c.checkinId));
+  const selected = selectedIds.filter((id) => conTrenMan.has(id));
+  const chonHet = items.length > 0 && selected.length === items.length;
+
+  const viSaoChuaGui = lyDoChuaGuiDuoc(decision, selected.length, reason);
+  const guiDuoc = viSaoChuaGui === null && !decide.isPending;
+  const doiLyDo = decision === "late" || decision === "absent";
+
+  function boChon() {
+    setSelectedIds([]);
+    setDecision(null);
+    setReason("");
+  }
+
+  function gui() {
+    if (decision === null || viSaoChuaGui !== null) return;
+    setDaGui(decision);
+    decide.mutate({
+      checkinIds: selected,
+      decision,
+      // "Có mặt" không đòi lý do (contract `.refine`), và gửi kèm một chuỗi soạn dở cho
+      // kết luận không cần nó là ghi vào sổ một câu không ai hỏi.
+      reason: decision === "present" ? undefined : reason.trim(),
+      clientMutationId: mutationId,
+    });
+  }
+
+  const xacNhan = decide.isSuccess && daGui ? ketQuaGhiKetLuan(decide.data, daGui) : null;
+
+  if (items.length === 0 && xacNhan === null) return null;
+
+  return (
+    <div className="flex flex-col gap-3.5 rounded-[20px] border-l-[5px] border-domain-attendance bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-surface-info">
+          <span className="msr text-[22px] text-link" aria-hidden>
+            schedule
+          </span>
+        </span>
+        <div className="min-w-0">
+          {/* Hai tiêu đề cho hai tình huống. Khối này còn sống thêm một nhịp sau khi danh
+              sách đã rỗng, để câu xác nhận ở cuối kịp được đọc — mà in "0 check-in gửi
+              muộn — chờ cô kết luận" lúc đó là mời cô đi làm một việc không còn nữa. */}
+          <h3 id="gui-muon-tieu-de" className="text-[14.5px] font-black text-ink">
+            {items.length > 0
+              ? `${items.length} check-in gửi muộn — chờ cô kết luận`
+              : "Đã kết luận xong các check-in gửi muộn"}
+          </h3>
+          {/* "gửi muộn ≠ vắng" là ràng buộc nghiệp vụ không thương lượng (PRODUCT.md,
+              ADR-007) nên NGHĨA ở lại; hình thức thì đổi (06/08/2026).
+              Câu cũ dài hai dòng và chở ba việc: phân biệt trạng thái, nói ai là người
+              kết luận, và nhắc lý do bắt buộc. Việc thứ ba đã có chỗ riêng — `lyDoChuaGuiDuoc`
+              in ra ngay dưới nút gửi, đúng lúc nó chặn. Việc thứ hai thì chính bốn cái nút
+              bên dưới đã nói. Còn lại đúng một CHIP cho việc thứ nhất. */}
+          {items.length > 0 && (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-surface-warn px-2.5 py-1 text-[10.5px] font-black text-gold-textDark">
+              <span className="msr text-[14px]" aria-hidden>
+                schedule
+              </span>
+              Gửi muộn ≠ vắng
+            </span>
+          )}
+        </div>
+      </div>
+
+      {items.length > 0 && (
+        <>
+          {/* Ô chọn tất cả là CHECKBOX THẬT, không phải một nút đổi màu (§11): trạng thái
+              chọn phải đọc được cả bằng tai lẫn khi không phân biệt được màu. `indeterminate`
+              đặt qua callback ref — nó không phải thuộc tính HTML, chỉ có ở DOM property,
+              nên React không tự đặt được; thiếu nó thì "đã chọn một nửa" trông y hệt
+              "chưa chọn gì". */}
+          <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl bg-surface-alt px-3">
+            <input
+              type="checkbox"
+              className="h-5 w-5 flex-none accent-navy"
+              checked={chonHet}
+              ref={(el) => {
+                if (el) el.indeterminate = selected.length > 0 && !chonHet;
+              }}
+              onChange={() => setSelectedIds(chonHet ? [] : items.map((c) => c.checkinId))}
+            />
+            <span className="text-[12.5px] font-black text-cardtitle2">
+              {chonHet ? "Bỏ chọn tất cả" : "Chọn tất cả"} ({items.length} em)
+            </span>
+          </label>
+
+          <ul aria-labelledby="gui-muon-tieu-de" className="flex flex-col gap-1.5">
+            {items.map((c) => {
+              const dangChon = selected.includes(c.checkinId);
+              return (
+                <li key={c.checkinId}>
+                  {/* Cả dòng là <label> nên vùng chạm bằng chiều rộng danh sách, không
+                      bằng 20px của ô tick (§11 · WCAG 2.5.5). `min-w-0` + `truncate` ở
+                      tên: ở 360px một cái tên dài phải bị cắt, không được đẩy giờ gửi
+                      ra ngoài mép — giờ gửi mới là thứ cô cần đọc để quyết định. */}
+                  <label
+                    className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border px-3 py-1.5 ${
+                      dangChon ? "border-navy bg-surface-infoSoft" : "border-line bg-white"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 flex-none accent-navy"
+                      checked={dangChon}
+                      onChange={() =>
+                        setSelectedIds((cu) =>
+                          cu.includes(c.checkinId)
+                            ? cu.filter((id) => id !== c.checkinId)
+                            : [...cu, c.checkinId],
+                        )
+                      }
+                    />
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-ink">
+                      {c.studentName}
+                    </span>
+                    <span className="flex flex-none items-center gap-1 text-[12.5px] font-black tabular-nums text-cardtitle2">
+                      <span className="msr text-[15px] text-subtle" aria-hidden>
+                        schedule
+                      </span>
+                      {/* Nhãn cho tai: một con số 07:55 đứng trơ không nói nó là giờ gì. */}
+                      <span className="sr-only">gửi lúc </span>
+                      {c.occurredAtTime}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="flex flex-col gap-2.5 rounded-xl bg-surface-alt p-3">
+            {/* `role="status"` để số em đang chọn được đọc lên sau mỗi lần tick — không có
+                nó thì người dùng bàn phím tick năm lần mà không nghe được mình đang ở đâu. */}
+            <div role="status" className="text-[12px] font-extrabold text-cardtitle2">
+              Đang chọn {selected.length}/{items.length} em
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {LATE_DECISIONS.map((k) => {
+                const dangChon = decision === k;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    // aria-pressed + icon đổi hình: §11 cấm để trạng thái chọn chỉ khác
+                    // nhau ở màu nền.
+                    aria-pressed={dangChon}
+                    onClick={() => {
+                      setDecision(k);
+                      if (k === "present") setReason("");
+                    }}
+                    className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.6px] px-4 py-2.5 text-[12.5px] font-black ${
+                      dangChon ? DECISION_ON[k] : "border-line bg-white text-subtle"
+                    }`}
+                  >
+                    <span className="msr text-[16px]" aria-hidden>
+                      {dangChon ? "check_circle" : "radio_button_unchecked"}
+                    </span>
+                    {LATE_DECISION_LABEL[k]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {doiLyDo && (
+              <div className="flex flex-col gap-1.5">
+                {/* Nhãn thật, không phải placeholder: placeholder biến mất ngay khi gõ ký
+                    tự đầu (WCAG 3.3.2), mà đây là ô đi thẳng vào `attendance.late_decisions`. */}
+                {/* CẮT vế "(dòng này vào sổ, kèm tên cô và giờ ghi)" — mô tả cơ chế ghi
+                    sổ. Cái cô cần biết ở đây là ô này BẮT BUỘC, và chừng đó đã đủ. */}
+                <label className="text-[12px] font-black text-cardtitle2" htmlFor="gui-muon-ly-do">
+                  Vì sao kết luận “{LATE_DECISION_LABEL[decision]}”? (bắt buộc)
+                </label>
+                <textarea
+                  id="gui-muon-ly-do"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={2}
+                  placeholder="Ví dụ: gia đình đã báo nghỉ…"
+                  className="w-full resize-none rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                disabled={!guiDuoc}
+                onClick={gui}
+                // Nút vô hiệu phải nói được VÌ SAO, và nói cho cả tai: `aria-describedby`
+                // trỏ tới đúng câu đang hiện bên dưới.
+                aria-describedby={viSaoChuaGui ? "gui-muon-vi-sao" : undefined}
+                className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+              >
+                {decide.isPending
+                  ? "Đang ghi…"
+                  : decision && selected.length > 0
+                    ? `Ghi “${LATE_DECISION_LABEL[decision]}” cho ${selected.length} em`
+                    : "Ghi kết luận"}
+              </button>
+              {/* NHÃN NÓI ĐÚNG VIỆC, THAY CHO MỘT ĐOẠN GIẢI THÍCH (06/08/2026).
+                  Nút cũ tên "Để sau" rồi phải có một đoạn văn phía dưới đính chính rằng
+                  "Để sau" chỉ bằng bỏ chọn — không gọi máy chủ, không đổi trạng thái em
+                  nào. Đổi tên nút thành đúng việc nó làm thì đoạn đính chính đó hết lý do
+                  tồn tại; đây là chỗ thiết kế nói thay chữ viết, không phải chỗ bớt nghĩa. */}
+              <button
+                type="button"
+                onClick={boChon}
+                className="min-h-[44px] px-2 text-[12.5px] font-extrabold text-subtle underline underline-offset-2"
+              >
+                Bỏ chọn
+              </button>
+            </div>
+
+            {viSaoChuaGui && (
+              <p id="gui-muon-vi-sao" className="text-[11.5px] font-semibold leading-relaxed text-muted">
+                {viSaoChuaGui}
+              </p>
+            )}
+
+            {/* GỠ 06/08/2026 đoạn ""Để sau" chỉ bỏ chọn: không gọi máy chủ, không đổi
+                trạng thái em nào…". Nó tồn tại chỉ vì cái nút mang một cái tên nói quá
+                việc nó làm. Nút nay tên "Bỏ chọn" (xem ghi chú ở đó), nên đoạn văn này là
+                lời đính chính cho một hiểu nhầm không còn nữa.
+                Luật thì KHÔNG đổi: vẫn không có `status = 'de_sau'` nào trong dữ liệu, và
+                nút này vẫn tuyệt đối không gọi máy chủ. */}
+          </div>
+        </>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <MutationError error={decide.error} onRetry={gui} />
+        {xacNhan && <MutationSuccess>{xacNhan}</MutationSuccess>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Nền + chữ của nút kết luận ĐANG CHỌN. Tách ra khỏi JSX để đọc được bằng một phép kiểm
+ * tương phản, đúng cách `CHOICE_STYLE` của màn điểm danh đang làm.
+ *
+ * Đo trên nền thật (WCAG 2.x): #00693F/#E3F8ED = 6,12:1 · #8A5A00/#FFF1C9 = 5,27:1 ·
+ * #C7333A/#FFF5F5 = 4,95:1. Nút chưa chọn: #5B6B80 trên trắng = 5,44:1.
+ */
+const DECISION_ON: Record<LateDecision, string> = {
+  present: "border-[#00A05F] bg-surface-success text-successText",
+  late: "border-gold-dark bg-surface-warn text-gold-textDark",
+  absent: "border-dangerText bg-surface-danger text-dangerText",
+};
 
 /**
  * Một thẻ cờ = một em cần cô để mắt tới. Tách thành component riêng vì mỗi thẻ có
@@ -756,10 +1189,23 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           </span>
           {look.label}
         </span>
+        {/* Tên em là ĐƯỜNG VÀO hồ sơ của em — cùng lý do đã ghi ở class-roster-view:
+            /gvcn/hoc-sinh/<id> có trang thật nhưng đến 05/08/2026 không một href nào
+            trong app trỏ tới. Ở đây nó còn cần hơn: thẻ cờ nói "em có dấu hiệu cần để ý"
+            và câu hỏi kế tiếp của cô luôn là "mấy hôm nay em thế nào?" — hỏi trước khi
+            bấm "Ghi can thiệp" ngay bên dưới. Không có lối đi này thì cô phải nhớ tên rồi
+            mở màn khác đi tìm, và phần lớn sẽ ghi mà không xem.
+            min-h-[44px] + inline-flex: padding trên <a> nội tuyến không tạo chiều cao. */}
         <div className="mt-2.5 text-[15px] font-black text-ink">
-          {flag.ruleCode === "E_URGENT" ? "Em cần gặp thầy cô" : "Em cần được để ý"} · {flag.studentName}
+          {flag.ruleCode === "E_URGENT" ? "Em cần gặp thầy cô" : "Em cần được để ý"} ·{" "}
+          <Link
+            href={`/gvcn/hoc-sinh/${flag.studentId}`}
+            className="inline-flex min-h-[44px] items-center text-link underline underline-offset-2"
+          >
+            {flag.studentName}
+          </Link>
         </div>
-        <div className="mt-0.5 text-[12.5px] leading-relaxed text-[#5B6B80]">{describeFlag(flag.detail)}</div>
+        <div className="mt-0.5 text-[12.5px] leading-relaxed text-subtle">{describeFlag(flag.detail)}</div>
         {/* NHỊP của thẻ này, in ngay dưới câu mô tả — VIỆC 4 / [QĐ-2]. Hai thẻ cạnh nhau
             trong cùng một danh sách có thể đến từ hai đồng hồ khác nhau, và người đọc
             không có cách nào tự biết điều đó. `msr` + chữ, không chỉ màu (§11). */}
@@ -780,10 +1226,10 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
         onChange={(e) => setNote(e.target.value)}
         placeholder="Ghi lại đã trò chuyện gì với em…"
         rows={2}
-        // #5B6B80 = 5,44:1 trên trắng. globals.css đã đặt đúng màu này làm lưới an toàn
+        // Token `subtle` (#5B6B80) = 5,44:1 trên trắng. globals.css đã đặt đúng màu này làm lưới an toàn
         // cho mọi ::placeholder; khai lại ở đây là cố ý — ô này là chỗ GVCN ghi lời đã
         // nói với một đứa trẻ, không được phụ thuộc vào việc lưới an toàn còn sống.
-        className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
+        className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
       />
 
       <div className="flex flex-wrap items-center gap-2.5">
@@ -818,7 +1264,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
                 helpRequestIds: openHelp.map((h) => h.helpRequestId),
               })
             }
-            className="min-h-[44px] rounded-xl border-[1.6px] border-[#00A05F] bg-[#E3F8ED] px-5 py-3 text-[12.5px] font-black text-[#00693F] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+            className="min-h-[44px] rounded-xl border-[1.6px] border-[#00A05F] bg-[#E3F8ED] px-5 py-3 text-[12.5px] font-black text-successText disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
           >
             {acknowledgeHelp.isPending
               ? "Đang ghi…"
@@ -834,7 +1280,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           <button
             type="button"
             onClick={() => setClosing(true)}
-            className="min-h-[44px] rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-[#5B6B80]"
+            className="min-h-[44px] rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-subtle"
           >
             Đóng hồ sơ
           </button>
@@ -843,16 +1289,18 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
 
       {flag.caseId && closing && (
         <div className="flex flex-col gap-2.5 rounded-xl bg-[#F7FAFF] p-3.5">
-          <label className="text-[12px] font-black text-[#33507C]" htmlFor={`close-${flag.flagId}`}>
-            Vì sao đóng hồ sơ này? (bắt buộc — để lần sau còn học được từ nó)
+          {/* CẮT vế "để lần sau còn học được từ nó" — biện minh cho một ô đã ghi rõ là
+              bắt buộc. */}
+          <label className="text-[12px] font-black text-cardtitle2" htmlFor={`close-${flag.flagId}`}>
+            Vì sao đóng hồ sơ này? (bắt buộc)
           </label>
           <textarea
             id={`close-${flag.flagId}`}
             value={resolution}
             onChange={(e) => setResolution(e.target.value)}
             rows={2}
-            placeholder="Ví dụ: em đã ổn định, gia đình đã phối hợp, đã bàn giao cho tâm lý cụm…"
-            className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
+            placeholder="Ví dụ: em đã ổn định, đã bàn giao…"
+            className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
           />
           <div className="flex flex-wrap items-center gap-2.5">
             <button
@@ -866,7 +1314,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
             <button
               type="button"
               onClick={() => setClosing(false)}
-              className="min-h-[44px] px-2 text-[12.5px] font-extrabold text-[#5B6B80] underline underline-offset-2"
+              className="min-h-[44px] px-2 text-[12.5px] font-extrabold text-subtle underline underline-offset-2"
             >
               Thôi
             </button>
@@ -880,8 +1328,10 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
         <MutationError error={logIntervention.error} onRetry={submitIntervention} />
         {logIntervention.isSuccess && (
           <MutationSuccess>
+            {/* CẮT vế "— không ghi thêm dòng mới" (06/08/2026): đó là mô tả cơ chế chống
+                trùng, đúng thứ chủ đầu tư gọi tên. "Đã ghi trước đó" nói đủ. */}
             {logIntervention.data.deduplicated
-              ? "Hành động này đã được ghi trước đó — không ghi thêm dòng mới."
+              ? "Đã ghi trước đó."
               : "Đã ghi vào hồ sơ chăm sóc."}
           </MutationSuccess>
         )}
@@ -919,13 +1369,15 @@ function StatCard({
 }) {
   return (
     <div
-      // basis-[150px] dưới md: bốn thẻ vẫn xếp 2 cột trên máy 390px thay vì tràn ra
-      // ngoài khung rồi bị cắt mất (xem ghi chú 1 ở đầu file).
-      className="flex-1 basis-[150px] rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:basis-[190px] md:p-5"
+      // Dưới md: bề rộng CỐ ĐỊNH 142px + `snap-start`, để năm thẻ nằm trên một hàng cuộn
+      // và mỗi lần vuốt dừng đúng mép một thẻ (xem lý do ở khối cha). 142px vì thẻ hẹp
+      // nhất còn chứa trọn "Chưa điểm danh" trên một dòng ở chữ 12px/800.
+      // Từ md trở lên trả về hành vi cũ: co giãn, tối thiểu 190px (ghi chú 1 đầu file).
+      className="w-[142px] flex-none snap-start rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:w-auto md:flex-1 md:basis-[190px] md:p-5"
       style={accentTop ? { borderTop: `3px solid ${accentTop}` } : undefined}
     >
       <div className="flex items-start justify-between">
-        <span className="text-[12px] font-extrabold text-[#5B6B80]">{label}</span>
+        <span className="text-[12px] font-extrabold text-subtle">{label}</span>
         <span className={`flex h-[34px] w-[34px] items-center justify-center rounded-[11px] ${iconBg}`} aria-hidden>
           <span className={`msr text-[18px] ${iconColor}`}>{icon}</span>
         </span>

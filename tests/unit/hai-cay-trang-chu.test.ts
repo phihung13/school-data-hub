@@ -44,35 +44,47 @@ function than(ten: string): string {
   return src.slice(i, j === -1 ? undefined : j);
 }
 
+// ĐỔI TÊN KHOÁ 06/08/2026: `loiTatGvcn` → `khoiNguoiLon`, và đó là đổi NGHĨA chứ không
+// phải đổi chữ. Khoá cũ trả lời "có in dòng nhắc về buồng lái không" — một câu hỏi chỉ
+// dành cho GVCN, và câu trả lời của nó là một đoạn chữ tĩnh. Khoá mới trả lời "màn này
+// đang nói với người lớn hay với một đứa trẻ", và nó bật/tắt HAI khối có dữ liệu thật:
+// chuông `session.getPendingWork` và cột phải theo vai.
+//
+// Vế bảo vệ thì giữ nguyên: tổ hợp hỏng "vừa là em vừa là GVCN" vẫn phải cho ra màn của
+// EM. Phép so đổi từ `isHomeroom && !isStudent` sang `!isStudent`, mạnh hơn chứ không lỏng
+// hơn — nay MỌI khối người lớn đều tắt trước mặt một tài khoản học sinh, không riêng dòng
+// nhắc buồng lái.
 describe("khoiChoVai — một chỗ quyết định, đúng như luật cũ", () => {
-  it("học sinh: có thẻ check-in, KHÔNG có lối tắt buồng lái", () => {
+  it("học sinh: có thẻ check-in, KHÔNG có khối nào của người lớn", () => {
     expect(khoiChoVai({ isStudent: true, isHomeroom: false })).toEqual({
       theCheckin: true,
       tuanNay: true,
-      loiTatGvcn: false,
+      khoiNguoiLon: false,
     });
   });
 
-  it("GVCN: có lối tắt buồng lái, KHÔNG có thẻ check-in", () => {
+  it("GVCN: có khối người lớn, KHÔNG có thẻ check-in", () => {
     expect(khoiChoVai({ isStudent: false, isHomeroom: true })).toEqual({
       theCheckin: false,
       tuanNay: false,
-      loiTatGvcn: true,
+      khoiNguoiLon: true,
     });
   });
 
   it("tổ hợp hỏng (vừa là em vừa là GVCN): màn của EM thắng", () => {
     // Tổ hợp này không tồn tại trong dữ liệu thật. Nhưng nếu một ngày dữ liệu hỏng mà ra
-    // nó thì em KHÔNG được thấy lời nhắc về buồng lái — phép so `&& !isStudent` giữ đúng
-    // điều đó, và nó là phép so đã có từ trước, chỉ được chuyển chỗ.
-    expect(khoiChoVai({ isStudent: true, isHomeroom: true }).loiTatGvcn).toBe(false);
+    // nó thì em KHÔNG được thấy chuông việc của buồng lái, cũng không thấy cột phải.
+    expect(khoiChoVai({ isStudent: true, isHomeroom: true }).khoiNguoiLon).toBe(false);
   });
 
-  it("người lớn không phải GVCN: không khối nào của hai nhóm trên", () => {
+  it("người lớn không phải GVCN: vẫn có khối người lớn (chuông + cột phải)", () => {
+    // Đây là chỗ luật cũ ĐỂ TRỐNG và chủ đầu tư nhìn ra ngày 06/08/2026: quản trị và giáo
+    // viên bộ môn không phải GVCN, nên trước hôm nay họ không được khối nào — nửa màn phải
+    // trống trơn. VAI NÀO thấy khối NÀO trong cột phải là câu hỏi riêng, ở `coRailNguoiLon`.
     expect(khoiChoVai({ isStudent: false, isHomeroom: false })).toEqual({
       theCheckin: false,
       tuanNay: false,
-      loiTatGvcn: false,
+      khoiNguoiLon: true,
     });
   });
 });

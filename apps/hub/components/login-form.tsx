@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mascot } from "./mascot";
 import { LoginParallaxBg } from "./login-parallax-bg";
+import { MainContent } from "./page-shell";
 import { resolveThenPath } from "@/lib/trpc-client";
 
 interface DevAccount {
@@ -195,9 +196,24 @@ export function LoginForm({
           <LoginParallaxBg />
         </div>
 
-        <div className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#EFE6D6] md:bg-white/[.94] md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)] md:backdrop-blur-[6px]">
+        {/* CỘT THẺ ĐĂNG NHẬP LÀ <main id="noi-dung"> CỦA TRANG /login (sửa 05/08/2026).
+            Đường tắt "Bỏ qua menu" in ở đầu <body> trên MỌI trang (app/layout.tsx) trỏ tới
+            #noi-dung, mà /login không có phần tử nào mang id đó: người dùng bàn phím bấm
+            đường tắt đầu tiên của trang đầu tiên họ gặp và không đi tới đâu cả.
+            Bọc ĐÚNG cột thẻ, KHÔNG bọc nền parallax: nền là trang trí (aria-hidden), đưa
+            nó vào landmark là mời trình đọc màn hình đi qua sáu lớp ảnh trước khi tới ô
+            đăng nhập — đúng thứ đường tắt sinh ra để tránh. Cả trang chỉ có MỘT id này.
+
+            Bỏ `md:backdrop-blur-[6px]`: nền dưới thẻ đã đục 94% nên hiệu ứng gần như không
+            nhìn thấy, trong khi backdrop-filter buộc trình duyệt tách một lớp composite và
+            vẽ lại nó theo TỪNG KHUNG HÌNH của vòng parallax 60fps ngay bên dưới. Chi phí
+            có thật, hiệu ứng thì không — nền `md:bg-white` giữ nguyên phần nhìn thấy được. */}
+        <MainContent className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 focus:outline-none md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#EFE6D6] md:bg-white md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)]">
           <div>
-            <div className="hidden text-[12.5px] font-extrabold uppercase tracking-[.14em] text-[#9A8F6E] md:block">
+            {/* #9A8F6E chỉ đạt 3,22:1 trên thẻ trắng — dưới chuẩn 4,5:1. Mã đầu tiên thử
+                thay (#8A7B52) đo lại chỉ được 4,17:1, nên chốt #806E44 = 4,96:1 trên trắng:
+                cùng sắc vàng-nâu của bộ nhận diện, đủ biên để không tụt lại ở lần sửa sau. */}
+            <div className="hidden text-[12.5px] font-extrabold uppercase tracking-[.14em] text-[#806E44] md:block">
               Chào mừng trở lại
             </div>
             <h1 className="text-[24px] font-black leading-[1.15] tracking-[-.015em] text-ink md:mt-[7px] md:text-[31px] md:text-[#26275D]">
@@ -211,7 +227,12 @@ export function LoginForm({
 
           {error && (
             <div role="alert" className="flex items-start gap-[9px] rounded-2xl border border-[#F6D2D2] bg-[#FFF1F1] p-[11px_13px] animate-popIn">
-              <span className="msr flex-none text-[19px] text-[#D2383E]">error</span>
+              {/* aria-hidden: tên icon là chữ THẬT trong DOM. Không che thì trình đọc màn
+                  hình đọc "error" (tiếng Anh) trước câu lỗi tiếng Việt ngay bên cạnh —
+                  khối đã có role="alert" nói đủ rồi, icon chỉ là hình. */}
+              <span className="msr flex-none text-[19px] text-[#D2383E]" aria-hidden>
+                error
+              </span>
               <span className="text-[12.5px] font-bold leading-[1.45] text-[#A32127]">{error}</span>
             </div>
           )}
@@ -240,7 +261,10 @@ export function LoginForm({
             onClick={() => setGuardianOpen((v) => !v)}
             className="flex h-[52px] items-center justify-center gap-2.5 rounded-[15px] bg-[#0068FF] text-[14.5px] font-black text-white shadow-[0_8px_20px_rgba(0,104,255,.26)] transition-transform hover:-translate-y-0.5 active:scale-[.985]"
           >
-            <span className="msr text-[19px]">chat_bubble</span>
+            {/* aria-hidden: nếu không, nút này đọc thành "chat_bubble Dành cho phụ huynh". */}
+            <span className="msr text-[19px]" aria-hidden>
+              chat_bubble
+            </span>
             Dành cho phụ huynh · Zalo
           </button>
 
@@ -262,7 +286,7 @@ export function LoginForm({
           <p className="border-t border-[#F1EADD] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#5B6B80]">
             Tài khoản do Trường Việt Anh cấp · Cần hỗ trợ, nhắn giáo viên chủ nhiệm.
           </p>
-        </div>
+        </MainContent>
       </div>
     </div>
   );
@@ -285,7 +309,7 @@ function MobileHeroBand() {
       />
       <div className="relative mt-6 flex flex-col items-center gap-2.5">
         <div className="flex h-[72px] w-[72px] animate-floaty items-center justify-center rounded-[21px] bg-white shadow-[0_10px_26px_rgba(6,32,74,.34)]">
-          <img src="/logo.jpg" alt="" className="h-[58px] w-[58px] rounded-2xl object-cover" />
+          <img src="/logo.webp?v=ddafa976" alt="" className="h-[58px] w-[58px] rounded-2xl object-cover" />
         </div>
         <div className="text-center">
           <div className="text-[20px] font-black text-white">School Hub</div>
@@ -401,7 +425,7 @@ function StaffPanel({
           type="button"
           disabled={loading || !chon}
           onClick={() => onPick(chon)}
-          className="flex min-h-[48px] items-center justify-center rounded-[15px] bg-gradient-to-br from-navy to-navy-light text-[14px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)] transition-all hover:-translate-y-0.5 disabled:opacity-50"
+          className="flex min-h-[48px] items-center justify-center rounded-[15px] bg-gradient-to-br from-navy to-navy-light text-[14px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)] transition-[transform,box-shadow] hover:-translate-y-0.5 disabled:opacity-50"
         >
           {loading ? "Đang vào…" : "Vào Hub"}
         </button>

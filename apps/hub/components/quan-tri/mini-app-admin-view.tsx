@@ -24,10 +24,13 @@
 "use client";
 
 import { useState } from "react";
-import type { HubRole, MiniAppRow } from "@hub/core/contracts";
+import type { HubRole, MiniAppRow, MiniAppScope } from "@hub/core/contracts";
 import { trpc } from "@/lib/trpc-client";
 import { OperationsShell, Card } from "../dieu-hanh/operations-shell";
 import { EmptyState, ErrorState, LoadingState } from "../ui/query-state";
+import { HopThoai } from "../ui/hop-thoai";
+import { HuongDanTichHop, QuyTrinhDauNoi } from "./huong-dan-tich-hop";
+import { DanPhieuDauNoi } from "./dan-phieu-dau-noi";
 
 const NHAN_RO: Record<string, { chu: string; nen: string; mau: string }> = {
   xanh: { chu: "Rổ Xanh · không gắn tên em nào", nen: "bg-[#E3F8ED]", mau: "text-[#126B45]" },
@@ -57,10 +60,15 @@ export function MiniAppAdminView({
   const utils = trpc.useUtils();
   const query = trpc.admin.miniApp.list.useQuery();
   const [dangSua, setDangSua] = useState<string | null>(null);
+  /** Mã app đang mở bản đấu nối. Một lúc một bản — nó là lớp nổi, không phải một cột. */
+  const [dangXemDauNoi, setDangXemDauNoi] = useState<string | null>(null);
+  const [moQuyTrinh, setMoQuyTrinh] = useState(false);
 
   const doiTrangThai = trpc.admin.miniApp.setEnabled.useMutation({
     onSuccess: () => void utils.admin.miniApp.list.invalidate(),
   });
+
+  const appDangXem = query.data?.apps.find((a) => a.appId === dangXemDauNoi);
 
   return (
     <OperationsShell
@@ -73,7 +81,30 @@ export function MiniAppAdminView({
       displayName={displayName}
       email={email}
       roles={roles}
-      toolbar={<NutThemApp onXong={() => void utils.admin.miniApp.list.invalidate()} />}
+      active="miniapp"
+      toolbar={
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setMoQuyTrinh(true)}
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-line2 bg-white px-4 text-[13px] font-extrabold text-cardtitle2"
+          >
+            {/* `checklist`, không phải `route`: font đã cắt gọn không có `route`, và một tên
+                ngoài danh sách vẽ ra một Ô TRỐNG chứ không báo lỗi
+                (`tests/unit/a11y.test.ts` bắt đúng ca này lúc 07/08/2026). */}
+            <span className="msr text-[18px]" aria-hidden>
+              checklist
+            </span>
+            Quy trình đấu nối
+          </button>
+          {/* ĐƯỜNG CHÍNH để khai app mới từ 07/08/2026, đứng TRƯỚC "Khai app mới" — chủ đầu
+              tư: *"copy paste vào đó phát là ra app, khỏi cần điền từng tí 1"*. Form khai tay
+              ở lại làm đường phụ: nó vẫn cần cho app khai vội trong lúc chờ đội kia gửi phiếu,
+              và cho việc sửa một dòng đã có. */}
+          <DanPhieuDauNoi onXong={() => void utils.admin.miniApp.list.invalidate()} />
+          <NutThemApp onXong={() => void utils.admin.miniApp.list.invalidate()} />
+        </div>
+      }
     >
       {query.isPending && <LoadingState label="Đang mở sổ đăng ký…" />}
       {query.error && (
@@ -83,7 +114,9 @@ export function MiniAppAdminView({
         <EmptyState
           icon="space_dashboard"  /* font đã cắt gọn không có `widgets` — tên ngoài danh sách vẽ ra ô trống */
           title="Chưa có app ngoài nào"
-          hint="Bấm “Khai app mới” để thêm. App mới luôn ở trạng thái TẮT cho tới khi có người bật."
+          // CẮT vế "App mới luôn ở trạng thái TẮT cho tới khi có người bật": chính form
+          // khai app mới đã nói đúng điều đó, ở đúng lúc người ta sắp khai.
+          hint="Bấm “Khai app mới” để thêm."
         />
       )}
 
@@ -104,8 +137,16 @@ export function MiniAppAdminView({
             setDangSua(null);
             void utils.admin.miniApp.list.invalidate();
           }}
+          onXemDauNoi={() => setDangXemDauNoi(app.appId)}
         />
       ))}
+
+      {moQuyTrinh && query.data && (
+        <QuyTrinhDauNoi hubUrl={query.data.hubUrl} onDong={() => setMoQuyTrinh(false)} />
+      )}
+      {appDangXem && query.data && (
+        <HuongDanTichHop app={appDangXem} hubUrl={query.data.hubUrl} onDong={() => setDangXemDauNoi(null)} />
+      )}
     </OperationsShell>
   );
 }
@@ -118,6 +159,7 @@ function TheApp({
   dangDoi,
   loiDoi,
   onXongSua,
+  onXemDauNoi,
 }: {
   app: MiniAppRow;
   dangMoSua: boolean;
@@ -126,17 +168,36 @@ function TheApp({
   dangDoi: boolean;
   loiDoi: string | null;
   onXongSua: () => void;
+  onXemDauNoi: () => void;
 }) {
   const ro = NHAN_RO[app.basket] ?? NHAN_RO.xanh!;
   const quaHan = app.overdueDays > 0;
   const sapHan = !quaHan && app.overdueDays >= -30;
 
+  // Biến đã KHAI TÊN mà CHƯA CÓ GIÁ TRỊ trên máy chủ này. Khai tên nhưng chưa đặt là trạng
+  // thái duy nhất màn hình bắt được mà người khai app không tự thấy — biến chưa khai tên thì
+  // đã có dòng "Chưa khai biến môi trường" nói hộ, và biến đã đặt thì không có gì phải làm.
+  const thieuBien = [
+    app.webhookSecretEnv && !app.daCapSecret ? app.webhookSecretEnv : null,
+    app.ssoEnabled && app.ssoClientSecretEnv && !app.daCapSsoSecret ? app.ssoClientSecretEnv : null,
+  ].filter((b): b is string => !!b);
+
   return (
-    <Card className={app.enabled ? "" : "opacity-75"}>
+    // TRẠNG THÁI TẮT NÓI BẰNG NỀN, KHÔNG BẰNG ĐỘ MỜ (sửa 05/08/2026).
+    //
+    // `opacity-75` phủ lên CẢ thẻ, kể cả những dòng chữ mang thông tin nặng nhất của màn:
+    // `text-muted` tụt còn 3,07:1 và `text-caption` còn 3,22:1. Mà thẻ app ĐANG TẮT chính
+    // là thẻ người ta đọc kỹ nhất — đó là lúc quyết định có bật hay không, và câu phải đọc
+    // được là "biến môi trường CHƯA được đặt", "quá hạn rà lại". Làm mờ đúng chỗ đó là làm
+    // mờ cơ sở của quyết định.
+    // Nền #FAFBFD + badge "ĐANG TẮT" đã có sẵn là hai tín hiệu đủ, và badge nói bằng CHỮ
+    // nên nó qua được cả mắt mù màu lẫn tai (§11).
+    <Card className={app.enabled ? "" : "bg-[#FAFBFD]"}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[15px] font-black text-navy">{app.displayName}</span>
+            {/* <h2>: mỗi app là một khối ngang cấp dưới <h1> "Mini App" của khung màn. */}
+            <h2 className="text-[15px] font-black text-navy">{app.displayName}</h2>
             {/* Trạng thái nói bằng CHỮ, không chỉ bằng màu (§11: màu không phải tín hiệu
                 duy nhất). Người mù màu và người đọc bằng tai vẫn phải biết app nào đang bật. */}
             <span
@@ -169,8 +230,20 @@ function TheApp({
         </button>
       </div>
 
+      {/* role="alert" — máy chủ từ chối thì phải NGHE được (sửa 05/08/2026).
+          Ba câu lỗi sau cú bấm của màn này (tắt/bật app · lưu cấu hình · khai app mới) đều
+          là `<p>` trần. Người dùng chuột nhìn thấy chữ đỏ hiện ra; người dùng bàn phím và
+          trình đọc màn hình thì không nghe gì cả — họ bấm "Tắt app", tiêu điểm vẫn ở nút,
+          nút hết mờ, và không có tín hiệu nào phân biệt "đã tắt" với "máy chủ từ chối".
+          Màu: #D2383E trên nền hồng #FFF3F3 chỉ đạt 4,43:1. `dangerText` #C7333A = 4,89:1
+          trên đúng nền đó. */}
       {loiDoi && (
-        <p className="mt-2 rounded-xl bg-[#FFF3F3] px-3 py-2 text-[12px] font-bold text-[#D2383E]">{loiDoi}</p>
+        <p
+          role="alert"
+          className="mt-2 rounded-xl bg-[#FFF3F3] px-3 py-2 text-[12px] font-bold text-dangerText"
+        >
+          {loiDoi}
+        </p>
       )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -182,7 +255,7 @@ function TheApp({
             Chưa cấp cho vai nào — không ai mở được
           </span>
         ) : (
-          <span className="rounded-full bg-[#F1F4F8] px-2.5 py-1 text-[10.5px] font-bold text-[#33507C]">
+          <span className="rounded-full bg-[#F1F4F8] px-2.5 py-1 text-[10.5px] font-bold text-cardtitle2">
             Mở cho: {app.allowedRoles.map((r) => NHAN_VAI[r] ?? r).join(", ")}
           </span>
         )}
@@ -206,9 +279,33 @@ function TheApp({
           ) : (
             // Đây là ca mà cả màn hình này sinh ra để bắt: tên biến có, giá trị không.
             // Không nói ra thì quản trị tin webhook đã sẵn sàng và app nhận 401 mãi mãi.
-            <span className="font-bold text-[#D2383E]">
-              Khai <span className="font-mono text-[11.5px]">{app.webhookSecretEnv}</span> nhưng biến này CHƯA
-              được đặt trên máy chủ — webhook sẽ trả 401
+            // RÚT NGẮN 06/08/2026: bỏ khung "Khai X nhưng biến này…". Tên biến đứng
+            // trước, hậu quả đứng sau — hai mảnh, không phải một câu kể.
+            <span className="flex items-center gap-1 font-bold text-dangerText">
+              <span className="msr text-[15px]" aria-hidden>
+                error
+              </span>
+              <span className="font-mono text-[11.5px]">{app.webhookSecretEnv}</span> chưa đặt — webhook 401
+            </span>
+          )}
+        </Muc>
+        {/* SSO đứng NGANG HÀNG với webhook, không nằm sau một nút "chi tiết" (07/08/2026).
+            Từ ADR-032, "app này có đăng nhập được bằng tài khoản Hub không" là một trong ba
+            đường mà công tắc bật/tắt ở trên cắt cùng lúc. Giấu nó đi thì người bấm nút thu
+            hồi không biết mình vừa cắt những gì. */}
+        <Muc nhan="Đăng nhập (SSO)">
+          {!app.ssoEnabled ? (
+            <span className="text-caption">Không dùng — app không đăng nhập bằng tài khoản Hub</span>
+          ) : !app.daCapSsoSecret ? (
+            <span className="flex items-center gap-1 font-bold text-dangerText">
+              <span className="msr text-[15px]" aria-hidden>
+                error
+              </span>
+              <span className="font-mono text-[11.5px]">{app.ssoClientSecretEnv}</span> chưa đặt — invalid_client
+            </span>
+          ) : (
+            <span className="font-bold text-successText">
+              Bật — client_id <span className="font-mono text-[11.5px]">{app.appId}</span>
             </span>
           )}
         </Muc>
@@ -243,14 +340,39 @@ function TheApp({
         </Muc>
       </dl>
 
-      <button
-        type="button"
-        onClick={onMoSua}
-        aria-expanded={dangMoSua}
-        className="mt-3 flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2"
-      >
-        {dangMoSua ? "Đóng" : "Sửa cấu hình"}
-      </button>
+      {/* CẢNH BÁO THIẾU SECRET PHẢI LÀM ĐƯỢC GÌ ĐÓ (07/08/2026).
+          Hai dòng đỏ ở trên nói ĐÚNG chuyện gì hỏng, rồi bỏ mặc người đọc: họ biết biến
+          chưa đặt nhưng không biết đặt ở đâu, đặt cái gì, và đặt xong có phải khởi động lại
+          không. Điều 22 của hiến pháp UI đòi mọi trạng thái lỗi kèm đường ra. Khối này LÀ
+          đường ra, và nó chỉ hiện đúng lúc có thứ để làm. */}
+      {thieuBien.length > 0 && (
+        <div className="mt-3 rounded-2xl border border-[#F0C9CB] bg-surface-danger p-3">
+          <div className="text-[10.5px] font-black uppercase tracking-wide text-dangerText">
+            Thêm vào apps/hub/.env.local trên máy chủ rồi khởi động lại
+          </div>
+          <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11.5px] font-semibold text-ink">
+            {thieuBien.map((b) => `${b}=<sinh ngẫu nhiên 32 byte>`).join("\n")}
+          </pre>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onMoSua}
+          aria-expanded={dangMoSua}
+          className="flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-extrabold text-link underline underline-offset-2"
+        >
+          {dangMoSua ? "Đóng" : "Sửa cấu hình"}
+        </button>
+        <button
+          type="button"
+          onClick={onXemDauNoi}
+          className="flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-extrabold text-link underline underline-offset-2"
+        >
+          Đấu nối
+        </button>
+      </div>
 
       {dangMoSua && <FormSua app={app} onXong={onXongSua} />}
     </Card>
@@ -281,12 +403,174 @@ const MOI_VAI: HubRole[] = [
   "admin",
 ];
 
+/**
+ * Textarea nhiều dòng → mảng. Bỏ dòng trống và cắt khoảng trắng hai đầu.
+ *
+ * Cắt khoảng trắng KHÔNG phải là dọn dẹp cho gọn: `redirect_uri` so khớp tuyệt đối theo
+ * OIDC, nên một dấu cách vô hình dán kèm từ Slack là RP không bao giờ đăng nhập được, với
+ * một câu lỗi (`redirect_uri mismatch`) không hề nhắc tới khoảng trắng.
+ */
+function tachDong(s: string): string[] {
+  return s
+    .split("\n")
+    .map((d) => d.trim())
+    .filter((d) => d.length > 0);
+}
+
+/**
+ * Tên biến môi trường theo đúng quy ước đang dùng cho Factory: TIỀN_TỐ + mã app viết HOA.
+ *
+ * Điền sẵn không phải để tiết kiệm gõ. Tên biến gõ sai một ký tự là một app khai xong, hiện
+ * lên đẹp đẽ trên màn này, và nhận `invalid_client` / `401` mãi mãi — vì `process.env[tên
+ * sai]` là `undefined`, đúng cùng giá trị với "chưa đặt". Không có cách nào phân biệt hai ca
+ * đó từ trong hệ.
+ */
+function tenBien(tienTo: string, maApp: string): string {
+  return `${tienTo}_${maApp.trim().toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+}
+
+const MOI_SCOPE: { ma: MiniAppScope; nhan: string }[] = [
+  { ma: "openid", nhan: "openid — bắt buộc" },
+  { ma: "profile", nhan: "profile — tên hiển thị" },
+  { ma: "hub_profile", nhan: "hub_profile — vai, cơ sở, lớp" },
+  { ma: "offline_access", nhan: "offline_access — refresh token" },
+];
+
+/**
+ * Khối SSO trong form sửa cấu hình.
+ *
+ * Các ô CHỈ hiện khi công tắc bật — điều 15 của hiến pháp UI: hành động không dùng được thì
+ * ẩn, không phải làm mờ. Một app trang tin không đăng nhập gì cả thì bốn ô OIDC nằm xám ở
+ * đó chỉ tạo cảm giác form còn dở.
+ */
+function KhoiSso({
+  appId,
+  bat,
+  setBat,
+  uri,
+  setUri,
+  bcl,
+  setBcl,
+  scope,
+  setScope,
+  bien,
+  setBien,
+}: {
+  appId: string;
+  bat: boolean;
+  setBat: (v: boolean) => void;
+  uri: string;
+  setUri: (v: string) => void;
+  bcl: string;
+  setBcl: (v: string) => void;
+  scope: MiniAppScope[];
+  setScope: (v: MiniAppScope[]) => void;
+  bien: string;
+  setBien: (v: string) => void;
+}) {
+  return (
+    <fieldset className="rounded-2xl border border-line bg-white p-3">
+      <legend className="px-1 text-[10.5px] font-black uppercase tracking-wide text-muted">
+        Đăng nhập bằng tài khoản Hub
+      </legend>
+
+      <label className="flex min-h-[44px] cursor-pointer items-center gap-2.5">
+        <input
+          type="checkbox"
+          checked={bat}
+          onChange={(e) => {
+            const v = e.target.checked;
+            setBat(v);
+            // Bật lần đầu mà chưa có tên biến thì điền sẵn — xem `tenBien()`.
+            if (v && !bien) setBien(tenBien("OIDC_CLIENT_SECRET", appId));
+          }}
+          className="h-4 w-4 accent-gold"
+        />
+        <span className="text-[12.5px] font-extrabold text-cardtitle2">
+          App này đăng nhập bằng tài khoản Hub (OIDC)
+        </span>
+      </label>
+
+      {bat && (
+        <div className="mt-2 flex flex-col gap-3">
+          <O nhan="redirect_uri — mỗi dòng một cái" goiY="https://…  Hub tự thêm đường cầu nối cho khung nhúng.">
+            <textarea
+              value={uri}
+              onChange={(e) => setUri(e.target.value)}
+              rows={2}
+              required
+              placeholder="https://app.vidu.vn/api/auth/oidc/callback"
+              className={`${O_INPUT} py-2 font-mono leading-relaxed`}
+            />
+          </O>
+          <O nhan="backchannel_logout_uri" goiY="Thoát Hub là Hub gọi vào đây để đóng phiên bên app.">
+            <input
+              value={bcl}
+              onChange={(e) => setBcl(e.target.value)}
+              placeholder="https://app.vidu.vn/api/auth/oidc/backchannel-logout"
+              className={`${O_INPUT} font-mono`}
+            />
+          </O>
+          <fieldset>
+            <legend className="text-[10.5px] font-black uppercase tracking-wide text-muted">scope được xin</legend>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {MOI_SCOPE.map((s) => {
+                const chon = scope.includes(s.ma);
+                // `openid` không bỏ được: thiếu nó thì đây là OAuth2 trần, không có id_token,
+                // và ràng buộc của bảng sẽ từ chối. Khoá ô ở đây để người dùng gặp sự thật
+                // ngay lúc bấm chứ không phải sau khi gửi.
+                const khoa = s.ma === "openid";
+                return (
+                  <label
+                    key={s.ma}
+                    className={
+                      chon
+                        ? "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl bg-navy px-3 text-[12px] font-black text-white"
+                        : "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-[12px] font-bold text-cardtitle2"
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={chon}
+                      disabled={khoa}
+                      onChange={(e) => setScope(e.target.checked ? [...scope, s.ma] : scope.filter((x) => x !== s.ma))}
+                      className="h-4 w-4 accent-gold"
+                    />
+                    {s.nhan}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+          <O nhan="Tên biến môi trường chứa client_secret" goiY="CHỈ tên biến, không phải giá trị.">
+            <input
+              value={bien}
+              onChange={(e) => setBien(e.target.value.toUpperCase())}
+              required
+              placeholder="OIDC_CLIENT_SECRET_TENAPP"
+              className={`${O_INPUT} font-mono`}
+            />
+          </O>
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
 function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
   const [ten, setTen] = useState(app.displayName);
   const [chuTri, setChuTri] = useState(app.owner);
   const [ngayRa, setNgayRa] = useState(app.reviewDueOn);
   const [vai, setVai] = useState<HubRole[]>(app.allowedRoles);
   const [gioiThieu, setGioiThieu] = useState(app.intro ?? "");
+  const [sso, setSso] = useState(app.ssoEnabled);
+  // Mỗi dòng một URI. Textarea chứ không phải một ô có dấu phẩy: URI đã dài sẵn, và một
+  // danh sách ngăn bằng dấu phẩy thì không ai thấy được mình vừa dán thừa khoảng trắng vào
+  // đâu — mà `redirect_uri` so khớp TUYỆT ĐỐI, thừa một ký tự là RP không đăng nhập được.
+  const [uri, setUri] = useState(app.ssoRedirectUris.join("\n"));
+  const [bcl, setBcl] = useState(app.ssoBackchannelLogoutUri ?? "");
+  const [scope, setScope] = useState<MiniAppScope[]>(app.ssoScopes as MiniAppScope[]);
+  const [bienSso, setBienSso] = useState(app.ssoClientSecretEnv ?? "");
 
   const sua = trpc.admin.miniApp.update.useMutation({ onSuccess: onXong });
 
@@ -302,17 +586,36 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
           reviewDueOn: ngayRa,
           allowedRoles: vai,
           intro: gioiThieu.trim() || null,
+          ssoEnabled: sso,
+          ssoRedirectUris: tachDong(uri),
+          ssoBackchannelLogoutUri: bcl.trim() || null,
+          ssoScopes: scope,
+          ssoClientSecretEnv: bienSso.trim() || null,
         });
       }}
     >
       {/* MÃ APP và RỔ DỮ LIỆU cố ý KHÔNG có ô nhập — xem khối chú thích đầu
           routers/admin.ts. Nói ra ở đây thay vì để một ô xám khoá lại: ô khoá đọc thành
           "chưa làm xong", còn dòng chữ này nói thẳng là không sửa được và vì sao. */}
-      <p className="text-[11.5px] leading-relaxed text-muted2">
-        Mã app (<span className="font-mono">{app.appId}</span>) và rổ dữ liệu không sửa được: mã nằm trong URL,
-        trong mọi webhook app đang gửi và trong alias đã sinh cho từng em; rổ dữ liệu là thứ Hội đồng dữ liệu
-        duyệt. Muốn đổi thì tắt app này và khai app mới — chậm hơn, và chậm ở đây là cố ý.
-      </p>
+      {/* `muted2` GIỮ NGUYÊN sau khi đo lại 05/08/2026: token vừa được nâng #6B7789 →
+          #5F6B7D, và trên nền form #F9FBFD nó đạt 5,21:1 — trên chuẩn 4,5:1. Đây là đoạn
+          giải thích VÌ SAO mã app và rổ dữ liệu không sửa được; nó phải đọc được. */}
+      {/* GẤP LẠI, KHÔNG CẮT (06/08/2026). Đoạn này ba câu và nó là thứ đầu tiên đập vào
+          mắt khi mở form sửa — trong khi 95% lượt mở form là để đổi tên hoặc gia hạn ngày
+          rà. Nó vẫn PHẢI đọc được: nó trả lời "vì sao không có ô cho mã app và rổ dữ
+          liệu", và không có nó thì thiếu ô đọc thành lỗi. `<details>` theo đúng mẫu
+          `ScopeNotice` — một dòng trên mặt, phần còn lại chỉ khi có người hỏi. */}
+      <details className="text-[11.5px] leading-relaxed text-muted2">
+        <summary className="flex min-h-[44px] cursor-pointer items-center font-bold">
+          Mã app và rổ dữ liệu không sửa được
+          <span className="ml-1 font-black text-link">— vì sao?</span>
+        </summary>
+        <p className="mt-1.5">
+          Mã (<span className="font-mono">{app.appId}</span>) nằm trong URL, trong mọi webhook app đang gửi và
+          trong alias đã sinh cho từng em; rổ dữ liệu là thứ Hội đồng dữ liệu duyệt. Muốn đổi thì tắt app này
+          và khai app mới — chậm hơn, và chậm ở đây là cố ý.
+        </p>
+      </details>
 
       <O nhan="Tên hiện cho người dùng">
         <input value={ten} onChange={(e) => setTen(e.target.value)} maxLength={60} required className={O_INPUT} />
@@ -344,7 +647,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
                 className={
                   chon
                     ? "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl bg-navy px-3 text-[12px] font-black text-white"
-                    : "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-[12px] font-bold text-[#33507C]"
+                    : "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-[12px] font-bold text-cardtitle2"
                 }
               >
                 <input
@@ -359,15 +662,33 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
           })}
         </div>
         {vai.length === 0 && (
+          // CẮT vế "Đó là trạng thái hợp lệ (và là mặc định của app mới), chỉ cần biết
+          // là mình đang chọn nó" — trấn an dài cho một dòng đã nói đủ.
           <p className="mt-1.5 text-[11.5px] font-bold text-[#8A5A00]">
-            Không chọn vai nào = không ai mở được app. Đó là trạng thái hợp lệ (và là mặc định của app mới),
-            chỉ cần biết là mình đang chọn nó.
+            Không chọn vai nào = không ai mở được app.
           </p>
         )}
       </fieldset>
 
+      <KhoiSso
+        appId={app.appId}
+        bat={sso}
+        setBat={setSso}
+        uri={uri}
+        setUri={setUri}
+        bcl={bcl}
+        setBcl={setBcl}
+        scope={scope}
+        setScope={setScope}
+        bien={bienSso}
+        setBien={setBienSso}
+      />
+
+      {/* role="alert" + `dangerText` — cùng lý lẽ và cùng phép đo với khối lỗi ở TheApp. */}
       {sua.isError && (
-        <p className="rounded-xl bg-[#FFF3F3] px-3 py-2 text-[12px] font-bold text-[#D2383E]">{sua.error.message}</p>
+        <p role="alert" className="rounded-xl bg-[#FFF3F3] px-3 py-2 text-[12px] font-bold text-dangerText">
+          {sua.error.message}
+        </p>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -381,7 +702,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
         <button
           type="button"
           onClick={onXong}
-          className="flex min-h-[44px] items-center rounded-xl border border-line bg-white px-5 text-[13px] font-extrabold text-[#33507C]"
+          className="flex min-h-[44px] items-center rounded-xl border border-line bg-white px-5 text-[13px] font-extrabold text-cardtitle2"
         >
           Huỷ
         </button>
@@ -417,6 +738,11 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
   const [origin, setOrigin] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
   const [bienSecret, setBienSecret] = useState("");
+  const [sso, setSso] = useState(false);
+  const [uri, setUri] = useState("");
+  const [bcl, setBcl] = useState("");
+  const [scope, setScope] = useState<MiniAppScope[]>(["openid", "profile"]);
+  const [bienSso, setBienSso] = useState("");
 
   const them = trpc.admin.miniApp.create.useMutation({
     onSuccess: () => {
@@ -428,28 +754,47 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
       setOrigin("");
       setIframeUrl("");
       setBienSecret("");
+      setSso(false);
+      setUri("");
+      setBcl("");
+      setScope(["openid", "profile"]);
+      setBienSso("");
       onXong();
     },
   });
 
-  if (!mo) {
-    return (
-      <button
-        type="button"
-        onClick={() => setMo(true)}
-        className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 text-[13px] font-black text-white"
-      >
-        <span className="msr text-[18px]" aria-hidden>
-          add
-        </span>
-        Khai app mới
-      </button>
-    );
-  }
+  const nut = (
+    <button
+      type="button"
+      onClick={() => setMo(true)}
+      className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 text-[13px] font-black text-white"
+    >
+      <span className="msr text-[18px]" aria-hidden>
+        add
+      </span>
+      Khai app mới
+    </button>
+  );
+
+  if (!mo) return nut;
 
   return (
+    <>
+      {/* Nút Ở LẠI DƯỚI LỚP PHỦ, không biến mất khi hộp mở (07/08/2026).
+          Bản cũ `return <form>` thay chỗ cái nút, nên ở khổ máy tính form mọc lên trong
+          slot toolbar — cuối một hàng `md:justify-between` — và đẩy toàn bộ danh sách app
+          xuống dưới màn hình. Đúng chỗ chủ đầu tư chỉ ra: "nó nằm ở bên phải, đè khối kia
+          xuống". Giữ nút tại chỗ thì bố cục trang không đổi một pixel nào khi hộp mở/đóng,
+          và tiêu điểm có chỗ để trả về lúc đóng. */}
+      {nut}
+      <HopThoai
+        tieuDe="Khai một Mini App mới"
+        moTa="Khai xong: app TẮT, chưa cấp cho vai nào."
+        rong="max-w-[620px]"
+        onDong={() => setMo(false)}
+      >
     <form
-      className="flex w-full max-w-[520px] flex-col gap-3 rounded-2xl border border-line bg-white p-4"
+      className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
         them.mutate({
@@ -463,19 +808,15 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
           origin: origin.trim() || null,
           iframeUrl: iframeUrl.trim() || null,
           webhookSecretEnv: bienSecret.trim() || null,
+          ssoEnabled: sso,
+          ssoRedirectUris: tachDong(uri),
+          ssoBackchannelLogoutUri: bcl.trim() || null,
+          ssoScopes: scope,
+          ssoClientSecretEnv: bienSso.trim() || null,
         });
       }}
     >
-      <div className="text-[14px] font-black text-navy">Khai một Mini App mới</div>
-      {/* Nói TRƯỚC, không nói sau khi bấm: app mới luôn tắt và chưa cấp cho vai nào. Người
-          khai cần biết mình vừa tạo ra một dòng chưa hoạt động, chứ không đi tìm xem vì
-          sao app không hiện trên trang chủ. */}
-      <p className="rounded-xl bg-[#F1F4F8] px-3 py-2 text-[11.5px] leading-relaxed text-[#33507C]">
-        App khai xong sẽ ở trạng thái <b>TẮT</b> và <b>chưa cấp cho vai nào</b>. Bật và cấp vai là hai bước
-        riêng — cố ý, để "app này tồn tại" không bị bấm chung một nhịp với "app này được chạm vào dữ liệu học sinh".
-      </p>
-
-      <O nhan="Mã app" goiY="Chữ thường, số và gạch ngang. Sẽ thành đường /embed/<mã app> — không đổi được về sau.">
+      <O nhan="Mã app" goiY="Chữ thường, số, gạch ngang. Không đổi được về sau.">
         <input
           value={maApp}
           onChange={(e) => setMaApp(e.target.value)}
@@ -489,7 +830,7 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
       </O>
       <O
         nhan="Rổ dữ liệu"
-        goiY="Fitness và căn tin NGHE như rổ Xanh nhưng là rổ VÀNG — chúng ghi chỉ số cơ thể và dị ứng của từng em. Chỉ app hiển thị nội dung chung cho cả trường mới là Xanh."
+        goiY="Có gắn tên từng em ⇒ Vàng (kể cả Fitness, căn tin)."
       >
         <select value={ro} onChange={(e) => setRo(e.target.value as "xanh" | "vang")} className={O_INPUT}>
           <option value="xanh">Xanh — không gắn tên em nào</option>
@@ -499,29 +840,49 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
       <O nhan="Người chịu trách nhiệm" goiY="Tên đội làm app + dev lõi bảo trợ.">
         <input value={chuTri} onChange={(e) => setChuTri(e.target.value)} maxLength={120} required className={O_INPUT} />
       </O>
-      <O nhan="Ngày rà lại" goiY="Thường là 6 tháng kể từ hôm nay. Quá hạn thì màn này bật đèn đỏ.">
+      <O nhan="Ngày rà lại" goiY="Thường 6 tháng kể từ hôm nay.">
         <input type="date" value={ngayRa} onChange={(e) => setNgayRa(e.target.value)} required className={O_INPUT} />
       </O>
-      <O nhan="Origin (bỏ trống nếu app không có UI nhúng)" goiY="Dạng https://ten-mien — không kèm đường dẫn, không dấu / cuối.">
+      <O nhan="Origin (bỏ trống nếu app không có UI nhúng)" goiY="Dạng https://ten-mien, không đường dẫn.">
         <input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="https://app.vidu.vn" className={`${O_INPUT} font-mono`} />
       </O>
-      <O nhan="URL nạp vào iframe" goiY="Phải nằm trong origin ở trên. Thường là một trang riêng cho ngữ cảnh nhúng, không phải trang chủ của app.">
+      <O nhan="URL nạp vào iframe" goiY="Phải nằm trong origin ở trên.">
         <input value={iframeUrl} onChange={(e) => setIframeUrl(e.target.value)} placeholder="https://app.vidu.vn/embed" className={`${O_INPUT} font-mono`} />
       </O>
       <O
         nhan="Tên biến môi trường chứa secret webhook"
-        goiY="CHỈ tên biến, không phải giá trị. Giá trị đặt trên máy chủ và không bao giờ vào cơ sở dữ liệu."
+        goiY="CHỈ tên biến, không phải giá trị."
       >
         <input
           value={bienSecret}
           onChange={(e) => setBienSecret(e.target.value.toUpperCase())}
+          onFocus={() => {
+            if (!bienSecret && maApp.trim()) setBienSecret(tenBien("EMBED_WEBHOOK_SECRET", maApp));
+          }}
           placeholder="EMBED_WEBHOOK_SECRET_TENAPP"
           className={`${O_INPUT} font-mono`}
         />
       </O>
 
+      <KhoiSso
+        appId={maApp.trim() || "tenapp"}
+        bat={sso}
+        setBat={setSso}
+        uri={uri}
+        setUri={setUri}
+        bcl={bcl}
+        setBcl={setBcl}
+        scope={scope}
+        setScope={setScope}
+        bien={bienSso}
+        setBien={setBienSso}
+      />
+
+      {/* role="alert" + `dangerText` — cùng lý lẽ và cùng phép đo với hai khối lỗi trên. */}
       {them.isError && (
-        <p className="rounded-xl bg-[#FFF3F3] px-3 py-2 text-[12px] font-bold text-[#D2383E]">{them.error.message}</p>
+        <p role="alert" className="rounded-xl bg-[#FFF3F3] px-3 py-2 text-[12px] font-bold text-dangerText">
+          {them.error.message}
+        </p>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -535,11 +896,13 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
         <button
           type="button"
           onClick={() => setMo(false)}
-          className="flex min-h-[44px] items-center rounded-xl border border-line bg-white px-5 text-[13px] font-extrabold text-[#33507C]"
+          className="flex min-h-[44px] items-center rounded-xl border border-line bg-white px-5 text-[13px] font-extrabold text-cardtitle2"
         >
           Huỷ
         </button>
       </div>
     </form>
+      </HopThoai>
+    </>
   );
 }

@@ -135,13 +135,19 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
             <span className="msr text-[17px] text-caption" aria-hidden>
               calendar_month
             </span>
-            <span className="sr-only">Ngày điểm danh</span>
+            {/* `aria-label` trên chính ô nhập, không phải một <span class="sr-only"> đứng
+                cạnh: nhãn nay nói ĐỦ việc ô này làm — nó vừa chọn ngày để XEM lại vừa
+                chọn ngày sẽ GHI vào. Đo trên bản cũ: ô cao 21px, rộng 111px (§11 và WCAG
+                2.5.5 đòi 44px). Khung <label> bọc ngoài đã khai 44px, nhưng phần bấm được
+                thật của một `input[type=date]` là chính nó — trên iOS chạm vào khoảng
+                trống của khung không mở được bộ chọn ngày. */}
             <input
               type="date"
               value={onDate}
               max={toLocalIsoDate(new Date())}
               onChange={(e) => switchDate(e.target.value)}
-              className="bg-transparent text-[12.5px] font-extrabold text-[#33507C] outline-none"
+              aria-label="Ngày điểm danh — chọn ngày cần xem hoặc ghi"
+              className="min-h-[44px] bg-transparent text-[12.5px] font-extrabold text-cardtitle2 outline-none"
             />
           </label>
         </div>
@@ -158,14 +164,16 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
         <EmptyState
           icon="school"
           title="Thầy cô chưa được phân công chủ nhiệm lớp nào"
-          hint="Chỉ giáo viên chủ nhiệm mới ghi được điểm danh hộ. Phân công do văn phòng nhập."
+          // CẮT vế "Chỉ giáo viên chủ nhiệm mới ghi được điểm danh hộ" — tiêu đề ngay
+          // trên đã nói người này chưa được phân công chủ nhiệm.
+          hint="Phân công do văn phòng nhập."
         />
       )}
       {bodyState === "empty" && (
         <EmptyState
           icon="group_off"
           title="Lớp này chưa có học sinh nào"
-          hint="Không có em nào trong sổ ghi danh của lớp — chưa có gì để điểm danh."
+          hint="Sổ ghi danh của lớp chưa có em nào."
         />
       )}
 
@@ -217,14 +225,17 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
             <div className="overflow-x-auto">
               <table className="w-full min-w-[600px] border-collapse text-left">
                 <thead>
+                  {/* `scope="col"`: không có nó, trình đọc màn hình không nối được ô với
+                      tiêu đề cột nào — mà bảng này có ba cột nói ba chuyện khác hẳn nhau
+                      ("Đang lưu" là dữ liệu cũ, "Thầy cô ghi" là bản nháp sắp ghi đè). */}
                   <tr className="border-b border-line">
-                    <th className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-muted">
+                    <th scope="col" className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-muted">
                       Học sinh
                     </th>
-                    <th className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-muted">
+                    <th scope="col" className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-muted">
                       Đang lưu
                     </th>
-                    <th className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-muted">
+                    <th scope="col" className="px-4 py-3 text-[10.5px] font-black uppercase tracking-wide text-muted">
                       Thầy cô ghi
                     </th>
                   </tr>
@@ -272,10 +283,14 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
                   ? "Chưa có thay đổi nào để lưu"
                   : `${changes.length} em sẽ được ghi lại`}
               </div>
-              <div className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
-                Chỉ những em thầy cô vừa chọn mới được ghi. Bấm hai lần cùng một nội dung không tạo bản ghi
-                thứ hai.
-              </div>
+              {/* GỠ 06/08/2026 — chủ đầu tư chỉ đích danh câu "Chỉ những em thầy cô vừa
+                  chọn mới được ghi. Bấm hai lần cùng một nội dung không tạo bản ghi thứ hai."
+                  Vế MỘT đã do thiết kế nói, và nói chính xác hơn chữ: thẻ/dòng của em có
+                  thay đổi mang viền navy, và con số ngay trên đây đếm đúng số em sắp ghi
+                  ("N em sẽ được ghi lại", có `aria-live` nên tai cũng nghe).
+                  Vế HAI là idempotency — cơ chế máy móc, đúng thứ luật cắt gọi tên. Nó
+                  không mất: `markAttendance` vẫn upsert theo khoá duy nhất, và
+                  `tests/db` vẫn canh gọi hai lần không sinh dòng thứ hai. */}
             </div>
             {markAttendance.error && <MutationError error={markAttendance.error} />}
             {markAttendance.isSuccess && changes.length === 0 && (

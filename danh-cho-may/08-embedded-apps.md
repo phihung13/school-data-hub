@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 5
+sync-version: 6
 ---
 
 # Embedded Apps — chuẩn nhúng Mini App/tool ngoài vào Super App Shell (ADR-015, mở rộng ADR-017)
@@ -171,10 +171,37 @@ App ngoài (Base44/Firebase Studio/v.v. đều có hạ tầng lưu trữ riêng
 | Rate limit | mặc định 30 req/phút/app |
 | Cách sinh `external_id` | `sha256(app-id + alias + ngày + 'dear')` — lặp lại được |
 | Dữ liệu chạm tới | `evidence` (không `care`/`health`) |
-| Đăng ký OIDC RP | Không (chỉ dùng context token, không tự đổi token) |
+| Đăng ký OIDC RP | Không (chỉ dùng context token, không tự đổi token) — nếu **có** thì khai luôn `redirect_uris` · `backchannel_logout_uri` · `scope` · tên biến chứa `client_secret`, xem dưới |
 | Ngày rà lại | mỗi 6 tháng — quá hạn không rà thì thu hồi quyền |
 
-Chưa xây bảng quản trị + màn hình UI ngay từ đầu — quản lý bằng file config `packages/core/embedded-apps/registry.json`, review qua PR như mọi thay đổi vùng lõi (§10), tới khi có ≥5 app mới cân nhắc xây màn hình quản trị (không xây thứ chưa cần).
+**Manifest nay là MỘT HÀNG trong `core.embedded_apps`, không phải một file** (`0052` cho phần nhúng + webhook, `0055` cho phần đăng nhập). Bản cũ của đoạn này viết *"quản lý bằng file config `packages/core/embedded-apps/registry.json` … tới khi có ≥5 app mới cân nhắc xây màn hình quản trị"* — ngưỡng ≥5 đó bị bỏ vì cái nó bỏ qua là **đường thu hồi**, không phải sự tiện lợi: một app lộ dữ liệu mà phải chờ deploy để tắt thì con số 5 không liên quan gì.
+
+### 5.1 Ba đường, một dòng, một công tắc (ADR-032)
+
+Một app nối vào Hub bằng **ba** đường. Tất cả nằm trên cùng một hàng, và cột `enabled` cắt **cả ba** cùng lúc:
+
+| Đường | Cột quyết định | Tắt bằng |
+|---|---|---|
+| Nhúng iframe | `origin` + `iframe_url` | `enabled` |
+| Gửi dữ liệu về (webhook) | `webhook_secret_env` + `allowed_event_types` | `enabled` |
+| Đăng nhập bằng tài khoản Hub | `sso_enabled` + bốn cột `sso_*` | `enabled` **hoặc** `sso_enabled` |
+
+Trước `0055`, đường thứ ba nằm trong `apps/hub/server/oidc/clients.ts` nên `enabled` **không** chạm tới nó: app đã thu hồi vẫn đổi được `authorization_code` lấy token cho tới lần deploy sau. Chi tiết đăng ký RP: `03-api.md` mục "Đăng ký Relying Party".
+
+### 5.2 Quy trình đấu nối — sáu bước, ba người, đúng MỘT bước chạm máy chủ
+
+Quy trình này in thẳng trên `/quan-tri/mini-app` (nút "Quy trình đấu nối"), và mỗi app có một **bản đấu nối sinh tự động** từ chính hàng của nó — không có bản thứ hai để lạc hậu.
+
+| # | Ai | Làm gì |
+|---|---|---|
+| 1 | Quản trị · màn Mini App | Khai app: mã · rổ dữ liệu · người chịu trách nhiệm · ngày rà lại. Khai xong app **TẮT**, **chưa cấp vai nào** |
+| 2 | **Người vận hành · máy chủ Hub** | Sinh ngẫu nhiên hai secret, đặt vào `apps/hub/.env.local` đúng tên đã khai, khởi động lại. **Bước duy nhất chạm máy chủ** — và nó phải ở đó, vì giá trị secret không bao giờ vào database (`0052`) |
+| 3 | Đội làm app | Đấu OIDC bằng thư viện chuẩn: issuer = địa chỉ Hub, PKCE S256, `client_secret_basic`. Không tự viết tay luồng OAuth |
+| 4 | Đội làm app | Gửi dữ liệu qua **một** endpoint webhook, ký bằng secret. Không có đường ghi thứ hai (§8) |
+| 5 | Quản trị · màn Mini App | Cấp vai, rồi bật. Hai bước riêng — "app tồn tại" và "app chạm được dữ liệu học sinh" là hai quyết định |
+| 6 | Quản trị · màn Mini App | Rà lại sau 6 tháng. Quá hạn thì thẻ app bật đèn |
+
+**Điều bước 4 KHÔNG hứa:** mọi `event_type` đều vào kho, nhưng chỉ `dear_log` có luật ánh xạ thành dữ liệu nghiệp vụ. Loại khác nằm ở `ops.embedded_app_events` dưới dạng JSON thô — đọc được, thống kê được, **không** tự thành khoá học hay buổi điểm danh. Thêm luật ánh xạ là một migration, không phải một ô trên màn quản trị. Ghi ra vì "dữ liệu tự đổ về" là câu dễ hiểu thành "app con khai gì Hub hiểu nấy", và mở đúng cửa đó là bỏ chính hàng rào §8.
 
 **Vòng đời app, không chỉ ngày sinh:** mỗi Manifest có ngày rà lại. Đến hạn mà owner không xác nhận app còn dùng → thu hồi alias + key, gỡ khỏi `frame-src`. App bị nền tảng ngoài khai tử (Base44 đóng cửa, domain hết hạn) xử lý y như vậy. Dữ liệu đã promote vào Hub vẫn giữ — nó thuộc về trường, không thuộc về app.
 

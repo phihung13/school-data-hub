@@ -215,6 +215,86 @@ describe("nhãn riêng tư của ô cảm xúc: một câu, một nguồn", () =
 });
 
 // ---------------------------------------------------------------------------
+// 1c. §1.5 — "Ít chữ: hình thể thay lời nói"
+//
+// Thêm 06/08/2026, theo chỉ đạo chủ đầu tư ("ngôn ngữ phải được thể hiện qua thiết kế chứ
+// không phải chữ viết"). Luật thì có sẵn từ đầu — DESIGN-GUIDELINES §1.5: "không câu giải
+// thích thừa, không tip dông dài. Caption tối đa 1 dòng." App đã trôi khỏi nó.
+//
+// Vì sao phải khoá bằng test chứ không phải dọn một lần cho xong: đây đúng loại lỗi trôi
+// dần. Không ai viết một màn ngập chữ trong một lần; mỗi lần sửa một lỗi thật, người sửa
+// thêm MỘT câu giải thích cho tử tế, và mười lần như thế thì màn hình đầy chữ mà không có
+// lần nào sai. Chú thích trong mã (chỗ này rất nhiều) KHÔNG bị đếm — luật nói về chữ HIỆN
+// TRÊN MÀN, không phải lời giải thích cho người sửa mã sau.
+//
+// Cách đo, cố ý thô và cố ý ổn định: đếm những đoạn chữ nằm giữa hai thẻ JSX dài hơn 55 ký
+// tự. 55 xấp xỉ một dòng ở khổ 390px (§2) với cỡ chữ 11,5–12,5px của caption — quá mốc đó
+// là caption tràn hai dòng, tức là đã hết đúng §1.5.
+//
+// NGƯỠNG MỘT CHIỀU, cùng lối `BASELINE` của tests/unit/a11y.test.ts: gói khác cắt bớt thì
+// vẫn xanh (và HÃY hạ số này xuống theo), nhưng thêm một câu dài là đỏ ngay. Đặt bằng số
+// chính xác sẽ biến việc dọn đúng của người khác thành CI đỏ.
+// ---------------------------------------------------------------------------
+
+/** Tám màn học sinh/phụ huynh đã được dọn trong đợt 06/08/2026. */
+const MAN_DA_DON_CHU = [
+  "checkin-view.tsx",
+  "home-view.tsx",
+  "this-week-view.tsx",
+  "attendance-view.tsx",
+  "growth-report-view.tsx",
+  "profile-view.tsx",
+  "help-request-view.tsx",
+  "mini-app-tile.tsx",
+];
+
+/**
+ * Những đoạn chữ >55 ký tự nằm giữa hai thẻ JSX, sau khi đã bỏ hết chú thích.
+ *
+ * Bộ lọc `[;=\`]` KHÔNG phải để nới luật, nó để phép đo đừng nói dối: `>…<` cũng khớp phần
+ * MÃ nằm giữa hai dấu ngoặc nhọn của TypeScript — `useState<number | null>(null); const
+ * queued = …` trông y hệt một câu dài với cái regex này. Đo lần đầu 06/08/2026 ra 20, trong
+ * đó 4 là mã kiểu như vậy; một cổng đếm nhầm mã thành chữ thì con số nó canh không có
+ * nghĩa gì. Câu nói với trẻ thì không có `;`, `=` hay dấu huyền `.
+ */
+function cauDaiTrenMan(src: string): string[] {
+  return [...src.matchAll(/>([^<>{}]+)</g)]
+    .map((m) => m[1]!.replace(/\s+/g, " ").trim())
+    .filter((t) => !/[;=`]/.test(t))
+    .filter((t) => t.length > 55);
+}
+
+describe("§1.5 — ít chữ trên màn của trẻ và phụ huynh", () => {
+  it("tám màn đã dọn không mọc thêm câu dài", () => {
+    // Đo được 06/08/2026: TRƯỚC đợt cắt là 16, SAU là 1 — và cái còn lại là câu §9 cố ý
+    // giữ (xem bài kế tiếp). Trần 3 để hai gói đang chạy song song còn chỗ xoay.
+    const TRAN = 3;
+    const tong = MAN_DA_DON_CHU.reduce((n, f) => n + cauDaiTrenMan(readComponent(f)).length, 0);
+    expect(tong, `câu dài đang là ${tong}, trần cho phép ${TRAN}`).toBeLessThanOrEqual(TRAN);
+  });
+
+  it("câu dài DUY NHẤT còn lại là câu hợp đồng §9, và nó được phép dài", () => {
+    // Đây là ngoại lệ CÓ TÊN, không phải chỗ sót. DESIGN-GUIDELINES §9 chốt nguyên văn dòng
+    // dành cho cô chủ nhiệm trong thẻ "Ai thấy gì của mình?" và bắt "tầng màn hình in ĐÚNG
+    // chữ này". Dòng đó dài vì nó phải tách làm hai ý (cô KHÔNG đọc được cảm xúc · cô VẪN
+    // biết em cần được để ý) — gộp lại cho ngắn là nói quá hoặc nói thiếu, và §9 gọi cả hai
+    // là nói dối. §1.5 nhường §9 ở đúng một chỗ này, và chỗ đó phải nêu đích danh để lần
+    // dọn sau không ai "tiện tay" cắt nó cho tròn con số.
+    // Mốc nhận dạng là ĐUÔI của dòng đó, không phải cụm "cần được để ý": cụm ấy nằm trong
+    // <b>…</b> nên nó CẮT đoạn chữ làm đôi, và mảnh dài còn lại không chứa nó. Đây đúng cái
+    // bẫy mà phép đo `>…<` hay sập — nó đo mảnh chữ, không đo câu.
+    // "biết vậy thôi, không biết con đã ghi gì" là nguyên văn §9, và §9 gọi nó là câu quan
+    // trọng nhất cả khối (nó vẽ ranh giới để em khỏi phải thử mới biết).
+    const cauDai = MAN_DA_DON_CHU.flatMap((f) => cauDaiTrenMan(readComponent(f)));
+    for (const cau of cauDai) {
+      expect(cau, `câu dài chưa được §9 miễn: "${cau.slice(0, 70)}…"`).toMatch(
+        /biết vậy thôi, không biết con đã ghi gì/,
+      );
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 2. Nhãn tuần: ngày của máy phải đổi thành ngày của người
 // ---------------------------------------------------------------------------
 

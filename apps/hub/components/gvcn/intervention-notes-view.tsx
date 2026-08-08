@@ -102,16 +102,22 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
         <EmptyState
           icon="school"
           title="Thầy cô chưa được phân công chủ nhiệm lớp nào"
-          hint="Ghi chú can thiệp gắn với một lớp cụ thể — chưa có lớp thì chưa có gì để ghi."
+          hint="Ghi chú can thiệp gắn với một lớp cụ thể."
         />
       ) : (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <Card className="min-w-0 flex-1 basis-[420px]">
-            <div className="text-[15px] font-black text-navy">Ghi một việc vừa làm</div>
-            <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
-              Ghi lại việc CON NGƯỜI đã làm với em. Có dòng ở đây thì hồ sơ không còn là "đo rồi để đó",
-              và đồng hồ nhắc 7 ngày được đặt lại.
-            </p>
+            {/* <h2> chứ không phải <div>: <h1> của trang do GvcnShell đặt, và hai thẻ của
+                màn này là hai mục ngang cấp dưới nó. Trước hôm nay trình đọc màn hình
+                nghe hết cả màn mà không có mốc nào để nhảy giữa hai nửa "ghi" và "đọc".
+                Cỡ chữ, màu, khoảng cách giữ nguyên từng pixel — đổi THẺ, không đổi thiết kế. */}
+            {/* GỠ 06/08/2026 câu "Ghi lại việc CON NGƯỜI đã làm với em. Có dòng ở đây thì
+                hồ sơ không còn là "đo rồi để đó", và đồng hồ nhắc 7 ngày được đặt lại."
+                Vế đầu lặp lại tiêu đề ngay trên nó. Vế sau là CƠ CHẾ (đồng hồ leo thang
+                được reset) — đúng thứ luật cắt gọi tên, và nó còn viết chết con số 7 ngày
+                trong khi ngưỡng đọc từ `care.thresholds` (mệnh lệnh 7). Luật không đổi:
+                mỗi dòng vẫn reset đồng hồ, vẫn theo ngưỡng của bảng. */}
+            <h2 className="text-[15px] font-black text-navy">Ghi một việc vừa làm</h2>
 
             {/* BA TRẠNG THÁI CỦA Ô CHỌN EM, ba câu khác nhau (sửa 01/08/2026).
 
@@ -128,7 +134,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                 tế bằng ErrorState + nút thử lại ở cột phải. Một nửa màn nói thật, nửa kia
                 im lặng. */}
             <label className="mt-3.5 block">
-              <span className="text-[11.5px] font-extrabold text-[#33507C]">Học sinh</span>
+              <span className="text-[11.5px] font-extrabold text-cardtitle2">Học sinh</span>
               <select
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
@@ -159,8 +165,13 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
             )}
 
             <div className="mt-3">
-              <span className="text-[11.5px] font-extrabold text-[#33507C]">Việc đã làm</span>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <span className="text-[11.5px] font-extrabold text-cardtitle2">Việc đã làm</span>
+              {/* role="group" + aria-label: bốn nút này khai `aria-pressed`, tức mỗi nút tự
+                  nói "đang chọn / không chọn" — nhưng chúng nằm trong một <div> trơn, nên
+                  trình đọc màn hình đọc bốn nút rời rạc, không nói được chúng là BỐN LỰA
+                  CHỌN CỦA CÙNG MỘT CÂU HỎI. Chữ "Việc đã làm" ngay trên chỉ dành cho mắt.
+                  Cùng mẫu đã dùng cho bốn nút trạng thái ở class-attendance-view. */}
+              <div role="group" aria-label="Việc đã làm" className="mt-1.5 flex flex-wrap gap-1.5">
                 {QUICK_ACTIONS.map((a) => (
                   <button
                     key={a}
@@ -170,7 +181,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                     className={
                       action === a
                         ? "min-h-[44px] rounded-full bg-navy px-4 py-1.5 text-[11.5px] font-black text-white"
-                        : "min-h-[44px] rounded-full border border-line bg-white px-4 py-1.5 text-[11.5px] font-bold text-[#33507C] hover:bg-[#F5F8FC]"
+                        : "min-h-[44px] rounded-full border border-line bg-white px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-[#F5F8FC]"
                     }
                   >
                     {a}
@@ -182,7 +193,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                 onChange={(e) => setAction(e.target.value)}
                 maxLength={200}
                 aria-label="Việc đã làm"
-                className="mt-2 min-h-[44px] w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
+                className="mt-2 min-h-[44px] w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
               />
               {/* Ghi rõ ranh giới của cái nút: nó ghi nhật ký, nó không chuyển việc.
                   Không có câu này thì "đã trao đổi" dễ bị đọc thành "đã bàn giao". */}
@@ -191,21 +202,28 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                   <span className="msr mt-[1px] flex-none text-[15px]" aria-hidden>
                     info
                   </span>
-                  Dòng này chỉ vào nhật ký của lớp. Hệ thống chưa có đường chuyển tuyến — tâm lý cụm không nhận
-                  được thông báo nào, thầy cô vẫn phải báo trực tiếp.
+                  {/* RÚT NGẮN 06/08/2026, KHÔNG BỎ. Câu này là ranh giới của cái nút:
+                      không có nó, "đã trao đổi với tâm lý cụm" bị đọc thành "đã bàn giao",
+                      và với một em vừa bấm "cần gặp thầy cô" thì hiểu nhầm đó là im lặng
+                      đúng lúc không được phép im. Bốn từ nói đủ chừng đó. */}
+                  Chỉ ghi nhật ký — không chuyển tuyến.
                 </p>
               )}
             </div>
 
-            <label className="mt-3 block">
-              <span className="text-[11.5px] font-extrabold text-[#33507C]">Ghi chú (không bắt buộc)</span>
+            {/* <label htmlFor> thật, không chỉ là <label> bọc ngoài (mẫu: help-request-view).
+                Bọc ngoài đúng theo chuẩn HTML, nhưng nối bằng id thì còn sống sót qua lần
+                sửa bố cục sau — chỉ cần ai đó tách ô ra khỏi khung là nhãn đứt lặng lẽ. */}
+            <label className="mt-3 block" htmlFor="ghi-chu-can-thiep">
+              <span className="text-[11.5px] font-extrabold text-cardtitle2">Ghi chú (không bắt buộc)</span>
               <textarea
+                id="ghi-chu-can-thiep"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={3}
                 maxLength={2000}
                 placeholder="Nội dung ngắn gọn, đủ để lần sau đọc lại còn hiểu…"
-                className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
+                className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
               />
             </label>
 
@@ -237,7 +255,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
           </Card>
 
           <Card className="min-w-0 flex-1 basis-[420px]">
-            <div className="text-[15px] font-black text-navy">Nhật ký của lớp</div>
+            <h2 className="text-[15px] font-black text-navy">Nhật ký của lớp</h2>
             {logQuery.error ? (
               <div className="mt-2">
                 <ErrorState error={logQuery.error} label="nhật ký can thiệp" onRetry={() => logQuery.refetch()} />
@@ -247,15 +265,17 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
             ) : rows.length === 0 ? (
               <EmptyState
                 icon="edit_note"
-                title="Chưa có ghi chú nào cho lớp này"
-                hint="Trống ở đây nghĩa là chưa ai ghi việc gì — không phải mất dữ liệu."
+                // CẮT hint "Trống ở đây nghĩa là chưa ai ghi việc gì — không phải mất dữ
+                // liệu": tiêu đề đã nói đúng chừng đó, và nhánh mất dữ liệu có ErrorState
+                // riêng ngay phía trên nên hiểu nhầm được thiết kế chặn rồi.
+                title="Chưa ai ghi ghi chú nào cho lớp này"
               />
             ) : (
               <ul className="mt-3 flex flex-col gap-3">
                 {rows.map((r) => (
                   <li key={r.interventionId} className="flex items-start gap-2.5">
                     <span
-                      className={`mt-[6px] h-2 w-2 flex-none rounded-full ${r.caseStatus === "open" ? "bg-[#2C7BF2]" : "bg-[#C9D2DE]"}`}
+                      className={`mt-[6px] h-2 w-2 flex-none rounded-full ${r.caseStatus === "open" ? "bg-[#2C7BF2]" : "bg-line2"}`}
                       aria-hidden
                     />
                     <div className="min-w-0">

@@ -15,11 +15,17 @@ const TILE_GRADIENT: Record<string, string> = {
 export function MiniAppTile({ tile }: { tile: MiniAppTileType }) {
   if (!tile.available) {
     return (
-      <div className="flex flex-col items-center gap-1.5 opacity-40">
+      <div className="flex flex-col items-center gap-1.5">
         {/* aria-hidden cho icon: nội dung DOM của .msr là chữ thô ("insights"...), font chỉ
             đổi hình chứ không đổi nội dung — không ẩn thì trình đọc màn hình đọc "insights
             Báo cáo". Nhãn app nằm ngay dưới, không mất thông tin gì (WCAG 1.1.1). */}
-        <span aria-hidden="true" className="flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl bg-[#E9ECF2]">
+        {/* MỜ CHỈ Ô ICON, KHÔNG MỜ CẢ KHỐI. `opacity-40` đặt ở thẻ cha kéo theo cả nhãn chữ:
+            #2A3444 trên nền trang đo được 12,55:1 tụt còn 2,21:1 — dưới chuẩn 4,5:1, và tụt
+            đúng ở chỗ mang thông tin (tên app), không phải ở chỗ trang trí.
+            DESIGN-GUIDELINES §3 muốn `opacity:.45` cho app chưa mở, §11 nói tương phản chữ
+            không có ngoại lệ. Hai điều đó chỉ mâu thuẫn khi mờ cả khối: giữ tín hiệu "chưa
+            mở" cho MẮT bằng ô icon mờ, giữ chữ đặc màu cho người đọc chữ. */}
+        <span aria-hidden="true" className="flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl bg-[#E9ECF2] opacity-45">
           {tile.iconImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- logo app ngoài, kích thước cố định nhỏ
             <img src={tile.iconImageUrl} alt="" className="h-full w-full object-cover" />

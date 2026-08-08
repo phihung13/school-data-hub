@@ -26,6 +26,7 @@ import {
   verifyDevSecret,
 } from "@hub/core/auth-adapter";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFrom } from "@/lib/client-ip";
 import { log } from "@/lib/logger";
 
 const Body = z.object({ secret: z.string().min(1).max(256) });
@@ -38,15 +39,10 @@ const NOT_CONFIGURED =
 /** MỘT thông điệp cho mọi kiểu sai, cùng lý do với /api/auth/invite: đừng dạy người dò. */
 const DENY = "Mã mở khoá không đúng.";
 
-/**
- * IP thật sau đường hầm: chặng đầu của `x-forwarded-for` (cloudflared đặt header này).
- * Không đọc được thì gom vào một xô chung — thà siết nhầm còn hơn để giấu IP là thoát.
- * Đây CHỈ dùng để đếm số lần thử, KHÔNG dùng để cấp quyền (xem ghi chú đầu file).
- */
-function clientIp(req: NextRequest): string {
-  const first = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return first || req.headers.get("x-real-ip") || "loopback";
-}
+// IP đọc từ `lib/client-ip.ts`, KHÔNG còn bản riêng ở đây (07/08/2026): route này và
+// `/api/auth/dev-login` nay tiêu CHUNG một ngân sách đoán `dev-gate:<ip>`, và ngân sách
+// chung chỉ đúng khi hai bên tính ra cùng một chuỗi. Lý lẽ đầy đủ ở đầu file đó.
+const clientIp = clientIpFrom;
 
 function credentialsOf(req: NextRequest) {
   return {

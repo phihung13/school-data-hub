@@ -52,7 +52,12 @@ const MOOD_NAME: Record<MoodValue, string> = { 4: "Vui", 3: "Bình thường", 2
 const MOOD_DOT: Record<MoodValue, string> = { 4: "#00C96F", 3: "#2C7BF2", 2: "#F5A300", 1: "#F0474D" };
 const GLOW_BG: Record<string, string> = { green: "bg-[#F6FEF9]", blue: "bg-[#F6FAFF]", amber: "bg-[#FFFBF2]" };
 const GLOW_ICON_BG: Record<string, string> = { green: "bg-[#E3F8ED]", blue: "bg-[#E2F0FC]", amber: "bg-[#FFF1C9]" };
-const GLOW_ICON_COLOR: Record<string, string> = { green: "text-[#00A05F]", blue: "text-[#2C7BF2]", amber: "text-[#E8940D]" };
+// Mỗi màu icon đo trên ĐÚNG nền ô của nó (GLOW_ICON_BG cùng khoá), mốc 3:1 của WCAG 1.4.11:
+//   green #00A05F trên #E3F8ED = 3,05:1 · blue #2C7BF2 trên #E2F0FC = 3,47:1 — giữ nguyên.
+//   amber #E8940D trên #FFF1C9 = 2,15:1 — trượt, nay là #8A5A00 (gold-textDark) = 5,93:1.
+// Đây là chỗ thứ hai của chính mã #E8940D: lần sửa 01/08 chỉ chạm được ô "Gửi muộn" ở
+// /diem-danh vì sáu chỗ còn lại nằm trong file người sửa không mở ra. (05/08/2026)
+const GLOW_ICON_COLOR: Record<string, string> = { green: "text-[#00A05F]", blue: "text-[#2C7BF2]", amber: "text-gold-textDark" };
 const GLOW_ICON: Record<string, string> = { green: "event_available", blue: "pool", amber: "menu_book" };
 
 export function ThisWeekView({
@@ -251,11 +256,18 @@ export function ThisWeekView({
                         cảm xúc" theo nghĩa của §9 và phải mang đúng nhãn đã chốt. Câu chốt
                         ghép thẳng từ hằng số dùng chung (ui/labels.ts) thay vì chép tay:
                         câu này đã sai một lần đúng theo kiểu đó — nó vẫn hứa "thầy cô chủ
-                        nhiệm xem" sau khi ADR-026/migration 0044 cắt hẳn quyền đọc của cô. */}
-                    <p className="mt-3 text-[11.5px] leading-relaxed text-caption">
-                      Cảm xúc là chuyện riêng của con. {NHAN_AI_DOC_CAM_XUC}, để biết khi nào con
-                      cần giúp.
-                    </p>
+                        nhiệm xem" sau khi ADR-026/migration 0044 cắt hẳn quyền đọc của cô.
+
+                        CẮT 06/08/2026 (§1.5 "ít chữ — hình thể thay lời nói"): bỏ hai vế bọc
+                        quanh nhãn — "Cảm xúc là chuyện riêng của con." (nói lại đúng điều mà
+                        chính chữ "Chỉ … đọc" đã nói) và "để biết khi nào con cần giúp" (biện
+                        minh cho quyền đọc, em không cần đọc câu đó để làm gì cả). Còn lại là
+                        ĐÚNG hằng số §9 + icon `lock`, cùng hình dạng với hai chỗ in nhãn ở
+                        /checkin — ba màn nay nói một câu, trông cũng như nhau. */}
+                    <div className="mt-3 flex items-center gap-1">
+                      <span aria-hidden className="msr text-[13px] text-caption">lock</span>
+                      <span className="text-[11.5px] text-caption">{NHAN_AI_DOC_CAM_XUC}</span>
+                    </div>
                   </div>
 
                   <Link
@@ -266,9 +278,11 @@ export function ThisWeekView({
                     <div className="relative text-[15px] font-black text-navy">
                       Báo cáo Trưởng thành · {formatWeekLabel(report.data.report.weekLabel)}
                     </div>
-                    <p className="relative mt-1 text-[12px] leading-relaxed text-gold-text">
-                      Bản đầy đủ thầy cô gửi bố mẹ — con xem trước được.
-                    </p>
+                    {/* CẮT 06/08/2026 (§1.5): "Bản đầy đủ thầy cô gửi bố mẹ — con xem trước
+                        được." Vế "con xem trước được" là mô tả lại chính cái nút ngay dưới
+                        ("Mở báo cáo"), tức chữ nói lại việc mà hình đã nói. Giữ đúng thông
+                        tin em chưa biết: bản này còn đi tới bố mẹ. */}
+                    <p className="relative mt-1 text-[12px] text-gold-text">Bản đầy đủ gửi bố mẹ</p>
                     <span className="relative mt-3 inline-flex items-center gap-1.5 rounded-full bg-navy px-4 py-2 text-[12px] font-black text-white">
                       Mở báo cáo
                       <span aria-hidden="true" className="msr text-[16px] text-gold">arrow_forward</span>

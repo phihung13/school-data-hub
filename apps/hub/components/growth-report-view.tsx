@@ -24,7 +24,7 @@ import { mondayOf, toLocalIsoDate } from "@/lib/date";
 import { useIsDesktop } from "@/lib/viewport";
 import { formatWeekLabel } from "@/lib/week-label";
 import { Mascot } from "./mascot";
-import { PageShell } from "./page-shell";
+import { MainContent, PageShell } from "./page-shell";
 import { HubSidebar } from "./hub-sidebar";
 import { HubTabBar } from "./tab-bar";
 import { ErrorState, LoadingState } from "./ui/query-state";
@@ -65,11 +65,17 @@ const GLOW_ICON_COLOR: Record<"green" | "blue" | "amber", string> = {
  * trường CHƯA GHI NHẬN ngày nào (thì chưa có gì để nói — im lặng không phải kết luận).
  * Trước đây cả hai cùng nhận câu "tuần sau cùng cố gắng nhé", tức là đoán tin không
  * vui từ chỗ trống — đúng thứ phụ huynh sẽ hiểu thành "con học kém tuần này".
+ *
+ * RÚT NGẮN 06/08/2026 (§1.5). HAI CÂU VẪN LÀ HAI CÂU — đó là cả lý do hàm này tồn tại,
+ * và nó không đổi. Cái bị cắt là hai cái đuôi:
+ *   · "— chưa có gì để kể, không phải tuần không tốt": biện minh cho chỗ thiếu dữ liệu.
+ *     Đúng thể văn mà §1.5 gọi là chữ thừa, và tự nó gieo cái ý mà nó đang chối.
+ *   · "— tuần sau cùng cố gắng nhé!": lời động viên, không mang dữ liệu nào.
  */
 function glowEmptyMessage(report: Report): string {
   return report.checkinDaysThisWeek === 0
-    ? "Tuần này chưa có dữ liệu điểm danh — chưa có gì để kể, không phải tuần không tốt."
-    : "Tuần này chưa có mục nào nổi bật — tuần sau cùng cố gắng nhé!";
+    ? "Tuần này chưa có dữ liệu điểm danh."
+    : "Tuần này chưa có mục nào nổi bật.";
 }
 
 function mondayOffsetIso(weeksFromNow: number): string {
@@ -135,13 +141,19 @@ export function GrowthReportView({
       <div className="flex w-[240px] flex-none">
         <HubSidebar roles={effectiveRoles} active="report" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <DesktopReport
-        report={report}
-        isStudent={isStudent}
-        weekOffset={weekOffset}
-        onPrevWeek={() => setWeekOffset((w) => w - 1)}
-        onNextWeek={() => setWeekOffset((w) => w + 1)}
-      />
+      {/* Nhánh desktop trước đây trả về <div> trần: /bao-cao trên máy tính KHÔNG có landmark
+          nào, nên đường tắt "Bỏ qua menu" ở đầu trang bấm xong không đi tới đâu. Bản mobile
+          đã có <main> sẵn nhờ <PageShell>, và hai nhánh loại trừ nhau (useIsDesktop) nên
+          không bao giờ có hai id "noi-dung" cùng lúc. Menu trái ở NGOÀI. */}
+      <MainContent className="flex min-w-0 flex-1 overflow-hidden">
+        <DesktopReport
+          report={report}
+          isStudent={isStudent}
+          weekOffset={weekOffset}
+          onPrevWeek={() => setWeekOffset((w) => w - 1)}
+          onNextWeek={() => setWeekOffset((w) => w + 1)}
+        />
+      </MainContent>
     </div>
   );
 }
@@ -170,7 +182,9 @@ function MobileReport({
           style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.55), rgba(255,198,41,.06) 72%)" }}
         />
         <div className="relative">
-          <div className="text-[17px] font-black text-white">Báo cáo Trưởng thành</div>
+          {/* Tiêu đề trang thật, không phải chữ to: màn này không có <h1> nào, nên trình
+              đọc màn hình mở link Zalo ra không biết đang đứng ở đâu. Giữ nguyên class. */}
+          <h1 className="text-[17px] font-black text-white">Báo cáo Trưởng thành</h1>
           <div className="mt-0.5 text-[11px] text-[#D6E6FF]">
             {report.studentName} · {report.className} · {formatWeekLabel(report.weekLabel)}
           </div>
@@ -190,8 +204,8 @@ function MobileReport({
 
       <div className="flex flex-col gap-3 px-4 pb-8 pt-4">
         <div className="flex items-center gap-2">
-          <span className="msr text-[17px] text-gold-dark">sunny</span>
-          <span className="text-[13.5px] font-black text-navy">Tỏa sáng (Glow)</span>
+          <span aria-hidden="true" className="msr text-[17px] text-gold-dark">sunny</span>
+          <h2 className="text-[13.5px] font-black text-navy">Tỏa sáng (Glow)</h2>
         </div>
         {report.glow.length === 0 && (
           <p className="text-[12px] text-muted">{glowEmptyMessage(report)}</p>
@@ -217,6 +231,10 @@ function MobileReport({
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] font-black text-navy">{item.title}</div>
+              {/* ĐO LẠI 05/08/2026, KHÔNG ĐỔI: token muted2 vừa nâng lên #5F6B7D, nên chi
+                  tiết Glow trên ba nền thẻ đạt 5,16:1 (#F6FAFF) · 5,23:1 (#FFFBF2) ·
+                  5,27:1 (#F6FEF9). Trước lần nâng đó nó là 4,33–4,42:1. Không hạ xuống
+                  text-caption nữa: hai token nay cùng một mã màu, đổi chỉ là đổi tên. */}
               <div className="mt-0.5 text-[11px] text-muted2">{item.detail}</div>
             </div>
           </div>
@@ -225,8 +243,8 @@ function MobileReport({
         {report.grow.length > 0 && (
           <>
             <div className="mt-2 flex items-center gap-2">
-              <span className="msr text-[17px] text-domain-studyDark">psychiatry</span>
-              <span className="text-[13.5px] font-black text-navy">Đang lớn lên (Grow)</span>
+              <span aria-hidden="true" className="msr text-[17px] text-domain-studyDark">psychiatry</span>
+              <h2 className="text-[13.5px] font-black text-navy">Đang lớn lên (Grow)</h2>
             </div>
             {report.grow.map((item, i) => (
               <div key={i} className="rounded-2xl bg-white p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)]">
@@ -276,26 +294,26 @@ function DesktopReport({
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
       <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
         <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-[#9D6BFF] to-[#7434E8]">
-          <span className="msr text-[19px] text-white">workspace_premium</span>
+          <span aria-hidden="true" className="msr text-[19px] text-white">workspace_premium</span>
         </span>
         <div className="flex-1">
-          <div className="text-[16px] font-black text-ink">Báo cáo Trưởng thành</div>
+          <h1 className="text-[16px] font-black text-ink">Báo cáo Trưởng thành</h1>
           <div className="text-[11.5px] text-caption">{formatWeekLabel(report.weekLabel)}</div>
         </div>
         <button
           onClick={onPrevWeek}
-          className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:border-[#C9D6E6]"
+          className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
         >
-          <span className="msr text-[17px] text-[#5B6B80]">chevron_left</span>
+          <span aria-hidden="true" className="msr text-[17px] text-subtle">chevron_left</span>
           Tuần trước
         </button>
         {weekOffset < 0 && (
           <button
             onClick={onNextWeek}
-            className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:border-[#C9D6E6]"
+            className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
           >
             Tuần sau
-            <span className="msr text-[17px] text-[#5B6B80]">chevron_right</span>
+            <span aria-hidden="true" className="msr text-[17px] text-subtle">chevron_right</span>
           </button>
         )}
       </div>
@@ -316,12 +334,17 @@ function DesktopReport({
                   {report.glow.length} điều con đang tỏa sáng · {report.grow.length} điều con đang lớn lên.
                 </div>
               </div>
+              {/* Hai thẻ số liệu này nằm ở đầu SÁNG của hero (#1E5FB8) y hệt ba thẻ trên
+                  trang chủ, và mắc đúng một lỗi: `bg-white/15` làm sáng chỗ đó thêm lần
+                  nữa, nhãn #C7D8F0 chỉ còn 3,12:1 và số vàng 2,88:1. Nền navy pha 70%
+                  (kết quả ≈ #103A79) đưa nhãn lên 7,62:1, số vàng 7,02:1, số trắng
+                  11,03:1 — vẫn là thẻ nổi trên hero, chỉ nổi bằng tối thay vì sáng. */}
               <div className="relative flex gap-2.5">
-                <div className="rounded-2xl border border-white/15 bg-white/15 px-[18px] py-3.5 text-center">
+                <div className="rounded-2xl border border-white/15 bg-navy/70 px-[18px] py-3.5 text-center">
                   <div className="text-[22px] font-black text-gold">{report.checkinDaysThisWeek}/5</div>
                   <div className="mt-0.5 text-[10px] font-bold text-[#C7D8F0]">ngày đến lớp</div>
                 </div>
-                <div className="rounded-2xl border border-white/15 bg-white/15 px-[18px] py-3.5 text-center">
+                <div className="rounded-2xl border border-white/15 bg-navy/70 px-[18px] py-3.5 text-center">
                   <div className="text-[22px] font-black text-white">{report.streakDays}</div>
                   <div className="mt-0.5 text-[10px] font-bold text-[#C7D8F0]">chuỗi check-in</div>
                 </div>
@@ -330,8 +353,8 @@ function DesktopReport({
 
             <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
               <div className="flex items-center gap-2">
-                <span className="msr text-[21px] text-[#F5A300]">sunny</span>
-                <span className="text-[17px] font-black text-navy">Tỏa sáng (Glow)</span>
+                <span aria-hidden="true" className="msr text-[21px] text-[#F5A300]">sunny</span>
+                <h2 className="text-[17px] font-black text-navy">Tỏa sáng (Glow)</h2>
               </div>
               <div className="mt-4 flex flex-col gap-3">
                 {report.glow.length === 0 && (
@@ -358,8 +381,8 @@ function DesktopReport({
             {report.grow.length > 0 && (
               <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
                 <div className="flex items-center gap-2">
-                  <span className="msr text-[21px] text-[#00A05F]">psychiatry</span>
-                  <span className="text-[17px] font-black text-navy">Đang lớn lên (Grow)</span>
+                  <span aria-hidden="true" className="msr text-[21px] text-[#00A05F]">psychiatry</span>
+                  <h2 className="text-[17px] font-black text-navy">Đang lớn lên (Grow)</h2>
                 </div>
                 <div className="mt-4 flex flex-wrap items-start gap-4">
                   <Mascot pose="think" width={56} />
@@ -397,7 +420,7 @@ function DesktopReport({
                 ) : guardians.data?.length ? (
                   guardians.data.map((g, i) => (
                     <div key={i} className="flex items-center gap-2.5">
-                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-[#ECE7DD] text-[12.5px] font-black text-[#7D6A3A]">
+                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-[#FFF1C9] text-[12.5px] font-black text-gold-text">
                         {g.full_name.trim().slice(0, 1).toUpperCase() || "?"}
                       </span>
                       <div className="min-w-0 flex-1 text-[12.5px] font-bold text-ink">{g.full_name}</div>
@@ -409,10 +432,19 @@ function DesktopReport({
               </div>
             </div>
             )}
-            <div className="flex items-start gap-2.5 rounded-[20px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-[18px]">
-              <span className="msr flex-none text-[19px] text-[#E8940D]">verified_user</span>
-              <span className="text-[12px] font-semibold leading-relaxed text-[#8A5A00]">
-                Báo cáo chỉ nói về điều con làm được và điều con đang tập — không có xếp hạng, không so sánh với bạn khác.
+            {/* RÚT NGẮN 06/08/2026 (§1.5). Câu cũ 105 ký tự, và nửa đầu của nó ("chỉ nói về
+                điều con làm được và điều con đang tập") chỉ mô tả lại hai khối Glow/Grow mà
+                phụ huynh vừa đọc xong ngay bên trái. Nửa sau là thứ họ KHÔNG đọc được ở đâu
+                khác — cái báo cáo này cố ý không làm — nên nó ở lại, dưới dạng hai chip. */}
+            <div className="flex flex-wrap items-center gap-2 rounded-[20px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-[18px]">
+              <span aria-hidden="true" className="msr flex-none text-[19px] text-gold-textDark">verified_user</span>
+              <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11.5px] font-black text-gold-textDark">
+                <span aria-hidden="true" className="msr text-[14px]">block</span>
+                Không xếp hạng
+              </span>
+              <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11.5px] font-black text-gold-textDark">
+                <span aria-hidden="true" className="msr text-[14px]">block</span>
+                Không so sánh với bạn
               </span>
             </div>
           </div>

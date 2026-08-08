@@ -105,8 +105,63 @@ export const PendingLateCheckin = z.object({
   studentId: z.string().uuid(),
   studentName: z.string(),
   occurredOn: z.string(),
+  // GIỜ GỬI, thêm 06/08/2026. Cột `attendance.checkins.occurred_at` có từ 0004 nhưng buồng
+  // lái chưa bao giờ đọc nó, nên cô chỉ thấy "1 check-in gửi muộn" mà không biết em bấm lúc
+  // mấy giờ — trong khi đó chính là dữ kiện để quyết định có xác nhận hay không (bấm lúc
+  // 07:55 khác hẳn bấm lúc 10:20). Chuỗi "HH:MM" giờ địa phương, máy chủ đã đổi múi giờ.
+  occurredAtTime: z.string(),
 });
 export type PendingLateCheckin = z.infer<typeof PendingLateCheckin>;
+
+/**
+ * Ba kết luận cô có thể ghi cho một check-in gửi muộn.
+ *
+ * `absent` là quyết định MỚI ngày 06/08/2026 (ADR-029) và nó sửa một điều đã chốt: ADR-007
+ * cấm GVCN chuyển thẳng sang `absent` với lý lẽ "gửi muộn ≠ vắng". Lý lẽ đó vẫn đúng ở chỗ
+ * nó sinh ra — MÁY không được tự suy ra vắng từ việc gửi muộn. Cái ADR-029 mở là quyền của
+ * một CON NGƯỜI biết chuyện gì đã xảy ra trong lớp mình: cô nhìn thấy chỗ ngồi trống, và
+ * hôm nay cô không có cách nào ghi lại điều đó ngoài việc mở CSDL lên sửa tay.
+ *
+ * Đổi lại, mở quyền thì phải mở kèm sổ: mọi kết luận khác `present` đều BẮT BUỘC có lý do
+ * và được ghi vào `attendance.late_decisions` (ai · lúc nào · từ trạng thái nào sang trạng
+ * thái nào · vì sao). Quyền không có vết là quyền không ai soát được.
+ */
+export const LATE_DECISIONS = ["present", "late", "absent"] as const;
+export const LateDecision = z.enum(LATE_DECISIONS);
+export type LateDecision = z.infer<typeof LateDecision>;
+
+/** Nhãn tiếng Việt dùng chung cho nút bấm và cho sổ — không chép tay ở từng màn. */
+export const LATE_DECISION_LABEL: Record<LateDecision, string> = {
+  present: "Có mặt",
+  late: "Đi muộn",
+  absent: "Vắng",
+};
+
+export const DecideLateCheckinsInput = z
+  .object({
+    // Trần 60: một GVCN có tối đa ~45 em; con số này chặn một lệnh quét cả trường lọt qua
+    // vì lỗi phía client, chứ không phải để hạn chế cô.
+    checkinIds: z.array(z.string().uuid()).min(1).max(60),
+    decision: LateDecision,
+    reason: z.string().trim().min(3).max(300).optional(),
+    // §9 idempotency: gửi lại cùng mã = cùng một quyết định, không phải quyết định thứ hai.
+    clientMutationId: z.string().uuid().optional(),
+  })
+  .refine((v) => v.decision === "present" || (v.reason?.length ?? 0) >= 3, {
+    // Bắt ở TẦNG HỢP ĐỒNG chứ không chỉ ở ô nhập: một màn hình khác gọi thẳng API vẫn phải
+    // đưa lý do. Ràng buộc tương ứng còn được database canh lần nữa (0053).
+    message: "Phải ghi lý do khi kết luận khác 'Có mặt'",
+    path: ["reason"],
+  });
+export type DecideLateCheckinsInput = z.infer<typeof DecideLateCheckinsInput>;
+
+export const DecideLateCheckinsOutput = z.object({
+  /** Số dòng THẬT SỰ đổi trạng thái trong lượt này. */
+  updated: z.number().int().min(0),
+  /** Số dòng bỏ qua vì không còn ở `queued_late` (ai đó đã xử trước, hoặc gọi lại lần hai). */
+  skipped: z.number().int().min(0),
+});
+export type DecideLateCheckinsOutput = z.infer<typeof DecideLateCheckinsOutput>;
 
 /**
  * Vì sao buồng lái GVCN KHÔNG còn ô "Cảm xúc lớp hôm nay".
@@ -600,10 +655,103 @@ export const ListReportApprovalsOutput = z.object({
 });
 export type ListReportApprovalsOutput = z.infer<typeof ListReportApprovalsOutput>;
 
+/**
+ * Hai quyết định GVCN ký được trên một Báo cáo Trưởng thành.
+ *
+ * `pending` KHÔNG có mặt ở đây, và đó là ranh giới giữa hai khái niệm: `ReportApprovalStatus`
+ * là TRẠNG THÁI đọc ra từ sổ (gồm cả "chưa ai quyết"), còn tập này là những thứ một con
+ * người ký được. Cho phép ký `pending` là dựng một đường "rút chữ ký" không ai định nghĩa
+ * hậu quả — báo cáo đã gửi phụ huynh rồi thì đưa dòng sổ về `pending` không gọi nó về.
+ */
+export const REPORT_DECISIONS = ["approved", "rejected"] as const;
+export const ReportDecision = z.enum(REPORT_DECISIONS);
+export type ReportDecision = z.infer<typeof ReportDecision>;
+
+/** Nhãn tiếng Việt dùng chung cho nút bấm và cho câu xác nhận — không chép tay ở từng màn. */
+export const REPORT_DECISION_LABEL: Record<ReportDecision, string> = {
+  approved: "Duyệt gửi phụ huynh",
+  rejected: "Trả lại",
+};
+
+/**
+ * Duyệt / trả lại báo cáo của NHIỀU em trong một lời gọi (06/08/2026).
+ *
+ * Cùng hình dạng với `DecideLateCheckinsInput` (ADR-029) và cố ý: hai màn của cùng một cô
+ * làm cùng một việc — chọn vài em, chọn một kết luận, ghi. Hai hình dạng khác nhau cho
+ * cùng một thao tác là hai chỗ để client lệch nhau.
+ *
+ * ── `ghiDeQuyetDinhDaCo` — ĐƯỜNG SỬA, ADR-031 (06/08/2026) ────────────────────
+ * Mặc định `false`: thủ tục chỉ chạm dòng CHƯA ai quyết. Đó là hàng rào, không phải một
+ * hạn chế tạm — "Chọn tất cả" trên một màn đã cũ vài phút sẽ ôm theo cả những em đồng
+ * nghiệp vừa trả lại, và một cú bấm không được lật ngược chữ ký người khác.
+ *
+ * Bật `true` là một hành động KHÁC, khai riêng: đè lên `approved`/`rejected` đã ký. Cờ
+ * phải tường minh vì đây là sửa một thứ ĐÃ GỬI RA NGOÀI NHÀ TRƯỜNG — và ADR-031 ghi thẳng
+ * giới hạn: sổ vết trả lời được "ai đổi, lúc nào, vì sao", KHÔNG trả lời được "phụ huynh
+ * đã đọc bản nào". Không ai được tưởng sổ vết là bảo hiểm.
+ *
+ * Cờ bật thì lý do BẮT BUỘC, kể cả khi `decision` là `approved`. Đổi một chữ ký đã gửi
+ * sang "đã duyệt" cũng là đổi — miễn lý do cho nhánh đó là mở lại đúng cửa mà cả điều
+ * khoản này sinh ra để đóng.
+ *
+ * ── §9 ─────────────────────────────────────────────────────────────────────────
+ * `clientMutationId` NAY ĐƯỢC LƯU: `report.report_decisions` (0054, ADR-031) có cột +
+ * unique một phần `(student_id, week_start, client_mutation_id)`. Trước 0054 trường này
+ * nhận vào mà không có chỗ ghi, và chống trùng chỉ dựa vào khoá `(student_id, week_start)`
+ * cộng điều kiện "chỉ ghi lên dòng chưa ai quyết" — đủ cho đường mặc định nhưng KHÔNG đủ
+ * cho đường ghi đè, vì ở đó không còn điều kiện trạng thái nào để chặn lượt thứ hai.
+ */
+export const DecideReportsInput = z
+  .object({
+    classId: z.string().uuid().optional(),
+    // Trần 60 = trần của `MarkAttendanceInput` và `DecideLateCheckinsInput`: một GVCN có
+    // tối đa ~45 em. Con số này chặn một lệnh quét cả trường lọt qua vì lỗi phía client.
+    studentIds: z.array(z.string().uuid()).min(1).max(60),
+    weekStart: IsoDate,
+    decision: ReportDecision,
+    note: z.string().trim().min(3).max(2000).optional(),
+    /** ADR-031 — đè lên quyết định ĐÃ KÝ. Mặc định `false`; bật thì lý do bắt buộc. */
+    ghiDeQuyetDinhDaCo: z.boolean().default(false),
+    clientMutationId: z.string().uuid().optional(),
+  })
+  .refine(
+    (v) => (v.decision !== "rejected" && !v.ghiDeQuyetDinhDaCo) || (v.note?.length ?? 0) >= 3,
+    {
+      // Bắt ở TẦNG HỢP ĐỒNG chứ không chỉ ở ô nhập: một màn khác gọi thẳng API vẫn phải đưa
+      // lý do. Router kiểm lại lần nữa, và hàm `report.decide_reports` (0054) kiểm lần thứ
+      // ba — tầng dưới không suy ra rằng tầng trên đã kiểm hộ mình.
+      message: "Trả lại — hoặc đổi một quyết định đã ký — thì phải ghi lý do",
+      path: ["note"],
+    },
+  );
+export type DecideReportsInput = z.infer<typeof DecideReportsInput>;
+
+export const DecideReportsOutput = z.object({
+  /** Số em THẬT SỰ được ghi quyết định trong lượt này. */
+  updated: z.number().int().min(0),
+  /**
+   * Số em bỏ qua. Nghĩa của nó ĐỔI THEO `ghiDeQuyetDinhDaCo`, và màn hình phải nói đúng
+   * nghĩa đang dùng:
+   *   · cờ tắt — đã có người ký trước (kể cả chính cô ở tab khác, kể cả đây là lượt gửi
+   *     lại), hoặc em không thuộc lớp chủ nhiệm của người gọi.
+   *   · cờ bật — chỉ còn hai lý do: em không thuộc lớp chủ nhiệm, hoặc đây là lượt gửi
+   *     lại cùng `clientMutationId` (0054 chặn ở tầng bảng).
+   * KHÔNG ném lỗi cho những em này — ném lỗi là dựng một kênh dò xem một id có tồn tại và
+   * thuộc lớp nào.
+   */
+  skipped: z.number().int().min(0),
+});
+export type DecideReportsOutput = z.infer<typeof DecideReportsOutput>;
+
+/**
+ * @deprecated 06/08/2026 — dùng `DecideReportsInput` (một lời gọi cho nhiều em). Giữ lại
+ * vì client cũ (PWA đã cài trên máy thầy cô) còn gọi `care.approveReport`; gỡ được khi
+ * không còn phiên bản nào gọi, đúng luật expand–contract.
+ */
 export const ApproveReportInput = z.object({
   studentId: z.string().uuid(),
   weekStart: IsoDate,
-  decision: z.enum(["approved", "rejected"]),
+  decision: ReportDecision,
   // Trả lại mà không nói vì sao thì tuần sau lặp lại đúng lỗi đó (cùng lý lẽ với
   // CloseCaseInput.resolution). Bắt buộc khi trả lại — kiểm ở router, không kiểm ở đây
   // để thông điệp lỗi còn ra tiếng Việt cho người dùng.

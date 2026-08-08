@@ -168,7 +168,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
               <span className={`msr text-[20px] ${isActive ? "text-gold" : "text-caption"}`} aria-hidden>
                 {item.icon}
               </span>
-              <span className={`flex-1 text-[13.5px] ${isActive ? "font-extrabold text-white" : "font-bold text-[#33507C]"}`}>
+              <span className={`flex-1 text-[13.5px] ${isActive ? "font-extrabold text-white" : "font-bold text-cardtitle2"}`}>
                 {item.label}
               </span>
               {!isActive && item.badge ? (
@@ -181,16 +181,30 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
         })}
         {soon.map((item) => (
           // Cố tình KHÔNG phải <Link>: trang chưa tồn tại, cho bấm được là hứa suông.
+          //
+          // MỜ Ở ICON, KHÔNG MỜ Ở CHỮ (sửa 05/08/2026). Cả khối này từng mang `opacity-45`:
+          // nhãn #5B6B80 tụt còn 1,91:1 và badge còn 1,80:1 trên nền trắng — dưới một nửa
+          // chuẩn 4,5:1, tức là chữ nói "màn này chưa mở" lại chính là chữ khó đọc nhất
+          // sidebar. DESIGN-GUIDELINES §3 cho phép mờ .45 để báo trạng thái tắt, nhưng §11
+          // nói tương phản không có ngoại lệ; hai điều đó chỉ sống chung được khi tín hiệu
+          // mờ nằm ở phần TRANG TRÍ. Nên icon giữ nguyên .45, chữ về đúng ngưỡng:
+          //   nhãn  text-subtle #5B6B80 = 5,73:1 trên trắng
+          //   badge text-muted  #66707D = 4,56:1 trên nền chip #F1F4F8
           <div
             key={item.key}
             aria-disabled="true"
-            className="flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px] opacity-45"
+            className="flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px]"
           >
-            <span className="msr text-[20px] text-caption" aria-hidden>
+            <span className="msr text-[20px] text-caption opacity-45" aria-hidden>
               {item.icon}
             </span>
-            <span className="flex-1 text-[13.5px] font-bold text-[#5B6B80]">{item.label}</span>
-            <span className="rounded-full bg-[#F1F4F8] px-[7px] py-[3px] text-[9px] font-black text-muted">
+            <span className="flex-1 text-[13.5px] font-bold text-subtle">
+              {item.label}
+              {/* `aria-disabled` nói với API trợ năng rằng mục bị vô hiệu, nhưng đây không
+                  phải nút nên nhiều trình đọc màn hình bỏ qua. Câu này nói bằng lời. */}
+              <span className="sr-only"> — sắp có, chưa mở</span>
+            </span>
+            <span className="rounded-full bg-chip px-[7px] py-[3px] text-[9px] font-black text-muted">
               {item.soonBadge ?? "GĐ2"}
             </span>
           </div>

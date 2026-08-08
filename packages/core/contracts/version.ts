@@ -93,9 +93,21 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 // {
 //   "version": "0.2.0",
 //   "schemas": {
+//     "tenBienSecret": [
+//       "#function#"
+//     ],
+//     "phieuThanhKhaiBao": [
+//       "#function#"
+//     ],
 //     "MiniAppBasket": [
 //       "#enum#xanh",
 //       "#enum#vang"
+//     ],
+//     "MiniAppScope": [
+//       "#enum#openid",
+//       "#enum#profile",
+//       "#enum#hub_profile",
+//       "#enum#offline_access"
 //     ],
 //     "MiniAppRow": [
 //       "appId",
@@ -113,6 +125,12 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "overdueDays",
 //       "webhookSecretEnv",
 //       "daCapSecret",
+//       "ssoEnabled",
+//       "ssoRedirectUris",
+//       "ssoBackchannelLogoutUri",
+//       "ssoScopes",
+//       "ssoClientSecretEnv",
+//       "daCapSsoSecret",
 //       "updatedAt"
 //     ],
 //     "CreateMiniAppInput": [
@@ -127,16 +145,35 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "iframeUrl",
 //       "iconImageUrl",
 //       "intro",
-//       "webhookSecretEnv"
+//       "webhookSecretEnv",
+//       "ssoEnabled",
+//       "ssoRedirectUris",
+//       "ssoBackchannelLogoutUri",
+//       "ssoScopes",
+//       "ssoClientSecretEnv"
 //     ],
 //     "UpdateMiniAppInput": [
 //       "appId"
+//     ],
+//     "PhieuDauNoi": [
+//       "phienBan",
+//       "maApp",
+//       "tenHienThi",
+//       "moTaMotCau",
+//       "roDuLieu",
+//       "doiChiuTrachNhiem",
+//       "nhung",
+//       "webhook",
+//       "sso"
 //     ],
 //     "MiniAppId": [
 //       "#expr#z .string() .regex(/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/, \"Mã app chỉ gồm chữ thường, số và dấu gạch ngang\")"
 //     ],
 //     "MiniAppOrigin": [
 //       "#expr#z .string() .regex(/^https:\\/\\/[a-z0-9.-]+(:\\d{1,5})?$/, \"Origin phải dạng https://ten-mien — không kèm đường dẫn, không dấu / cuối\")"
+//     ],
+//     "MiniAppRedirectUri": [
+//       "#expr#z .string() .regex( /^https:\\/\\/[a-z0-9.-]+(:\\d{1,5})?(\\/[^#]*)?$/, \"URI phải bắt đầu bằng https:// và không chứa dấu #\", )"
 //     ],
 //     "MiniAppRole": [
 //       "#enum#student",
@@ -150,7 +187,30 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     ],
 //     "ListMiniAppsOutput": [
 //       "apps",
-//       "soAppCanRaLai"
+//       "soAppCanRaLai",
+//       "hubUrl"
+//     ],
+//     "PhieuNhung": [
+//       "origin",
+//       "urlIframe"
+//     ],
+//     "PhieuWebhook": [
+//       "cacLoaiSuKien"
+//     ],
+//     "PhieuSso": [
+//       "redirectUris",
+//       "backchannelLogoutUri",
+//       "scopes"
+//     ],
+//     "KHOA_NHA_TRUONG_QUYET": [
+//       "allowedRoles",
+//       "vai",
+//       "enabled",
+//       "reviewDueOn",
+//       "ngayRaLai",
+//       "webhookSecretEnv",
+//       "ssoClientSecretEnv",
+//       "secret"
 //     ],
 //     "SetMiniAppEnabledInput": [
 //       "appId",
@@ -222,7 +282,21 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "checkinId",
 //       "studentId",
 //       "studentName",
-//       "occurredOn"
+//       "occurredOn",
+//       "occurredAtTime"
+//     ],
+//     "LateDecision": [
+//       "#enum#reason"
+//     ],
+//     "DecideLateCheckinsInput": [
+//       "checkinIds",
+//       "decision",
+//       "reason",
+//       "clientMutationId"
+//     ],
+//     "DecideLateCheckinsOutput": [
+//       "updated",
+//       "skipped"
 //     ],
 //     "MoodVisibility": [
 //       "readable",
@@ -402,6 +476,22 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "weekStart",
 //       "rows"
 //     ],
+//     "ReportDecision": [
+//       "#enum#note"
+//     ],
+//     "DecideReportsInput": [
+//       "classId",
+//       "studentIds",
+//       "weekStart",
+//       "decision",
+//       "note",
+//       "ghiDeQuyetDinhDaCo",
+//       "clientMutationId"
+//     ],
+//     "DecideReportsOutput": [
+//       "updated",
+//       "skipped"
+//     ],
 //     "ApproveReportInput": [
 //       "studentId",
 //       "weekStart",
@@ -563,6 +653,14 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "helpSignals",
 //       "notesWritable"
 //     ],
+//     "LATE_DECISIONS": [
+//       "#expr#[\"present\", \"late\", \"absent\"] as const"
+//     ],
+//     "LATE_DECISION_LABEL": [
+//       "present",
+//       "late",
+//       "absent"
+//     ],
 //     "ATTENDANCE_STATUS_LABEL": [
 //       "present",
 //       "late",
@@ -585,6 +683,13 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     ],
 //     "ARRIVAL_BAND_UNAVAILABLE_NOTE": [
 //       "#expr#\"Bảng này hiện giờ em bấm nút, không hiện nhãn “đi sớm”. Hệ chỉ ghi được giờ máy chủ nhận lượt bấm, chưa ghi giờ em vào cổng, nên không nói chắc được em đến sớm hay đúng giờ.\""
+//     ],
+//     "REPORT_DECISIONS": [
+//       "#expr#[\"approved\", \"rejected\"] as const"
+//     ],
+//     "REPORT_DECISION_LABEL": [
+//       "approved",
+//       "rejected"
 //     ],
 //     "MoodValue": [
 //       "#expr#z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])"
@@ -739,6 +844,49 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //     ],
 //     "ReportWeekStart": [
 //       "#expr#IsoDateString.refine(withinReportableRange, REPORT_WEEK_RANGE_MESSAGE)"
+//     ],
+//     "PendingWorkTone": [
+//       "#enum#urgent",
+//       "#enum#normal"
+//     ],
+//     "PendingWorkItem": [
+//       "key",
+//       "label",
+//       "count",
+//       "href",
+//       "tone"
+//     ],
+//     "GetPendingWorkOutput": [
+//       "asOfDate",
+//       "items"
+//     ],
+//     "TeachingClass": [
+//       "classId",
+//       "classCode",
+//       "studentCount",
+//       "recordedCount",
+//       "absentCount",
+//       "noRecordCount"
+//     ],
+//     "GetMyTeachingClassesOutput": [
+//       "asOfDate",
+//       "classes"
+//     ],
+//     "GetTeachingRosterInput": [
+//       "classId",
+//       "onDate"
+//     ],
+//     "TeachingRosterEntry": [
+//       "studentId",
+//       "studentCode",
+//       "fullName",
+//       "status"
+//     ],
+//     "GetTeachingRosterOutput": [
+//       "classId",
+//       "className",
+//       "asOfDate",
+//       "students"
 //     ],
 //     "parseSemver": [
 //       "#function#"

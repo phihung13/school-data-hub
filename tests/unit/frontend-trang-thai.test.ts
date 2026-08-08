@@ -143,7 +143,22 @@ describe("thẻ cờ buồng lái GVCN — màu không được là tín hiệu 
       ],
       recentlyHandled: false,
     });
-    expect(urgent).toContain("cần gặp thầy cô");
+    // ĐỔI PHÉP ĐO 06/08/2026 — khẳng định cũ là `toContain("cần gặp thầy cô")`.
+    //
+    // Chủ đầu tư chỉ đích danh câu mà hàm này từng trả về: "Em đã bấm “cần gặp thầy cô”
+    // và chưa ai đánh dấu đã gặp." Trên một thẻ cờ, LOẠI TÍN HIỆU đã được in HAI lần
+    // phía trên dòng mô tả — huy hiệu mức khẩn, rồi tiêu đề "Em cần gặp thầy cô · <tên
+    // em>" — nên câu đó là bản thứ ba của cùng một sự thật.
+    //
+    // Luật thì không đổi chỗ nào: cờ chỉ được nói LOẠI tín hiệu, không được chở nội dung
+    // em ghi. Nên phép đo tách làm hai, không bớt đi một:
+    //   · dòng mô tả phải nói phần CÒN LẠI (chưa ai xử lý) — thứ không màn nào khác nói;
+    //   · loại tín hiệu vẫn phải hiện trên thẻ, chỉ là ở tiêu đề chứ không ở dòng mô tả.
+    // Bỏ khẳng định thứ hai là mở đường cho lần sửa sau gỡ nốt cái tiêu đề mà không ai đỏ.
+    expect(urgent.toLowerCase()).toContain("chưa ai đánh dấu");
+    expect(readScreen("gvcn-dashboard.tsx"), "thẻ cờ không còn nói ra loại tín hiệu").toContain(
+      "Em cần gặp thầy cô",
+    );
 
     const mood = describeFlag({ cadence: "quet_dem", openHelpRequests: [], recentlyHandled: false });
     // Ba thứ §9 cấm in phía GVCN: chiều của cảm xúc, số ngày, trích dẫn lời em.

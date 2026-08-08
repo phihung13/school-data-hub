@@ -20,23 +20,77 @@
 // thẩm mỹ: hai mũi tên đổi tuần đang là 32×32 (bấm trượt = duyệt nhầm tuần), ba nút
 // quyết định đang cao 38px, và mã học sinh — thứ dùng để phân biệt hai em trùng tên —
 // in bằng token caption 3,06:1. Nay 44px và token muted (5,03:1) cho cả ba chỗ.
+//
+// ── 06/08/2026 · CHỌN NHIỀU EM ──────────────────────────────────────────────
+//
+// Chủ đầu tư, cùng ngày với ADR-029: "báo cáo thì cũng có thể gửi hàng loạt, hoặc sửa,
+// hoặc trả lại gì đó hàng loạt". Bản cũ đặt hai nút quyết định DƯỚI TỪNG THẺ, nên một
+// lớp 40 em là 40 cú bấm cho một quyết định cô đã ra từ lúc đọc xong danh sách.
+//
+// Hình dạng lấy nguyên của khối "check-in gửi muộn" (`LateCheckinBoard` trong
+// gvcn-dashboard.tsx, dựng cùng ngày): ô tick từng dòng · "Chọn tất cả" · một thanh nói
+// số đang chọn · hai nút kết luận · "Để sau" · và câu đọc `{updated, skipped}` sau khi
+// ghi. Hai màn của cùng một cô làm cùng một thao tác thì không được nói hai thứ tiếng.
+//
+// BỐN THỨ CỐ Ý:
+//
+//   1. MỌI em đều tick được, kể cả em đã có chữ ký (ADR-031, 06/08/2026 — chủ đầu tư
+//      duyệt vế "SỬA" trong chính câu mở màn duyệt hàng loạt). Nhưng đè lên một chữ ký đã
+//      gửi phụ huynh KHÔNG cùng một cú bấm với ký lần đầu: khi lô đang chọn có em đã ký,
+//      thanh dưới mọc thêm ĐÚNG MỘT ô xác nhận nói bằng con số — "Đổi quyết định đã ký
+//      cho N em" — và chỉ khi tick nó thì lượt gửi mới mang cờ `ghiDeQuyetDinhDaCo`, kèm
+//      lý do bắt buộc. Không tick thì máy chủ giữ nguyên hàng rào cũ (chỉ chạm dòng chưa
+//      ai quyết) và những em đó rơi vào `skipped`.
+//   2. Phần đã chọn được lọc lại theo danh sách ĐANG CÓ ở mỗi lần vẽ. Đổi tuần hoặc đổi
+//      lớp thì id cũ không được lẳng lặng đi theo lượt gửi kế tiếp.
+//   3. `clientMutationId` sinh một lần mỗi lượt soạn (§9): bấm hai lần vì mạng chậm là
+//      CÙNG một quyết định. Mã đó nay được lưu thật (`report.report_decisions`, 0054), và
+//      đó là điều kiện để đường ghi đè tồn tại: ở đó không còn trạng thái `pending` nào
+//      để biến lượt thứ hai thành no-op.
+//   4. KHÔNG một câu nào dạy cách dùng màn (yêu cầu chủ đầu tư 06/08/2026, §1.5). Nghĩa
+//      nằm ở hình: ô tick, số đang chọn, nhãn trạng thái. Chữ còn lại chỉ có ba loại —
+//      câu báo lỗi, nhãn trạng thái, và `sr-only` cho tai. Cùng luật đó cắt luôn hai câu
+//      "vì sao màn này thiếu một mục Glow" trong khối xem trước: nghĩa lên thành chip
+//      `visibility_off` + "Bản phụ huynh có thể khác", bốn chữ, cạnh tiêu đề khối.
 "use client";
 
 import { useState } from "react";
-import type { ReportApprovalRow, ReportPreview } from "@hub/core/contracts";
+import {
+  REPORT_DECISIONS,
+  REPORT_DECISION_LABEL,
+  type DecideReportsOutput,
+  type ReportApprovalRow,
+  type ReportDecision,
+  type ReportPreview,
+} from "@hub/core/contracts";
 import { trpc } from "@/lib/trpc-client";
 import { mondayOf, toLocalIsoDate } from "@/lib/date";
 import { formatWeekLabel } from "@/lib/week-label";
-import { EmptyState, ErrorState, LoadingState, MutationError } from "../ui/query-state";
+import { EmptyState, ErrorState, LoadingState, MutationError, MutationSuccess } from "../ui/query-state";
 import { classLabel } from "../ui/labels";
 import { ClassPicker, useSelectedClass } from "./class-picker";
 import { Card, GvcnShell } from "./gvcn-shell";
+import { newMutationId } from "./mutation-id";
 
 const STATUS_META = {
-  pending: { label: "Chờ duyệt", bg: "bg-chip", fg: "text-[#5B6B80]", icon: "hourglass_empty" },
-  approved: { label: "Đã duyệt", bg: "bg-[#E3F8ED]", fg: "text-[#00693F]", icon: "check_circle" },
+  pending: { label: "Chờ duyệt", bg: "bg-chip", fg: "text-subtle", icon: "hourglass_empty" },
+  approved: { label: "Đã duyệt", bg: "bg-[#E3F8ED]", fg: "text-successText", icon: "check_circle" },
   rejected: { label: "Đã trả lại", bg: "bg-[#FFF0F0]", fg: "text-[#C0272D]", icon: "undo" },
 } as const;
+
+/**
+ * Nền + chữ của nút kết luận ĐANG CHỌN — tách khỏi JSX để đo được bằng một phép kiểm
+ * tương phản, đúng cách `DECISION_ON` của khối gửi muộn và `CHOICE_STYLE` của màn điểm
+ * danh đang làm.
+ *
+ * Đo trên nền thật (WCAG 2.x): #00693F/#E3F8ED = 6,12:1 · #8A5A00/#FFF1C9 = 5,27:1.
+ * Nút chưa chọn: #5B6B80 trên trắng = 5,44:1. Không mã hex mới nào — cả hai cặp đã có
+ * tên token (`surface-success`/`successText`, `surface-warn`/`gold-textDark`).
+ */
+const DECISION_ON: Record<ReportDecision, string> = {
+  approved: "border-[#00A05F] bg-surface-success text-successText",
+  rejected: "border-gold-dark bg-surface-warn text-gold-textDark",
+};
 
 /**
  * Ba màu nhấn của Glow (contract `GlowItem.accentColor`). Giữ đúng bảng màu mood/domain
@@ -46,7 +100,12 @@ const STATUS_META = {
 const GLOW_ACCENT = {
   green: { dot: "bg-[#00A85E]", icon: "workspace_premium" },
   blue: { dot: "bg-[#2C7BF2]", icon: "sentiment_very_satisfied" },
-  amber: { dot: "bg-[#F5A300]", icon: "volunteer_activism" },
+  // #F5A300 → #C77A00 (05/08/2026). Ô icon là phần tử ĐỒ HOẠ mang nghĩa, nên mốc của nó
+  // là WCAG 1.4.11 (3:1), không phải 4,5:1 của chữ. Đo icon trắng trên nền cũ: 2,07:1 —
+  // ba mục Glow đứng cạnh nhau chỉ khác nhau bằng icon, mà đúng icon của mục thứ ba thì
+  // nhoè vào nền. Mã mới đạt 3,38:1, vẫn là tông vàng của §3, không chế màu ngoài bảng.
+  // Hai mã kia đã đạt sẵn nên không đụng tới: #00A85E = 3,10:1 · #2C7BF2 = 4,02:1.
+  amber: { dot: "bg-[#C77A00]", icon: "volunteer_activism" },
 } as const;
 
 /**
@@ -65,6 +124,87 @@ function weekLabel(weekStart: string): string {
   const end = new Date(`${weekStart}T00:00:00`);
   end.setDate(end.getDate() + 4);
   return formatWeekLabel(`${weekStart} – ${toLocalIsoDate(end)}`);
+}
+
+/**
+ * Vì sao nút ghi đang vô hiệu — hoặc `null` khi nó bấm được.
+ *
+ * Một nút xám không kèm chữ là nút CHẾT CÂM: người dùng nhìn thấy thứ mình cần bấm, bấm
+ * không được, và màn hình không nói vì sao. Ở đây cái chặn còn không nằm ở nút mà nằm ở
+ * một ô nhập cách đó vài dòng.
+ *
+ * MỘT DÒNG, không hơn (§1.5): đây là caption, không phải bài hướng dẫn. Ngưỡng 3 ký tự
+ * không phải con số chọn ở đây — nó là `note: z.string().trim().min(3)` trong
+ * `DecideReportsInput`, và router canh lại lần nữa. Câu này chỉ nói sớm điều máy chủ sẽ
+ * từ chối muộn.
+ */
+export function lyDoChuaGhiDuoc(
+  decision: ReportDecision | null,
+  selectedCount: number,
+  note: string,
+  /** Trong lô đang chọn có bao nhiêu em ĐÃ có chữ ký (ADR-031). 0 = đường mặc định. */
+  soEmDaKy = 0,
+  /** Cô đã tick bước xác nhận đổi quyết định đã ký chưa. */
+  daXacNhanGhiDe = false,
+): string | null {
+  if (selectedCount === 0) return "Chọn ít nhất một em.";
+  if (decision === null) return "Chọn một quyết định.";
+  // Bước xác nhận đứng TRƯỚC ô lý do: chưa tick thì máy chủ sẽ bỏ qua đúng những em này
+  // (cờ tắt = chỉ chạm dòng chưa ai quyết), nên hỏi lý do trước là hỏi cho một lượt ghi
+  // sẽ không xảy ra.
+  if (soEmDaKy > 0 && !daXacNhanGhiDe) return `${soEmDaKy} em đã ký — xác nhận để đổi.`;
+  const doiLyDo = decision === "rejected" || (soEmDaKy > 0 && daXacNhanGhiDe);
+  if (!doiLyDo) return null;
+  const du = note.trim().length;
+  if (du === 0) return soEmDaKy > 0 ? "Đổi quyết định phải kèm lý do." : "Trả lại phải kèm lý do.";
+  if (du < 3) return `Lý do còn ${3 - du} ký tự nữa mới đủ.`;
+  return null;
+}
+
+/**
+ * Đọc `{updated, skipped}` thành câu — KHÔNG được im lặng ở vế `skipped`.
+ *
+ * `skipped > 0` nghĩa là những em đó máy chủ KHÔNG ghi. Nuốt nó đi thì cô đếm "đã duyệt
+ * 30 em" trong khi hệ chỉ ghi 27.
+ *
+ * NGHĨA CỦA `skipped` ĐỔI THEO ĐƯỜNG ĐANG ĐI, nên câu chữ cũng phải đổi (ADR-031):
+ *   · đường mặc định — em đã có người ký trước, hoặc màn hình này đã cũ;
+ *   · đường ghi đè   — trạng thái cũ không còn chặn được gì nữa, nên lý do còn lại chỉ là
+ *     em không thuộc lớp chủ nhiệm, hoặc đây là lượt gửi lại cùng mã (§9, chỉ mục 0054).
+ * In câu của đường này cho đường kia là một lời giải thích sai trông như thật — cô sẽ đi
+ * tìm "ai đã ký trước" cho một con số không nói về chuyện đó.
+ *
+ * `updated = 0 && skipped = 0` không rơi vào được (input đòi `.min(1)`), nhưng nếu máy
+ * chủ đổi mà quên chỗ này thì im lặng vẫn là hỏng tệ nhất.
+ */
+export function ketQuaDuyetBaoCao(
+  r: DecideReportsOutput,
+  decision: ReportDecision,
+  ghiDe = false,
+): string {
+  const parts: string[] = [];
+  if (r.updated > 0) {
+    parts.push(
+      ghiDe
+        ? `Đã đổi quyết định của ${r.updated} em sang “${REPORT_DECISION_LABEL[decision]}”.`
+        : decision === "approved"
+          ? `Đã duyệt gửi phụ huynh cho ${r.updated} em.`
+          : `Đã trả lại báo cáo của ${r.updated} em.`,
+    );
+  }
+  if (r.skipped > 0) {
+    const viSao = ghiDe
+      ? "không thuộc lớp chủ nhiệm, hoặc lượt này đã ghi rồi"
+      : "đã có người quyết trước";
+    parts.push(
+      r.updated > 0
+        ? `${r.skipped} em bỏ qua vì ${viSao}.`
+        : `Không em nào đổi: cả ${r.skipped} em ${viSao}. Tải lại để xem trạng thái thật.`,
+    );
+  }
+  return parts.length > 0
+    ? parts.join(" ")
+    : "Đã gửi, nhưng máy chủ không nói rõ kết quả — hãy tải lại màn hình.";
 }
 
 export function ReportApprovalView({ displayName, email }: { displayName: string; email: string }) {
@@ -125,7 +265,7 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
             <span
               aria-live="polite"
               aria-atomic="true"
-              className="px-1 text-[12px] font-extrabold tabular-nums text-[#33507C]"
+              className="px-1 text-[12px] font-extrabold tabular-nums text-cardtitle2"
             >
               {weekLabel(weekStart)}
             </span>
@@ -164,38 +304,285 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
           hint="Chưa có em nào trong sổ ghi danh — chưa có báo cáo nào để duyệt."
         />
       ) : (
-        // aria-busy trong lúc nạp lại: đổi tuần giữ nguyên danh sách cũ trên màn hình
-        // (react-query trả dữ liệu cũ trước), nên nếu không khai thì trong nửa giây đó
-        // màn hình đang trình bày báo cáo TUẦN KHÁC dưới nhãn tuần vừa đổi.
-        <div className="flex flex-col gap-3" aria-busy={listQuery.isFetching}>
-          {rows.map((row) => (
-            <ApprovalRow key={row.studentId} row={row} weekStart={weekStart} onDone={() => utils.care.listReportApprovals.invalidate()} />
-          ))}
-        </div>
+        <ApprovalBoard
+          key={`${classId ?? ""}:${weekStart}`}
+          rows={rows}
+          classId={classId}
+          weekStart={weekStart}
+          refetching={listQuery.isFetching}
+          onDone={() => utils.care.listReportApprovals.invalidate()}
+        />
       )}
     </GvcnShell>
   );
 }
 
-function ApprovalRow({
-  row,
+/**
+ * Danh sách + thanh hành động. Trạng thái chọn nằm ở ĐÂY chứ không ở từng thẻ: một lượt
+ * ghi là một lượt cho nhiều em, nên nó phải có đúng một chỗ giữ danh sách đang chọn, một
+ * mã chống trùng, và một câu kết quả.
+ *
+ * `key` ở nơi gọi ghim theo lớp + tuần: đổi tuần là đổi hẳn tập quyết định, và một lựa
+ * chọn sống sót qua ranh giới đó là một lượt ghi vào tuần cô không nhìn thấy.
+ */
+function ApprovalBoard({
+  rows,
+  classId,
   weekStart,
+  refetching,
   onDone,
 }: {
-  row: ReportApprovalRow;
+  rows: ReportApprovalRow[];
+  classId: string | null;
   weekStart: string;
+  refetching: boolean;
   onDone: () => void;
 }) {
-  const [note, setNote] = useState(row.note ?? "");
-  const [askReason, setAskReason] = useState(false);
-  const approve = trpc.care.approveReport.useMutation({ onSuccess: onDone });
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [decision, setDecision] = useState<ReportDecision | null>(null);
+  const [note, setNote] = useState("");
+  // Bước xác nhận của ADR-031. Một ô tick, không phải một hộp thoại: hộp thoại chặn màn
+  // hình để hỏi một câu mà con số ngay cạnh đã trả lời rồi.
+  const [xacNhanGhiDe, setXacNhanGhiDe] = useState(false);
+  const [mutationId, setMutationId] = useState(newMutationId);
+  // Quyết định của lượt VỪA GỬI, giữ riêng: `onSuccess` xoá `decision` để màn hình sạch
+  // cho lượt sau, nên câu xác nhận không đọc được nhãn từ đó nữa. Đọc `decide.variables`
+  // thì đúng dữ liệu nhưng sai kiểu, và một `?? "approved"` để chiều kiểu là bịa nhãn cho
+  // một dòng đã ghi vào sổ. Giữ cả cờ ghi đè vì câu kết quả nói khác nhau ở hai đường.
+  const [daGui, setDaGui] = useState<{ decision: ReportDecision; ghiDe: boolean } | null>(null);
+
+  const decide = trpc.care.decideReports.useMutation({
+    onSuccess: () => {
+      setSelectedIds([]);
+      setDecision(null);
+      setNote("");
+      setXacNhanGhiDe(false);
+      setMutationId(newMutationId());
+      onDone();
+    },
+  });
+
+  // MỌI em đều chọn được kể từ ADR-031 — kể cả em đã có chữ ký. Lọc theo danh sách ĐANG
+  // CÓ, không tin state cũ: một em vừa rời lớp (hoặc màn vừa đổi tuần) không được lẳng
+  // lặng đi theo lượt gửi kế tiếp.
+  const conTrenMan = new Set(rows.map((r) => r.studentId));
+  const selected = selectedIds.filter((id) => conTrenMan.has(id));
+  const chonHet = rows.length > 0 && selected.length === rows.length;
+
+  // Bao nhiêu em trong lô đang chọn ĐÃ có chữ ký. Đây là con số quyết định cả bước xác
+  // nhận lẫn cờ gửi xuống máy chủ — tính từ dữ liệu đang hiện, không từ một biến nhớ.
+  const daKy = rows.filter((r) => r.status !== "pending" && selected.includes(r.studentId));
+  // Cờ chỉ bật khi CẢ HAI cùng đúng. Cô tick xác nhận rồi bỏ chọn hết em đã ký thì lượt
+  // gửi quay về đường mặc định — không gửi một cờ ghi đè cho một lô không có gì để đè.
+  const ghiDe = daKy.length > 0 && xacNhanGhiDe;
+
+  const viSaoChuaGhi = lyDoChuaGhiDuoc(decision, selected.length, note, daKy.length, xacNhanGhiDe);
+  const ghiDuoc = viSaoChuaGhi === null && !decide.isPending;
+  const doiLyDo = decision === "rejected" || ghiDe;
+  const xacNhan =
+    decide.isSuccess && daGui ? ketQuaDuyetBaoCao(decide.data, daGui.decision, daGui.ghiDe) : null;
+
+  function ghi() {
+    if (decision === null || viSaoChuaGhi !== null) return;
+    setDaGui({ decision, ghiDe });
+    decide.mutate({
+      classId: classId ?? undefined,
+      studentIds: selected,
+      weekStart,
+      decision,
+      // "Duyệt gửi phụ huynh" trên một lô toàn em chưa ai quyết không đòi lý do; gửi kèm
+      // một chuỗi soạn dở cho quyết định không cần nó là ghi vào sổ một câu không ai hỏi.
+      note: doiLyDo ? note.trim() : undefined,
+      ghiDeQuyetDinhDaCo: ghiDe,
+      clientMutationId: mutationId,
+    });
+  }
+
+  return (
+    // aria-busy trong lúc nạp lại: đổi tuần giữ nguyên danh sách cũ trên màn hình
+    // (react-query trả dữ liệu cũ trước), nên nếu không khai thì trong nửa giây đó
+    // màn hình đang trình bày báo cáo TUẦN KHÁC dưới nhãn tuần vừa đổi.
+    <div className="flex flex-col gap-3" aria-busy={refetching}>
+      {/* Ô chọn tất cả là CHECKBOX THẬT, không phải một nút đổi màu (§11): trạng thái
+          chọn phải đọc được cả bằng tai lẫn khi không phân biệt được màu. `indeterminate`
+          đặt qua callback ref — nó không phải thuộc tính HTML, chỉ có ở DOM property, nên
+          React không tự đặt được; thiếu nó thì "đã chọn một nửa" trông y hệt "chưa chọn gì". */}
+      <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl bg-surface-alt px-3">
+        <input
+          type="checkbox"
+          className="h-5 w-5 flex-none accent-navy"
+          checked={chonHet}
+          ref={(el) => {
+            if (el) el.indeterminate = selected.length > 0 && !chonHet;
+          }}
+          onChange={() => setSelectedIds(chonHet ? [] : rows.map((r) => r.studentId))}
+        />
+        <span className="text-[12.5px] font-black text-cardtitle2">
+          {chonHet ? "Bỏ chọn tất cả" : "Chọn tất cả"} ({rows.length} em)
+        </span>
+      </label>
+
+      {rows.map((row) => (
+        <ApprovalRow
+          key={row.studentId}
+          row={row}
+          selected={selected.includes(row.studentId)}
+          onToggle={() =>
+            setSelectedIds((cu) =>
+              cu.includes(row.studentId)
+                ? cu.filter((id) => id !== row.studentId)
+                : [...cu, row.studentId],
+            )
+          }
+        />
+      ))}
+
+      {/* Thanh dính đáy: với 40 thẻ, mỗi thẻ cao bằng nguyên bản xem trước, một thanh
+          đứng yên trên đầu danh sách là một thanh cô không nhìn thấy lúc cần bấm. */}
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2.5 rounded-2xl border border-line bg-white p-3 shadow-[0_-4px_16px_rgba(10,42,94,.10)]">
+        {/* `role="status"` để số em đang chọn được đọc lên sau mỗi lần tick — không có
+            nó thì người dùng bàn phím tick năm lần mà không nghe được mình đang ở đâu. */}
+        <div role="status" className="text-[12px] font-extrabold text-cardtitle2">
+          Đang chọn {selected.length}/{rows.length} em
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {REPORT_DECISIONS.map((k) => {
+            const dangChon = decision === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                // aria-pressed + icon đổi hình: §11 cấm để trạng thái chọn chỉ khác nhau
+                // ở màu nền.
+                aria-pressed={dangChon}
+                onClick={() => setDecision(k)}
+                className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.6px] px-4 py-2.5 text-[12.5px] font-black ${
+                  dangChon ? DECISION_ON[k] : "border-line bg-white text-subtle"
+                }`}
+              >
+                <span className="msr text-[16px]" aria-hidden>
+                  {dangChon ? "check_circle" : "radio_button_unchecked"}
+                </span>
+                {REPORT_DECISION_LABEL[k]}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* BƯỚC XÁC NHẬN của ADR-031 — đúng một bước, và nó chỉ tồn tại khi có thứ để đè.
+            Nói bằng CON SỐ và NHÃN, không bằng một đoạn văn cảnh báo: cô đã nhìn thấy nhãn
+            "Đã duyệt"/"Đã trả lại" trên từng thẻ vừa tick, nên thứ còn thiếu là một hành
+            động khai rằng mình cố ý, không phải một bài giảng.
+            Checkbox thật chứ không phải nút đổi màu (§11), và nền vàng `surface-warn` là
+            tín hiệu THỨ HAI chứ không phải tín hiệu duy nhất. */}
+        {daKy.length > 0 && (
+          <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl bg-surface-warn px-3">
+            <input
+              type="checkbox"
+              className="h-5 w-5 flex-none accent-navy"
+              checked={xacNhanGhiDe}
+              onChange={() => setXacNhanGhiDe((v) => !v)}
+            />
+            <span className="text-[12.5px] font-black text-gold-textDark">
+              Đổi quyết định đã ký cho {daKy.length} em
+            </span>
+          </label>
+        )}
+
+        {doiLyDo && (
+          <div className="flex flex-col gap-1.5">
+            {/* Nhãn thật, không phải placeholder: placeholder biến mất ngay khi gõ ký tự
+                đầu (WCAG 3.3.2), mà đây là ô đi thẳng vào sổ vết (0054). */}
+            <label className="text-[12px] font-black text-cardtitle2" htmlFor="duyet-ly-do">
+              {ghiDe ? "Lý do đổi quyết định (bắt buộc)" : "Lý do trả lại (bắt buộc)"}
+            </label>
+            <textarea
+              id="duyet-ly-do"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="Ví dụ: tuần này em nghỉ ốm 3 ngày, báo cáo chưa phản ánh đúng…"
+              className="w-full resize-none rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            disabled={!ghiDuoc}
+            onClick={ghi}
+            // Nút vô hiệu phải nói được VÌ SAO, và nói cho cả tai: `aria-describedby`
+            // trỏ tới đúng câu đang hiện bên dưới.
+            aria-describedby={viSaoChuaGhi ? "duyet-vi-sao" : undefined}
+            className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+          >
+            {decide.isPending
+              ? "Đang ghi…"
+              : decision && selected.length > 0
+                ? `${REPORT_DECISION_LABEL[decision]} · ${selected.length} em`
+                : "Ghi quyết định"}
+          </button>
+          {/* "Để sau" KHÔNG phải một trạng thái mới trong dữ liệu — không có
+              `status = 'de_sau'` nào, và bịa ra một cái là thêm một khái niệm mà cả sổ
+              duyệt lẫn báo cáo phụ huynh đều không biết đọc. Nó đúng bằng "bỏ chọn". */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedIds([]);
+              setDecision(null);
+              setNote("");
+              setXacNhanGhiDe(false);
+            }}
+            className="min-h-[44px] px-2 text-[12.5px] font-extrabold text-subtle underline underline-offset-2"
+          >
+            Để sau
+          </button>
+        </div>
+
+        {viSaoChuaGhi && (
+          <p id="duyet-vi-sao" className="text-[11.5px] font-semibold leading-relaxed text-muted">
+            {viSaoChuaGhi}
+          </p>
+        )}
+
+        <MutationError error={decide.error} onRetry={ghi} />
+        {xacNhan && <MutationSuccess>{xacNhan}</MutationSuccess>}
+      </div>
+    </div>
+  );
+}
+
+function ApprovalRow({
+  row,
+  selected,
+  onToggle,
+}: {
+  row: ReportApprovalRow;
+  selected: boolean;
+  onToggle: () => void;
+}) {
   const meta = STATUS_META[row.status];
 
   return (
-    <Card>
+    <Card className={selected ? "ring-[1.6px] ring-navy" : ""}>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[14.5px] font-black text-ink">{row.fullName}</span>
+          {/* MỌI em đều tick được kể từ ADR-031, kể cả em đã có chữ ký — đường sửa đi qua
+              đúng ô này cộng bước xác nhận ở thanh dưới. Trước ADR-031 chỗ này ẩn ô tick
+              với em đã quyết, vì máy chủ từ chối ghi đè; lý do đó không còn đúng nữa.
+              Cả tên nằm trong <label> nên vùng chạm bằng chiều rộng của tên, không bằng
+              20px của ô tick (§11 · WCAG 2.5.5). */}
+          <label className="flex min-h-[44px] cursor-pointer items-center gap-2.5">
+            <input
+              type="checkbox"
+              className="h-5 w-5 flex-none accent-navy"
+              checked={selected}
+              onChange={onToggle}
+            />
+            <span className="text-[14.5px] font-black text-ink">{row.fullName}</span>
+          </label>
           {/* text-muted chứ không phải text-caption: mã học sinh là thứ cô đối chiếu với
               sổ giấy khi hai em trùng tên — đọc sai một ký tự là duyệt nhầm người.
               caption (#8A94A6) chỉ đạt 3,06:1. */}
@@ -234,72 +621,6 @@ function ApprovalRow({
       </div>
 
       <ReportPreviewBlock preview={row.preview} studentName={row.fullName} />
-
-      {/* Nút đặt SAU khối xem trước, không phải bên cạnh tên: thứ tự đọc trên màn hình
-          chính là thứ tự việc phải làm — đọc bản phụ huynh sẽ nhận rồi mới quyết định.
-
-          min-h-[44px] (§11): đây là nút GỬI THẬT cho phụ huynh, không hoàn tác được từ
-          giao diện. Nút cao 38px cạnh nhau 8px là đúng khoảng cách sinh ra bấm nhầm.
-          aria-expanded trên "Trả lại": nó mở/đóng một khối bên dưới, người dùng trình đọc
-          màn hình phải nghe được là mình vừa mở cái gì. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={approve.isPending}
-          onClick={() => {
-            setAskReason(false);
-            approve.mutate({ studentId: row.studentId, weekStart, decision: "approved" });
-          }}
-          className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
-        >
-          {approve.isPending ? "Đang ghi…" : "Duyệt gửi phụ huynh"}
-        </button>
-        <button
-          type="button"
-          disabled={approve.isPending}
-          aria-expanded={askReason}
-          onClick={() => setAskReason((v) => !v)}
-          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12.5px] font-black text-gold-textDark disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
-        >
-          Trả lại
-        </button>
-      </div>
-
-      {askReason && (
-        <div className="mt-3 flex flex-wrap items-end gap-2.5 border-t border-[#F1F4F8] pt-3">
-          <label className="min-w-0 flex-1 basis-[260px]">
-            <span className="text-[11.5px] font-extrabold text-[#33507C]">Lý do trả lại (bắt buộc)</span>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              placeholder="Ví dụ: tuần này em nghỉ ốm 3 ngày, báo cáo chưa phản ánh đúng…"
-              className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-[#5B6B80] focus:border-navy"
-            />
-          </label>
-          <button
-            type="button"
-            disabled={approve.isPending || note.trim().length === 0}
-            onClick={() =>
-              approve.mutate({
-                studentId: row.studentId,
-                weekStart,
-                decision: "rejected",
-                note: note.trim(),
-              })
-            }
-            className="min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
-          >
-            Xác nhận trả lại
-          </button>
-        </div>
-      )}
-
-      {approve.error && (
-        <div className="mt-2.5">
-          <MutationError error={approve.error} />
-        </div>
-      )}
     </Card>
   );
 }
@@ -329,33 +650,45 @@ function ReportPreviewBlock({ preview, studentName }: { preview: ReportPreview; 
         <span className="msr text-[16px] text-navy" aria-hidden>
           visibility
         </span>
-        <h4 className="text-[11.5px] font-black uppercase tracking-wide text-[#33507C]">
+        {/* <h4> → <h2> (05/08/2026). Trang này có đúng một <h1> (tiêu đề màn, do GvcnShell
+            đặt) và KHÔNG có <h2>/<h3> nào, nên một <h4> ở đây là nhảy ba cấp: trình đọc
+            màn hình nghe "heading cấp bốn" và không có cấp hai, cấp ba nào để nó thuộc
+            vào. Đây là cấp hai thật — mỗi thẻ duyệt có đúng một mục con, chính là nguyên
+            văn bản phụ huynh sẽ đọc. Class giữ nguyên từng ký tự: đổi THẺ, không đổi cỡ chữ. */}
+        <h2 className="text-[11.5px] font-black uppercase tracking-wide text-cardtitle2">
           Phụ huynh sẽ đọc đúng thế này
-        </h4>
+        </h2>
+
+        {/* `glowIncomplete` do MÁY CHỦ phát ra, không phải màn hình tự suy: nó bật khi
+            `attendance.happy_days()` trả `null` cho cô (ADR-026), nghĩa là bản dựng ở đây
+            có thể THIẾU mục Glow "Cả tuần đến lớp với tâm trạng vui vẻ" mà bản phụ huynh
+            đọc vẫn có. Người ký phải biết mình đang ký bản rút gọn.
+            06/08/2026 — CÂU THÀNH CHIP. Chỗ này từng là hai câu giải thích vì sao màn
+            thiếu dữ liệu; chủ đầu tư chỉ đích danh nó. Nghĩa không bỏ (bỏ là quay lại đúng
+            lỗi màn duyệt sinh ra để chữa: cô ký một bản khác bản người khác đọc), nhưng
+            nghĩa đó vừa đúng bốn chữ. "CÓ THỂ khác", không phải "khác" — máy chủ chỉ biết
+            mình không đọc được nguồn, không biết em có đủ 3 ngày Vui hay không; nhãn in ra
+            không được nói mạnh hơn thứ máy chủ thật sự biết.
+            #5B6B80 trên #F1F4F8 = 4,93:1. Icon `aria-hidden`, chữ là chữ thật nên trình
+            đọc màn hình vẫn nghe được — không phải một dấu hiệu chỉ dành cho mắt. */}
+        {preview.glowIncomplete && (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-chip px-2 py-0.5 text-[10.5px] font-black text-subtle">
+            <span className="msr text-[13px]" aria-hidden>
+              visibility_off
+            </span>
+            Bản phụ huynh có thể khác
+          </span>
+        )}
       </div>
 
       <p className="mt-2 text-[14px] font-black text-navy">"{preview.headline}"</p>
 
-      {/* `glowIncomplete` do MÁY CHỦ phát ra, không phải màn hình tự suy: nó bật khi
-          `attendance.happy_days()` trả `null` cho cô (ADR-026), nghĩa là bản dựng ở đây có
-          thể THIẾU mục Glow "Cả tuần đến lớp với tâm trạng vui vẻ" mà bản phụ huynh đọc vẫn
-          có. Trước 01/08/2026 trường này đi ra tới trình duyệt rồi KHÔNG ai vẽ — tức là màn
-          duyệt lại đúng lỗi nó sinh ra để chữa: cô ký một bản khác bản người khác đọc, và
-          lần này còn không biết là mình đang ký bản rút gọn.
-          "có thể còn", KHÔNG phải "chắc chắn có" — máy chủ chỉ biết mình không đọc được
-          nguồn, không biết em có đủ 3 ngày Vui hay không. Câu in ra không được nói mạnh hơn
-          thứ máy chủ thật sự biết. */}
-      {preview.glowIncomplete && (
-        <p className="mt-2 flex gap-1.5 text-[11.5px] leading-snug text-muted">
-          <span className="msr mt-px flex-none text-[14px] text-[#33507C]" aria-hidden>
-            info
-          </span>
-          <span>
-            Bản phụ huynh đọc có thể còn một mục nữa dựa trên tâm trạng cả tuần. Màn này không
-            dựng được mục đó vì thầy cô không đọc nhật ký cảm xúc của em.
-          </span>
-        </p>
-      )}
+      {/* Ở đây từng có hai câu giải thích vì sao bản của cô có thể thiếu một mục Glow.
+          Gỡ 06/08/2026 — chủ đầu tư chỉ đích danh nó trong danh sách "chữ giải thích bé bé".
+          Nghĩa KHÔNG mất: nó lên thành chip `visibility_off` cạnh tiêu đề khối, ngay trên
+          đầu. Không để lại đoạn văn "phòng khi cần" — cùng lý do gvcn-dashboard.tsx đã ghi
+          hai lần khi cắt `MoodClosedCard`: một khối không ai đọc là lời mời cho lần sửa sau
+          nối lại đúng thứ vừa cắt. */}
 
       {empty ? (
         <p className="mt-2 text-[12.5px] leading-relaxed text-muted">

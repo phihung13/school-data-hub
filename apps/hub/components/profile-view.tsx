@@ -1,48 +1,63 @@
-// components/profile-view.tsx — V9 Hồ sơ (Hub Desktop V2, 30/07/2026).
-// KHÔNG có "huy hiệu"/"đọc sách tuần"/"thiết bị đang đăng nhập"/mục Cài đặt như
-// bản vẽ tay — chưa có bảng huy hiệu, chưa theo dõi thiết bị, và 3 công tắc cài
-// đặt (ngôn ngữ, nhắc giờ, thêm màn hình chính) chưa có tính năng thật đứng sau.
-// GVCN cũng mở /ho-so (sidebar dùng chung) nhưng dùng bản rút gọn — mockup chỉ vẽ
-// hồ sơ học sinh.
+// components/profile-view.tsx — V10 Hồ sơ, dựng lại theo ảnh mẫu chủ đầu tư (06/08/2026).
 //
-// Sửa 31/07/2026 (gói "frontend-trang-thai"), bốn lỗi:
-//   1. `{profile && …}` không có nhánh isPending/error → hết phiên hay mất mạng là
-//      màn TRẮNG vĩnh viễn, ngay trên trang duy nhất có nút Đăng xuất.
-//   2. Bản mobile là NGÕ CỤT: một câu "tối ưu cho máy tính", không link nào — mà
-//      "Hồ sơ" là 1 trong 3 tab chính của học sinh (tab-bar.tsx). Nay có bản
-//      mobile thật (ảnh đại diện, tên, lớp, mã học sinh, Đăng xuất) + tab bar.
-//   3. SimpleProfile (nhân viên) là `flex h-screen` với sidebar `w-[240px]` KHÔNG
-//      tiền tố md: — trên 390px sidebar nuốt 240px, phần còn lại vỡ.
-//   4. HubSidebar nhận role="teacher"/"student" cứng: admin, phụ huynh, hiệu
-//      trưởng đều rơi vào menu GVCN. Nay truyền `roles` thật của phiên.
+// ══════════════════════════════════════════════════════════════════════════════
+// SÁU Ô TRONG ẢNH MẪU KHÔNG ĐƯỢC DỰNG, VÀ VÌ SAO
+// ══════════════════════════════════════════════════════════════════════════════
+// Ảnh mẫu vẽ nhiều hơn số dữ liệu đang có. Điều 20 của hiến pháp UI ("không số liệu bịa,
+// không nút dở dang, không liên kết chết") và §3 DESIGN-GUIDELINES cấm dựng chúng bằng số
+// giả hay công tắc không nối vào đâu. Với mỗi ô, hai đường: (a) bỏ khỏi bản dựng, hoặc
+// (b) dựng ở thể "chưa có" kèm nhãn "· sắp" như ô mini app mờ ở trang chủ. Đường (b) chỉ
+// đúng khi người dùng CẦN biết trường có định làm hay không — nó là kỳ vọng, không phải
+// quyền (mục 9c của brief). Sáu ô dưới đây đều chọn (a), và đây là lý do từng ô:
 //
-// Sửa 31/07/2026 (gói "a11y-nen"): mỗi nhánh (học sinh / nhân viên) gộp về MỘT cây
-// duy nhất có <MainContent> bọc nội dung — menu trái và tab bar nằm NGOÀI nó, nên
-// đường tắt "Bỏ qua menu" ở layout.tsx mới thật sự bỏ qua được menu. Trước đó nhánh
-// học sinh là hai cây rời (mobile + desktop) không cây nào có landmark; nếu đặt
-// <main id="noi-dung"> vào cả hai thì trang có hai id trùng nhau, trình duyệt chỉ
-// nhảy tới cái đầu — cái đang display:none ở khổ màn hiện tại.
+//  1. HUY HIỆU — không bảng nào, không cột nào trong migration tới 06/08/2026. Một ô số
+//     ở đây chỉ có thể là số bịa. Không chọn (b): huy hiệu không phải một mini app trường
+//     đã hứa, nên "· sắp" sẽ là lời hứa do màn hình tự đặt ra.
+//  2. ĐỌC SÁCH TUẦN (3/5) — "Học tập" là mini app giai đoạn 2, chưa xây. Ô mờ "· sắp" của
+//     nó ĐÃ CÓ ở lưới mini app trang chủ; vẽ lại một ô số mờ ở hồ sơ là nói hai lần cùng
+//     một điều, lần thứ hai dưới dạng một con số không tồn tại.
+//  3. THIẾT BỊ ĐANG ĐĂNG NHẬP — không có sổ thiết bị. Phiên là token 15 phút, hệ KHÔNG
+//     biết em đang mở trên máy nào. Đây là ô nguy hiểm nhất trong sáu ô: một danh sách
+//     thiết bị sai làm em tưởng có người lạ đăng nhập, hoặc tệ hơn, làm em YÊN TÂM rằng
+//     không có ai — trong khi hệ không có cách nào biết.
+//  4. NHẮC CHECK-IN BUỔI SÁNG (công tắc) — chưa có kênh đẩy nào (DEBT #40: kênh duy nhất
+//     có thật là một tệp nhật ký). Một công tắc bật lên rồi không ai nhận được nhắc là
+//     lời hứa suông, và nó còn tệ hơn không có: em bật rồi trông chờ vào nó.
+//  5. NGÔN NGỮ — chưa có i18n. Một ô chọn chỉ có một lựa chọn là ô trang trí (§3).
+//  6. CHIP "GOOGLE SSO" — Google SSO thật CHƯA bật; /login đang chạy nhà cung cấp thử
+//     (login-form.tsx: "Chọn tài khoản thử (thay Google SSO thật)"). In tên nhà cung cấp
+//     lên hồ sơ là khai một sự thật kỹ thuật chưa đúng. Dòng "Đăng nhập bằng tài khoản
+//     trường" nói đúng thứ đang xảy ra và không phải sửa lại khi SSO bật.
 //
-// Sửa 31/07/2026 (gói "mobile-cho-man-con-thieu"): bản điện thoại vẫn còn là bản RÚT
-// GỌN — nó kết bằng câu "Bản đầy đủ (ai thấy gì của mình, liên hệ GVCN) mở trên máy
-// tính". Hai thứ bị cắt đúng là hai thứ không được phép cắt:
-//   1. Khối "Ai thấy gì của mình?" — DESIGN-GUIDELINES §9 và PRODUCT.md bắt người
-//      nhập dữ liệu cảm xúc phải biết ai đọc được. Bối cảnh dùng thật của học sinh
-//      THCS là điện thoại, nên để khối này chỉ ở desktop = giấu nó khỏi gần như toàn
-//      bộ người mà nó sinh ra để bảo vệ.
-//   2. Link "Trợ giúp & liên hệ GVCN" (/can-gap-thay-co) — đường duy nhất từ tab Hồ
-//      sơ để em nhờ cô giúp. Em cần nó lúc 9 giờ tối, cầm điện thoại.
-// Hai khối nay dựng một lần thành <WhoSeesWhatCard>/<HelpLink> rồi dùng chung cho cả
-// hai khổ màn: không chép markup nên không thể lệch nội dung giữa hai bản. Bố cục
-// điện thoại vẫn là MỘT CỘT sẵn có, không vẽ mới. Nút Đăng xuất xuống cuối cột —
-// hành động rời trang thì đứng sau nội dung, không chen giữa.
+// Và một câu bị bỏ hẳn: **"thường trả lời trong ngày"** cạnh tên thầy cô chủ nhiệm. Đó là
+// một cam kết SLA không ai đặt ra, in trên màn của một đứa trẻ đang cân nhắc có nên nhờ
+// giúp hay không. Không đo được, không ai chịu trách nhiệm — bỏ.
 //
-// Sửa 31/07/2026 (gói "giong-noi-va-don-dep"): ba chỗ trong màn này nói chữ "GVCN" với
-// một đứa trẻ 11 tuổi — hai chỗ còn lấy chính chữ viết tắt đó LÀM TÊN người khi chưa
-// biết tên cô (`teacherName ?? "GVCN"`). Nay đi qua teacherLabel() ở ngay dưới: cắt hậu
-// tố chức danh trong full_name, chưa biết tên thì nói "thầy cô chủ nhiệm".
+// Cổng canh sáu ô này: tests/unit/ho-so-khong-bia-so.test.ts. Có nó để lần sau không ai
+// lặng lẽ thêm một con số giả vào, và để người thêm phải đọc lý do trước khi thêm.
+//
+// ══════════════════════════════════════════════════════════════════════════════
+// BỐ CỤC — HAI CỘT, MỘT CÂY DUY NHẤT
+// ══════════════════════════════════════════════════════════════════════════════
+// Máy tính (1440×900): cột nội dung `flex 1.65` + rail `flex 1`, đúng tỉ lệ brief mục 5.2.
+// Điện thoại (390×844): cùng cây đó xếp thành một cột, thứ tự DOM = thứ tự đọc.
+//
+// Vì sao MỘT cây chứ không phải hai nhánh `md:hidden` như bản trước: bản trước dựng cột
+// mobile và cột desktop tách rời, và lỗi đã xảy ra thật hai lần — bản mobile là NGÕ CỤT
+// (31/07), rồi bản mobile thiếu khối "Ai thấy gì của mình?" và đường nhờ thầy cô giúp
+// (31/07, gói "mobile-cho-man-con-thieu"). Hai lần đều cùng một cơ chế: nội dung mới được
+// thêm vào một cột, không ai nhớ cột kia. Một cây thì không có "cột kia" để mà quên.
+//
+// Sửa 31/07/2026 (gói "a11y-nen") vẫn còn hiệu lực: mỗi nhánh (học sinh / nhân viên) là
+// MỘT cây có <MainContent> bọc nội dung — menu trái và tab bar nằm NGOÀI nó, nên đường tắt
+// "Bỏ qua menu" ở layout.tsx mới thật sự bỏ qua được menu.
+//
+// Sửa 31/07/2026 (gói "giong-noi-va-don-dep"): mọi chỗ gọi tên thầy cô đi qua teacherLabel()
+// ở ngay dưới — cắt hậu tố chức danh trong full_name, chưa biết tên thì nói "thầy cô chủ
+// nhiệm", không bao giờ lấy chữ viết tắt hành chính làm tên người.
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc-client";
 import type { HubRole } from "@hub/core/contracts";
@@ -78,19 +93,98 @@ function useLogout() {
   };
 }
 
-function LogoutButton({ onClick, className }: { onClick: () => void; className: string }) {
+/**
+ * Đăng xuất — hành động KHÔNG LÙI ĐƯỢC, nên phải hỏi lại (điều 15 hiến pháp UI).
+ *
+ * Trước 06/08/2026 nút này gọi thẳng `/api/auth/logout` ngay cú bấm đầu tiên. Trên điện
+ * thoại nó nằm ngay dưới nội dung cuộn, và một cú chạm nhầm đá người dùng ra màn đăng
+ * nhập — với nhà cung cấp SSO thật thì đường quay lại còn đi qua một vòng chuyển hướng nữa.
+ *
+ * Hỏi lại bằng cách MỞ TẠI CHỖ chứ không bằng hộp thoại nổi: hộp thoại đúng chuẩn cần giam
+ * focus, trả focus, khoá cuộn nền — hứa `role="dialog"` mà không làm đủ thì tệ hơn không
+ * hứa (cùng lý lẽ với `aria-haspopup` ở user-menu.tsx). Khối mở tại chỗ giữ nguyên thứ tự
+ * Tab của trang, và con trỏ bàn phím được đặt vào nút xác nhận nên trình đọc màn hình đọc
+ * ra câu hỏi ngay khi nó hiện.
+ *
+ * `Escape` = "Ở lại": phím thoát quen thuộc phải trả về trạng thái an toàn, không phải
+ * trạng thái đã thoát.
+ */
+function LogoutBox({ className = "" }: { className?: string }) {
+  const logout = useLogout();
+  const [hoiLai, setHoiLai] = useState(false);
+  const nutXacNhan = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (hoiLai) nutXacNhan.current?.focus();
+  }, [hoiLai]);
+
+  if (!hoiLai) {
+    return (
+      <button
+        type="button"
+        onClick={() => setHoiLai(true)}
+        // Chữ đỏ của nút dùng token `dangerText` (#C7333A), không phải #D2383E: #D2383E đạt
+        // 4,80:1 trên trắng nên nhìn qua tưởng đủ — nhưng nút này nằm trên NỀN HỒNG
+        // #FFF5F5 (token surface-danger), và ở đó nó chỉ 4,49:1, hụt 0,01 so với mốc 4,5:1.
+        // #C7333A trên #FFF5F5 = 4,94:1. (05/08/2026)
+        // Icon `logout` giữ #D2383E: nó là thành phần phi văn bản (aria-hidden, chữ "Đăng
+        // xuất" ngay bên cạnh mới mang nghĩa) nên mốc của nó là 3:1, và 4,49:1 vượt xa.
+        //
+        // VIỀN ĐỔI 06/08/2026 — #FFD5D6 → token `dangerText`. Đo lại đợt này ra một con số
+        // không chống chế được: nền nút #FFF5F5 so với nền trang #F5F7FA là **1,00:1**, và
+        // viền cũ #FFD5D6 so với cả hai là 1,25:1. Tức là RANH GIỚI của nút không tồn tại —
+        // WCAG 1.4.11 đòi 3:1 cho phần nhìn được dùng để nhận ra một điều khiển, và thứ duy
+        // nhất đang làm việc đó là dòng chữ bên trong. Trên một nút KHÔNG LÙI ĐƯỢC thì nhận
+        // nhầm ranh giới là bấm nhầm. #C7333A cho 4,94:1 trên nền trang — và đúng là "nút
+        // Đăng xuất viền đỏ" mà ảnh mẫu vẽ.
+        className={`flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-dangerText bg-surface-danger px-6 py-3 text-[14px] font-black text-dangerText hover:bg-[#FFECEC] ${className}`}
+      >
+        <span aria-hidden="true" className="msr text-[20px] text-[#D2383E]">logout</span>
+        Đăng xuất
+      </button>
+    );
+  }
+
   return (
-    <button type="button" onClick={onClick} className={className}>
-      <span aria-hidden="true" className="msr text-[19px] text-[#D2383E]">logout</span>
-      Đăng xuất
-    </button>
+    <div
+      role="group"
+      aria-label="Xác nhận đăng xuất"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setHoiLai(false);
+      }}
+      className={`flex flex-col gap-2.5 rounded-2xl border-[1.5px] border-dangerText bg-surface-danger p-4 ${className}`}
+    >
+      <p className="text-[13px] font-black text-dangerText">Đăng xuất khỏi tài khoản này?</p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          ref={nutXacNhan}
+          onClick={logout}
+          // Trắng trên #C7333A = 6,03:1 — nút xác nhận là chỗ duy nhất trong màn dùng nền
+          // đỏ đặc, và nó phải đọc được chắc chắn hơn nút mở ra nó.
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-dangerText px-4 text-[13px] font-black text-white"
+        >
+          <span aria-hidden="true" className="msr text-[18px]">logout</span>
+          Đăng xuất
+        </button>
+        <button
+          type="button"
+          onClick={() => setHoiLai(false)}
+          // Viền `subtle` (#5B6B80) chứ không phải `line` (#E4E9F0): nút này màu trắng đứng
+          // trên nền hồng #FFF5F5 — hai mặt cách nhau 1,03:1, nên viền là thứ DUY NHẤT vẽ
+          // ra nó. `line` cho 1,22:1, `subtle` cho 5,09:1. Đường lùi phải nhìn thấy rõ ít
+          // nhất bằng đường đi tiếp.
+          className="flex min-h-[44px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-subtle bg-white px-4 text-[13px] font-black text-cardtitle2"
+        >
+          Ở lại
+        </button>
+      </div>
+    </div>
   );
 }
 
 /**
  * "Ai thấy gì của mình?" — bắt buộc có ở MỌI khổ màn (DESIGN-GUIDELINES §9).
- * Dùng chung cho điện thoại và desktop: chép làm hai bản là mở đường cho hai bản
- * nói khác nhau về cùng một luật riêng tư.
  *
  * Viết lại 01/08/2026 (ADR-026, migration 0044). Đây là màn SINH RA để nói thật, nên
  * nó mà nói thiếu thì hỏng gấp đôi — và dòng cô chủ nhiệm là dòng dễ nói thiếu nhất.
@@ -107,20 +201,24 @@ function LogoutButton({ onClick, className }: { onClick: () => void; className: 
  *  · gộp thành "cô thấy cảm xúc" là nói THIẾU SỰ THẬT MỚI — đúng câu vừa bị bỏ.
  * Câu "biết vậy thôi, không biết con đã ghi gì" là câu quan trọng nhất cả khối: nó nói
  * cho em biết ranh giới, để em không phải tự đoán ranh giới đó bằng cách thử.
+ *
+ * KHÔNG viết lại theo ảnh mẫu. Ảnh ghi "Cô Thu (GVCN) — cảm xúc…" — chữ đó đã hết đúng
+ * từ ADR-026, và nó sai theo hướng nguy hiểm nhất: hứa với em rằng cô đọc được thứ cô
+ * không đọc được nữa.
  */
 function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
   const teacher = teacherLabel(teacherName);
   return (
-    <div className="flex flex-col gap-3 rounded-[22px] border-[1.5px] border-[#CFE4FB] bg-[#F0F7FF] p-5 text-left md:p-[22px]">
+    <div className="flex flex-col gap-3 rounded-[22px] border-[1.5px] border-[#CFE4FB] bg-surface-infoSoft p-5 text-left md:p-[22px]">
       <div className="flex items-center gap-2">
         <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">shield_person</span>
-        <span className="text-[15px] font-black text-[#1D4E8F]">Ai thấy gì của mình?</span>
+        <span className="text-[15px] font-black text-link">Ai thấy gì của mình?</span>
       </div>
       {/* Màu không bao giờ là tín hiệu duy nhất (§11): mỗi dòng có icon check/cancel
           KÈM chữ nói rõ thấy gì — người mù màu vẫn đọc đủ nghĩa. */}
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
-        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+        <span className="text-[12.5px] leading-relaxed text-link">
           <b>Thầy cô tâm lý</b> — đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
         </span>
       </div>
@@ -129,22 +227,32 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
           không thuộc hẳn nhóm nào — cô thấy một phần, và phần đó phải được kể ra. */}
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#2C7BF2]">visibility</span>
-        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+        <span className="text-[12.5px] leading-relaxed text-link">
           <b>{teacher}</b> — xem điểm danh và đọc lời nhắn con gửi. Cô <b>không đọc</b> được con đã
           ghi cảm xúc gì mỗi ngày. Cô chỉ biết là con <b>cần được để ý</b> khi con bấm nút cần gặp,
           hoặc khi hệ thống thấy con có nhiều ngày liền không vui — biết vậy thôi, không biết con đã
           ghi gì.
         </span>
       </div>
+      {/* RÚT NGẮN 06/08/2026 (§1.5). Vế trong ngoặc là một GIỚI HẠN QUYỀN, không phải chữ
+          thừa — bỏ hẳn là nói nhiều hơn sự thật, đúng thứ §9 gọi là nói dối. Nên nó ở lại,
+          chỉ đổi từ đuôi câu trong ngoặc thành một chip `visibility_off` đứng riêng: cùng
+          nội dung, ngắn hơn một nửa, và cái "không" thì mắt bắt được ngay bằng icon. */}
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#2C7BF2]">visibility</span>
-        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
-          <b>Bố mẹ</b> — điểm danh và Báo cáo Trưởng thành (không xem chi tiết cảm xúc từng ngày)
+        <span className="flex flex-wrap items-center gap-1.5 text-[12.5px] leading-relaxed text-link">
+          <span>
+            <b>Bố mẹ</b> — điểm danh, Báo cáo Trưởng thành
+          </span>
+          <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-black text-link">
+            <span aria-hidden="true" className="msr text-[13px]">visibility_off</span>
+            không xem cảm xúc
+          </span>
         </span>
       </div>
       <div className="flex items-start gap-2.5">
         <span aria-hidden="true" className="msr flex-none text-[18px] text-[#D2383E]">cancel</span>
-        <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+        <span className="text-[12.5px] leading-relaxed text-link">
           <b>Bạn cùng lớp</b> — không thấy gì cả
         </span>
       </div>
@@ -153,24 +261,229 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
 }
 
 /**
- * Đường tới "Cần gặp thầy cô". Ở desktop nó là một hàng trong thẻ "Tài khoản";
- * ở điện thoại nó đứng riêng thành một thẻ bấm được — cùng nội dung, khác vỏ, nên
- * `className` là tham số chứ không phải hai bản chép tay.
+ * Đường tới "Cần gặp thầy cô" — một hàng trong thẻ "Tài khoản".
+ *
+ * Dòng phụ chỉ còn TÊN thầy cô. Câu "· thường trả lời trong ngày" trong ảnh mẫu đã bỏ:
+ * không có SLA nào của trường nói thế, không ai đo, không ai chịu trách nhiệm. Một lời hứa
+ * về thời gian trả lời in ngay tại chỗ em đang cân nhắc có nên nhờ giúp hay không là chỗ
+ * tệ nhất để hứa liều.
  */
 function HelpLink({ teacherName, className }: { teacherName: string | null; className: string }) {
   return (
     <a href="/can-gap-thay-co" className={className}>
-      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-[#E3F8ED]">
+      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-surface-success">
         <span aria-hidden="true" className="msr text-[20px] text-[#00A05F]">support_agent</span>
       </span>
       <div className="min-w-0 flex-1">
         <div className="text-[14px] font-extrabold text-ink">Trợ giúp &amp; nhắn thầy cô chủ nhiệm</div>
-        <div className="mt-px text-[11.5px] text-caption">
-          {teacherLabel(teacherName)} · thường trả lời trong ngày
-        </div>
+        <div className="mt-px text-[11.5px] text-caption">{teacherLabel(teacherName)}</div>
       </div>
-      <span aria-hidden="true" className="msr text-[20px] text-[#C9D2DE]">chevron_right</span>
+      {/* Token `line2` = #C9D2DE. Mũi tên này là trang trí thuần (aria-hidden, chữ ngay bên
+          trái đã nói đủ) nên không có mốc tương phản nào áp lên nó — nhưng mỗi mã hex viết
+          tay là một chỗ đợt sửa sau bỏ sót. */}
+      <span aria-hidden="true" className="msr text-[20px] text-line2">chevron_right</span>
     </a>
+  );
+}
+
+/** Avatar tròn vàng + chữ cái đầu. Tên rỗng ra "?" chứ không ra một vòng tròn trống. */
+function Avatar({ initial }: { initial: string }) {
+  return (
+    <span className="flex h-[84px] w-[84px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[32px] font-black text-navy shadow-[0_8px_18px_rgba(232,148,13,.3)]">
+      {initial}
+    </span>
+  );
+}
+
+/**
+ * Thẻ danh tính. `meta` là một dòng đã ghép sẵn ở nơi gọi — ghép ở đó chứ không ở đây vì
+ * học sinh và nhân viên có bộ thông tin khác nhau, và vì phần rỗng phải được LOẠI chứ
+ * không được in ra thành dấu chấm giữa hai khoảng trắng ("Lớp  · Trường …").
+ */
+function IdentityCard({
+  initial,
+  name,
+  meta,
+  email,
+}: {
+  initial: string;
+  name: string;
+  meta: string;
+  email: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-5 rounded-[22px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-[26px]">
+      <Avatar initial={initial} />
+      <div className="min-w-0 flex-1 basis-[220px]">
+        <div className="text-[19px] font-black text-ink md:text-[22px]">{name}</div>
+        {meta && <div className="mt-1 text-[13px] font-semibold text-subtle">{meta}</div>}
+        {email && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-full bg-chip px-3 py-1.5">
+              <span aria-hidden="true" className="msr text-[15px] text-subtle">mail</span>
+              <span className="break-all text-[11.5px] font-bold text-cardtitle2">{email}</span>
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Một ô số. Ảnh mẫu vẽ BA ô; dựng được HAI — ô thứ ba (huy hiệu / đọc sách tuần) không có
+ * dữ liệu nào phía sau, xem đầu file. Hai ô còn lại đều là số đếm thật từ
+ * `attendance.checkins` (server/routers/profile.ts), không phải số dẫn xuất.
+ */
+function StatTile({
+  icon,
+  value,
+  label,
+  className,
+  iconClass,
+}: {
+  icon: string;
+  value: number;
+  label: string;
+  className: string;
+  iconClass: string;
+}) {
+  return (
+    <div className={`min-w-[104px] flex-1 rounded-2xl px-4 py-3.5 text-center ${className}`}>
+      <div className="flex items-center justify-center gap-1">
+        {/* Cả icon lẫn CON SỐ đều phải đọc được trên nền nhạt: con số là CHỮ nên mốc của nó
+            là 4,5:1, và nó lại chính là thứ duy nhất mang dữ liệu trong ô này. Mã cũ
+            #E8940D chỉ 2,26:1 trên #FFF7E0. (05/08/2026) */}
+        <span aria-hidden="true" className={`msr text-[19px] ${iconClass}`}>{icon}</span>
+        <span className="text-[20px] font-black">{value}</span>
+      </div>
+      <div className="mt-0.5 text-[10px] font-extrabold">{label}</div>
+    </div>
+  );
+}
+
+/**
+ * Hàng ô số, đủ bốn thể của khối có dữ liệu.
+ *
+ * Thể RỖNG ở đây là thật, không phải giả định: em vừa nhập học thì chưa có lượt check-in
+ * nào, và hai ô số sẽ là "0". Số 0 là một con số ĐÚNG, nhưng hai số 0 cạnh nhau đọc giống
+ * hệt một màn hỏng — nên thể rỗng nói thẳng ra là chưa có gì được ghi, một dòng.
+ * (Thể đang tải và thể lỗi ở tầng màn: cả thẻ danh tính, hàng ô số và đường nhờ giúp đều
+ * đến từ MỘT truy vấn, nên vẽ ba khung xương rời nhau chỉ là ba lần nói cùng một điều.)
+ */
+function StatRow({ presentDays, streakDays }: { presentDays: number; streakDays: number }) {
+  if (presentDays === 0 && streakDays === 0) {
+    return (
+      <div
+        role="status"
+        className="flex items-center gap-2.5 rounded-2xl bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)]"
+      >
+        {/* `caption2` chứ không phải `line2`: #C9D2DE trên trắng là 1,53:1 — icon gần như
+            biến mất, mà đây là ô CHỈ CÓ một icon và một dòng chữ. #66707D = 5,03:1. */}
+        <span aria-hidden="true" className="msr text-[20px] text-caption2">event_busy</span>
+        <span className="text-[12.5px] font-bold text-muted">Chưa có ngày nào được ghi</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-2.5">
+      <StatTile
+        icon="local_fire_department"
+        value={streakDays}
+        label="chuỗi check-in"
+        className="bg-surface-warnSoft text-gold-textDark"
+        iconClass="text-gold-textDark"
+      />
+      <StatTile
+        icon="event_available"
+        value={presentDays}
+        label="ngày có mặt"
+        className="bg-surface-success text-successText"
+        iconClass="text-[#00A05F]"
+      />
+    </div>
+  );
+}
+
+/** Thẻ "Tài khoản". Ảnh mẫu gọi nó là "Tài khoản & thiết bị" — phần thiết bị đã bỏ, xem đầu file. */
+function AccountCard({ children }: { children?: React.ReactNode }) {
+  return (
+    <div className="rounded-[22px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+      <div className="text-[15px] font-black text-navy md:text-[16px]">Tài khoản</div>
+      <div className="mt-3 flex flex-col">
+        <div className="flex items-center gap-3.5 py-[15px]">
+          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-surface-infoSoft">
+            <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">verified_user</span>
+          </span>
+          {/* BỎ 06/08/2026 (§1.5): "Không có mật khẩu riêng để quên" là câu biện minh cho một
+              lựa chọn kỹ thuật của trường, không phải thông tin em hay bố mẹ cần để làm việc
+              gì trên màn này. Dòng chính + chip ĐANG DÙNG đã nói đủ trạng thái tài khoản. */}
+          <div className="min-w-0 flex-1 text-[14px] font-extrabold text-ink">
+            Đăng nhập bằng tài khoản trường
+          </div>
+          <span className="flex-none rounded-full bg-surface-success px-[11px] py-1.5 text-[10px] font-black text-successText">
+            ĐANG DÙNG
+          </span>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Dòng phiên bản — em và bố mẹ đọc nó cho người hỗ trợ khi báo lỗi ("bản nào?"). */
+function VersionLine() {
+  // #B6BECB = 1,87:1 trên trắng — dưới cả mốc 3:1 của thành phần phi văn bản. Token
+  // caption2 = 5,03:1. (01/08/2026)
+  return (
+    <div className="text-center text-[10.5px] font-semibold text-caption2">
+      School Hub v1.0 · Giai đoạn 1 · Trường Việt Anh
+    </div>
+  );
+}
+
+/**
+ * Kiểu chữ của `<h1>` — một chuỗi dùng chung, để hai nhánh không trôi khỏi nhau về hình.
+ *
+ * Vì sao chính thẻ `<h1>` thì KHÔNG gói vào đây mà viết thẳng ở từng nhánh: cổng
+ * tests/unit/a11y-nen.test.ts đếm số `<h1>` trong mã nguồn và đòi nó bằng số vùng
+ * <MainContent>. Gói `<h1>` vào một component dùng chung làm phép đếm ra 1 cho 2 vùng —
+ * đúng lúc chạy, sai lúc đếm. Nới phép đếm để nhận một `<h1>` gián tiếp là mở đúng cái
+ * cửa mà cổng đó sinh ra để đóng: hai `<h1>` cùng lúc trong một DOM. Nên chỗ này chịu lặp
+ * đúng MỘT dòng thẻ ở mỗi nhánh, và lặp có kiểm.
+ */
+const H1_CLASS = "text-[16px] font-black text-ink md:text-[17px]";
+
+/**
+ * Thanh tiêu đề màn, có ở CẢ HAI khổ. `<h1>` truyền vào từ nhánh gọi (xem H1_CLASS).
+ *
+ * `<h1>` thật chứ không phải `sr-only` + một `<div>` vẽ lại cùng chữ: hai thứ nói cùng một
+ * điều thì một trong hai sẽ trôi.
+ */
+function ScreenHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-none items-center gap-3.5 border-b border-line bg-white px-5 py-3.5 md:px-7">
+      <div className="min-w-0 flex-1">
+        {children}
+        <div className="text-[11.5px] text-caption">Tài khoản trường</div>
+      </div>
+    </div>
+  );
+}
+
+/** Khung hai cột dùng chung cho hai nhánh: cột nội dung 1.65, rail 1 (brief mục 5.2). */
+function TwoColumn({ main, rail }: { main: React.ReactNode; rail: React.ReactNode }) {
+  return (
+    // `md:min-h-0` là bắt buộc, không phải thừa: trong một flex-col, con `flex-1` mặc định
+    // có `min-height:auto` nên nó KHÔNG co lại được — vùng này sẽ tràn ra ngoài
+    // <MainContent> (đang `md:overflow-hidden`) thay vì tự cuộn, và ở khổ 1440×900 phần
+    // cuối rail (nút Đăng xuất, dòng phiên bản) rơi khỏi khung nhìn mà không cuộn tới được.
+    <div className="flex-1 px-5 py-5 md:min-h-0 md:overflow-y-auto md:p-7">
+      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 md:flex-row md:items-start md:gap-5">
+        <div className="flex min-w-0 flex-col gap-4 md:flex-[1.65]">{main}</div>
+        <div className="flex min-w-0 flex-col gap-4 md:flex-1">{rail}</div>
+      </div>
+    </div>
   );
 }
 
@@ -190,53 +503,7 @@ export function ProfileView({
   return isStudent ? (
     <StudentProfile displayName={displayName} email={email} roles={roles} classCode={classCode} />
   ) : (
-    <SimpleProfile displayName={displayName} email={email} roles={roles} classCode={classCode} />
-  );
-}
-
-function SimpleProfile({
-  displayName,
-  email,
-  roles,
-  classCode,
-}: {
-  displayName: string;
-  email: string;
-  roles: HubRole[];
-  classCode?: string | null;
-}) {
-  const logout = useLogout();
-  return (
-    // `md:h-screen` chứ không phải `h-screen`: trên điện thoại để trang cao tự
-    // nhiên và cuộn được, đúng cách bốn màn học sinh đang làm.
-    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
-      {/* Sidebar 240px chỉ có nghĩa từ md trở lên — dưới đó nó ăn 2/3 chiều ngang máy. */}
-      <div className="hidden md:flex md:w-[240px] md:flex-none">
-        <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
-      </div>
-      <MainContent className="flex flex-1 flex-col items-center justify-center gap-4 bg-pagebgDesktop px-6 py-10">
-        <h1 className="sr-only">Hồ sơ của mình</h1>
-        <Mascot pose="think" width={64} />
-        <div className="text-center text-[18px] font-black text-navy">{displayName}</div>
-        <div className="break-all text-center text-[12.5px] text-caption">{email}</div>
-        {classLabel(classCode) && (
-          <div className="text-[12.5px] font-bold text-[#33507C]">{classLabel(classCode)}</div>
-        )}
-        <LogoutButton
-          onClick={logout}
-          className="mt-2 flex items-center gap-2 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] px-6 py-3 text-[13.5px] font-black text-[#D2383E]"
-        />
-        {/* Nhân viên không có tab bar; nút này là đường ra duy nhất trên điện thoại.
-            inline-flex + min-h-[44px]: đo thật trên 360px ngày 02/08/2026 ra 81×19 — một
-            đường ra cao 19px trên màn cảm ứng, đúng ở màn mà nó là đường ra DUY NHẤT. */}
-        <a
-          href="/home"
-          className="inline-flex min-h-[44px] items-center text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2 md:hidden"
-        >
-          Về trang chủ
-        </a>
-      </MainContent>
-    </div>
+    <StaffProfile displayName={displayName} email={email} roles={roles} classCode={classCode} />
   );
 }
 
@@ -251,181 +518,148 @@ function StudentProfile({
   roles: HubRole[];
   classCode?: string | null;
 }) {
-  const logout = useLogout();
   const query = trpc.profile.getMyStudentProfile.useQuery();
   const profile = query.data;
-  const initial = displayName.trim().slice(0, 1).toUpperCase() || "?";
+  // CHỮ CÁI TRÊN AVATAR LẤY TỪ TÊN ĐANG HIỆN NGAY CẠNH NÓ, không lấy từ tên phiên.
+  //
+  // Đo thật 06/08/2026 trên hub_dev: phiên của em trả `displayName = "Học sinh Minh (6A1)"`
+  // (tên tài khoản thử), trong khi thẻ in tên thật "Nguyễn Văn Minh". Lấy ký tự đầu của tên
+  // phiên cho ra chữ **H** nằm cạnh chữ "Nguyễn Văn Minh" — một avatar không khớp với chính
+  // cái tên nó đứng cạnh. Và tiếng Việt gọi nhau bằng TÊN, nên chữ đúng là chữ đầu của từ
+  // cuối cùng: "Nguyễn Văn Minh" → M.
+  const tenHienThi = profile?.fullName?.trim() || displayName.trim();
+  const initial = (tenHienThi.split(/\s+/).pop() ?? "").slice(0, 1).toUpperCase() || "?";
+
+  // Ghép ở đây chứ không trong thẻ: phần nào rỗng thì BIẾN MẤT khỏi dòng. Chưa có lớp
+  // (chưa xếp lớp, hoặc đã kết thúc niên khoá) mà in "Lớp  · …" là in ra một chỗ trống
+  // trông như dữ liệu bị mất.
+  const meta = profile
+    ? [classLabel(profile.classCode), profile.schoolName, `mã học sinh ${profile.studentCode}`]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
 
   return (
     <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
       {/* Menu trái và tab bar nằm NGOÀI <MainContent> — đó chính là thứ đường tắt
-          "Bỏ qua menu" phải bỏ qua được. */}
+          "Bỏ qua menu" phải bỏ qua được. Sidebar 240px chỉ có nghĩa từ md trở lên;
+          dưới đó nó ăn 2/3 chiều ngang máy. */}
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
       </div>
       <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg md:overflow-hidden md:bg-pagebgDesktop">
-        {/* Một <h1> duy nhất, luôn có mặt ở mọi khổ màn. Không đổi thẻ của dòng chữ
-            đang hiện vì mỗi khổ màn vẽ tiêu đề ở một chỗ khác nhau (tên em ở điện
-            thoại, thanh trên ở desktop) — đặt <h1> vào cả hai là để hai <h1> trong
-            cùng một DOM. */}
-        <h1 className="sr-only">Hồ sơ của mình</h1>
-        {/* Bản mobile THẬT: một cột, đủ mọi thứ bản desktop có — tên, lớp, mã học sinh
-            để đọc cho cô, đường nhờ cô giúp, luật riêng tư, rồi mới tới Đăng xuất.
-            Không còn khối nào "chỉ có ở máy tính". */}
-        <div className="flex flex-1 flex-col items-center gap-3 px-5 pb-6 pt-10 text-center md:hidden">
-          <span className="flex h-[84px] w-[84px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[32px] font-black text-navy shadow-[0_8px_18px_rgba(232,148,13,.3)]">
-            {initial}
-          </span>
-          <div className="text-[19px] font-black text-ink">{profile?.fullName ?? displayName}</div>
-          {query.isPending && <p className="text-[12.5px] text-caption">Đang tải hồ sơ…</p>}
-          {!query.isPending && query.error && (
-            <p className="text-[12.5px] font-bold text-[#D2383E]">
-              Chưa tải được lớp và mã học sinh.{" "}
-              <button type="button" onClick={() => void query.refetch()} className="min-h-[44px] underline underline-offset-2">
-                Thử lại
-              </button>
-            </p>
-          )}
-          {profile && (
-            <>
-              <div className="text-[12.5px] font-semibold text-[#5B6B80]">
-                Lớp {profile.classCode} · {profile.schoolName}
-              </div>
-              <div className="rounded-full bg-[#F1F4F8] px-3.5 py-1.5 text-[11.5px] font-bold text-[#33507C]">
-                Mã học sinh {profile.studentCode}
-              </div>
-            </>
-          )}
-          <div className="break-all text-[11.5px] text-caption">{email}</div>
+        <ScreenHeader>
+          <h1 className={H1_CLASS}>Hồ sơ của mình</h1>
+        </ScreenHeader>
 
-          {/* Hai khối này chỉ vẽ được khi đã biết tên GVCN — chưa có dữ liệu thì không
-              vẽ khung rỗng đoán bừa tên cô. */}
-          {profile && (
-            <div className="mt-3 flex w-full flex-col gap-3">
-              <HelpLink
-                teacherName={profile.homeroomTeacherName}
-                // min-h-[52px] > 44px của §11; cả thẻ là vùng chạm, không chỉ dòng chữ.
-                className="flex min-h-[52px] items-center gap-3.5 rounded-[20px] bg-white px-4 py-3 text-left shadow-[0_3px_14px_rgba(10,42,94,.06)]"
-              />
-              <WhoSeesWhatCard teacherName={profile.homeroomTeacherName} />
-            </div>
-          )}
+        {query.isPending && <LoadingState label="Đang tải hồ sơ…" />}
+        {!query.isPending && query.error && (
+          <ErrorState error={query.error} label="Hồ sơ" onRetry={() => void query.refetch()} />
+        )}
 
-          <LogoutButton
-            onClick={logout}
-            className="mt-4 flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] px-6 py-3 text-[13.5px] font-black text-[#D2383E]"
+        {profile && (
+          <TwoColumn
+            main={
+              <>
+                <IdentityCard
+                  initial={initial}
+                  name={profile.fullName}
+                  meta={meta}
+                  email={email}
+                />
+                <StatRow presentDays={profile.presentDays} streakDays={profile.streakDays} />
+                <AccountCard>
+                  <HelpLink
+                    teacherName={profile.homeroomTeacherName}
+                    // min-h-[52px] > 44px của §11; cả hàng là vùng chạm, không chỉ dòng chữ.
+                    className="flex min-h-[52px] items-center gap-3.5 border-t border-chip py-[15px] hover:bg-[#FAFBFD]"
+                  />
+                </AccountCard>
+              </>
+            }
+            rail={
+              <>
+                <WhoSeesWhatCard teacherName={profile.homeroomTeacherName} />
+                {/* RÚT NGẮN 06/08/2026 (§1.5). Bỏ "Hồ sơ là của con." — không mang thông
+                    tin nào. Giữ phần dùng được: sai thì báo cho ai. */}
+                <div className="flex items-center gap-3 rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+                  <Mascot pose="think" width={46} />
+                  <p className="text-[12.5px] font-semibold text-cardtitle2">
+                    Thông tin chưa đúng — nói với {teacherLabel(profile.homeroomTeacherName)} nhé.
+                  </p>
+                </div>
+                <LogoutBox />
+                <VersionLine />
+              </>
+            }
           />
-        </div>
-
-        {/* Từ md trở lên: thanh tiêu đề + bản đầy đủ. Ba nhánh tải/lỗi/có dữ liệu nằm
-            trong cùng một cột ẩn dưới md để bản điện thoại ở trên không bị lặp. */}
-        <div className="hidden flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5 md:flex">
-            <div className="flex-1">
-              <div className="text-[16px] font-black text-ink">Hồ sơ của mình</div>
-              <div className="text-[11.5px] text-caption">Tài khoản trường</div>
-            </div>
-          </div>
-
-        <div className="hidden md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden">
-          {query.isPending && <LoadingState label="Đang tải hồ sơ…" />}
-          {!query.isPending && query.error && (
-            <ErrorState error={query.error} label="Hồ sơ" onRetry={() => void query.refetch()} />
-          )}
-
-          {profile && (
-            <div className="flex-1 overflow-y-auto p-7">
-              <div className="flex flex-wrap items-start gap-5">
-                <div className="min-w-0 flex-[2_1_520px] flex flex-col gap-[18px]">
-                  <div className="flex flex-wrap items-center gap-5 rounded-[22px] bg-white p-[26px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                    <span className="flex h-[84px] w-[84px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[32px] font-black text-navy shadow-[0_8px_18px_rgba(232,148,13,.3)]">
-                      {initial}
-                    </span>
-                    <div className="min-w-0 flex-1 basis-[240px]">
-                      <div className="text-[22px] font-black text-ink">{profile.fullName}</div>
-                      <div className="mt-1 text-[13px] font-semibold text-[#5B6B80]">
-                        Lớp {profile.classCode} · {profile.schoolName} · mã học sinh {profile.studentCode}
-                      </div>
-                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                        <span className="flex items-center gap-1.5 rounded-full bg-[#F1F4F8] px-3 py-1.5">
-                          <span aria-hidden="true" className="msr text-[15px] text-[#5B6B80]">mail</span>
-                          <span className="text-[11.5px] font-bold text-[#33507C]">{email}</span>
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2.5">
-                      <div className="min-w-[92px] rounded-2xl bg-[#FFF7E0] px-4 py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <span aria-hidden="true" className="msr text-[19px] text-[#F58F00]">local_fire_department</span>
-                          <span className="text-[20px] font-black text-[#E8940D]">{profile.streakDays}</span>
-                        </div>
-                        <div className="mt-0.5 text-[10px] font-extrabold text-[#8A5A00]">chuỗi check-in</div>
-                      </div>
-                      <div className="min-w-[92px] rounded-2xl bg-[#E3F8ED] px-4 py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <span aria-hidden="true" className="msr text-[19px] text-[#00A05F]">event_available</span>
-                          <span className="text-[20px] font-black text-[#00693F]">{profile.presentDays}</span>
-                        </div>
-                        <div className="mt-0.5 text-[10px] font-extrabold text-[#00693F]">ngày có mặt</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                    <div className="text-[16px] font-black text-navy">Tài khoản</div>
-                    <div className="mt-3.5 flex flex-col">
-                      <div className="flex items-center gap-3.5 border-b border-[#F1F4F8] py-[15px]">
-                        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-[#F0F7FF]">
-                          <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">verified_user</span>
-                        </span>
-                        <div className="flex-1">
-                          <div className="text-[14px] font-extrabold text-ink">Đăng nhập bằng tài khoản trường</div>
-                          <div className="mt-px text-[11.5px] text-caption">Không có mật khẩu riêng để quên</div>
-                        </div>
-                        <span className="rounded-full bg-[#E3F8ED] px-[11px] py-1.5 text-[10px] font-black text-[#00693F]">
-                          ĐANG DÙNG
-                        </span>
-                      </div>
-                      <HelpLink
-                        teacherName={profile.homeroomTeacherName}
-                        className="flex items-center gap-3.5 py-[15px] hover:bg-[#FAFBFD]"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="min-w-0 flex-[1_1_300px] flex flex-col gap-4">
-                  <WhoSeesWhatCard teacherName={profile.homeroomTeacherName} />
-
-                  <div className="flex items-center gap-3 rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                    <Mascot pose="think" width={46} />
-                    <p className="text-[12.5px] font-semibold leading-relaxed text-[#33507C]">
-                      Hồ sơ là của con. Nếu thấy thông tin nào chưa đúng, nói với {teacherLabel(profile.homeroomTeacherName)} nhé!
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className="flex items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] p-[15px] text-[14px] font-black text-[#D2383E] hover:bg-[#FFECEC]"
-                  >
-                    <span aria-hidden="true" className="msr text-[20px] text-[#D2383E]">logout</span>
-                    Đăng xuất
-                  </button>
-                  {/* #B6BECB = 1,87:1 trên trắng — dưới cả mốc 3:1 của thành phần phi văn
-                      bản, mà đây là dòng em/bố mẹ đọc cho người hỗ trợ khi báo lỗi ("bản
-                      nào?"). Token caption2 = 5,03:1. (01/08/2026) */}
-                  <div className="text-center text-[10.5px] font-semibold text-caption2">
-                    School Hub v1.0 · Giai đoạn 1 · Trường Việt Anh
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </MainContent>
       <div className="md:hidden">
         <StudentTabBar fullName={displayName} email={email} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Nhánh NHÂN VIÊN — cùng bố cục hai cột, khác nội dung và khác giọng (§8: người lớn gọn,
+ * nghiệp vụ; không "nhé", không mascot).
+ *
+ * Ba khối của nhánh học sinh KHÔNG có ở đây, và không phải vì làm tắt:
+ *  · "Ai thấy gì của mình?" nói về quyền đọc dữ liệu cảm xúc của MỘT HỌC SINH. Nhân viên
+ *    không có dữ liệu đó nên thẻ này với họ là một khối trống có tiêu đề.
+ *  · Ô số chuỗi check-in / ngày có mặt là dữ liệu điểm danh của học sinh.
+ *  · Đường "nhắn thầy cô chủ nhiệm" là đường của em, không phải của đồng nghiệp.
+ * Thứ nhân viên THẬT SỰ cần ở màn này — biết mình đang đăng nhập bằng tài khoản nào, và
+ * thoát ra được — thì có đủ, ở cả hai khổ màn.
+ */
+function StaffProfile({
+  displayName,
+  email,
+  roles,
+  classCode,
+}: {
+  displayName: string;
+  email: string;
+  roles: HubRole[];
+  classCode?: string | null;
+}) {
+  const initial = displayName.trim().slice(0, 1).toUpperCase() || "?";
+
+  return (
+    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
+      <div className="hidden md:flex md:w-[240px] md:flex-none">
+        <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
+      </div>
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg md:overflow-hidden md:bg-pagebgDesktop">
+        <ScreenHeader>
+          <h1 className={H1_CLASS}>Hồ sơ của tôi</h1>
+        </ScreenHeader>
+        <TwoColumn
+          main={
+            <>
+              <IdentityCard initial={initial} name={displayName} meta={classLabel(classCode)} email={email} />
+              <AccountCard />
+            </>
+          }
+          rail={
+            <>
+              <LogoutBox />
+              {/* Nhân viên không có thanh tab; trên điện thoại đây là đường về Hub duy nhất.
+                  inline-flex + min-h-[44px]: đo thật trên 360px ngày 02/08/2026 ra 81×19 —
+                  một đường ra cao 19px trên màn cảm ứng, đúng ở màn mà nó là đường ra DUY NHẤT. */}
+              <a
+                href="/home"
+                className="inline-flex min-h-[44px] items-center justify-center text-[12.5px] font-extrabold text-link underline underline-offset-2 md:hidden"
+              >
+                Về trang chủ
+              </a>
+              <VersionLine />
+            </>
+          }
+        />
+      </MainContent>
     </div>
   );
 }

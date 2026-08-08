@@ -72,6 +72,27 @@
 // trạng) · em làm gì tiếp được. Chỉ khi em bấm "Đã hiểu" thì dấu vết mới mất — không có
 // đường nào khác xoá nó, vì xoá im lặng chính là con lỗi đang sửa.
 //
+// Sửa 05/08/2026 — /checkin LÀ MỘT TRANG CỦA HUB, KHÔNG PHẢI MINI APP:
+//
+// `/checkin` khai trong `lib/man-hinh.ts` như mọi màn Hub khác (vai student), không nằm
+// trong `core.embedded_apps`. Nhưng nó dựng bằng <PageShell> + <MiniAppHeader>, tức là
+// mượn nguyên bộ vỏ của shell mini app (DESIGN-GUIDELINES §6: header màu chủ + capsule
+// ⋯│✕ kiểu Zalo Mini App). Hậu quả ở HAI khổ màn, không riêng máy tính:
+//   · Laptop 1440px: khung thẻ `max-w-xl` của PageShell cho ra một thẻ ~576px trôi giữa
+//     nền xám, không menu trái, không đường đi đâu ngoài link cuối trang — trong khi ba
+//     màn học sinh cạnh nó (/tuan-nay, /diem-danh, /can-gap-thay-co) đã có menu trái thật
+//     từ 31/07/2026.
+//   · Điện thoại: capsule ⋯│✕ nói với em rằng đây là một app khác vừa mở đè lên Hub, và
+//     nó THAY chỗ của thanh tab — nên đứng ở đây em mất luôn đường đi các màn còn lại.
+//
+// Nay là một trang bình thường, dùng đúng khung của /diem-danh và /tuan-nay: menu trái
+// <HubSidebar> từ `md`, thanh tiêu đề trắng ở cả hai khổ, thanh tab học sinh dưới `md`,
+// nội dung trong <MainContent>. KHÔNG bịa bố cục desktop mới — nội dung vẫn là một cột
+// xếp dọc như cũ, chỉ nằm trong thẻ trắng căn giữa vùng nội dung.
+//
+// Ghi chú cũ nói "màn này cố ý toàn màn, không có thanh tab" nay hết đúng: cái toàn màn
+// ấy đến từ vỏ mini app, không phải từ một quyết định sản phẩm nào.
+//
 // Sửa 01/08/2026 (ADR-026) — NHÃN: câu "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy"
 // đã hết đúng. Migration 0044 cắt nhánh chủ nhiệm khỏi `core.can_read_mood()`, nên
 // người đọc được ô cảm xúc nay chỉ còn chính em và thầy cô tâm lý. Nhãn chuẩn chốt ở
@@ -80,7 +101,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { MoodValue } from "@hub/core/contracts";
+import type { HubRole, MoodValue } from "@hub/core/contracts";
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { trpc } from "@/lib/trpc-client";
 import { toLocalIsoDate } from "@/lib/date";
@@ -92,11 +113,12 @@ import {
   shouldQueueOffline,
   type FailedCheckin,
 } from "@/lib/offline-queue";
-import { MiniAppHeader } from "./mini-app-header";
+import { HubSidebar } from "./hub-sidebar";
 import { MoodTile } from "./mood-tile";
 import { Mascot } from "./mascot";
-import { PageShell } from "./page-shell";
-import { NHAN_AI_DOC_CAM_XUC } from "./ui/labels";
+import { MainContent } from "./page-shell";
+import { StudentTabBar } from "./tab-bar";
+import { NHAN_AI_DOC_CAM_XUC, classLabel } from "./ui/labels";
 import { LoadingState, MutationError } from "./ui/query-state";
 
 type ViewState = "pick" | "success";
@@ -256,23 +278,24 @@ function QueueFailureNotice({
                   : `Lần con ghi ${when} chưa gửi được lên trường`}
               </p>
             </div>
+            {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ: đây là câu báo một hành động đã hỏng —
+                lúc hỏng thì em CẦN chữ, nên ba nhánh vẫn còn ba câu khác nhau. Cái bị cắt là
+                phần kể cơ chế của máy, thứ em không dùng để làm gì:
+                  · moodOnly: bỏ "Phần “Hôm nay con thấy thế nào” đang tạm tắt vì…" — tiêu đề
+                    ngay trên đã nói phần tâm trạng chưa vào sổ. Giữ nguyên vế "không phải lỗi
+                    của con", vì đó là điều duy nhất em cần nghe ở đây.
+                  · expired: bỏ "Máy đã đăng xuất con từ lúc nào đó, nên lần bấm ấy nằm lại
+                    trong máy chứ không đi được" — nút "Đăng nhập lại" ngay dưới đã là lời giải
+                    thích đủ, và đường đi thì nút mới là thứ đi được.
+                  · nhánh còn lại: bỏ "Máy đã giữ lần bấm ấy trong điện thoại và thử gửi lại" +
+                    "lần này con sẽ thấy ngay là đã ghi xong" — cả hai đều kể chuyện bên trong
+                    máy, không đổi việc em phải làm (ghi lại). */}
             <p className="text-[11.5px] leading-relaxed text-[#8A5A00]">
-              {moodOnly ? (
-                <>
-                  Phần “Hôm nay con thấy thế nào” đang tạm tắt vì trường chưa nhận được phiếu đồng ý
-                  của bố mẹ. Đây không phải lỗi của con.
-                </>
-              ) : expired ? (
-                <>
-                  Máy đã đăng xuất con từ lúc nào đó, nên lần bấm ấy nằm lại trong máy chứ không đi
-                  được. Con đăng nhập lại rồi ghi lại giúp thầy cô nhé.
-                </>
-              ) : (
-                <>
-                  Máy đã giữ lần bấm ấy trong điện thoại và thử gửi lại, nhưng trường không nhận
-                  được. Con ghi lại hôm nay nhé — lần này con sẽ thấy ngay là đã ghi xong.
-                </>
-              )}
+              {moodOnly
+                ? "Chưa có phiếu đồng ý — không phải lỗi của con."
+                : expired
+                  ? "Phiên đã hết — con đăng nhập lại rồi ghi lại nhé."
+                  : "Trường không nhận được — con ghi lại hôm nay nhé."}
             </p>
             {/* Câu lỗi thật của máy chủ, nếu có — không nuốt nó, nhưng cũng không để nó
                 thay câu nói với em ở trên. */}
@@ -301,7 +324,7 @@ function QueueFailureNotice({
               <button
                 type="button"
                 onClick={() => onDismiss(item.clientId)}
-                className="min-h-[44px] px-2 text-[12px] font-black text-[#1D4E8F] underline underline-offset-2"
+                className="min-h-[44px] px-2 text-[12px] font-black text-link underline underline-offset-2"
               >
                 Đã hiểu
               </button>
@@ -313,7 +336,78 @@ function QueueFailureNotice({
   );
 }
 
-export function CheckinView() {
+/** Người đang đứng ở màn này — chỉ dùng để dựng menu trái và thanh tab, không đụng dữ liệu. */
+export type CheckinViewProps = {
+  displayName: string;
+  email: string;
+  roles: HubRole[];
+  classCode?: string | null;
+};
+
+/**
+ * Khung trang, dùng chung cho CẢ BỐN thể của màn (đang xem · đã ghi · chọn · vừa ghi xong).
+ *
+ * Một khung duy nhất chứ không phải mỗi thể tự dựng: trước hôm nay ba trong bốn thể tự viết
+ * lấy <PageShell> + <MiniAppHeader> còn thể "vừa ghi xong" thì không có header nào — nên
+ * ngay giữa một lần bấm, thanh trên của trang biến mất. Bốn thể là bốn CÂU NÓI khác nhau
+ * trong cùng một trang, không phải bốn trang.
+ *
+ * `active="checkin"`: /checkin cố ý không có mục trong menu trái (nó là nút tròn giữa thanh
+ * tab — xem `lib/man-hinh.ts`), nên không mục nào sáng lên. Đó là đúng: sáng "Trang chủ" khi
+ * em đang ở màn check-in là menu nói dối chỗ em đang đứng.
+ */
+function CheckinShell({
+  displayName,
+  email,
+  roles,
+  classCode,
+  children,
+}: CheckinViewProps & { children: React.ReactNode }) {
+  const subtitle = classLabel(classCode);
+  return (
+    <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
+      {/* Menu trái 240px chỉ có nghĩa từ md; dưới đó đường ra là thanh tab cuối trang. */}
+      <div className="hidden md:flex md:w-[240px] md:flex-none">
+        <HubSidebar roles={roles} active="checkin" fullName={displayName} email={email} classCode={classCode} />
+      </div>
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-white md:overflow-hidden md:bg-pagebgDesktop">
+        <div className="flex flex-none items-center gap-3 border-b border-[#E9ECF2] bg-white px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
+          <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-domain-attendance to-domain-attendanceDark">
+            <span aria-hidden="true" className="msr text-[19px] text-white">sentiment_satisfied</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[16px] font-black text-ink">Check-in cảm xúc</h1>
+            {/* Không biết lớp thì bỏ hẳn dòng này, không đoán — xem ui/labels.ts. */}
+            {subtitle && <div className="text-[11.5px] text-caption">{subtitle}</div>}
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col md:overflow-y-auto md:p-7">
+          {/* Điện thoại: thẻ trải sát mép như cũ (nội dung tự có padding riêng). Máy tính:
+              thẻ trắng DÙNG HẾT bề ngang vùng nội dung (chặn ở 1160px cho màn siêu rộng —
+              quá mốc đó thì mắt phải quét ngang cả gang tay để đọc một câu). Bản 05/08 đầu
+              tiên chặn ở 620px và chủ đầu tư nói ngay "vẫn bị bó trong một cái khung": một
+              thẻ 620px giữa vùng 1200px thì vẫn là bản điện thoại phóng to, chỉ khác là có
+              thêm menu bên cạnh. Các thể bên trong tự trải theo chiều ngang đó (bốn ô cảm
+              xúc thành MỘT HÀNG, khối "đã ghi" thành hai cột) chứ không xếp dọc rồi chừa
+              trống hai bên. */}
+          <div className="flex flex-1 flex-col bg-white md:mx-auto md:w-full md:max-w-[1160px] md:flex-none md:rounded-[22px] md:shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+            {children}
+          </div>
+        </div>
+      </MainContent>
+      {/* Đường ra ở điện thoại, giống /diem-danh và /tuan-nay. page.tsx đá mọi vai không
+          phải học sinh về /home nên `roles` luôn có "student" — vẫn hỏi cho đúng §6 (chỉ
+          học sinh mới có thanh tab Hub), không dựa vào một điều kiện ngầm. */}
+      {roles.includes("student") && (
+        <div className="md:hidden">
+          <StudentTabBar fullName={displayName} email={email} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function CheckinView({ displayName, email, roles, classCode }: CheckinViewProps) {
   const utils = trpc.useUtils();
   const [state, setState] = useState<ViewState>("pick");
   const [wantsHelp, setWantsHelp] = useState(false);
@@ -337,6 +431,7 @@ export function CheckinView() {
    * quay về xoá trong im lặng.
    */
   const [failedCheckins, setFailedCheckins] = useState<FailedCheckin[]>([]);
+  const shellProps = { displayName, email, roles, classCode };
   const todayStatus = trpc.checkin.getTodayStatus.useQuery();
   const submitMood = trpc.checkin.submitMood.useMutation();
   const submitRef = useRef(submitMood.mutateAsync);
@@ -488,7 +583,7 @@ export function CheckinView() {
     const helpState = helpSignalState({ wantsHelp: helpAtSubmit, reachedServer: !queuedOffline });
     const helpStuck = helpState === "chua-gui-duoc";
     return (
-      <PageShell bg="bg-white">
+      <CheckinShell {...shellProps}>
         <div
           role="status"
           aria-live="polite"
@@ -520,15 +615,29 @@ export function CheckinView() {
                    của mình hỏng rồi", và đứa trẻ thôi mở app.
                 3. KHÔNG trách bố mẹ em, không dùng chữ nào để em mang về nhà chất vấn. */}
           {moodBlocked && (
-            <div className="flex w-full max-w-[340px] flex-col items-center gap-1.5 rounded-[14px] border-[1.6px] border-[#DDE6F2] bg-[#F4F8FD] p-3.5 text-center">
-              <p className="text-[12.5px] font-bold leading-relaxed text-ink">
-                Phần “Hôm nay con thấy thế nào” đang tạm tắt vì trường chưa nhận được phiếu đồng ý
-                của bố mẹ. Đây không phải lỗi của con.
-              </p>
-              <p className="text-[11.5px] leading-relaxed text-muted">
-                Lượt điểm danh hôm nay của con <b className="font-black">vẫn được ghi</b>, và nút
-                “Mình cần gặp thầy cô” của con <b className="font-black">vẫn dùng được như thường</b>.
-              </p>
+            <div className="flex w-full max-w-[340px] flex-col items-center gap-2 rounded-[14px] border-[1.6px] border-[#DDE6F2] bg-[#F4F8FD] p-3.5 text-center">
+              {/* RÚT NGẮN 06/08/2026 (§1.5). Bỏ "Phần “Hôm nay con thấy thế nào” đang tạm tắt
+                  vì…": tiêu đề <h2> ngay trên đã nói đúng chuyện đó ("Trường chưa ghi tâm
+                  trạng của con"), nên câu này là lần nói thứ hai. */}
+              {/* Hai dòng ngắn chứ không một dòng dài: ở khổ 390px một câu 56 ký tự vẫn vắt
+                  hai dòng, mà vế thứ hai ("không phải lỗi của con") là vế em cần đọc rõ nhất
+                  ở màn này. Tách ra thì nó đứng riêng thay vì trôi ở cuối câu. */}
+              <p className="text-[12.5px] font-bold text-ink">Chưa có phiếu đồng ý của bố mẹ.</p>
+              <p className="text-[12px] font-black text-navy">Không phải lỗi của con.</p>
+              {/* Luật 2 của khối (xem ba luật ở trên) KHÔNG bị cắt, chỉ đổi hình: cái em
+                  KHÔNG mất nay là hai chip icon + nhãn ngắn thay cho một câu hai mệnh đề.
+                  Chip nói nhanh hơn câu ở đúng chỗ này, vì em đang quét màn hình tìm xem
+                  mình có mất gì không. */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="flex items-center gap-1 rounded-full bg-[#E3F8ED] px-2.5 py-1 text-[11px] font-black text-successText">
+                  <span aria-hidden className="msr text-[14px]">check_circle</span>
+                  Điểm danh vẫn ghi
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-[#FFF7E0] px-2.5 py-1 text-[11px] font-black text-gold-textDark">
+                  <span aria-hidden className="msr text-[14px]">waving_hand</span>
+                  Nút cần gặp vẫn dùng được
+                </span>
+              </div>
             </div>
           )}
           {savedAt !== null && (
@@ -545,8 +654,16 @@ export function CheckinView() {
               {notice}
             </p>
           )}
+          {/* CẮT 06/08/2026 (§1.5 + §4). Câu cũ: "Chuỗi check-in hiện tại: {n} ngày 🔥".
+              Hai chữ "hiện tại" không thêm nghĩa nào (không có con số chuỗi nào khác trên
+              màn), và 🔥 đang làm ICON — §4 cấm emoji làm icon UI, đúng cặp ví dụ nó nêu
+              (🔥 → `local_fire_department`). Nay là chip: icon lửa + "Chuỗi {n} ngày", cùng
+              hình dạng với chip chuỗi ở popup check-in trang chủ. */}
           {streakDays !== null && (
-            <p className="text-[13px] text-muted2">Chuỗi check-in hiện tại: {streakDays} ngày 🔥</p>
+            <span className="flex items-center gap-1.5 rounded-full bg-[#FFF7E0] px-3 py-1.5 text-[12px] font-black text-gold-textDark">
+              <span aria-hidden className="msr text-[16px]">local_fire_department</span>
+              Chuỗi {streakDays} ngày
+            </span>
           )}
           {queuedOffline && (
             <p className="flex items-center gap-1.5 text-[11px] text-caption2">
@@ -558,9 +675,12 @@ export function CheckinView() {
           {/* QĐ-2, chiều TỐT: máy chủ đã nhận. Nói "đã tới", KHÔNG nói "cô đã đọc" —
               máy chỉ biết vế đầu, và bịa vế sau thì đứa trẻ lãnh. */}
           {helpState === "da-toi-co" && (
-            <p className="flex max-w-[320px] items-center gap-1.5 rounded-[12px] bg-[#E3F8ED] px-3.5 py-2 text-[12px] font-bold leading-relaxed text-[#00693F]">
+            // RÚT NGẮN 06/08/2026 (§1.5): bỏ phần nhắc lại nguyên văn nhãn của nút em vừa
+            // bấm ("Lời “Mình cần gặp thầy cô” của con…") — em vừa bấm nó xong, không cần
+            // đọc lại. Chữ còn lại giữ ĐÚNG mệnh đề của QĐ-2 ("đã tới", không phải "đã đọc").
+            <p className="flex items-center gap-1.5 rounded-full bg-[#E3F8ED] px-3.5 py-2 text-[12px] font-black text-successText">
               <span aria-hidden className="msr flex-none text-[16px]">waving_hand</span>
-              Lời “Mình cần gặp thầy cô” của con đã tới chỗ thầy cô rồi.
+              Lời cần gặp đã tới chỗ thầy cô
             </p>
           )}
 
@@ -570,12 +690,16 @@ export function CheckinView() {
               đường đi thật: thử lại ngay, hoặc gặp người thật. */}
           {helpStuck && (
             <div className="flex w-full max-w-[340px] flex-col items-center gap-2 rounded-[14px] border-[1.6px] border-[#FFD5D6] bg-[#FFF5F5] p-3.5 text-center">
-              <p className="text-[12.5px] font-bold leading-relaxed text-[#8A4A4C]">
-                Thầy cô <b>chưa</b> biết con muốn gặp — máy chưa gửi được lời nhắn này đi.
+              {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — đây là câu báo hỏng của QĐ-2.
+                  Bỏ "Máy sẽ tự gửi khi có mạng lại": chip `cloud_off` ngay trên khối này
+                  ("Đang offline — đã lưu máy, tự gửi khi có mạng") đã nói đúng câu đó, và
+                  nó chỉ hiện ở đúng nhánh này. Giữ trọn hai điều em cần: thầy cô CHƯA biết,
+                  và đường đi thật cho hôm nay. */}
+              <p className="text-[12.5px] font-bold text-[#8A4A4C]">
+                Thầy cô <b>chưa</b> biết con muốn gặp.
               </p>
               <p className="text-[11.5px] leading-relaxed text-[#8A4A4C]">
-                Máy sẽ tự gửi khi có mạng lại. Nhưng nếu con cần gặp trong hôm nay, con tìm thầy cô
-                nói trực tiếp nhé — như vậy chắc chắn hơn.
+                Cần gặp hôm nay: con tìm thầy cô nói trực tiếp nhé.
               </p>
               {lastMood !== null && (
                 <button
@@ -589,24 +713,20 @@ export function CheckinView() {
               )}
               <Link
                 href="/can-gap-thay-co"
-                className="text-[12px] font-black text-[#1D4E8F] underline underline-offset-2"
+                className="text-[12px] font-black text-link underline underline-offset-2"
               >
                 Viết rõ hơn cho thầy cô
               </Link>
             </div>
           )}
-          {/* min-h-[44px] + inline-flex (01/08/2026): `py-2.5` cho ra ô cao ~33px — dưới mốc
-              44px của §11/WCAG 2.5.5, và đây là đường ra DUY NHẤT của màn thành công trên
-              điện thoại (mini app không có tab bar Hub, PWA thêm vào màn hình chính không có
-              nút Back). min-h trên một <a> nội tuyến không có tác dụng nếu thiếu inline-flex. */}
-          <a
-            href="/home"
-            className="mt-2 inline-flex min-h-[44px] items-center rounded-full bg-navy px-6 py-2.5 text-[13px] font-black text-white"
-          >
-            Về trang chủ
-          </a>
+          {/* NÚT "VỀ TRANG CHỦ" ĐÃ BỎ (05/08/2026). Nó sinh ra ngày 01/08 khi màn này còn là
+              vỏ mini app: không thanh tab, không menu trái, nên nó là đường ra DUY NHẤT và
+              phải đạt 44px. Từ hôm nay /checkin là một trang bình thường của Hub — có menu
+              trái từ md và thanh tab học sinh dưới md — nên nút này thành đường ra thứ ba cho
+              cùng một chỗ, và không màn nào khác của Hub có nó. Giữ lại là để một dấu vết của
+              kiến trúc cũ nằm trên màn hình mới. */}
         </div>
-      </PageShell>
+      </CheckinShell>
     );
   }
 
@@ -616,10 +736,9 @@ export function CheckinView() {
   // -------------------------------------------------------------------------
   if (stage === "loading") {
     return (
-      <PageShell bg="bg-white">
-        <MiniAppHeader title="Check-in cảm xúc" icon="sentiment_satisfied" gradient="from-domain-attendance to-domain-attendanceDark" />
+      <CheckinShell {...shellProps}>
         <LoadingState label="Đang xem hôm nay con đã check-in chưa…" />
-      </PageShell>
+      </CheckinShell>
     );
   }
 
@@ -628,86 +747,91 @@ export function CheckinView() {
   // -------------------------------------------------------------------------
   if (stage === "recorded") {
     return (
-      <PageShell bg="bg-white">
-        <MiniAppHeader title="Check-in cảm xúc" icon="sentiment_satisfied" gradient="from-domain-attendance to-domain-attendanceDark" />
-        <div className="flex flex-1 flex-col items-center px-6 pb-8 pt-8 text-center">
-          <Mascot pose="thumbsup" width={64} />
-          <h2 className="mt-3 text-[19px] font-black text-navy">Hôm nay con ghi rồi nhé</h2>
-          <p className="mt-2 text-[14px] text-ink">
-            {moodToday !== null ? (
-              <>
-                Con đã ghi: <b className="font-black text-navy">{MOOD_LABEL[moodToday]}</b>
-              </>
-            ) : (
-              // Có bản ghi hôm nay nhưng không đọc được tâm trạng: nói đúng chừng
-              // đó, không đoán thêm một tâm trạng nào cho em.
-              <>Con đã check-in hôm nay.</>
+      <CheckinShell {...shellProps}>
+        {/* HAI CỘT TỪ `md` (DESIGN-GUIDELINES "Desktop 2 cột").
+            Cột trái KỂ chuyện đã xảy ra (em ghi gì, lúc mấy giờ, ai đọc được), cột phải
+            320px là NHỮNG VIỆC LÀM TIẾP. Ở điện thoại hai cột xếp dọc thành đúng thứ tự cũ
+            nên không màn nào bị vẽ lại — `md:` là thứ duy nhất thêm vào. */}
+        <div className="flex flex-1 flex-col items-center px-6 pb-8 pt-8 text-center md:flex-row md:items-center md:justify-center md:gap-10 md:px-10 md:py-12 md:text-left">
+          <div className="flex flex-col items-center md:flex-1 md:items-start">
+            <Mascot pose="thumbsup" width={64} />
+            <h2 className="mt-3 text-[19px] font-black text-navy md:text-[24px]">Hôm nay con ghi rồi nhé</h2>
+            <p className="mt-2 text-[14px] text-ink md:text-[16px]">
+              {moodToday !== null ? (
+                <>
+                  Con đã ghi: <b className="font-black text-navy">{MOOD_LABEL[moodToday]}</b>
+                </>
+              ) : (
+                // Có bản ghi hôm nay nhưng không đọc được tâm trạng: nói đúng chừng
+                // đó, không đoán thêm một tâm trạng nào cho em.
+                <>Con đã check-in hôm nay.</>
+              )}
+            </p>
+            {today?.checkedInAt && (
+              <p className="mt-1 text-[12.5px] text-muted2">Lúc {today.checkedInAt}</p>
             )}
-          </p>
-          {today?.checkedInAt && (
-            <p className="mt-1 text-[12.5px] text-muted2">Lúc {today.checkedInAt}</p>
-          )}
 
-          {/* Nợ #31 — màn "hôm nay ghi rồi" cũng phải nói ra lần bấm CŨ đã hỏng. Đây là
-              màn em thấy nhiều nhất; giấu dấu vết ở đây là giấu ở đúng chỗ đông người. */}
-          <div className="w-full max-w-[340px]">
-            <QueueFailureNotice
-              items={failedCheckins}
-              busy={submitMood.isPending}
-              onRetry={(item) => void retryFailed(item)}
-              onDismiss={(clientId) => void dismissFailed(clientId)}
-            />
-          </div>
-          {/* Nhãn chuẩn DESIGN-GUIDELINES §9 (ADR-026). Không viết tay một câu khác ở đây:
-              hai chỗ in nhãn trong cùng file mà lệch nhau một chữ là hai lời hứa khác nhau
-              về cùng một ô nhập. */}
-          <div className="mt-2 flex items-center justify-center gap-1">
-            <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-            <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
+            {/* Nhãn chuẩn DESIGN-GUIDELINES §9 (ADR-026). Không viết tay một câu khác ở đây:
+                hai chỗ in nhãn trong cùng file mà lệch nhau một chữ là hai lời hứa khác nhau
+                về cùng một ô nhập. */}
+            <div className="mt-2 flex items-center gap-1">
+              <span aria-hidden className="msr text-[13px] text-caption">lock</span>
+              <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
+            </div>
+
+            {/* Nợ #31 — màn "hôm nay ghi rồi" cũng phải nói ra lần bấm CŨ đã hỏng. Đây là
+                màn em thấy nhiều nhất; giấu dấu vết ở đây là giấu ở đúng chỗ đông người. */}
+            <div className="w-full max-w-[340px] md:max-w-[420px]">
+              <QueueFailureNotice
+                items={failedCheckins}
+                busy={submitMood.isPending}
+                onRetry={(item) => void retryFailed(item)}
+                onDismiss={(clientId) => void dismissFailed(clientId)}
+              />
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setWantsChange(true)}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-[14px] bg-gradient-to-br from-navy to-navy-light py-3.5 text-[13.5px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)]"
-          >
-            {/* `edit` chứ không phải mũi tên đổi chiều: font đã cắt gọn theo
-                public/fonts/icon-names.txt — tên ngoài danh sách đó hiện ra ô trống,
-                không báo lỗi, không ai biết (tests/unit/a11y.test.ts). */}
-            <span aria-hidden className="msr text-[19px]">edit</span>
-            Đổi tâm trạng
-          </button>
-          <p className="mt-2 max-w-[300px] text-[11.5px] leading-relaxed text-caption2">
-            Đổi thì tâm trạng mới sẽ thay tâm trạng con ghi lúc nãy, mỗi ngày chỉ giữ một.
-          </p>
+          <div className="flex w-full flex-col items-center md:w-[320px] md:flex-none md:items-stretch">
+            <button
+              type="button"
+              onClick={() => setWantsChange(true)}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-[14px] bg-gradient-to-br from-navy to-navy-light py-3.5 text-[13.5px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)] md:mt-0"
+            >
+              {/* `edit` chứ không phải mũi tên đổi chiều: font đã cắt gọn theo
+                  public/fonts/icon-names.txt — tên ngoài danh sách đó hiện ra ô trống,
+                  không báo lỗi, không ai biết (tests/unit/a11y.test.ts). */}
+              <span aria-hidden className="msr text-[19px]">edit</span>
+              Đổi tâm trạng
+            </button>
+            {/* RÚT NGẮN 06/08/2026 (§1.5). Câu cũ nói LUẬT ("mỗi ngày chỉ giữ một") sau khi
+                đã kể lại cơ chế của nút ngay trên nó ("Đổi thì tâm trạng mới sẽ thay tâm
+                trạng con ghi lúc nãy") — mà cơ chế đó thì `changeNotice` nói thẳng bằng dữ
+                liệu thật ngay sau khi em bấm ("Đã đổi từ Vui sang Mệt"). Giữ đúng phần luật. */}
+            <p className="mt-2 text-center text-[11.5px] text-caption2">
+              Mỗi ngày chỉ giữ một tâm trạng.
+            </p>
 
-          <Link
-            href="/can-gap-thay-co"
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-[14px] border-[1.6px] border-gold bg-[#FFFBEE] py-3 text-[13px] font-black text-gold-textDark"
-          >
-            <span aria-hidden className="msr text-[18px] text-[#E8940D]">waving_hand</span>
-            Mình cần gặp thầy cô
-          </Link>
-          {/* inline-flex + min-h-[44px] (§11). Đo thật 360px ngày 02/08/2026: 81×19 — và đây
-              là màn KHÔNG có thanh tab (luồng check-in cố ý toàn màn), nên link này là
-              đường ra duy nhất. Một đường ra cao 19px trên màn cảm ứng. */}
-          <Link
-            href="/home"
-            className="mt-4 inline-flex min-h-[44px] items-center text-[12.5px] font-extrabold text-[#1D4E8F] underline underline-offset-2"
-          >
-            Về trang chủ
-          </Link>
+            <Link
+              href="/can-gap-thay-co"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-[14px] border-[1.6px] border-gold bg-[#FFFBEE] py-3 text-[13px] font-black text-gold-textDark"
+            >
+              <span aria-hidden className="msr text-[18px] text-gold-textDark">waving_hand</span>
+              Mình cần gặp thầy cô
+            </Link>
+            {/* Link "Về trang chủ" đã bỏ ở đây cùng lượt với nút bên màn thành công — xem lý
+                lẽ ở đó. Tóm tắt: đường về nhà nay nằm ở menu trái và thanh tab như mọi trang
+                khác của Hub, nên một link riêng ở giữa cột hành động là thừa và lạc kiểu. */}
+          </div>
         </div>
-      </PageShell>
+      </CheckinShell>
     );
   }
 
   return (
-    <PageShell bg="bg-white">
-      <MiniAppHeader title="Check-in cảm xúc" icon="sentiment_satisfied" gradient="from-domain-attendance to-domain-attendanceDark" />
-      <div className="flex flex-1 flex-col px-5 pt-5">
+    <CheckinShell {...shellProps}>
+      <div className="flex flex-1 flex-col px-5 pb-6 pt-5 md:px-10 md:py-10">
         <div className="text-center">
-          <div className="text-[20px] font-black text-ink">
+          <div className="text-[20px] font-black text-ink md:text-[26px]">
             {wantsChange ? "Đổi lại tâm trạng hôm nay" : "Hôm nay em thấy thế nào?"}
           </div>
           <div className="mt-1.5 flex items-center justify-center gap-1">
@@ -718,7 +842,7 @@ export function CheckinView() {
 
         {/* Đang đổi: nói rõ cái sắp bị thay là gì, và cho đường quay lại giữ nguyên. */}
         {wantsChange && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-[12px] bg-[#F1F4F8] px-3 py-2 text-center text-[12px] text-muted2">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-[12px] bg-chip px-3 py-2 text-center text-[12px] text-muted2">
             <span>
               {moodToday !== null ? (
                 <>
@@ -732,7 +856,7 @@ export function CheckinView() {
             <button
               type="button"
               onClick={() => setWantsChange(false)}
-              className="font-black text-[#1D4E8F] underline underline-offset-2"
+              className="font-black text-link underline underline-offset-2"
             >
               Giữ nguyên
             </button>
@@ -742,15 +866,17 @@ export function CheckinView() {
         {/* Không đọc được trạng thái hôm nay: nói thẳng là chưa biết, KHÔNG chặn em
             ghi (offline-first), nhưng cũng KHÔNG hứa đây là lần ghi đầu tiên. */}
         {unknownToday && (
-          <div className="mt-3 flex flex-col items-center gap-1.5 rounded-[12px] border-[1.5px] border-[#E4E9F0] bg-[#F7F9FC] px-3.5 py-2.5 text-center">
-            <p className="text-[12px] leading-relaxed text-muted2">
-              Chưa xem được hôm nay con đã ghi chưa. Con vẫn ghi được — nếu sáng nay con ghi rồi thì
-              lần này sẽ thay tâm trạng cũ.
-            </p>
+          <div className="mt-3 flex flex-col items-center gap-1.5 rounded-[12px] border-[1.5px] border-line bg-pagebg px-3.5 py-2.5 text-center">
+            {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — khối này là câu "máy chưa biết", và
+                theo `checkinStage` nó phải nói ra chứ không được im. Bỏ hai vế thừa: "Con vẫn
+                ghi được" (bốn ô cảm xúc ngay dưới đã mời em ghi — hình đã nói) và "nếu sáng
+                nay con ghi rồi thì lần này sẽ thay tâm trạng cũ" (kể cơ chế ghi đè; việc đó
+                `changeNotice` nói bằng dữ liệu thật ngay sau khi em bấm). */}
+            <p className="text-[12px] text-muted2">Chưa xem được hôm nay con đã ghi chưa.</p>
             <button
               type="button"
               onClick={() => void todayStatus.refetch()}
-              className="text-[12px] font-black text-[#1D4E8F] underline underline-offset-2"
+              className="text-[12px] font-black text-link underline underline-offset-2"
             >
               Thử xem lại
             </button>
@@ -767,7 +893,10 @@ export function CheckinView() {
           onDismiss={(clientId) => void dismissFailed(clientId)}
         />
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        {/* Điện thoại 2×2 (ô ~162px, vừa ngón cái). Máy tính MỘT HÀNG bốn ô — cùng cách
+            trang chủ desktop bày thẻ check-in (D2), và là lý do duy nhất đáng để có chiều
+            ngang: bốn lựa chọn nằm ngang tầm mắt, không phải quét dọc hai lượt. */}
+        <div className="mt-4 grid grid-cols-2 gap-3 md:mt-7 md:grid-cols-4 md:gap-5">
           {/* `selected`: khi đang đổi, ô đang được ghi phải tự nói ra mình đang được
               chọn — cho cả mắt lẫn trình đọc màn hình (mood-tile khai aria-pressed). */}
           <MoodTile mood={4} selected={wantsChange && moodToday === 4} onSelect={pick} />
@@ -780,8 +909,11 @@ export function CheckinView() {
         {failure != null && (
           <div className="mt-4 flex flex-col items-center gap-2 rounded-[14px] border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] p-3.5 text-center">
             <MutationError error={failure} />
-            <p className="text-[11.5px] leading-relaxed text-[#8A4A4C]">
-              Cảm xúc của em <b>chưa</b> được gửi. Bấm lại ô em đã chọn để gửi lại nhé.
+            {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — câu báo hỏng. Bỏ vế chỉ đường bằng
+                chữ ("Bấm lại ô em đã chọn để gửi lại nhé"): nút "Gửi lại" ngay dưới làm đúng
+                việc đó, và nút thì bấm được còn câu thì không. */}
+            <p className="text-[11.5px] text-[#8A4A4C]">
+              Cảm xúc của em <b>chưa</b> được gửi.
             </p>
             {lastMood !== null && (
               <button
@@ -800,11 +932,14 @@ export function CheckinView() {
           type="button"
           aria-pressed={wantsHelp}
           onClick={() => setWantsHelp((v) => !v)}
-          className={`mt-4 flex items-center justify-center gap-2 rounded-[14px] border-[1.6px] py-3 text-[13px] font-black transition-colors ${
+          // md:w-[420px] mx-auto: nút này trải hết 1100px thì thành một thanh ngang chắn
+          // ngay dưới bốn ô — to hơn cả thứ nó đứng cạnh, trong khi nó là lối RẼ chứ không
+          // phải việc chính của màn.
+          className={`mt-4 flex items-center justify-center gap-2 rounded-[14px] border-[1.6px] py-3 text-[13px] font-black transition-colors md:mx-auto md:mt-7 md:w-[420px] ${
             wantsHelp ? "border-gold bg-gold/20 text-gold-textDark" : "border-gold bg-[#FFFBEE] text-gold-textDark"
           }`}
         >
-          <span aria-hidden className="msr text-[18px] text-[#E8940D]">waving_hand</span>
+          <span aria-hidden className="msr text-[18px] text-gold-textDark">waving_hand</span>
           {wantsHelp ? "Đã chọn — em cần gặp thầy cô" : "Mình cần gặp thầy cô"}
         </button>
 
@@ -813,6 +948,6 @@ export function CheckinView() {
           <span className="text-[10.5px] text-caption2">Offline vẫn lưu — tự gửi sau.</span>
         </div>
       </div>
-    </PageShell>
+    </CheckinShell>
   );
 }

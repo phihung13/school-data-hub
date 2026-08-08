@@ -58,6 +58,35 @@
 //     care.getDashboard chỉ bắt đầu chạy SAU khi /gvcn đã hydrate xong, đúng vào 2 phút
 //     đầu giờ. Nay /home tự nạp trước dữ liệu đó (staleTime 60s của REACT_QUERY_DEFAULTS
 //     đủ để lần bấm sau dùng lại) — chỉ cho vai homeroom, không tốn request của ai khác.
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sửa 06/08/2026 — NỬA MÀN PHẢI CỦA VAI NGƯỜI LỚN
+// ═══════════════════════════════════════════════════════════════════════════════
+// Chủ đầu tư mở /home bằng tài khoản quản trị rồi tài khoản giáo viên: "thiếu thiếu gì á
+// — thiếu nút tìm mini app, cột bên kia thiếu khung gì đó, thiếu chuông thông báo góc
+// phải; không chỉ admin, giáo viên cũng thiếu". Bốn thay đổi, và cả bốn đều dựng trên dữ
+// liệu ĐANG CÓ, không mở thêm một quyền nào:
+//
+//  A. CỘT PHẢI (components/cot-phai-nguoi-lon.tsx). DESIGN.md quy định bố cục máy tính là
+//     nội dung `flex 1.6–1.7` + rail `flex 1`; trang chủ người lớn không có rail nào nên
+//     nửa màn phải trống. Nhân đây sửa luôn TỈ LỆ: hai cột đang là `flex-[3]` và
+//     `flex-[1]` — tức 3:1, ngoài dải đã duyệt. Nay 1,65:1 cho CẢ HAI nhánh vai, vì đó là
+//     một luật của bố cục chứ không phải một lựa chọn theo vai.
+//
+//  B. CHUÔNG (components/chuong-viec-cho.tsx) đọc `session.getPendingWork`. Cái chuông bị
+//     gỡ ngày 31/07 là một `<Link href="/ho-so">`; cái này dẫn tới đúng màn xử việc, và
+//     đường đi do MÁY CHỦ trả về chứ không do màn hình ghép.
+//
+//  C. Ô TÌM MINI APP (components/tim-mini-app.tsx) chỉ hiện từ `NGUONG_HIEN_O_TIM` app trở
+//     lên. Hôm nay hệ có 2 app, nên ở khổ hiện tại nó KHÔNG hiện — đúng như thiết kế.
+//
+//  D. Thẻ "Buồng lái đang chờ" cũ ĐÃ GỠ. Nó in ba chip tĩnh "Cờ ưu tiên · Gửi muộn · Mood
+//     lớp" dưới câu "Sáng nay lớp có:" mà không đọc một con số nào — với cô giáo nó đọc
+//     thành "sáng nay lớp mình CÓ cờ ưu tiên", trong khi màn hình không hề biết điều đó.
+//     Chỗ của nó nay là khối "Lớp chủ nhiệm" trong rail, với ba con số thật từ
+//     `care.getDashboard` và mốc lượt quét đứng ngay dưới ô số nó ảnh hưởng (ADR-030).
+//     Dòng "Mở Bảng điều khiển để xem lớp sáng nay" ở bản điện thoại gỡ cùng lượt: nó chỉ
+//     đường bằng chữ tới một ô tile đang hiện cách đó 3cm.
 "use client";
 
 import Link from "next/link";
@@ -71,6 +100,10 @@ import { MiniAppTile } from "./mini-app-tile";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { HubSidebar } from "./hub-sidebar";
+import { MainContent } from "./page-shell";
+import { ChuongViecCho, useViecCho, type ViecChoQuery } from "./chuong-viec-cho";
+import { CotPhaiNguoiLon, coRailNguoiLon } from "./cot-phai-nguoi-lon";
+import { OTimMiniApp, useLocMiniApp, type LuoiDaLoc } from "./tim-mini-app";
 import { NHAN_AI_DOC_CAM_XUC, personName } from "./ui/labels";
 import { MutationError, SkeletonBlock } from "./ui/query-state";
 
@@ -106,6 +139,25 @@ interface HomeData {
   weekState: StatState;
   /** Bấm để tải lại hai truy vấn số liệu. */
   retryStats: () => void;
+  /** Nguồn DUY NHẤT của chuông góc phải hero (session.getPendingWork). */
+  viecCho: ViecChoQuery;
+}
+
+/**
+ * Trang chủ này KHÔNG còn việc nào để nói với người đang xem hay không.
+ *
+ * Ba vế, và phải đủ cả ba: lưới không có ô nào · vai không có khối rail nào · chuông đã
+ * tải xong và trả về rỗng. Vế thứ ba đòi `đã tải xong` chứ không phải `không có việc`:
+ * lúc query còn chạy hoặc vừa hỏng, "không có việc" là một kết luận dựng từ im lặng —
+ * đúng thứ Rev F điều 8 của RULES.md cấm.
+ */
+export function manRong(d: {
+  soApp: number;
+  roles: HubRole[];
+  viecCho: { isPending: boolean; isError: boolean; soMuc: number };
+}): boolean {
+  const chuongDaTraLoi = !d.viecCho.isPending && !d.viecCho.isError;
+  return d.soApp === 0 && !coRailNguoiLon(d.roles) && chuongDaTraLoi && d.viecCho.soMuc === 0;
 }
 
 export function HomeView({
@@ -136,6 +188,10 @@ export function HomeView({
   const growthReport = trpc.report.getMyLatestReport.useQuery(undefined, { enabled: isStudent });
   const today = new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
   const isDesktop = useIsDesktop();
+  // Chuông chỉ dựng cho vai người lớn ở màn này (xem `khoiChoVai`), nên truy vấn cũng chỉ
+  // chạy cho họ. Máy chủ CÓ trả mục cho học sinh và phụ huynh; đưa chuông vào nhánh học
+  // sinh là việc của gói giữ màn đó, không phải một dòng sửa kèm ở đây.
+  const viecCho = useViecCho(!isStudent);
 
   // Hâm sẵn buồng lái cho GVCN — xem ghi chú 3 đầu file. `prefetch` không ném lỗi ra
   // màn hình: hỏng thì /gvcn tự tải lại như trước, người dùng không thấy gì khác.
@@ -171,6 +227,7 @@ export function HomeView({
       void todayStatus.refetch();
       void growthReport.refetch();
     },
+    viecCho,
   };
 
   // MỘT nhánh, không hai. `md:hidden`/`hidden md:flex` vẫn dựng cả hai cây trong DOM —
@@ -182,7 +239,12 @@ export function HomeView({
       <div className="flex w-[240px] flex-none">
         <HubSidebar roles={roles} active="home" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <DesktopHome data={data} />
+      {/* Menu trái nằm NGOÀI <MainContent>, nếu không thì đường tắt "Bỏ qua menu" không bỏ
+          qua được gì. Hai nhánh khổ màn loại trừ nhau (useIsDesktop), nên mỗi nhánh một
+          <MainContent> vẫn giữ đúng luật "một trang một id noi-dung". */}
+      <MainContent className="flex min-w-0 flex-1 overflow-hidden">
+        <DesktopHome data={data} />
+      </MainContent>
     </div>
   );
 }
@@ -211,10 +273,17 @@ export function khoiChoVai(data: { isStudent: boolean; isHomeroom: boolean }) {
   return {
     theCheckin: data.isStudent,
     tuanNay: data.isStudent,
-    // `&& !isStudent`: một em học sinh đồng thời là GVCN không tồn tại, nhưng nếu dữ liệu
-    // hỏng mà ra tổ hợp đó thì màn của em phải thắng — em không được thấy lời nhắc về
-    // buồng lái. Giữ nguyên phép so cũ, chỉ chuyển chỗ.
-    loiTatGvcn: data.isHomeroom && !data.isStudent,
+    /**
+     * Chuông "việc đang chờ" + cột phải theo vai. `!isStudent` chứ không phải một danh
+     * sách vai: đây là câu hỏi "màn này đang nói với ai", và nó chỉ có hai câu trả lời.
+     * VAI NÀO thấy khối nào TRONG rail là câu hỏi thứ hai, và nó ở `coRailNguoiLon` —
+     * gộp hai câu hỏi vào một chỗ là cách một trong hai bị nuốt.
+     *
+     * Vế `!isStudent` giữ nguyên tinh thần phép so cũ (`isHomeroom && !isStudent`): một em
+     * học sinh đồng thời là GVCN không tồn tại trong dữ liệu thật, nhưng nếu dữ liệu hỏng
+     * mà ra tổ hợp đó thì màn của EM phải thắng — em không được thấy việc của buồng lái.
+     */
+    khoiNguoiLon: !data.isStudent,
   };
 }
 
@@ -240,13 +309,119 @@ function StatValue({ state, value, width }: { state: StatState; value: string; w
   return <>{value}</>;
 }
 
+/**
+ * LƯỚI MINI APP — ba thể, MỘT bản cài đặt cho hai cây bố cục.
+ *
+ * Ba thể là ba câu khác nhau, và trước hôm nay cả ba đều vẽ ra cùng một thứ (một `<div>`
+ * lưới, rỗng thì rỗng):
+ *   · có app        → lưới 4 cột, giữ nguyên ở cả hai khổ (§6).
+ *   · lọc không ra  → lỗi của TỪ KHOÁ, sửa được bằng một cú bấm ngay tại chỗ.
+ *   · không có app  → sự thật về TÀI KHOẢN, không sửa được bằng cách gõ lại.
+ *
+ * Gộp hai thể rỗng cuối là để người dùng tự đoán mình đang ở ca nào — và đoán sai theo
+ * hướng tệ hơn: "hệ thống này chẳng có gì".
+ */
+function LuoiMiniApp({
+  loc,
+  tongApp,
+  laQuanTri,
+  rongCaMan,
+  oTimTrongThe,
+}: {
+  loc: LuoiDaLoc;
+  /** Số app THẬT của tài khoản — không phải số sau khi lọc. */
+  tongApp: number;
+  laQuanTri: boolean;
+  /** Cả trang không còn gì khác để nói (xem `manRong`) — thêm một lối đi thứ hai. */
+  rongCaMan: boolean;
+  /** Khổ điện thoại đặt ô tìm trong thẻ này; khổ máy tính đặt nó ở hero. */
+  oTimTrongThe: boolean;
+}) {
+  return (
+    <>
+      {oTimTrongThe && loc.hienOTim && (
+        <div className="mb-3">
+          <OTimMiniApp tuKhoa={loc.tuKhoa} datTuKhoa={loc.datTuKhoa} nen="the" />
+        </div>
+      )}
+
+      {tongApp > 0 && !loc.locKhongRa && (
+        <div className="grid grid-cols-4 gap-3 py-1.5">
+          {loc.luoi.map((tile) => (
+            <MiniAppTile key={tile.key} tile={tile} />
+          ))}
+        </div>
+      )}
+
+      {loc.locKhongRa && (
+        <div role="status" aria-live="polite" className="flex flex-col items-start gap-2 py-4">
+          <span className="flex items-center gap-2 text-[12.5px] font-extrabold text-ink">
+            <span aria-hidden="true" className="msr text-[19px] text-caption">search_off</span>
+            Không app nào khớp từ khoá
+          </span>
+          <button
+            type="button"
+            onClick={() => loc.datTuKhoa("")}
+            className="flex min-h-[44px] items-center rounded-xl bg-surface-alt px-4 text-[12.5px] font-extrabold text-link"
+          >
+            Xoá từ khoá
+          </button>
+        </div>
+      )}
+
+      {tongApp === 0 && (
+        <div role="status" aria-live="polite" className="flex flex-col items-start gap-2 py-4">
+          <span className="flex items-center gap-2 text-[12.5px] font-extrabold text-ink">
+            <span aria-hidden="true" className="msr text-[19px] text-caption">space_dashboard</span>
+            Tài khoản này chưa có mini app nào
+          </span>
+          {laQuanTri && (
+            // Quản trị là vai DUY NHẤT sửa được tình trạng này, và sổ đăng ký bật/tắt app
+            // trong mười giây. Với vai khác thì đây là một sự thật về phân quyền, không
+            // phải một việc chờ họ làm — nên không có nút nào giả vờ ngược lại.
+            <Link
+              href="/quan-tri/mini-app"
+              className="flex min-h-[44px] items-center rounded-xl bg-surface-alt px-4 text-[12.5px] font-extrabold text-link"
+            >
+              Mở sổ đăng ký Mini App
+            </Link>
+          )}
+          {rongCaMan && !laQuanTri && (
+            // Không có app, không có việc, không có khối rail nào: nếu chỗ này cũng không
+            // dẫn đi đâu thì /home là một màn cụt — trang duy nhất mọi vai đi qua sau khi
+            // đăng nhập lại là trang không đi tiếp được (điều 21).
+            <Link
+              href="/ho-so"
+              className="flex min-h-[44px] items-center rounded-xl bg-surface-alt px-4 text-[12.5px] font-extrabold text-link"
+            >
+              Hồ sơ và trợ giúp
+            </Link>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Mobile — M3: hero cong, thẻ check-in trồi lên vòm, tab bar dưới cùng.
 // ---------------------------------------------------------------------------
 function MobileHome({ data }: { data: HomeData }) {
   const khoi = khoiChoVai(data);
+  const loc = useLocMiniApp(data.miniApps);
+  const rongCaMan = manRong({
+    soApp: data.miniApps.length,
+    roles: data.roles,
+    viecCho: {
+      isPending: data.viecCho.isPending,
+      isError: data.viecCho.isError,
+      soMuc: data.viecCho.data?.items.length ?? 0,
+    },
+  });
   return (
     <div className="flex min-h-screen w-full flex-col bg-pagebg">
+      {/* Thanh tab ở cuối nằm NGOÀI vùng này — nó là điều hướng, không phải nội dung. */}
+      <MainContent className="flex flex-1 flex-col">
       <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light pb-[54px]">
         <div
           aria-hidden
@@ -258,13 +433,17 @@ function MobileHome({ data }: { data: HomeData }) {
             {data.displayName.slice(0, 1)}
           </div>
           <div className="flex-1">
-            <div className="text-[17px] font-black text-white">
+            {/* Tiêu đề trang, không phải chữ to: trước đây /home không có <h1> nào, trình
+                đọc màn hình mở ra không có cách nào biết đây là trang gì ngoài đọc tuần tự
+                từ đầu. Chỉ đổi THẺ, giữ nguyên class — hình dạng không đổi một pixel. */}
+            <h1 className="text-[17px] font-black text-white">
               <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
-            </div>
+            </h1>
             <div className="mt-0.5 text-[11.5px] text-[#D6E6FF]">{data.today}</div>
           </div>
-          {/* Chuông thông báo đã gỡ 31/07/2026: GĐ1 chưa có thông báo trong sản phẩm,
-              và ở đây nó là <span> trần — bấm không ra gì. */}
+          {/* Chuông cũ bị gỡ 31/07/2026 vì ở đây nó là <span> trần — bấm không ra gì. Bản
+              này đọc `session.getPendingWork` và mỗi dòng dẫn tới đúng màn xử việc. */}
+          {khoi.khoiNguoiLon && <ChuongViecCho work={data.viecCho} />}
         </div>
       </div>
       <div className="relative -mt-8 h-8 rounded-t-[100%] bg-pagebg" aria-hidden />
@@ -272,12 +451,18 @@ function MobileHome({ data }: { data: HomeData }) {
       <div className="flex flex-1 flex-col px-4">
         {khoi.theCheckin && <CheckinCardMobile data={data} />}
 
-        <div className={`${data.isStudent ? "mt-3.5" : "mt-5"} text-[14px] font-black text-navy`}>Mini App</div>
-        <div className="grid grid-cols-4 gap-3 py-1.5">
-          {data.miniApps.map((tile) => (
-            <MiniAppTile key={tile.key} tile={tile} />
-          ))}
-        </div>
+        <h2 className={`${data.isStudent ? "mt-3.5" : "mt-5"} mb-2 text-[14px] font-black text-navy`}>Mini App</h2>
+        {/* Ô tìm đứng NGAY TRÊN thứ nó lọc ở khổ này. Bản máy tính đặt nó ở hero cạnh
+            chuông (brief mục 5.1) — hero 390px không còn chỗ cho một ô nhập bên cạnh tên
+            người dùng, và một ô tìm nằm cách xa lưới nó lọc là một ô người ta phải học
+            cách dùng. Cùng MỘT component, hai chỗ đứng. */}
+        <LuoiMiniApp
+          loc={loc}
+          tongApp={data.miniApps.length}
+          laQuanTri={data.roles.includes("admin")}
+          rongCaMan={rongCaMan}
+          oTimTrongThe
+        />
 
         {data.isStudent && (
           <>
@@ -289,12 +474,15 @@ function MobileHome({ data }: { data: HomeData }) {
           </>
         )}
 
-        {khoi.loiTatGvcn && (
-          <p className="mt-4 text-center text-[12px] text-muted">
-            Mở <b>Bảng điều khiển</b> ở lưới mini app phía trên để xem lớp sáng nay.
-          </p>
+        {/* Cột phải của khổ máy tính, ở đây XẾP XUỐNG DƯỚI nội dung chứ không biến mất:
+            trên điện thoại nó là khối duy nhất nói cho cô biết sáng nay lớp có gì. */}
+        {khoi.khoiNguoiLon && (
+          <div className="mt-4 flex flex-col gap-3 pb-2">
+            <CotPhaiNguoiLon roles={data.roles} />
+          </div>
         )}
       </div>
+      </MainContent>
 
       {/* Thanh điều hướng của MỌI vai, không riêng học sinh (tab-bar.tsx chọn bộ tab
           theo vai). Trước đây chỉ học sinh có thanh này, nên trên điện thoại phụ huynh,
@@ -311,7 +499,7 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
   return (
     <div className="relative z-[2] -mt-[46px] flex flex-col gap-2.5 rounded-[22px] bg-white p-3.5 shadow-[0_14px_32px_rgba(10,42,94,.14)]">
       <div className="flex items-center justify-between">
-        <span className="text-[14.5px] font-black text-navy">Check-in cảm xúc</span>
+        <h2 className="text-[14.5px] font-black text-navy">Check-in cảm xúc</h2>
         <span className="rounded-full bg-[#FFF1C9] px-2.5 py-1 text-[10px] font-black text-gold-textDark">TRƯỚC 8:00</span>
       </div>
       <div className="flex items-center gap-2.5">
@@ -329,9 +517,12 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
       {/* Chỉ mời check-in khi BIẾT CHẮC là chưa check-in. Trước đây `!checkedInToday`
           đúng cả khi chưa biết → em đã check-in vẫn bị hỏi lại. */}
       {data.todayState === "ready" && data.checkedInToday === false && (
+        // min-h-[44px] (§11, WCAG 2.5.8): đo thật ra 42px cho nút này và 36px cho nút
+        // "Thử lại" bên dưới. Padding dọc một mình không kéo đủ chiều cao, nên min-h
+        // đi kèm flex căn giữa để chữ không dính mép khi ô cao hơn nội dung.
         <Link
           href="/checkin"
-          className="rounded-[13px] bg-gradient-to-br from-navy to-navy-light py-3 text-center text-[13.5px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)]"
+          className="flex min-h-[44px] items-center justify-center rounded-[13px] bg-gradient-to-br from-navy to-navy-light py-3 text-center text-[13.5px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)]"
         >
           Check-in ngay →
         </Link>
@@ -340,13 +531,13 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
         <button
           type="button"
           onClick={data.retryStats}
-          className="rounded-[13px] border-[1.5px] border-[#E4E9F0] py-2.5 text-center text-[12.5px] font-extrabold text-[#1D4E8F]"
+          className="flex min-h-[44px] items-center justify-center rounded-[13px] border-[1.5px] border-[#E4E9F0] py-2.5 text-center text-[12.5px] font-extrabold text-link"
         >
           Thử lại
         </button>
       )}
       <div className="flex items-center justify-center gap-1.5">
-        <span className="msr text-[14px] text-caption2">cloud_off</span>
+        <span aria-hidden="true" className="msr text-[14px] text-caption2">cloud_off</span>
         <span className="text-[10.5px] text-caption2">Offline vẫn lưu — tự gửi sau.</span>
       </div>
     </div>
@@ -361,6 +552,16 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
 // ---------------------------------------------------------------------------
 function DesktopHome({ data }: { data: HomeData }) {
   const khoi = khoiChoVai(data);
+  const loc = useLocMiniApp(data.miniApps);
+  const rongCaMan = manRong({
+    soApp: data.miniApps.length,
+    roles: data.roles,
+    viecCho: {
+      isPending: data.viecCho.isPending,
+      isError: data.viecCho.isError,
+      soMuc: data.viecCho.data?.items.length ?? 0,
+    },
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [autoOpened, setAutoOpened] = useState(false);
 
@@ -383,13 +584,16 @@ function DesktopHome({ data }: { data: HomeData }) {
             className="absolute -right-[50px] -top-[100px] h-[320px] w-[320px] rounded-full"
             style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.45), rgba(255,198,41,.04) 72%)" }}
           />
-          {/* Ô tìm kiếm giả và chuông thông báo đã gỡ 31/07/2026 — xem ghi chú 3 ở
-              đầu file. Khi GĐ2 có tìm kiếm thật thì dựng lại bằng <input>/<button>. */}
+          {/* Ô tìm kiếm giả và chuông thông báo bị gỡ 31/07/2026 vì cả hai là <div>/<span>
+              trần. Bản 06/08/2026 dựng lại bằng <input> và <button> thật, và mỗi cái phải
+              nêu được nguồn dữ liệu của mình — xem khối A–C ở đầu file. */}
           <div className="relative mt-3 flex flex-wrap items-end gap-6">
             <div className="min-w-0 flex-1 basis-[300px]">
-              <div className="text-[40px] font-black leading-[1.1] text-white">
+              {/* Cùng lý lẽ với bản mobile: đây là <h1> của trang. Hai nhánh khổ màn loại
+                  trừ nhau nên KHÔNG có hai <h1> cùng nằm trong một DOM. */}
+              <h1 className="text-[40px] font-black leading-[1.1] text-white">
                 <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
-              </div>
+              </h1>
               <div className="mt-2 text-[14px] font-semibold text-[#D6E6FF]">{data.today}</div>
             </div>
             {data.isStudent && (
@@ -421,11 +625,26 @@ function DesktopHome({ data }: { data: HomeData }) {
                   <button
                     type="button"
                     onClick={data.retryStats}
-                    className="self-end text-[11px] font-bold text-gold underline underline-offset-2"
+                    // text-gold trên đầu SÁNG của hero (#1E5FB8) chỉ 3,95:1 — chữ trắng ở
+                    // cùng chỗ đo 6,21:1. Gạch chân giữ nguyên: nút này nằm giữa nền màu,
+                    // không được nhận ra chỉ nhờ màu.
+                    className="self-end text-[11px] font-bold text-white underline underline-offset-2"
                   >
                     Chưa tải được số liệu — thử lại
                   </button>
                 )}
+              </div>
+            )}
+            {khoi.khoiNguoiLon && (
+              // `self-start`: hàng này căn `items-end` cho ba thẻ số của học sinh, còn cụm
+              // này thuộc về MÉP TRÊN hero — chỗ mắt đã quen tìm cái chuông.
+              <div className="flex flex-none items-center gap-3 self-start">
+                {loc.hienOTim && (
+                  <div className="w-[248px]">
+                    <OTimMiniApp tuKhoa={loc.tuKhoa} datTuKhoa={loc.datTuKhoa} nen="hero" />
+                  </div>
+                )}
+                <ChuongViecCho work={data.viecCho} />
               </div>
             )}
           </div>
@@ -442,25 +661,39 @@ function DesktopHome({ data }: { data: HomeData }) {
           Bản mobile (dòng ~211) từ đầu đã có `relative z-[2]` — chỉ bản desktop bị sót.
           DESIGN-GUIDELINES §6 cũng đã dặn đúng điều này cho mẫu "hero cong".
         */}
+        {/* TỈ LỆ HAI CỘT VỀ ĐÚNG SPEC (DESIGN.md mục Layout: nội dung `flex 1.6–1.7`, rail
+            `flex 1`). Hai cột đang là 3:1 — đo ở 1440px cho ra nội dung 928px / rail 408px,
+            tức rail hẹp hơn dải đã duyệt gần 100px. Nay 1,65:1 ra 859/505. Sửa cho CẢ HAI
+            nhánh vai vì đây là luật của bố cục, không phải lựa chọn theo vai. */}
         <div className="relative z-[2] mt-[-34px] flex flex-wrap items-start gap-5 px-7">
-          <div className="flex min-w-0 flex-[3_1_520px] flex-col gap-[18px]">
+          <div className="flex min-w-0 flex-[1.65_1_520px] flex-col gap-[18px]">
             {khoi.theCheckin && <CheckinCardDesktop data={data} onOpenModal={() => setModalOpen(true)} />}
 
-            <div className="rounded-[22px] border border-white bg-white p-6 shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
-              <div className="flex items-baseline justify-between">
-                <span className="text-[18px] font-black text-navy">Mini App</span>
+            {/* BÓNG THẺ VỀ ĐÚNG SPEC (DESIGN.md "Thẻ": `0 3px 12–14px rgba(10,42,94,.06)`).
+                Năm thẻ của bản desktop đang chồng ba lớp bóng, lớp giữa tới .18 và lớp cuối
+                toả 80px — đậm gấp ba spec, và đậm đều ở mọi thẻ nên không thẻ nào còn nổi
+                hơn thẻ nào. Một lớp mỏng là thứ đã được duyệt; sửa cả năm chỗ cùng lúc để
+                không còn thẻ nào nói khác thẻ bên cạnh. */}
+            <div className="rounded-[22px] border border-white bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="text-[18px] font-black text-navy">Mini App</h2>
                 <span className="text-[11.5px] font-extrabold text-gold-text">Giai đoạn 1 · {data.miniApps.length} app</span>
               </div>
-              <div className="mt-4 grid grid-cols-4 gap-[14px]">
-                {data.miniApps.map((tile) => (
-                  <MiniAppTile key={tile.key} tile={tile} />
-                ))}
-              </div>
+              {/* `oTimTrongThe` = false: ở khổ này ô tìm đứng trên hero cạnh chuông. */}
+              <LuoiMiniApp
+                loc={loc}
+                tongApp={data.miniApps.length}
+                laQuanTri={data.roles.includes("admin")}
+                rongCaMan={rongCaMan}
+                oTimTrongThe={false}
+              />
             </div>
 
             {data.isStudent && <GrowthBanner />}
           </div>
 
+          {/* RAIL. `-translate-y-1.5` của hai thẻ học sinh là kiểu dáng cũ của riêng chúng;
+              khối người lớn không dùng, nên nó nằm ở chính hai thẻ đó chứ không ở cột. */}
           <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-[18px]">
             {data.isStudent && (
               <ThisWeekCard
@@ -471,14 +704,7 @@ function DesktopHome({ data }: { data: HomeData }) {
               />
             )}
             {data.isStudent && data.checkedInToday && data.checkedInAt && <TodayCard checkedInAt={data.checkedInAt} />}
-            {khoi.loiTatGvcn && (
-              <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
-                <div className="text-[16px] font-black text-navy">Buồng lái đang chờ</div>
-                <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-                  Mở <b>Bảng điều khiển</b> ở lưới mini app bên trái để xem lớp sáng nay: cờ ưu tiên, xác nhận gửi muộn, mood lớp.
-                </p>
-              </div>
-            )}
+            {khoi.khoiNguoiLon && <CotPhaiNguoiLon roles={data.roles} />}
           </div>
         </div>
       </div>
@@ -486,9 +712,15 @@ function DesktopHome({ data }: { data: HomeData }) {
   );
 }
 
+// Ba thẻ số liệu nằm ở ĐẦU SÁNG của hero (#1E5FB8), không phải đầu navy. Nền cũ
+// `bg-white/[.15]` làm sáng chỗ đó thêm một lần nữa, nên nhãn #C7D8F0 chỉ còn 3,12:1 và
+// số vàng 2,88:1 — cả hai dưới 4,5:1, và đây là ba con số nói về việc đi học của em.
+// Nền nay là navy pha 70% ĐÈ LÊN nền sáng (kết quả ≈ #103A79): nhãn lên 7,62:1, số vàng
+// 7,02:1, số trắng 11,03:1. Thẻ vẫn "nổi trên hero" cho mắt, chỉ là nổi bằng tối hơn
+// thay vì sáng hơn.
 function HeroStat({ value, label, gold }: { value: React.ReactNode; label: string; gold?: boolean }) {
   return (
-    <div className="flex-1 rounded-2xl border border-white/[.16] bg-white/[.15] px-2.5 py-[15px] text-center">
+    <div className="flex-1 rounded-2xl border border-white/[.16] bg-navy/70 px-2.5 py-[15px] text-center">
       <div className={`text-2xl font-black ${gold ? "text-gold" : "text-white"}`}>{value}</div>
       <div className="mt-[3px] text-[10.5px] font-bold text-[#C7D8F0]">{label}</div>
     </div>
@@ -505,9 +737,9 @@ const MOOD_ORDER: MoodValue[] = [4, 3, 2, 1];
 
 function CheckinCardDesktop({ data, onOpenModal }: { data: HomeData; onOpenModal: () => void }) {
   return (
-    <div className="relative -translate-y-1.5 rounded-[22px] border border-white bg-white p-6 shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
+    <div className="relative -translate-y-1.5 rounded-[22px] border border-white bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
       <div className="flex items-center justify-between">
-        <span className="text-[19px] font-black text-navy">Check-in cảm xúc</span>
+        <h2 className="text-[19px] font-black text-navy">Check-in cảm xúc</h2>
         <span className="rounded-full bg-[#FFF1C9] px-[11px] py-[5px] text-[10.5px] font-black text-gold-textDark">TRƯỚC 8:00</span>
       </div>
       <div className="mt-3.5 flex flex-wrap items-center gap-3.5">
@@ -688,7 +920,7 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
                     className={`flex flex-col items-center gap-2 rounded-[18px] px-2 py-5 disabled:opacity-60 ${style.text}`}
                     style={{ background: style.bg, boxShadow: style.shadow }}
                   >
-                    <span className="msr text-[40px]">{style.icon}</span>
+                    <span aria-hidden="true" className="msr text-[40px]">{style.icon}</span>
                     <span className="text-[13.5px] font-black">{MOOD_LABEL[mood]}</span>
                   </button>
                 );
@@ -705,7 +937,7 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
               href="/can-gap-thay-co"
               className="mt-5 flex items-center gap-2 rounded-[14px] border-[1.7px] border-gold bg-[#FFFBEE] px-5 py-3.5 text-[13.5px] font-black text-gold-textDark"
             >
-              <span className="msr text-[19px] text-[#E8940D]">waving_hand</span>
+              <span aria-hidden="true" className="msr text-[19px] text-gold-textDark">waving_hand</span>
               Mình cần gặp thầy cô
             </Link>
           </div>
@@ -714,16 +946,16 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
             <Mascot pose="celebrate" width={76} />
             <div id="checkin-modal-xong" className="mt-2 text-[26px] font-black text-ink">Tuyệt vời!</div>
             <p className="mt-2 max-w-[420px] text-[13.5px] leading-relaxed text-[#5B6B80]">
-              Hôm nay con thấy <b className="text-[#00A05F]">{MOOD_LABEL[done.mood]}</b> — đã ghi lúc{" "}
+              Hôm nay con thấy <b className="text-successText">{MOOD_LABEL[done.mood]}</b> — đã ghi lúc{" "}
               <b className="text-navy">{done.checkedInAt}</b>.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-3">
               <span className="flex items-center gap-2 rounded-2xl bg-[#E3F8ED] px-[18px] py-3">
-                <span className="msr text-[21px] text-[#00A05F]">check_circle</span>
+                <span aria-hidden="true" className="msr text-[21px] text-[#00A05F]">check_circle</span>
                 <span className="text-[12.5px] font-black text-[#00693F]">Điểm danh hôm nay</span>
               </span>
               <span className="flex items-center gap-2 rounded-2xl bg-[#FFF7E0] px-[18px] py-3">
-                <span className="msr text-[21px] text-[#F58F00]">local_fire_department</span>
+                <span aria-hidden="true" className="msr text-[21px] text-[#F58F00]">local_fire_department</span>
                 <span className="text-[12.5px] font-black text-[#8A5A00]">Chuỗi {done.streakDays} ngày</span>
               </span>
             </div>
@@ -739,7 +971,7 @@ function CheckinModal({ onClose }: { onClose: () => void }) {
                 href="/can-gap-thay-co"
                 className="flex items-center gap-2 rounded-[15px] border-[1.7px] border-gold bg-[#FFFBEE] px-5 py-[15px] text-[14px] font-black text-gold-textDark"
               >
-                <span className="msr text-[19px] text-[#E8940D]">waving_hand</span>
+                <span aria-hidden="true" className="msr text-[19px] text-gold-textDark">waving_hand</span>
                 Cần gặp thầy cô
               </Link>
             </div>
@@ -762,9 +994,9 @@ function ThisWeekCard({
   onRetry: () => void;
 }) {
   return (
-    <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
+    <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
       <div className="flex items-baseline justify-between">
-        <span className="text-[16px] font-black text-navy">Tuần này của mình</span>
+        <h2 className="text-[16px] font-black text-navy">Tuần này của mình</h2>
         <span className="text-[10.5px] text-caption">{new Date().toLocaleDateString("vi-VN")}</span>
       </div>
       {/* Hai thanh RỖNG khi query hỏng là lời nói dối tệ nhất trên trang này: nó bảo
@@ -778,8 +1010,13 @@ function ThisWeekCard({
         </div>
       ) : (
         <>
-          <ProgressRow loading={state === "loading"} icon="event_available" iconColor="text-[#00A05F]" label="Đi học" value={checkinDays ?? 0} max={5} barFrom="#00D97A" barTo="#00A05F" valueColor="text-[#00A05F]" />
-          <ProgressRow loading={state === "loading"} icon="sentiment_satisfied" iconColor="text-[#2C7BF2]" label="Tâm trạng vui" value={happyDays ?? 0} max={5} barFrom="#4E9BFF" barTo="#2C7BF2" valueColor="text-[#2C7BF2]" />
+          {/* `valueColor` KHÁC `iconColor` và đó là chủ ý, không phải quên đồng bộ: con số
+              "2/5" là CHỮ (mốc 4,5:1) còn icon là hình (mốc 3:1). Đo 05/08/2026 trên nền
+              trắng: #00A05F chỉ 3,39:1 và #2C7BF2 chỉ 4,02:1 — đủ cho icon, thiếu cho chữ.
+              Số đổi sang successText (6,79:1) và domain-attendanceDark (8,59:1); icon và
+              thanh tiến trình giữ nguyên màu miền để mắt vẫn đọc ra "đi học" và "tâm trạng". */}
+          <ProgressRow loading={state === "loading"} icon="event_available" iconColor="text-[#00A05F]" label="Đi học" value={checkinDays ?? 0} max={5} barFrom="#00D97A" barTo="#00A05F" valueColor="text-successText" />
+          <ProgressRow loading={state === "loading"} icon="sentiment_satisfied" iconColor="text-[#2C7BF2]" label="Tâm trạng vui" value={happyDays ?? 0} max={5} barFrom="#4E9BFF" barTo="#2C7BF2" valueColor="text-domain-attendanceDark" />
         </>
       )}
       <Link
@@ -790,7 +1027,7 @@ function ThisWeekCard({
         className="mt-4 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-[#F5F8FC] py-[11px] text-[12.5px] font-extrabold text-[#1D4E8F]"
       >
         Xem Báo cáo Trưởng thành
-        <span className="msr text-[17px]">arrow_forward</span>
+        <span aria-hidden="true" className="msr text-[17px]">arrow_forward</span>
       </Link>
     </div>
   );
@@ -820,7 +1057,7 @@ function ProgressRow({
   const pct = Math.min(100, Math.round((value / max) * 100));
   return (
     <div className="mt-3 flex items-center gap-[11px]">
-      <span className={`msr text-[19px] ${iconColor}`}>{icon}</span>
+      <span aria-hidden="true" className={`msr text-[19px] ${iconColor}`}>{icon}</span>
       <div className="flex-1">
         <div className="mb-1 text-[11.5px] font-bold text-[#5B6B80]">{label}</div>
         <div className={`h-2 rounded-[4px] bg-[#EEF1F6] ${loading ? "animate-pulse" : ""}`}>
@@ -836,11 +1073,11 @@ function ProgressRow({
 
 function TodayCard({ checkedInAt }: { checkedInAt: string }) {
   return (
-    <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_2px_6px_rgba(10,42,94,.06),0_18px_40px_rgba(10,42,94,.18),0_44px_80px_rgba(10,42,94,.12)]">
-      <div className="text-[16px] font-black text-navy">Hôm nay</div>
+    <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+      <h2 className="text-[16px] font-black text-navy">Hôm nay</h2>
       <div className="mt-[15px] flex items-center gap-3">
         <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#E3F8ED]">
-          <span className="msr text-[19px] text-[#00A05F]">event_available</span>
+          <span aria-hidden="true" className="msr text-[19px] text-[#00A05F]">event_available</span>
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[12.5px] font-extrabold text-navy">Đã đến trường {checkedInAt}</div>
@@ -860,7 +1097,7 @@ function GrowthBanner() {
       className="relative flex items-center gap-3 overflow-hidden rounded-[18px] bg-gradient-to-r from-gold to-[#FFDD66] px-[18px] py-3"
     >
       <div aria-hidden className="absolute -right-6 -bottom-[42px] h-[110px] w-[110px] rounded-full bg-white/35" />
-      <span className="msr relative text-[26px] text-navy">workspace_premium</span>
+      <span aria-hidden="true" className="msr relative text-[26px] text-navy">workspace_premium</span>
       <div className="relative flex-1">
         <div className="text-[13px] font-black text-navy">Báo cáo Trưởng thành</div>
         <div className="mt-0.5 text-[11px] text-gold-text">Xem tuần này mình lớn lên thế nào →</div>
@@ -873,11 +1110,12 @@ function StreakCard({ streakDays }: { streakDays: number }) {
   return (
     <div className="flex items-center gap-2.5 rounded-2xl bg-white px-3.5 py-[10px] shadow-[0_3px_12px_rgba(10,42,94,.07)]">
       <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#E3F8ED]">
-        <span className="msr text-[19px] text-domain-studyDark">local_fire_department</span>
+        <span aria-hidden="true" className="msr text-[19px] text-domain-studyDark">local_fire_department</span>
       </span>
+      {/* BỎ 06/08/2026 (§1.5): "Giữ đều mỗi ngày để chuỗi không đứt" là lời dặn dò, không
+          mang dữ liệu nào — con số ngay trên nó đã là toàn bộ nội dung của thẻ. */}
       <div className="flex-1">
         <div className="text-[12.5px] font-extrabold text-navy">Chuỗi check-in: {streakDays} ngày</div>
-        <div className="mt-0.5 text-[10.5px] text-caption2">Giữ đều mỗi ngày để chuỗi không đứt</div>
       </div>
     </div>
   );

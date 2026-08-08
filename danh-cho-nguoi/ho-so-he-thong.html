@@ -1511,7 +1511,7 @@
         <div class="callout warn"><div class="callout-title"><span class="dot amber"></span>Cổng pháp lý độc lập</div><p>Trước vườn ươm phải hoàn tất DPIA, cơ chế đồng thuận, quy trình quyền truy cập/chỉnh sửa/xóa và mẫu thông báo sự cố dữ liệu. Hồ sơ kiến trúc không thay thế ý kiến pháp lý.</p></div>
       </section>
 
-            <section class="part" id="nhung-app" data-pair="danh-cho-may/08-embedded-apps.md" data-sync-version="5">
+            <section class="part" id="nhung-app" data-pair="danh-cho-may/08-embedded-apps.md" data-sync-version="6">
         <div class="section-head">
           <div class="section-no">08</div>
           <div><p class="eyebrow">Integration standard</p><h2>Chuẩn nhúng Mini App ngoài &mdash; tự code hay dựng bằng AI đều một luật</h2></div>
@@ -1622,7 +1622,30 @@
             </tbody>
           </table>
         </div>
-        <p class="lede">Chưa xây bảng quản trị + màn hình UI ngay từ đầu &mdash; quản lý bằng file config review qua PR, tới khi có &ge;5 app mới cân nhắc xây màn hình quản trị (không xây thứ chưa cần).</p>
+        <p class="lede">Hồ sơ này nay là <b>một dòng trong kho dữ liệu</b>, mở ra và sửa được trên một màn hình quản trị &mdash; không còn là một file trong mã nguồn. Bản trước đây viết &ldquo;tới khi có &ge;5 app mới cân nhắc xây màn hình quản trị&rdquo;; con số 5 đó đã bỏ, vì thứ nó bỏ qua không phải sự tiện lợi mà là <b>đường thu hồi</b>: một app để lộ dữ liệu mà phải chờ kỹ sư dựng lại hệ mới tắt được thì con số 5 không liên quan gì.</p>
+
+        <h4>Ba đường vào, một dòng, một công tắc</h4>
+        <p>Một app ngoài nối vào Hub bằng ba đường: <b>hiện lên trong Hub</b> · <b>gửi dữ liệu về</b> · <b>đăng nhập bằng tài khoản Hub</b>. Cả ba nằm trên cùng một dòng hồ sơ, và cái nút tắt cắt <b>cả ba cùng lúc</b>. Trước 07/08/2026 đường thứ ba nằm ở một chỗ khác nên nút tắt không chạm tới nó &mdash; chi tiết ở mục &ldquo;Dữ liệu &amp; ERD&rdquo;, đợt 07/08.</p>
+
+        <h4>Đấu nối một app mới: sáu bước, ba người, một bước chạm máy chủ</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Ai làm</th><th>Làm gì</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Quản trị</td><td>Khai app: mã &middot; loại dữ liệu &middot; người chịu trách nhiệm &middot; ngày rà lại. Khai xong app <b>đang tắt</b> và <b>chưa cấp cho ai</b>.</td></tr>
+              <tr><td>2</td><td><b>Người vận hành</b></td><td>Đặt hai chuỗi mật khẩu lên máy chủ rồi khởi động lại. <b>Bước duy nhất chạm vào máy chủ</b> &mdash; và nó phải ở đó, vì mật khẩu không bao giờ được cất trong kho dữ liệu.</td></tr>
+              <tr><td>3</td><td>Đội làm app</td><td>Đấu phần đăng nhập bằng thư viện chuẩn, theo bản đấu nối mà màn hình sinh sẵn.</td></tr>
+              <tr><td>4</td><td>Đội làm app</td><td>Gửi dữ liệu về qua <b>một</b> cửa duy nhất, có ký tên. Không có cửa thứ hai.</td></tr>
+              <tr><td>5</td><td>Quản trị</td><td>Cấp vai được mở app, rồi bật. Hai bước riêng, cố ý.</td></tr>
+              <tr><td>6</td><td>Quản trị</td><td>Rà lại sau 6 tháng. Quá hạn thì thẻ app bật đèn.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Một điều bước 4 KHÔNG hứa</div>
+          <p>Mọi dữ liệu app gửi về đều <b>vào kho và đọc được</b>. Nhưng chỉ những loại đã được viết luật riêng mới <b>trở thành dữ liệu nghiệp vụ</b> &mdash; số còn lại nằm ở dạng thô: tra cứu được, thống kê được, nhưng không tự biến thành một buổi điểm danh hay một khoá học.</p>
+          <p>Viết thêm một luật như vậy là việc của kỹ sư, không phải một ô trên màn hình. Chúng tôi ghi ra vì câu &ldquo;dữ liệu tự đổ về&rdquo; rất dễ hiểu thành &ldquo;app con khai gì Hub hiểu nấy&rdquo; &mdash; mà mở đúng cửa đó là bỏ chính hàng rào giữ cho dữ liệu học sinh không bị một app ngoài ghi sai mà không ai biết.</p>
+        </div>
 
         <details class="details deep">
           <summary>Chi tiết kỹ thuật &middot; Embed API, CSP/sandbox, test bắt buộc</summary>
@@ -1917,7 +1940,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="28">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="31">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -2328,6 +2351,124 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
 
         <h4>Nghiệm thu</h4>
         <p>29 phép kiểm ở tầng kho dữ liệu (mỗi ràng buộc đều dựng một dòng vi phạm thật rồi đòi kho từ chối) và 15 phép kiểm gọi qua đúng đường mà màn hình đi. Cách cắm một app mới viết thành một bài hướng dẫn riêng, kèm một app mẫu chạy được để đội làm app thử trước khi viết một dòng nghiệp vụ nào.</p>
+
+        <h3>Đợt 06/08/2026: khi cô giáo nhìn thấy chỗ ngồi trống mà phần mềm không cho cô nói ra</h3>
+        <p class="lede">Một quyết định của chủ đầu tư, và một điều chúng tôi đo được trong lúc thi hành nó, trái hẳn với điều chúng tôi tưởng.</p>
+
+        <h4>1 &middot; Chuyện gì đang xảy ra trong lớp</h4>
+        <p>Có những buổi sáng máy của học sinh không có mạng. Lượt điểm danh của em nằm lại trong máy, tới trưa mới gửi được về trường. Hệ thống không dám tự kết luận gì với những lượt gửi muộn ấy &mdash; đúng như đã hứa: <b>gửi muộn không phải là vắng</b>. Nó xếp riêng ra một chồng và chờ cô chủ nhiệm nhìn qua.</p>
+        <p>Trên màn hình của cô, chồng đó chỉ có một nút: <i>&ldquo;Xác nhận cả 3&rdquo;</i>. Không có giờ gửi để cô đối chiếu, không chọn được từng em, và quan trọng nhất: <b>không có cách nào nói &ldquo;em này hôm nay vắng thật&rdquo;</b>. Nhưng cô đã đứng trong lớp cả buổi sáng. Cô nhìn thấy chỗ ngồi trống. Người duy nhất biết chắc chuyện gì đã xảy ra lại là người phần mềm không cho nói.</p>
+        <p>Điều đó không làm sự thật biến mất, nó chỉ đẩy sự thật ra khỏi tầm nhìn: cách duy nhất còn lại là nhờ ai đó vào thẳng kho dữ liệu sửa tay. Một thao tác không ai duyệt, không ai soát lại được, và không đi kèm một chữ nào giải thích vì sao.</p>
+
+        <h4>2 &middot; Quyết định của chủ đầu tư, và cái giá đi kèm</h4>
+        <p>Ngày 06/08/2026 chủ đầu tư quyết trực tiếp: <b>cô được kết luận một lượt gửi muộn thành &ldquo;vắng&rdquo;</b>. Đây là sửa một điều đã chốt trước đó, và chúng tôi muốn nói rõ vì sao lần sửa này không mâu thuẫn với lần chốt cũ.</p>
+        <p>Điều cấm cũ có hai vế nằm chồng lên nhau. Vế thứ nhất: <i>máy</i> không được tự suy ra &ldquo;em vắng&rdquo; chỉ vì lượt điểm danh về muộn &mdash; vế này vẫn đúng nguyên và vẫn được giữ. Vế thứ hai, không ai định viết ra nhưng đã lẫn vào: <i>người</i> cũng không được nói. Lần này chỉ gỡ vế thứ hai.</p>
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Nói thẳng điều đánh đổi</div>
+          <p>Cho phép ghi &ldquo;vắng&rdquo; là mở một đường có thể làm hỏng số chuyên cần của một đứa trẻ nếu ai đó bấm ẩu. Chúng tôi không giả vờ là không có rủi ro đó. Đối trọng gồm ba thứ, và cả ba đều do kho dữ liệu cưỡng chế chứ không trông vào sự cẩn thận của người dùng:</p>
+          <ul class="plain-list">
+            <li><b>Phải ghi lý do.</b> Kết luận khác &ldquo;có mặt&rdquo; mà không có lý do thì hệ <b>từ chối</b>, không phải nhắc nhở rồi vẫn cho qua.</li>
+            <li><b>Mỗi lượt để lại một dòng sổ:</b> ai kết luận, lúc mấy giờ, từ trạng thái nào sang trạng thái nào, và vì sao. Sổ này <b>chỉ ghi thêm, không sửa, không xoá</b> &mdash; kể cả người vừa ghi cũng không sửa lại được dòng của chính mình.</li>
+            <li><b>Cô chỉ chạm được vào lượt gửi muộn của chính lớp mình.</b> Phần này giữ nguyên từ trước, không nới một chữ nào.</li>
+          </ul>
+        </div>
+        <p>Cuốn sổ đó dành cho cô chủ nhiệm và thầy cô tâm lý phụ trách cơ sở. Phụ huynh, học sinh, thầy cô bộ môn và ban giám hiệu <b>không đọc được</b>: đây là ghi chép nội bộ về thao tác của giáo viên, không phải một thông báo gửi về nhà.</p>
+
+        <h4>3 &middot; Điều chúng tôi tưởng, và điều đo ra được</h4>
+        <p>Khi bắt tay làm, chúng tôi tin rằng kho dữ liệu <b>đang chặn</b> việc ghi &ldquo;vắng&rdquo; &mdash; vì có một dòng ghi chú trong mã nguồn nói đúng như vậy, viết từ nhiều tháng trước. Việc của đợt này, tưởng là, mở cái chặn đó ra.</p>
+        <p>Chúng tôi thử thật trước khi tin: đăng nhập bằng đúng tài khoản một cô chủ nhiệm, chọn một lượt gửi muộn có thật, và ra lệnh ghi &ldquo;vắng&rdquo;. <b>Kho dữ liệu nhận, và ghi.</b> Cái chặn ấy đã không còn từ một lần sửa hồi cuối tháng Bảy &mdash; lần sửa đó thêm một quyền khác cho cô chủ nhiệm, và quyền mới vô tình phủ lên cái chặn cũ. Dòng ghi chú thì không ai sửa theo, nên suốt từ đó tới nay nó mô tả một hàng rào <b>không còn tồn tại</b>.</p>
+        <div class="callout good">
+          <div class="callout-title"><span class="dot green"></span>Vì sao chúng tôi kể chuyện này ra thay vì lặng lẽ sửa</div>
+          <p>Đây là loại sai nguy hiểm nhất trong cả hồ sơ này: <b>một lời hứa an toàn sống trong phần ghi chú, trong khi thứ thật sự cưỡng chế nó đã biến mất</b>. Người đọc sau tin vào ghi chú, không đi đo, và tiếp tục xây trên một cái nền không có. Nó cũng cho thấy con số thật của đợt này: chúng tôi <b>không mở thêm quyền nào</b> &mdash; quyền đó đã mở sẵn hơn một tuần. Cái đợt này thêm vào là <b>cái giá</b> của nó: trước hôm nay, đổi một ngày chuyên cần thành &ldquo;vắng&rdquo; chỉ để lại đúng một dấu vết là tên người bấm. Không giờ, không lý do, không biết trước đó em đang ở trạng thái nào. Tức là không hậu kiểm được.</p>
+        </div>
+
+        <h4>4 &middot; Bấm hai lần thì sao</h4>
+        <p>Mạng trường chập chờn, và một cô đang vội thì bấm hai lần là chuyện thường. Hệ nhận ra đó là <b>cùng một lượt bấm</b> chứ không phải hai quyết định: lần thứ hai không ghi thêm dòng sổ nào, không đổi thêm gì, và <b>không hiện lỗi đỏ</b> &mdash; màn hình chỉ nói gọn là không có em nào cần xử thêm. Tương tự, nếu trong danh sách cô chọn có em đã được xử trước đó rồi, hệ bỏ qua đúng em ấy và làm tiếp phần còn lại, thay vì bỏ cả lượt bấm.</p>
+
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Một khe còn hở, nói ra chứ không giấu</div>
+          <p>Cuốn sổ chỉ là đối trọng thật khi nó là <b>con đường duy nhất</b>. Hôm nay nó chưa phải. Màn hình &ldquo;Điểm danh lớp&rdquo; &mdash; nơi cô sửa lại một ngày đã ghi nhầm, việc hàng ngày bình thường &mdash; vẫn cho phép đổi thẳng sang &ldquo;vắng&rdquo; mà không đi qua ô ghi lý do. Chúng tôi đã đo và xác nhận điều đó sau khi làm xong đợt này, chứ không suy đoán.</p>
+          <p>Không vá ngay trong đợt này vì vá đúng chỗ đó là đổi cách làm việc hàng ngày của cô ở một màn hình khác &mdash; một quyết định riêng, cần người duyệt riêng, không phải hệ quả phụ của việc thi hành quyết định lần này. Ghi vào đây để nó là một việc <b>có tên và có chủ</b>, thay vì một khoảng trống mà hồ sơ kể như đã kín.</p>
+        </div>
+
+        <h4>Nghiệm thu</h4>
+        <p>27 phép kiểm tự động ở tầng kho dữ liệu, mỗi câu hỏi một phép đọc được thành lời: cô đổi được sang cả ba kết luận · thiếu lý do thì bị từ chối · <b>cô giáo lớp khác</b> không đổi được · <b>chính học sinh đó</b> cũng không đổi được · bấm hai lần vẫn chỉ một dòng sổ · em đã xử rồi thì bỏ qua chứ không báo lỗi. Toàn bộ bộ kiểm tra ở tầng dữ liệu sau đợt này: <b>927 phép kiểm đạt trên 52 bài</b>, chạy trên một kho dựng lại từ số không.</p>
+        <p>Và một phép <b>thử ngược</b>, vì một hàng rào chưa ai thử phá thì chưa biết nó có thật: chúng tôi cố tình gỡ ràng buộc &ldquo;phải ghi lý do&rdquo; ra khỏi kho dữ liệu, dựng lại toàn bộ, rồi chạy lại. Đúng một phép kiểm đỏ &mdash; đúng phép kiểm đo cái ràng buộc vừa gỡ, không phải một phép nào khác. Cắm lại thì cả 27 phép xanh trở lại.</p>
+
+        <h3>Đợt 06/08/2026 (tiếp): khi cô ký nhầm một tờ báo cáo đã gửi về nhà</h3>
+        <p class="lede">Cùng ngày, cùng một câu của chủ đầu tư. Lần này là một quyền khó hơn: sửa lại một chữ ký đã ký.</p>
+
+        <h4>1 &middot; Chuyện gì đang xảy ra</h4>
+        <p>Mỗi tuần cô chủ nhiệm đọc Báo cáo Trưởng thành của từng em rồi quyết một trong hai điều: <b>duyệt</b> để gửi về cho phụ huynh, hoặc <b>trả lại</b> để tuần sau sửa. Chủ đầu tư yêu cầu cho cô làm việc đó cho cả lớp trong một lượt, và nói thêm: <i>&ldquo;báo cáo thì cũng có thể gửi hàng loạt, hoặc <b>sửa</b>, hoặc trả lại gì đó hàng loạt&rdquo;</i>.</p>
+        <p>Chữ &ldquo;sửa&rdquo; ấy là chỗ chúng tôi phải dừng lại và báo trước khi làm. Vì cô có thể ký nhầm &mdash; chọn nhầm em, hoặc đọc lại thấy nhận xét chưa ổn. Chuyện đó rồi sẽ xảy ra, và khi nó xảy ra thì cô cần một đường sửa. Nhưng đường sửa mà chúng tôi định làm lại đi qua một chỗ trống.</p>
+
+        <h4>2 &middot; Điều chúng tôi đo được trước khi viết một dòng nào</h4>
+        <p>Kho dữ liệu giữ <b>đúng một dòng</b> cho mỗi em mỗi tuần. Chúng tôi thử thật, bằng đúng tài khoản một cô chủ nhiệm: ký &ldquo;duyệt&rdquo; cho một em, rồi ghi đè thành &ldquo;trả lại&rdquo;. Trước một dòng, sau vẫn một dòng &mdash; và <b>chữ &ldquo;duyệt&rdquo; của lần ký đầu không còn tồn tại ở bất cứ đâu</b>. Cùng nó biến mất luôn ba thứ khác: ai đã ký, ký lúc mấy giờ, và ghi chú kèm theo.</p>
+        <p>Chúng tôi tìm chỗ khác để ghi vết. Hệ có một cuốn sổ kiểm toán chung, nhưng đo ra thì tài khoản người dùng thường <b>không có quyền viết vào đó</b>. Nghĩa là trước đợt này, nếu cho phép sửa, hệ sẽ không có một chỗ nào ghi lại được &ldquo;ai đổi quyết định của ai, lúc nào, vì sao&rdquo;.</p>
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Một lối tắt chúng tôi đã cân nhắc rồi bỏ</div>
+          <p>Có một cách làm được ngay, không cần đụng vào kho dữ liệu: mỗi lần sửa thì tự động chèn thêm dòng chữ &ldquo;đổi từ Đã duyệt&rdquo; vào ô ghi chú. Nhìn thì có vẻ đã có vết.</p>
+          <p>Chúng tôi bỏ cách đó. Nó <b>vẫn xoá mất</b> dấu vết của lần ký đầu, chỉ thay bằng một câu do máy viết; và không ai tra cứu được &mdash; không lọc ra được &ldquo;tuần này có bao nhiêu quyết định bị đổi&rdquo;. <b>Một cái vết giả còn tệ hơn không có vết</b>, vì người đọc hồ sơ sẽ tin là mình đang có vết.</p>
+        </div>
+
+        <h4>3 &middot; Quyết định, và ba thứ đi kèm</h4>
+        <p>Ngày 06/08/2026 chủ đầu tư quyết: <b>cho sửa, nhưng qua một cửa riêng</b>. Cụ thể:</p>
+        <ul class="plain-list">
+          <li><b>Cửa mặc định không đổi gì.</b> Bấm duyệt cả lớp thì hệ chỉ chạm những em <b>chưa ai quyết</b>. Em nào đã có người ký &mdash; đồng nghiệp, hoặc chính cô ở một cửa sổ khác &mdash; thì hệ bỏ qua và <b>nói ra con số đó</b>. Không có chuyện một cú bấm trên màn hình mở từ mười phút trước lặng lẽ lật ngược chữ ký của người khác.</li>
+          <li><b>Muốn đè thì phải nói là mình đang đè.</b> Màn hình thêm <b>đúng một bước xác nhận</b>, nói bằng con số &mdash; &ldquo;Đổi quyết định đã ký cho 12 em&rdquo; &mdash; chứ không phải một hộp thoại dài mà ai cũng bấm qua.</li>
+          <li><b>Đè thì bắt buộc ghi lý do</b>, và mỗi lượt để lại <b>một dòng sổ</b>: ai đổi, lúc mấy giờ, <b>từ quyết định nào sang quyết định nào</b>, vì sao. Sổ này chỉ ghi thêm &mdash; không sửa, không xoá, kể cả bởi chính người vừa ghi.</li>
+        </ul>
+        <p>Cột &ldquo;từ quyết định nào&rdquo; chính là thứ mà phép đo ở trên cho thấy đã bốc hơi. Cả cuốn sổ tồn tại vì cột đó.</p>
+        <p>Nhân đợt này chúng tôi trả nốt một chỗ hở đã ghi sổ từ lượt trước: màn hình vẫn gửi kèm một <b>mã cho mỗi lượt bấm</b> để chống bấm nhầm hai lần, nhưng kho dữ liệu chưa có chỗ cất mã ấy nên hệ phải suy đoán bằng cách nhìn trạng thái hiện tại. Nay mã có chỗ nằm thật. Kết quả: bấm hai lần vẫn là <b>một</b> quyết định, và kể cả một lượt gửi lại đến muộn &mdash; sau khi ai đó đã đổi dòng đó rồi &mdash; hệ vẫn nhận ra đó là bản sao chứ không phải một lệnh mới.</p>
+
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Giới hạn thật, nói ra để không ai tưởng cuốn sổ là bảo hiểm</div>
+          <p>Đây là sửa một thứ <b>đã gửi ra ngoài nhà trường</b>. Phụ huynh có thể đã mở ra đọc bản cũ, và hệ <b>không có cách nào thu hồi thứ đã đọc</b>.</p>
+          <p>Cuốn sổ trả lời được <b>&ldquo;ai đổi, lúc nào, vì sao&rdquo;</b>. Nó <b>không</b> trả lời được <b>&ldquo;phụ huynh đã đọc bản nào&rdquo;</b>. Đó là hai câu hỏi khác nhau, và hôm nay hệ chỉ trả lời được câu thứ nhất. Ngày nào có đường báo cho phụ huynh biết bản báo cáo đã đổi, lúc đó mới đến câu hỏi tiếp theo: có nên khoá không cho sửa sau một số ngày nhất định không.</p>
+        </div>
+
+        <h4>4 &middot; Ai đọc được cuốn sổ này</h4>
+        <p>Cô chủ nhiệm của em và thầy cô tâm lý phụ trách cơ sở &mdash; <b>đúng bằng</b> tập người đọc được chính quyết định duyệt. Phụ huynh, học sinh, thầy cô bộ môn và ban giám hiệu không đọc được. Lý do đơn giản: một cuốn sổ ghi vết không được phép rộng hơn thứ nó ghi vết, nếu không sẽ có người đọc được lịch sử đổi quyết định về một em trong khi quyết định hiện hành thì họ không đọc được.</p>
+        <p>Bộ phận làm báo cáo học thuật thì <b>không</b> chạm được cuốn sổ này &mdash; và ở đây chúng tôi phải tháo quyền một cách tường minh chứ không chỉ &ldquo;không cấp&rdquo;, vì cuốn sổ nằm trong khu vực mà bộ phận đó vốn có đường đi vào. Có một phép kiểm riêng canh đúng chỗ ấy.</p>
+
+        <h4>Nghiệm thu</h4>
+        <p>33 phép kiểm tự động, mỗi câu hỏi đọc được thành lời: lượt ký đầu vẫn đi như cũ &middot; <b>không bật cờ thì không đè được</b> &middot; bật cờ mà thiếu lý do thì bị từ chối &middot; đè xong thì sổ giữ đúng trạng thái cũ &middot; cô giáo lớp khác không đè được và cũng không nhận được thông báo lỗi nào để dò xem em đó có thật hay không &middot; bấm hai lần vẫn một dòng sổ. Toàn bộ bộ kiểm tra ở tầng dữ liệu sau đợt này: <b>960 phép kiểm đạt trên 53 bài</b>, chạy trên một kho dựng lại từ số không.</p>
+        <p>Lại một phép <b>thử ngược</b>: gỡ ràng buộc &ldquo;phải ghi lý do&rdquo; ra khỏi kho dữ liệu, dựng lại toàn bộ, chạy lại &mdash; đúng hai phép kiểm đỏ, đúng hai phép đo cái ràng buộc vừa gỡ, 31 phép còn lại vẫn xanh (vì tầng phần mềm vẫn chặn). Cắm lại thì cả 33 phép xanh.</p>
+        <p>Và một điều nhỏ chúng tôi ghi lại cho người sửa sau: bản nháp đầu tiên của bộ kiểm tra <b>tự lừa mình</b> &mdash; nó xếp hai dòng sổ theo thời gian, trong khi cả hai dòng do máy tạo ra trong cùng một khoảnh khắc nên thứ tự không xác định. Bài kiểm tra kiểu đó xanh hay đỏ là chuyện may rủi. Đã sửa để nó chỉ thẳng vào từng dòng bằng một dấu hiệu chắc chắn.</p>
+
+        <h3>Đợt 07/08/2026: cái công tắc tắt app hoá ra chỉ tắt được hai phần ba</h3>
+        <p class="lede">Đợt 02/08 kể trên hứa một điều: <b>tắt một app ngoài là một nút bấm, có hiệu lực ngay</b>. Đợt này chúng tôi đem lời hứa đó đi đo, và phát hiện nó chỉ đúng một phần.</p>
+
+        <p>Một app ngoài nối vào Hub bằng <b>ba đường</b>, và người quản trị không có lý do gì để biết là ba:</p>
+        <ul class="plain-list">
+          <li><b>Hiện lên trong Hub</b> &mdash; app chạy trong khung của Hub, người dùng thấy nó như một phần của Hub.</li>
+          <li><b>Gửi dữ liệu về</b> &mdash; app đẩy số liệu của nó vào kho của Hub.</li>
+          <li><b>Đăng nhập bằng tài khoản Hub</b> &mdash; thầy cô mở app ngoài mà không phải gõ lại mật khẩu, vì Hub đứng ra bảo lãnh danh tính.</li>
+        </ul>
+        <p>Chúng tôi khai thử một app mới rồi bấm nút tắt, và đo từng đường một. Hai đường đầu tắt ngay như đã hứa. <b>Đường thứ ba thì không.</b> Danh sách các app được Hub bảo lãnh danh tính nằm ở một chỗ khác &mdash; vẫn trong mã nguồn, đúng chỗ mà đợt 02/08 vừa dọn cho hai đường kia. Nghĩa là một app đã bị thu hồi vẫn tiếp tục được Hub bảo lãnh cho tới lần kỹ sư mở máy tiếp theo.</p>
+
+        <div class="callout warn">
+          <div class="callout-title"><span class="dot amber"></span>Vì sao chỗ này đáng lo hơn nó nghe</div>
+          <p>Tình huống thật của một cái nút thu hồi là tình huống xấu: app ngoài lộ dữ liệu, hoặc tên miền hết hạn rồi bị người khác mua lại. Người quản trị bấm tắt, màn hình báo đã tắt, app biến khỏi màn hình mọi người &mdash; và họ có mọi lý do để tin là xong.</p>
+          <p>Trong khi đó Hub vẫn đang nói với thế giới bên ngoài rằng &ldquo;người cầm chìa khoá này là người của trường tôi&rdquo;. <b>Một cái nút thu hồi mà thu hồi chưa hết thì tệ hơn không có nút</b>, vì nó làm người ta ngừng đi tìm.</p>
+        </div>
+
+        <h4>Nay ba đường nằm chung một dòng sổ</h4>
+        <p>Đường thứ ba được đưa về đúng cuốn sổ đang giữ hai đường kia. Một app là <b>một dòng</b>, mang cả ba đường: hiện lên · gửi dữ liệu · đăng nhập. Không tách thành hai cuốn sổ, vì hai cuốn sổ nghĩa là hai ngày rà lại, hai người chịu trách nhiệm, và một ngày có người tắt cuốn này mà quên cuốn kia &mdash; tức là dựng lại đúng cái lỗi vừa tìm ra.</p>
+        <p>Hệ quả đọc được thành một câu: <b>bấm tắt là cắt cả ba đường cùng lúc</b>, trong vòng mười giây, không chờ ai mở máy.</p>
+        <p>Và thêm một việc mà người quản trị làm được từ nay: <b>khai một app mới đăng nhập bằng tài khoản Hub, ngay trên màn hình đó</b> &mdash; trước đây việc này phải sửa mã nguồn và dựng lại cả hệ.</p>
+
+        <h4>Mật khẩu vẫn không nằm trong kho &mdash; và vẫn còn đúng một bước phải chạm vào máy chủ</h4>
+        <p>Chìa khoá để Hub bảo lãnh danh tính cũng là một chuỗi mật khẩu, và nó theo đúng luật đã đặt từ đợt 02/08: <b>cuốn sổ chỉ ghi tên chỗ cất, không ghi chính chuỗi đó</b>. Bản sao lưu kho dữ liệu được mang ra khỏi máy chủ mỗi ngày; mật khẩu nằm trong kho là mật khẩu đi theo mọi bản sao.</p>
+        <p>Nên quy trình đấu nối một app mới có <b>sáu bước</b>, và đúng <b>một</b> bước cần người vận hành chạm vào máy chủ: đặt hai chuỗi mật khẩu rồi khởi động lại. Năm bước còn lại làm trên màn hình. Chúng tôi viết hẳn sáu bước đó lên chính màn quản trị, và với mỗi app có một <b>bản đấu nối sinh tự động</b> &mdash; địa chỉ, mã app, đường dẫn, tên biến cần đặt &mdash; để đội làm app chép thẳng thay vì gõ lại. Bản đó sinh từ chính dòng trong sổ, nên nó không bao giờ lạc hậu so với cấu hình thật.</p>
+
+        <h4>Một quyền cấp thừa suốt nhiều tháng, phát hiện khi dọn</h4>
+        <p>Khi chuyển đường thứ ba về sổ, chúng tôi đọc lại phần mã cũ và thấy: nó <b>có khai</b> mỗi app được xin những thông tin gì về người đăng nhập, và <b>không bao giờ dùng đến lời khai đó</b>. Trong thực tế mọi app ngoài đều xin được tối đa &mdash; kể cả vai trò, cơ sở và lớp của người đang đăng nhập. Một dòng ghi chú trong mã nói rằng có hàng rào; hàng rào ấy chưa từng tồn tại.</p>
+        <p>Nay lời khai được thi hành thật. Nếu có app nào đang xin nhiều hơn phần đã khai, nó sẽ bị từ chối &mdash; và chúng tôi ghi điều này ra thay vì lặng lẽ sửa, vì nó có thể làm gãy một app đang chạy. Đổi lại, <b>chữa một lần siết nhầm nay là tích một ô trên màn hình</b>, không còn là một lần sửa mã và dựng lại hệ.</p>
+
+        <h4>Nghiệm thu</h4>
+        <p>39 phép kiểm ở tầng kho dữ liệu. Bài chính dựng <b>ba</b> loại app cùng lúc &mdash; đang bật và có đăng nhập · đã tắt nhưng vẫn khai đăng nhập · đang bật nhưng không khai đăng nhập &mdash; rồi đòi hệ chỉ bảo lãnh loại thứ nhất. Hai loại sau là hai kiểu &ldquo;không được bảo lãnh&rdquo; khác nhau, và nhầm loại nào cũng là một cánh cửa mở. Toàn bộ bộ kiểm tra ở tầng dữ liệu sau đợt này: <b>999 phép kiểm đạt trên 54 bài</b>, chạy trên một kho dựng lại từ số không.</p>
+        <p>Một sai của chính chúng tôi, giữ lại vì nó nói đúng điều màn hình phải nói: bản nháp khai một app có đủ phần đăng nhập rồi đòi nó phải được bảo lãnh &mdash; và bài kiểm <b>đỏ</b>. Không phải lỗi của hệ: app vừa khai thì <b>mặc định vẫn đang tắt</b>. &ldquo;Khai xong&rdquo; không bao giờ đồng nghĩa với &ldquo;đang chạy&rdquo;.</p>
 
         <details class="details deep">
           <summary>Chi tiết kỹ thuật · khóa, System of Record và vòng đời</summary>
@@ -2853,7 +2994,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <div class="callout risk"><div class="callout-title"><span class="dot red"></span>Kế hoạch rút lui</div><p>Khi chạm tiêu chí dừng: chuyển chỉ-đọc, lớp về quy trình giấy trong một ngày, xuất dữ liệu bàn giao, xử lý dữ liệu cảm xúc theo Hiến chương và làm postmortem trước khi quyết định xây lại.</p></div>
       </section>
 
-      <section class="part" id="hop-dong" data-pair="danh-cho-may/RULES.md" data-sync-version="9">
+      <section class="part" id="hop-dong" data-pair="danh-cho-may/RULES.md" data-sync-version="10">
         <div class="part-group-banner"><b>Hợp đồng &amp; Phê duyệt</b></div>
         <div class="section-head">
           <div class="section-no">16</div>
@@ -2963,6 +3104,8 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           <div class="decision-row"><div class="decision-code">ADR-016</div><div class="decision-copy"><b>Thoát một nơi là thoát mọi nơi; khóa là cắt; token mang vai trò</b><span>27/07/2026. Đăng xuất chung + thu hồi trong vài phút; Moodle tự xếp lớp nhờ vai trò trong token; tách sổ đăng nhập <code>core.identity_links</code> khỏi sổ dữ liệu học sinh.</span></div><span class="status done">Đã duyệt</span></div>
           <div class="decision-row"><div class="decision-code">ADR-017</div><div class="decision-copy"><b>Ba rổ dữ liệu + ổ cắm chuẩn cho app ngoài</b><span>27/07/2026. App ngoài được đọc/ghi theo rổ đã khai; mã ẩn danh riêng theo app do Hub sinh; ghi qua phòng chờ; app không có hậu trường riêng thì không được cấp khóa.</span></div><span class="status done">Đã duyệt</span></div>
           <div class="decision-row"><div class="decision-code">ADR-018/019</div><div class="decision-copy"><b>Hạ tầng đơn giản nhất: 1 VPS mạnh, tự quản</b><span>28/07/2026. Một máy 16 vCPU/32GB thay Vercel; không nhiều máy, không cân bằng tải, không Kubernetes. Đổi lấy sự đơn giản, chấp nhận cấu hình vượt xa tải đo được.</span></div><span class="status done">Đã duyệt</span></div>
+          <div class="decision-row"><div class="decision-code">ADR-029</div><div class="decision-copy"><b>Cô chủ nhiệm được ghi &ldquo;vắng&rdquo; cho một lượt điểm danh gửi muộn &mdash; kèm lý do bắt buộc</b><span>06/08/2026. Trước đó máy chỉ cho cô một nút &ldquo;xác nhận có mặt&rdquo;; muốn ghi khác thì phải nhờ kỹ thuật sửa thẳng trong kho dữ liệu, không ai soát được. Nay cô chọn một trong ba: <b>có mặt</b> &middot; <b>đi muộn</b> &middot; <b>vắng</b>. Chọn hai cái sau thì <b>bắt buộc ghi lý do</b>, và mỗi lần ghi đều lưu lại ai ghi, lúc nào, đổi từ gì sang gì. Đổi lại một quyền là thêm một cuốn sổ &mdash; quyền không có vết là quyền không ai soát được.</span></div><span class="status done">Đã duyệt</span></div>
+          <div class="decision-row"><div class="decision-code">ADR-030</div><div class="decision-copy"><b>Bỏ dải cảnh báo vàng trên buồng lái; lời cảnh báo chuyển vào đúng ô số bị ảnh hưởng</b><span>06/08/2026. Dải vàng &ldquo;bộ quét quá hạn&rdquo; chiếm cả một hàng ngang phía trên năm ô số, trong khi nó chỉ nói về đúng một ô. Nay ô &ldquo;Em cần để ý&rdquo; tự ghi dưới chân mình rằng đây là số của lần quét lúc mấy giờ, ngày nào. <b>Nghĩa vụ nói thật không đổi:</b> vẫn cấm để một con số cũ hiện ra như số hôm nay &mdash; chỉ đổi chỗ nói. Chữa tận gốc là cắm lịch chạy bộ quét lên máy chủ, lúc đó dòng này không bao giờ hiện.</span></div><span class="status done">Đã duyệt</span></div>
         </div>
 
         <h3>Việc cần người có thẩm quyền chốt</h3>

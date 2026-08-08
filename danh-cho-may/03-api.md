@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: none
-sync-version: 4
+sync-version: 5
 ---
 
 # API — tRPC routers, 2 đường ghi duy nhất
@@ -107,9 +107,28 @@ Scope `hub_profile` (RP phải khai mới nhận được; mặc định vẫn c
 
 Không có claim nào chứa tên thật, `student_code`, số điện thoại hay địa chỉ. Cập nhật theo **lần đăng nhập kế tiếp** của user — Hub không đẩy thông báo chủ động sang RP khi em chuyển lớp (thêm một đường là thêm một thứ hỏng được; độ trễ thực tế thường dưới một ngày).
 
-### Đăng ký Relying Party (RP)
+### Đăng ký Relying Party (RP) — từ 07/08/2026 nằm trong sổ Mini App, không còn trong mã (ADR-032, `0055`)
 
-Danh sách RP (Moodle là RP đầu tiên) khai báo qua **config tĩnh** (env/JSON): `client_id`, `client_secret` (hash), `redirect_uris` (allowlist khớp chính xác chuỗi, không wildcard), `scopes` cho phép. Chưa xây bảng + màn hình quản trị riêng cho tới khi có ≥3–4 RP thật — không xây thứ chưa cần (khớp tinh thần `DEBT.md`).
+**Bản cũ của mục này viết:** *"khai báo qua config tĩnh (env/JSON) … chưa xây bảng + màn hình quản trị riêng cho tới khi có ≥3–4 RP thật — không xây thứ chưa cần"*. Ngưỡng đó đặt lúc chưa ai đấu nối app thứ hai, và cái nó bỏ qua không phải là sự tiện lợi:
+
+> **Thu hồi một app phải qua một lần deploy.** Tắt app trong `/quan-tri/mini-app` cắt được nhúng và webhook, nhưng client OIDC nằm trong mảng TypeScript nên vẫn sống và vẫn đổi được `authorization_code` lấy token. Công tắc thu hồi thu hồi được hai phần ba, và không tầng nào nói ra điều đó.
+
+Nay RP là **cùng một dòng** với Mini App trong `core.embedded_apps`, và **`client_id` chính là `app_id`** — không có cột thứ hai để lệch.
+
+| Trường | Nguồn | Ghi chú |
+|---|---|---|
+| `client_id` | `app_id` | Đi thẳng vào URL `/embed/<app_id>`, header `x-embed-app`, và alias đã sinh cho từng em — nên nó không sửa được (`0052`) |
+| `client_secret` | `process.env[sso_client_secret_env]` | Bảng giữ **TÊN** biến, không giữ giá trị. Biến chưa đặt ⇒ client **không được nạp** (fail-closed) + một dòng `console.error`. Không rơi về chuỗi rỗng |
+| `redirect_uris` | `sso_redirect_uris` | Khớp chính xác chuỗi, không wildcard. https, không fragment — cưỡng chế bằng `core.moi_uri_la_https()` |
+| `backchannel_logout_uri` | `sso_backchannel_logout_uri` | ADR-016 |
+| `scope` | `sso_scopes` | **Nay được truyền xuống thư viện thật** — xem cảnh báo dưới |
+| Hiệu lực | `enabled AND sso_enabled` | Đặt trong `core.v_oidc_clients`, một chỗ duy nhất |
+
+**`/embed/relay` KHÔNG nằm trong bảng.** `clients.ts` tự thêm `${HUB_URL}/embed/relay` cho app có `origin`: URI đó thuộc về Hub (Embed Bridge, `08-embedded-apps.md` mục 3), không thuộc về app ngoài, và nạp nó vào bảng là ghi cứng một tên miền của chính mình vào dữ liệu.
+
+**Cách nạp:** `provider.ts` truyền `clients: []` và một `adapter` factory — model `Client` đọc từ sổ, mọi model khác giữ `MemoryAdapter` của thư viện. `oidc-provider` tra danh sách tĩnh trước, không thấy thì gọi `adapter('Client').find(id)` rồi cache theo **băm của metadata trả về** (`lib/models/client.js`): dòng đổi ⇒ băm đổi ⇒ client dựng lại; dòng không đổi ⇒ dùng lại bản cache. Đường thay thế — dựng lại provider sau mỗi lần sửa — bị loại vì nó **đá văng mọi interaction, session và refresh_token đang sống của MỌI app khác** chỉ vì ai đó đổi một ô "ngày rà lại".
+
+> **CẢNH BÁO TƯƠNG THÍCH (07/08/2026).** `scopes` trước nay được khai trong `clients.ts` rồi **không bao giờ truyền xuống thư viện**, nên mọi RP xin được cả bốn scope — kể cả `hub_profile` (vai + cơ sở + lớp) và `offline_access`. Mục "Phạm vi cố định" ngay dưới mô tả một hàng rào **chưa từng tồn tại**. Từ `0055` nó đi xuống thật: RP xin ngoài danh sách đã khai nhận `invalid_scope` tại `/oidc/auth`. Nếu một RP đang chạy gãy vì điều này, cách sửa là **tích thêm ô scope trên `/quan-tri/mini-app`** — không cần deploy.
 
 ### Khớp tài khoản — idempotent, dùng `core.identity_links` (sửa 27/07/2026)
 

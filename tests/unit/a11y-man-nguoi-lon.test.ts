@@ -51,6 +51,10 @@ const read = (rel: string) => stripComments(readFileSync(join(componentsDir, rel
 const ADULT_SCREENS = [
   "gvcn-dashboard.tsx",
   "hub-sidebar.tsx",
+  // Màn đầu tiên của vai `teacher` (06/08/2026). Vào danh sách NGAY khi dựng, không hẹn
+  // lại: danh sách này liệt kê tay, nên một màn người lớn không có tên ở đây là một màn
+  // không ai đo vùng chạm, không ai đo giọng §8 — và nó sẽ im lặng như vậy rất lâu.
+  "gv-bo-mon/teaching-view.tsx",
   "gvcn/class-attendance-view.tsx",
   "gvcn/class-picker.tsx",
   "gvcn/class-roster-view.tsx",
@@ -281,14 +285,30 @@ describe("thẻ “Vắng” không được đọc thành lớp đi đủ khi c
 });
 
 describe("hai nhịp cờ phải nói ra trên màn ([QĐ-2] · VIỆC 4)", () => {
-  it("tức thì và quét đêm cho hai câu KHÁC HẲN nhau", () => {
-    const now = cadenceNote("tuc_thi");
-    const night = cadenceNote("quet_dem");
+  // ĐO TRÊN HÌNH THỨC MỚI, KHÔNG BỎ PHÉP ĐO (06/08/2026).
+  //
+  // Chủ đầu tư cắt hai CÂU giải thích cơ chế nhịp quét ("Hiện ngay khi em bấm — không chờ
+  // lượt quét đêm." / "Do lượt quét đêm tìm ra — dấu hiệu của hôm nay phải chờ lượt quét
+  // kế tiếp."). [QĐ-2] KHÔNG bị cắt theo: luật là "hai nhịp phải phân biệt được trên
+  // màn", và nó nay sống trong hai NHÃN CHIP hai–bốn từ, mỗi nhãn kèm một icon riêng
+  // (`bolt` / `nightlight`). Ba khẳng định dưới đây giữ nguyên ý; chỉ hạ chữ hoa trước
+  // khi so, vì nhãn chip mở đầu bằng chữ hoa còn câu cũ thì không.
+  it("tức thì và quét đêm cho hai NHÃN khác hẳn nhau", () => {
+    const now = cadenceNote("tuc_thi").toLowerCase();
+    const night = cadenceNote("quet_dem").toLowerCase();
     expect(now).not.toBe(night);
     expect(now).toContain("ngay");
     expect(night).toContain("quét");
     // Người đọc một bảng gộp hai nhịp mà không biết là đang bị chính bảng đó đánh lừa.
     expect(night).toContain("chờ");
+  });
+
+  it("và cả hai đều ngắn đúng một dòng ở khổ 390px (§1.5)", () => {
+    // Phép đo MỚI, thêm cùng lần cắt: cái sinh ra hai câu cũ là chỗ này không có trần độ
+    // dài nào. 30 ký tự ở chữ 11px là vừa một dòng trên máy hẹp nhất đang tính tới.
+    for (const c of ["tuc_thi", "quet_dem"] as const) {
+      expect(cadenceNote(c).length, `nhãn nhịp "${c}" dài quá một dòng`).toBeLessThanOrEqual(30);
+    }
   });
 });
 

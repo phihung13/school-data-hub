@@ -19,6 +19,230 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ### Added
 
+- **Phiếu đấu nối — khuôn JSON đội làm app gửi về** (07/08/2026, chủ đầu tư yêu cầu trực tiếp:
+  *"lần nào cần cắm app khác thì tôi download đưa file đó cho họ sửa, sau đó họ trả về … json
+  theo đúng template thì copy paste vào đó phát là ra app, khỏi cần điền từng tí 1"*):
+  `PhieuDauNoi` + ba khối con `PhieuNhung` · `PhieuWebhook` · `PhieuSso`, bảng
+  `KHOA_NHA_TRUONG_QUYET`, và hai hàm thuần `phieuThanhKhaiBao()` · `tenBienSecret()`.
+
+  **Đây KHÔNG phải bản sao của `CreateMiniAppInput`, và khác biệt là toàn bộ lý do nó tồn
+  tại.** Bốn trường của `CreateMiniAppInput` là quyết định của NHÀ TRƯỜNG, không của đội làm
+  app: `allowedRoles` (ai được mở app) · `enabled` (app có chạy không) · `reviewDueOn` (nhịp
+  rà lại) · `webhookSecretEnv`/`ssoClientSecretEnv` (quy ước đặt tên trên máy chủ Hub). Phiếu
+  **không có** bốn thứ đó, và **mọi cấp đều `.strict()`** — khai thừa là một lỗi CÓ TÊN, không
+  phải một trường bị bỏ qua trong im lặng. `KHOA_NHA_TRUONG_QUYET` biến lỗi "khoá lạ" thành
+  một câu nói rõ vì sao khoá đó bị từ chối, vì người dán phiếu không phải kỹ sư và phải gửi
+  lại được cho đội bên kia một câu đủ để họ biết sửa dòng nào.
+
+  `phieuThanhKhaiBao()` luôn trả `allowedRoles: []` — **dán một phiếu không bao giờ cấp quyền
+  cho ai**. Tên biến secret do `tenBienSecret()` sinh từ mã app, không nhận từ phiếu: một ký
+  tự gõ sai cho ra `undefined`, đúng cùng giá trị với "chưa đặt", và không có cách nào phân
+  biệt hai ca đó từ trong hệ.
+
+  Hàm nhận `ngayRaLai` làm tham số thay vì tự gọi đồng hồ — hàm thuần thì bài test truyền một
+  hằng số, không phải chạy đúng vào một ngày cụ thể mới đo được.
+
+  Khoá tiếng Việt là có chủ ý: người đọc bản yêu cầu (`apps/hub/server/dau-noi/ban-yeu-cau.md`)
+  là đội làm app Việt Nam hoặc một AI đọc bản tiếng Việt đó. Một khuôn tiếng Anh cạnh một tài
+  liệu tiếng Việt là thêm một lớp dịch, và mỗi lớp dịch là một chỗ dịch sai.
+  `tests/unit/phieu-dau-noi.test.ts` bắt **mọi khối JSON trong chính bản yêu cầu** đi qua khuôn
+  thật — tài liệu phát ra ngoài tổ chức và mã ở đây không có đường nào trôi khỏi nhau mà vẫn xanh.
+
+- **Khai SSO ngay trong sổ Mini App** (07/08/2026, ADR-032, migration 0055 — chủ đầu tư duyệt
+  trực tiếp): `MiniAppRow` và `CreateMiniAppInput` nhận thêm `ssoEnabled`, `ssoRedirectUris`,
+  `ssoBackchannelLogoutUri`, `ssoScopes`, `ssoClientSecretEnv`; `MiniAppRow` có thêm
+  `daCapSsoSecret` (máy chủ tính); `ListMiniAppsOutput` có thêm `hubUrl`. Hai schema mới:
+  `MiniAppRedirectUri`, `MiniAppScope`.
+
+  **Vì sao:** đo trên bản đang chạy ngày 06/08 — khai một app trong sổ thì nhúng chạy được,
+  tile hiện được, webhook đóng cổng đúng, còn SSO thì *không có gì*: danh sách Relying Party
+  nằm trong `apps/hub/server/oidc/clients.ts`, một mảng TypeScript. Hệ quả nặng nhất không
+  phải "thêm app phải deploy" mà là **thu hồi cũng phải deploy**: tắt một app trong sổ cắt
+  được nhúng và webhook, nhưng client OIDC vẫn sống và vẫn đổi được `authorization_code` lấy
+  token. Công tắc thu hồi thu hồi được hai phần ba, và không chỗ nào nói ra điều đó.
+
+  Ba điều ràng buộc client:
+
+  1. **`client_id` CHÍNH LÀ `appId`.** Không có trường thứ hai. Mini App và RP là cùng một
+     app, nên hai cột là hai chỗ để lệch nhau.
+  2. **`ssoClientSecretEnv` là TÊN biến môi trường, không phải giá trị** — y hệt
+     `webhookSecretEnv`. Giá trị secret không bao giờ vào cơ sở dữ liệu (lý lẽ ở đầu migration
+     0052: bản sao lưu đi ra khỏi máy chủ). `daCapSsoSecret` là câu trả lời cho "biến đó đã có
+     giá trị trên máy chủ này chưa" — một boolean do máy chủ tính, không phải chuỗi.
+  3. **`ssoRedirectUris` KHÔNG chứa `/embed/relay`.** Hub tự thêm URI cầu nối đó từ `HUB_URL`
+     cho app có nhúng. Client đừng hiển thị nó như thứ người dùng phải khai, và đừng gửi nó
+     lên — nó không thuộc về app ngoài.
+
+  `hubUrl` do máy chủ khai chứ không lấy từ `window.location.origin`: màn quản trị sinh bản
+  đấu nối để chép cho đối tác, và mở màn bằng `localhost:3000` thì bản chép sẽ mang một
+  `issuer` trỏ về máy của chính người quản trị.
+
+### Changed
+
+- **`scope` khai trong sổ nay ĐƯỢC CƯỠNG CHẾ thật** (07/08/2026, cùng ADR-032). Trường
+  `scopes` của `OidcClientConfig` trước nay được khai rồi **không bao giờ truyền xuống thư
+  viện** — dòng chú thích "chỉ cho phép khai `hub_profile` nếu app thật sự cần vai trò" mô tả
+  một hàng rào chưa từng tồn tại: mọi RP xin được cả bốn scope, kể cả `hub_profile` (vai + cơ
+  sở + lớp) và `offline_access`.
+
+  Từ nay `scope` đi xuống provider. **RP xin scope ngoài danh sách đã khai sẽ nhận
+  `invalid_scope` tại `/oidc/auth`.** Đây là một siết chặt có thể làm gãy một RP đang chạy nếu
+  nó đang xin nhiều hơn phần đã khai — và đó là lý do nó nằm ở mục Changed chứ không phải một
+  dòng dọn dẹp. Cái giá của việc siết nhầm nay là **một ô tích trên `/quan-tri/mini-app`**,
+  không còn là một lần sửa mã và deploy.
+
+- **`PendingWorkItem.href` nay nhận `null`** (06/08/2026, cùng ngày ra mắt). `null` nghĩa là việc
+  đó CÓ THẬT nhưng chưa có màn nào xử nó: chuông vẫn hiện để người dùng biết, nhưng dòng đó
+  không bấm được và không vẽ mũi tên.
+
+  Sinh ra từ một phép đo trên bản đang chạy: mục "Job nền cần xem" của quản trị trỏ
+  `/quan-tri/mini-app` chỉ vì cần một đường dẫn hợp lệ — mà đó là sổ đăng ký Mini App, không
+  liên quan gì tới job nền. Một mục bấm vào ra nhầm màn còn tệ hơn một mục không bấm được: nó
+  dạy người dùng rằng chuông này không đáng tin.
+
+  **Client phải xử lý `null`** — dựng `<Link>` với href rỗng là quay lại đúng cái chuông giả đã
+  bị gỡ khỏi trang chủ ngày 31/07/2026.
+
+### Added
+
+- **Chuông thông báo + cột phải trang chủ — nguồn dữ liệu của chúng** (06/08/2026, chủ đầu tư
+  mở `/home` bằng tài khoản quản trị rồi tài khoản giáo viên: *"thiếu thiếu gì á"*): file mới
+  `contracts/session.ts` với `PendingWorkTone`, `PendingWorkItem`, `GetPendingWorkOutput` —
+  bề mặt của thủ tục mới `session.getPendingWork` (`protectedProcedure`, CHỈ ĐỌC).
+
+  **Vì sao vibe team cần biết trước khi vẽ:** brief thiết kế 06/08 mục 5.1 cho phép vẽ chuông
+  với đúng MỘT điều kiện — nêu được nguồn dữ liệu. Một cái chuông rỗng đã bị gỡ khỏi trang chủ
+  ngày 31/07/2026 vì là affordance giả. Hợp đồng này là lời khai nguồn đó, và nó ràng buộc
+  bốn điều mà client không được tự nới:
+
+  1. **`PendingWorkItem` có ĐÚNG bốn trường hiển thị** — `key`, `label`, `count`, `href`,
+     `tone`. **Không có `studentId`, không có tên, không có mã học sinh.** Chuông chỉ đưa
+     người dùng TỚI đúng màn; danh tính hiện ở màn đó, nơi RLS đã gác từ trước. Điều 24 hiến
+     pháp UI (không rò nội tình) trùng đúng chỗ này với luật riêng tư của trường — một danh
+     sách tên trong lớp nổi của chuông là một bề mặt lộ dữ liệu MỚI, không policy nào canh
+     riêng cho nó. `tests/unit/chuong-khong-lo-ten.test.ts` quét mã nguồn router + hợp đồng
+     để giữ điều này.
+  2. **`count` luôn `>= 1`.** Mục đếm được 0 KHÔNG được máy chủ trả ra. "Hết việc" là
+     `items: []`, và màn hình nói điều đó bằng thể rỗng của chuông — đừng vẽ một danh sách
+     bốn dòng số 0, đó chính là hình dạng cái chuông vừa bị gỡ.
+  3. **`label` do MÁY CHỦ sinh, đúng giọng của vai (§8 brief — hai giọng, không trộn).**
+     Học sinh/phụ huynh nhận giọng Glow & Grow; người lớn nhận giọng nghiệp vụ. Client
+     **không được viết lại chữ** theo `key`: client không biết người đang đọc mang vai nào
+     cho tới khi query xong, và một màn hình tự chọn giọng là một màn hình sẽ có ngày in chữ
+     "cờ", "leo thang", "định mức" cho một đứa lớp 6 đọc. `key` là mã nội bộ, dùng cho
+     `key` của React và cho việc nhớ thứ tự — **không phải để hiển thị** (điều 24).
+  4. **`principal` và `board` luôn nhận `items: []`.** Hai vai đó xem số tổng hợp ở
+     `/dieu-hanh` và không có thao tác nào phải làm trong hệ hôm nay. Đừng vẽ một ô trống chờ
+     số cho họ.
+
+  **Nguồn từng mục, để không ai vẽ số bịa** (mọi phép đếm đi qua RLS của chính người gọi,
+  không hàm `security definer` nào đếm hộ): `homeroom` ← `attendance.checkins` trạng thái
+  `queued_late` · `attendance.help_requests` chưa `handled_at` (mục **duy nhất** mang
+  `tone: "urgent"`) · `report.growth_report_approvals` thiếu dòng hoặc `status='pending'` ·
+  `care.flags` `origin='live'` trong cửa sổ đọc từ `care.thresholds`. `teacher` ←
+  `core.teaches` + `attendance.checkins` (số LỚP hôm nay chưa có dòng điểm danh nào).
+  `counselor` ← `care.care_cases` `status='open'`. `admin` ← `core.embedded_apps` đang tắt ·
+  `ops.v_job_health.needs_attention`. `student` ← hôm nay chưa có dòng check-in.
+  `guardian` ← `core.my_consent_status()` còn `needs_action`.
+
+  **`href` luôn trỏ tới màn ĐANG CÓ THẬT** — không mục nào dẫn tới màn chưa xây. Ngoại lệ đã
+  biết và đã ghi: `admin.jobs_need_attention` trỏ tạm về `/quan-tri/mini-app` vì hệ chưa có
+  màn "sức khoẻ job nền". Con số vẫn được trả về chứ không giấu — RULES Rev F điều 8 cấm suy
+  tin tốt từ im lặng, mà thứ đang im ở đây có thể là job xoá chi tiết cảm xúc sau 12 tháng
+  (§3) đã chết từ tuần trước.
+
+- **Màn đầu tiên của vai `teacher` — giáo viên BỘ MÔN** (06/08/2026, chủ đầu tư: *"họ không
+  có gì ngoài trang chủ?"*): file mới `contracts/teaching.ts` với `TeachingClass`,
+  `GetMyTeachingClassesOutput`, `GetTeachingRosterInput`, `TeachingRosterEntry`,
+  `GetTeachingRosterOutput` — bề mặt của router mới `teaching`
+  (`teaching.getMyClasses` · `teaching.getRoster`).
+
+  **Vì sao vibe team cần biết:** đây là hợp đồng THỨ HAI mô tả "một dòng danh sách lớp", bên
+  cạnh `ClassRosterEntry` của `care.ts`. Hai bản KHÔNG được dùng lẫn nhau, và khác biệt không
+  phải chuyện đặt tên:
+
+  1. **`TeachingRosterEntry` có ĐÚNG bốn field** — `studentId`, `studentCode`, `fullName`,
+     `status`. Không `mood` (đã không có ở `care.ts` từ ADR-026), và cũng KHÔNG có
+     `helpPending`, `hasOpenCase`, `checkedInAt`, `source`. Đo dưới phiên Thầy Nam (bộ môn
+     Toán) ngày 06/08/2026: `care.flags` = 0 dòng, `attendance.help_requests` = 0 dòng, cột
+     `mood` = `42501 permission denied`. Thêm những field đó vào đây là hứa một thứ tầng dữ
+     liệu không cấp — client sẽ vẽ ô trống và người đọc hiểu thành "em này không có gì".
+  2. **Không dùng khuôn `SuppressibleCount`** (`number | null`) của màn Điều hành: ở đó `null`
+     nghĩa là "nhóm nhỏ hơn `report.min_cohort()` nên che". Ở đây thầy cô nhìn đúng lớp mình
+     dạy, RLS đã cho đọc từng dòng, nên số luôn là số thật — thêm một trạng thái `null` không
+     bao giờ xảy ra chỉ tạo một nhánh chết trên màn hình.
+  3. **Ba con số của `TeachingClass` giữ QĐ-3 nguyên vẹn:** `recordedCount` (đã có dòng điểm
+     danh, bất kể trạng thái) · `absentCount` (CHỈ `status = 'absent'`) · `noRecordCount`
+     (chưa ai ghi). `noRecordCount` là field riêng chứ không để màn hình tự trừ, đúng để không
+     ai cộng nó vào `absentCount`: **chưa điểm danh ≠ vắng**.
+
+  **Một field CỐ Ý THIẾU, đọc trước khi dựng màn:** `TeachingClass` KHÔNG có `subject` (tên
+  môn). `core.class_assignments.subject` là nguồn duy nhất và bảng đó không GRANT cho
+  `authenticated` (`0024` có assertion khoá điều này) — đo dưới phiên Thầy Nam:
+  `42501 permission denied for table class_assignments`. Mở ra cần một view `security definer`
+  mới + migration, tức là một quyết định mở quyền, không phải một dòng SQL. Đừng vá bằng cách
+  đoán tên môn ở client.
+
+- **Duyệt / trả lại / SỬA báo cáo HÀNG LOẠT** (06/08/2026, chủ đầu tư yêu cầu trực tiếp;
+  migration `0054`, ADR-031): `REPORT_DECISIONS`, `ReportDecision`, `REPORT_DECISION_LABEL`,
+  `DecideReportsInput`, `DecideReportsOutput` — bề mặt của thủ tục mới `care.decideReports`.
+
+  **Vì sao vibe team cần biết:** màn Duyệt báo cáo bắt GVCN ký từng em một — một lớp 40 em
+  là 40 cú bấm cho một quyết định cô đã ra từ lúc đọc xong danh sách. Thủ tục mới nhận MẢNG
+  `studentIds` + một `decision` + một `note`, trả `{updated, skipped}`.
+
+  **Ba chỗ dễ hiểu nhầm, đọc trước khi dùng:**
+
+  1. `skipped` KHÔNG phải lỗi, và **nghĩa của nó đổi theo `ghiDeQuyetDinhDaCo`**. Cờ tắt:
+     em đã có người ký trước (đồng nghiệp, chính cô ở tab khác, hoặc đây là lượt gửi lại),
+     cộng em không thuộc lớp chủ nhiệm. Cờ bật: chỉ còn "không thuộc lớp" và "lượt gửi lại
+     cùng `clientMutationId`". Màn hình phải nói ra con số đó bằng đúng nghĩa đang dùng —
+     nuốt nó đi thì cô đếm "đã xử 30 em" trong khi hệ chỉ ghi 27.
+  2. **Mặc định thủ tục KHÔNG ghi đè một quyết định đã ký** — nó chỉ chạm dòng chưa ai
+     quyết, và đó là hàng rào cố ý. Muốn đổi một chữ ký đã có thì bật `ghiDeQuyetDinhDaCo:
+     true`: một trường riêng, tường minh, **bắt buộc kèm `note` kể cả khi `decision` là
+     `approved`**. Mỗi lượt ghi đè để lại một dòng `report.report_decisions` (`0054`):
+     `from_status · to_status · decided_by · decided_at · reason · client_mutation_id`.
+     Giới hạn ADR-031 ghi thẳng và màn hình không được nói khác: sổ vết trả lời "ai đổi,
+     lúc nào, vì sao", **không** trả lời "phụ huynh đã đọc bản nào".
+  3. `clientMutationId` **nay được lưu** (`0054` có cột + unique một phần
+     `(student_id, week_start, client_mutation_id)`), nên gửi lại cùng mã là cùng một
+     quyết định trên CẢ HAI đường. Trước `0054` trường này nhận vào mà không có chỗ ghi:
+     chống trùng chỉ dựa vào khoá `(student_id, week_start)` + điều kiện "chỉ ghi lên dòng
+     chưa ai quyết" — đủ cho đường mặc định, nhưng đường ghi đè thì không còn điều kiện
+     trạng thái nào để chặn lượt thứ hai. Đó là lý do `0054` phải có mặt trước đường sửa.
+
+- **Kết luận cho check-in gửi muộn** (migration `0053`, ADR-029): `LATE_DECISIONS`,
+  `LateDecision`, `LATE_DECISION_LABEL`, `DecideLateCheckinsInput`, `DecideLateCheckinsOutput`;
+  `PendingLateCheckin` thêm field `occurredAtTime`.
+
+  **Vì sao vibe team cần biết:** buồng lái GVCN trước đây chỉ có đúng một nút "Xác nhận cả N"
+  — tức chỉ có một kết luận duy nhất (`present`) cho mọi dòng gửi muộn, không giờ gửi, không
+  chọn từng em, không chỗ ghi vì sao. Nay cô chọn được từng dòng và ghi một trong ba kết luận
+  `present` · `late` · `absent`, **bắt buộc kèm lý do** khi kết luận khác `present`, và mỗi
+  lượt ghi để lại một dòng trong `attendance.late_decisions`.
+
+  `absent` là quyền MỚI của GVCN và nó sửa ADR-007 — đọc ADR-029 trước khi dựng màn nào chạm
+  tới trạng thái điểm danh.
+
+### Deprecated
+
+- `ApproveReportInput` / `ApproveReportOutput` và thủ tục `care.approveReport` (06/08/2026):
+  vẫn chạy nguyên hành vi cũ cho client cũ (PWA đã cài trên máy thầy cô còn gọi tên này).
+  Client mới chuyển sang `care.decideReports` — kể cả khi chỉ chọn một em, để có một đường
+  ghi duy nhất. Sẽ gỡ ở phiên bản kế tiếp theo luật expand–contract.
+
+  **Một khác biệt hành vi phải biết trước khi chuyển:** `approveReport` ghi đè lên quyết
+  định đã có mà **không hỏi và không để lại vết** (nó là upsert trần theo `(student_id,
+  week_start)`, viết trước ADR-031). `decideReports` làm được cùng việc đó nhưng bắt khai
+  `ghiDeQuyetDinhDaCo: true` + lý do, và ghi một dòng `report.report_decisions`. Đây chính
+  là lý do `approveReport` phải gỡ chứ không phải "cũng được": nó là đường ghi đè duy nhất
+  còn lại không ai soát được.
+
+- `AcknowledgeLateInput` và thủ tục `care.acknowledgeLate`: vẫn chạy, là lối tắt của
+  `decideLateCheckins({ decision: "present" })`. Client chuyển sang thủ tục mới; sẽ gỡ ở
+  phiên bản kế tiếp theo luật expand–contract.
+
 - **Sổ đăng ký Mini App** (migration `0052`, ADR-015 mục 5): `MiniAppRow`, `ListMiniAppsOutput`,
   `CreateMiniAppInput`, `UpdateMiniAppInput`, `SetMiniAppEnabledInput`, `MiniAppMutationOutput`,
   cùng ba kiểu nền `MiniAppId`, `MiniAppOrigin`, `MiniAppBasket`, `MiniAppRole`.

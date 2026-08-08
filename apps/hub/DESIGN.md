@@ -23,11 +23,41 @@ Màu dồn vào icon, nút, trạng thái và header — không phủ nền. Chi
 | Nền thẻ | `#FFFFFF` | card |
 | Chữ chính | `#0F172A` | nội dung |
 | Tiêu đề thẻ | `#0A2A5E` | heading trong thẻ |
-| Chữ phụ | `#66707D`, `#6B7789` | mô tả |
+| Chữ phụ | `#66707D` (`muted`), `#5F6B7D` (`muted2`) | mô tả |
 | Caption | `#5F6B7D` (`caption`) / `#66707D` (`caption2`) | 4,90:1 và 4,56:1 ở nền tệ nhất `#F1F4F8` |
 | Chữ gợi ý ô nhập | `#5B6B80` | đặt một lần ở `globals.css`, KHÔNG để rơi về `#9CA3AF` |
-| Viền | `#E4E9F0` | border |
+| Viền | `#E4E9F0` (`line`) / `#C9D2DE` (`line2`, viền nhạt & chevron) | border — `line2` KHÔNG dùng cho chữ |
 | Chip xám | `#F1F4F8` | nền chip |
+| Chữ phụ đậm | `#5B6B80` (`subtle`) | 5,73:1 — chữ phụ cần đọc chắc hơn caption |
+| Tiêu đề thẻ cấp hai | `#33507C` (`cardtitle2`) | 8,17:1 — màn người lớn |
+| Chữ liên kết | `#1D4E8F` (`link`) | 7,66:1 — liên kết trong thân trang |
+| Chữ trên nền xanh nhạt | `#00693F` (`successText`) | 6,12:1 — KHÔNG dùng `#00A05F` (3,39:1) cho chữ |
+| Chữ đỏ trên nền hồng | `#C7333A` (`dangerText`) | 4,94:1 trên `#FFF5F5` — `#D2383E` chỉ 4,49:1 |
+
+### Nền trạng thái (`surface.*`, thêm 05/08/2026)
+
+Giá trị giữ nguyên từng mã một — đợt này chỉ ĐẶT TÊN cho những nền đã chạy sẵn ở hơn 100 chỗ
+dưới dạng mã hex viết tay, để câu hỏi "chữ này có đọc được trên nền kia không" tra được bằng tên
+thay vì bằng mắt.
+
+| Token | Mã | Dùng cho |
+|---|---|---|
+| `surface-success` | `#E3F8ED` | đã xong, đã tới nơi |
+| `surface-warn` | `#FFF1C9` | đang chờ xử lý |
+| `surface-warnSoft` | `#FFF7E0` | nhắc nhẹ, ô số liệu |
+| `surface-gold` | `#FFFBEE` | nền nút phụ viền vàng |
+| `surface-danger` / `surface-danger2` | `#FFF5F5` / `#FFF0F0` | lỗi, đăng xuất · pill khẩn |
+| `surface-info` / `surface-infoSoft` | `#E2F0FC` / `#F0F7FF` | thông tin trung tính · thẻ giải thích |
+| `surface-alt` · `surface-shell` · `surface-muted` | `#F5F8FC` · `#EAEFF6` · `#E9ECF2` | nền xen kẽ · nền ngoài khung thẻ · ô app chưa mở |
+
+> **`muted2` đã đổi `#6B7789` → `#5F6B7D` (05/08/2026).** Mã cũ đạt 4,54:1 trên trắng nhưng
+> tụt xuống 4,12:1 trên chip và 4,33:1 trên nền thẻ Glow — tức là nó chở chữ thật dưới chuẩn ở
+> đúng bản báo cáo phụ huynh mở từ link Zalo. Ngoại lệ hạ sàn riêng cho token này trong
+> `tests/unit/a11y.test.ts` cũng đã gỡ: bốn token chữ xám nay đo cùng một thước 4,5:1.
+>
+> **Luật một dòng cho màu chữ:** không thêm mã hex mới vào component. Thiếu màu thì thêm token
+> ở `tailwind.config.ts` — bài học đã trả giá thật: lần sửa `#E8940D` hôm 01/08 chỉ chạm được
+> 1 trong 7 chỗ vì sáu chỗ kia người sửa không mở file ra.
 
 ### Bốn màu tâm trạng — KHÔNG đổi
 
@@ -82,6 +112,34 @@ Sàn tuyệt đối 9.5px. Icon: Material Symbols Rounded `FILL 1` (class `.msr`
 - **Badge pill**: 9–10.5px/900, uppercase, nền nhạt + chữ đậm cùng tông.
 - **Progress**: track `#EEF1F6` 6–7px, fill gradient theo màu domain.
 
+## Chữ trên màn — cái gì được viết, cái gì phải để hình nói (06/08/2026)
+
+DESIGN-GUIDELINES §1.5 đã có luật này từ đầu (*"Ít chữ — hình thể thay lời nói. Caption tối đa 1 dòng.
+Nếu 1 icon + 5 từ diễn đạt được thì không viết 2 câu"*), nhưng app trôi khỏi nó dần: đo 06/08/2026 được
+**106 câu dài** (trên 55 ký tự) nằm trong JSX, tập trung ở 14 màn. Chủ đầu tư mở buồng lái và nói thẳng:
+*"lạm dụng quá nhiều chữ, ngôn ngữ phải được thể hiện qua thiết kế chứ không phải chữ viết"*.
+
+**Bốn loại câu KHÔNG được viết ra màn** — chúng là chú thích cho người sửa mã, không phải cho người dùng:
+
+| Loại | Ví dụ có thật đã bị cắt |
+|---|---|
+| Giải thích cơ chế máy | *"Bấm hai lần cùng một nội dung không tạo bản ghi thứ hai"* · *"Hiện ngay khi em bấm — không chờ lượt quét đêm"* |
+| Dạy người dùng đọc màn của chính họ | *"Chỉ những em thầy cô vừa chọn mới được ghi"* (đã có checkbox và số đang chọn) |
+| Biện minh vì sao màn thiếu dữ liệu | *"Bản phụ huynh đọc có thể còn một mục nữa dựa trên tâm trạng cả tuần. Màn này không dựng được mục đó vì…"* |
+| Khuyên nhủ, an ủi, tự thuật | *"cùng sắp xếp giờ giấc buổi sáng nhé"* · *"báo cáo tuần này gần như không có dữ liệu thật để kể"* |
+
+**Bốn loại câu PHẢI giữ** — bỏ là vi phạm điều khoản, không phải gọn gàng hơn:
+
+1. **Nhãn quyền riêng tư tại chỗ nhập** (`NHAN_AI_DOC_CAM_XUC`) — ADR-026, §9 guideline.
+2. **Mọi `sr-only`** — ngôn ngữ cho tai, không chiếm một pixel nào. Cắt nó là cắt người khiếm thị khỏi app.
+3. **Câu báo lỗi của một hành động vừa hỏng** — đúng lúc hỏng thì người dùng cần chữ. Rút ngắn được, bỏ thì không.
+4. **Câu nói ra dữ liệu đang thiếu hoặc đang cũ** (điều 8 sau ADR-030; phân biệt 5 trạng thái theo QĐ-3) — nhưng
+   chuyển từ CÂU sang NHÃN/chip: một chip "gửi muộn" nói đúng thứ mà một câu 20 chữ đang nói.
+
+**Cách thay, không phải chỉ xoá:** icon + nhãn 2–4 từ · chip trạng thái · nền + icon (không dùng màu một
+mình, §11). Câu thật sự cần cho người muốn hiểu sâu thì cho vào `<details>/<summary>` — một dòng trên màn,
+phần còn lại bấm mới mở, mẫu ở `components/tam-ly/tam-ly-shell.tsx`.
+
 ## Motion
 
 - Thời lượng 150–300ms; stagger danh sách 40–80ms; đếm số 400–700ms; vẽ progress 700–800ms.
@@ -110,3 +168,17 @@ khác vẫn đọc được khi không phân biệt màu (§11 tiếp cận).
   cùng dữ liệu thì lại vẽ bằng nền nhạt + icon, tức hai bản đang nói khác nhau. (2)
   `help-request-view.tsx` dải "chờ xác nhận"/"đã nhận" có sẵn icon + chữ nên dải màu chỉ là thừa.
   Cả hai nay dùng **nền nhạt + icon + chữ** — thứ mang nghĩa thật.
+
+**Đợt rà 05/08/2026 chạm thêm hai điều khoản nữa, và chỉ chạm vế đo được bằng số:**
+
+- **§3 `opacity:.45` cho tile app chưa build** — đã sửa cách thi hành, KHÔNG sửa ý định. Trước đây
+  mờ phủ cả khối nên nhãn chữ chỉ còn 2,21:1; nay mờ nằm ở **ô icon**, nhãn giữ màu đặc (12,55:1).
+  Mắt vẫn đọc "app này chưa mở", tai vẫn nghe câu `sr-only` — không vế nào mất. Cùng cách xử lý cho
+  `opacity-45` ở menu trái và `opacity-60/75` ở màn quản trị.
+- **§Motion `popIn cubic-bezier(.34,1.56,.64,1)`** — công cụ rà xếp easing nảy vào diện cấm. **Giữ
+  nguyên**: đây là chuyển động đã duyệt trên bản giấy, và nó chỉ dùng cho một khoảnh khắc ăn mừng
+  của trẻ con, không phải cho mọi chuyển cảnh. Ghi vào `DEBT.md` #58 để người duyệt chốt, không tự đổi.
+
+Ba món trên nay có số hiệu trong `danh-cho-may/DEBT.md`: **#58** (ba điều khoản đá nhau), **#59**
+(hai màn buồng lái phân mức bằng hai ngôn ngữ hình), **#60** (cổng landmark còn chạy trên danh sách
+file viết tay).

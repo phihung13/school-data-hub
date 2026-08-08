@@ -103,7 +103,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
         <>
           <div>
             <h1 className="text-[22px] font-black text-navy md:text-[24px]">{data!.student.fullName}</h1>
-            <p className="mt-1 text-[12.5px] font-semibold text-[#5B6B80]">
+            <p className="mt-1 text-[12.5px] font-semibold text-subtle">
               {[data!.student.studentCode, classLabel(data!.student.className), data!.student.schoolName]
                 .filter((p) => p !== "")
                 .join(" · ")}
@@ -113,10 +113,18 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
           <ScopeNotice />
 
           {/* ── Trạng thái hồ sơ ───────────────────────────────────────── */}
+          {/* BẢY TIÊU ĐỀ THẺ CỦA MÀN NÀY LÀ <h2>, KHÔNG PHẢI <div> (sửa 05/08/2026).
+              Trước đó cả màn chỉ có đúng một mốc tiêu đề là <h1> tên em; bảy khối còn lại
+              — hồ sơ, tín hiệu, nhật ký, ghi chú tư vấn, cờ khẩn, ghi việc, đóng hồ sơ —
+              chỉ là chữ to. Người đọc bằng tai duyệt trang bằng phím tiêu đề, nên một
+              màn hồ sơ dài như thế này đọc thành một dòng liên tục không có mốc nào để
+              nhảy: muốn tới nút "Đóng hồ sơ" phải nghe hết cả nhật ký can thiệp.
+              Class giữ nguyên từng ký tự — đây là sửa NGỮ NGHĨA, không phải sửa hình thức.
+              Mẫu đúng đã có sẵn ở dieu-hanh/operations-view.tsx ("Theo khối", "Theo lớp"). */}
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-[15px] font-black text-navy">Hồ sơ chăm sóc</div>
+                <h2 className="text-[15px] font-black text-navy">Hồ sơ chăm sóc</h2>
                 <div className="mt-1 text-[12.5px] font-semibold text-[#4A5460]">
                   {openCase
                     ? `Đang mở từ ${formatDateTime(openCase.openedAt)}`
@@ -125,8 +133,10 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                 {!openCase && (
                   // "Chưa có hồ sơ" là một trạng thái THẬT, không phải dữ liệu thiếu:
                   // hồ sơ chỉ sinh ra khi có người ghi hành động đầu tiên.
+                  // RÚT NGẮN: hai câu cũ nói cùng một điều theo hai chiều. Giữ chiều
+                  // HÀNH ĐỘNG được, bỏ chiều mô tả cơ chế.
                   <div className="mt-1 text-[11px] leading-relaxed text-muted">
-                    Hồ sơ mở ra khi có người ghi hành động đầu tiên. Ghi một dòng ở dưới là hồ sơ tự mở.
+                    Ghi một dòng ở dưới là hồ sơ tự mở.
                   </div>
                 )}
               </div>
@@ -142,23 +152,26 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
             {/* ── Cột trái: những gì ĐÃ XẢY RA ────────────────────────── */}
             <div className="flex min-w-0 flex-1 basis-[460px] flex-col gap-4">
               <Card>
-                <div className="text-[15px] font-black text-navy">Tín hiệu "cần gặp thầy cô"</div>
+                <h2 className="text-[15px] font-black text-navy">Tín hiệu "cần gặp thầy cô"</h2>
+                {/* CẮT vế "Nội dung em viết chỉ GVCN của em đọc được" (06/08/2026): đó
+                    đúng là điều `<ScopeNotice />` cách trên vài chục pixel vừa nói, và
+                    ScopeNotice là chỗ luật cắt chỉ định giữ nhãn đó. Hai bản của cùng một
+                    lời hứa quyền riêng tư trên cùng một màn là hai bản sẽ trôi lệch nhau. */}
                 <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                  Loại tín hiệu và ngày em bấm, trong {data!.window.days} ngày gần nhất. Nội dung em viết
-                  chỉ GVCN của em đọc được.
+                  Loại tín hiệu và ngày · {data!.window.days} ngày gần nhất
                 </p>
                 {data!.helpSignals.length === 0 ? (
                   <EmptyState
                     icon="search_off"
                     title="Chưa có tín hiệu nào trong khoảng này"
-                    hint="Trống ở đây nghĩa là em chưa bấm nút nào trong khoảng thời gian trên — không phải em không có chuyện gì."
+                    hint="Em chưa bấm nút nào — không phải em không có chuyện gì."
                   />
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2.5">
                     {data!.helpSignals.map((s) => (
                       <li key={s.helpRequestId} className="flex items-start gap-2.5">
                         <span
-                          className={`mt-[6px] h-2 w-2 flex-none rounded-full ${s.handledAt ? "bg-[#C9D2DE]" : "bg-[#F0474D]"}`}
+                          className={`mt-[6px] h-2 w-2 flex-none rounded-full ${s.handledAt ? "bg-line2" : "bg-[#F0474D]"}`}
                           aria-hidden
                         />
                         <div className="min-w-0">
@@ -177,22 +190,25 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
               </Card>
 
               <Card>
-                <div className="text-[15px] font-black text-navy">Nhật ký can thiệp</div>
+                <h2 className="text-[15px] font-black text-navy">Nhật ký can thiệp</h2>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                  Việc con người đã làm với em — của cả GVCN lẫn tâm lý cụm.
+                  Của cả GVCN lẫn tâm lý cụm
                 </p>
                 {data!.interventions.length === 0 ? (
                   <EmptyState
                     icon="edit_note"
                     title="Chưa ai ghi hành động nào"
-                    hint="Trống ở đây nghĩa là chưa ai ghi việc gì vào hệ thống — không phải mất dữ liệu, cũng không phải chưa ai làm gì ngoài đời."
+                    // RÚT NGẮN: bỏ vế "không phải mất dữ liệu" (nhánh hỏng đã có
+                    // ErrorState riêng). GIỮ vế còn lại — sổ chỉ biết việc ĐƯỢC GHI, và
+                    // đọc nó thành "chưa ai làm gì" là hiểu ngược.
+                    hint="Sổ chỉ biết việc được ghi — không phải việc ngoài đời."
                   />
                 ) : (
                   <ul className="mt-3 flex flex-col gap-3">
                     {data!.interventions.map((i) => (
                       <li key={i.interventionId} className="flex items-start gap-2.5">
                         <span
-                          className={`mt-[6px] h-2 w-2 flex-none rounded-full ${i.caseStatus === "open" ? "bg-[#2C7BF2]" : "bg-[#C9D2DE]"}`}
+                          className={`mt-[6px] h-2 w-2 flex-none rounded-full ${i.caseStatus === "open" ? "bg-[#2C7BF2]" : "bg-line2"}`}
                           aria-hidden
                         />
                         <div className="min-w-0">
@@ -212,20 +228,26 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
               </Card>
 
               <Card>
+                {/* `visibility_off` thay `lock` (06/08/2026): DESIGN-GUIDELINES §9 và
+                    ADR-026 chốt ĐÚNG badge đó cho ghi chú tư vấn, và cùng một icon đang
+                    được dùng cho "ô này bị che" ở màn Điều hành — một khái niệm, một hình.
+                    Nhãn quyền riêng tư thì GIỮ (luật cắt liệt kê nó ở nhóm không được bỏ),
+                    chỉ rút một câu rưỡi còn một vế: "GVCN và phụ huynh không xem được" là
+                    cách nói ngược của "chỉ người viết và tâm lý cụm đọc được". */}
                 <div className="flex items-center gap-1.5">
                   <span className="msr text-[17px] text-domain-counselor" aria-hidden>
-                    lock
+                    visibility_off
                   </span>
-                  <div className="text-[15px] font-black text-navy">Ghi chú tư vấn</div>
+                  <h2 className="text-[15px] font-black text-navy">Ghi chú tư vấn</h2>
                 </div>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                  Chỉ người viết và tâm lý cụm đọc được. GVCN và phụ huynh không xem được khối này.
+                  Chỉ người viết và tâm lý cụm đọc được
                 </p>
                 {data!.counselorNotes.length === 0 ? (
                   <EmptyState
                     icon="sticky_note_2"
                     title="Chưa có ghi chú tư vấn nào"
-                    hint="Hub chưa có màn nhập ghi chú tư vấn, nên trống ở đây không nói được gì về việc em đã được tư vấn hay chưa."
+                    hint="Hub chưa có màn nhập — trống ở đây không nói được gì."
                   />
                 ) : (
                   <ul className="mt-3 flex flex-col gap-3">
@@ -248,8 +270,10 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                     <span className="msr mt-[1px] flex-none text-[15px]" aria-hidden>
                       info
                     </span>
-                    Hub chưa có đường ghi ghi chú tư vấn — hiện chỉ đọc được ghi chú đã có sẵn trong cơ sở
-                    dữ liệu. Ghi mới vẫn phải làm ngoài hệ thống.
+                    {/* RÚT NGẮN, KHÔNG BỎ: khối này thay cho một ô soạn thảo giả. Vế
+                        "chỉ đọc được ghi chú đã có sẵn trong cơ sở dữ liệu" thì chính
+                        danh sách ngay trên đã cho thấy. */}
+                    Chưa ghi được ở Hub — ghi mới làm ngoài hệ thống.
                   </p>
                 )}
               </Card>
@@ -259,9 +283,11 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
             <div className="flex min-w-0 flex-1 basis-[380px] flex-col gap-4">
               {pendingSignals.length > 0 && (
                 <Card>
-                  <div className="text-[15px] font-black text-navy">Cờ khẩn đang chờ</div>
+                  <h2 className="text-[15px] font-black text-navy">Cờ khẩn đang chờ</h2>
+                  {/* CẮT vế "Tín hiệu tắt khỏi hộp việc của cả GVCN lẫn tâm lý cụm" —
+                      mô tả cơ chế. Điều cô cần biết trước khi bấm là ĐIỀU KIỆN bấm. */}
                   <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                    Bấm khi đã thật sự gặp em. Tín hiệu tắt khỏi hộp việc của cả GVCN lẫn tâm lý cụm.
+                    Bấm khi đã thật sự gặp em.
                   </p>
                   {/* MỖI DÒNG MỘT COMPONENT, mỗi component một mutation riêng — đổi
                       01/08/2026. Bản cũ khai đúng MỘT `useMutation` cho cả danh sách, rồi
@@ -286,15 +312,13 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
               )}
 
               <Card>
-                <div className="text-[15px] font-black text-navy">Ghi một việc vừa làm</div>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
-                  Có dòng ở đây thì hồ sơ không còn là "đo rồi để đó", và đồng hồ nhắc{" "}
-                  {/* Ngưỡng đọc từ bảng, không viết số ở đây (§7) — nên câu này nói chung. */}
-                  được đặt lại.
-                </p>
+                {/* GỠ 06/08/2026 câu "Có dòng ở đây thì hồ sơ không còn là "đo rồi để
+                    đó", và đồng hồ nhắc được đặt lại." — cơ chế đồng hồ leo thang, cùng
+                    lý do đã ghi ở `gvcn/intervention-notes-view.tsx`. Luật không đổi. */}
+                <h2 className="text-[15px] font-black text-navy">Ghi một việc vừa làm</h2>
 
                 <div className="mt-3">
-                  <span className="text-[11.5px] font-extrabold text-[#33507C]">Việc đã làm</span>
+                  <span className="text-[11.5px] font-extrabold text-cardtitle2">Việc đã làm</span>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {QUICK_ACTIONS.map((a) => (
                       <button
@@ -305,7 +329,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                         className={
                           action === a
                             ? "min-h-[44px] rounded-full bg-domain-counselor px-4 py-1.5 text-[11.5px] font-black text-white"
-                            : "min-h-[44px] rounded-full border border-line bg-white px-4 py-1.5 text-[11.5px] font-bold text-[#33507C] hover:bg-[#F5F8FC]"
+                            : "min-h-[44px] rounded-full border border-line bg-white px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-[#F5F8FC]"
                         }
                       >
                         {a}
@@ -317,24 +341,30 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                     onChange={(e) => setAction(e.target.value)}
                     maxLength={200}
                     aria-label="Việc đã làm"
-                    className="mt-2 min-h-[44px] w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-[#5B6B80] focus:border-navy"
+                    className="mt-2 min-h-[44px] w-full rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-subtle focus:border-navy"
                   />
                 </div>
 
                 <label className="mt-3 block">
-                  <span className="text-[11.5px] font-extrabold text-[#33507C]">Ghi chú (không bắt buộc)</span>
+                  <span className="text-[11.5px] font-extrabold text-cardtitle2">Ghi chú (không bắt buộc)</span>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     rows={3}
                     maxLength={2000}
                     placeholder="Nội dung ngắn gọn, đủ để lần sau đọc lại còn hiểu…"
-                    className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-[#5B6B80] focus:border-navy"
+                    className="mt-1 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-subtle focus:border-navy"
                   />
                 </label>
-                <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
-                  Ô này là nhật ký hành động — GVCN của em đọc được. Nội dung buổi tư vấn thì không ghi
-                  vào đây.
+                {/* GIỮ vế AI ĐỌC ĐƯỢC (nhãn quyền riêng tư, ADR-026): nó là ranh giới
+                    giữa ô này và khối "Ghi chú tư vấn" ở cột trái, mà hai khối có hai
+                    tập người đọc khác nhau. Vế "Nội dung buổi tư vấn thì không ghi vào
+                    đây" là hệ quả tự nhiên của nó, cắt. Icon nói phần còn lại. */}
+                <p className="mt-1 flex items-center gap-1 text-[10.5px] leading-relaxed text-muted">
+                  <span className="msr text-[13px]" aria-hidden>
+                    visibility
+                  </span>
+                  GVCN của em đọc được ô này
                 </p>
 
                 <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -368,10 +398,13 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
 
               {openCase && (
                 <Card>
-                  <div className="text-[15px] font-black text-navy">Đóng hồ sơ</div>
+                  <h2 className="text-[15px] font-black text-navy">Đóng hồ sơ</h2>
+                  {/* CẮT vế "nên lý do phải ghi lại để lần sau đọc còn hiểu vì sao" —
+                      biện minh cho một ô mà nút bên dưới đã khoá cho tới khi có chữ.
+                      GIỮ HẬU QUẢ: đóng hồ sơ là em rời hộp việc của cụm. Đó không phải
+                      cơ chế, đó là thứ cô đang quyết định. */}
                   <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
-                    Chỉ đóng khi việc đã xong. Hồ sơ đóng thì em không còn trong hộp việc của cụm — nên
-                    lý do phải ghi lại để lần sau đọc còn hiểu vì sao.
+                    Đóng thì em rời hộp việc của cụm.
                   </p>
                   <textarea
                     value={resolution}
@@ -379,8 +412,8 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                     rows={3}
                     maxLength={2000}
                     aria-label="Lý do đóng hồ sơ"
-                    placeholder="Vì sao đóng: em đã ổn định, đã bàn giao, gia đình đã phối hợp…"
-                    className="mt-2 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-[#5B6B80] focus:border-navy"
+                    placeholder="Vì sao đóng: em đã ổn định, đã bàn giao…"
+                    className="mt-2 w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] placeholder:text-subtle focus:border-navy"
                   />
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <button
@@ -389,7 +422,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                       onClick={() =>
                         closeCase.mutate({ caseId: openCase.caseId, resolution: resolution.trim() })
                       }
-                      className="min-h-[44px] rounded-xl border-[1.6px] border-line bg-white px-5 py-3 text-[12.5px] font-black text-[#33507C] disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+                      className="min-h-[44px] rounded-xl border-[1.6px] border-line bg-white px-5 py-3 text-[12.5px] font-black text-cardtitle2 disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
                     >
                       {closeCase.isPending ? "Đang đóng…" : "Đóng hồ sơ này"}
                     </button>

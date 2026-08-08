@@ -24,6 +24,7 @@ export function OperationsShell({
   displayName,
   email,
   roles,
+  active,
   toolbar,
   children,
 }: {
@@ -33,6 +34,17 @@ export function OperationsShell({
   email: string;
   /** Vai THẬT của người đang xem — sidebar và tab bar đều đọc từ đây, không đoán. */
   roles: HubRole[];
+  /**
+   * `key` của màn đang mở, lấy từ bản khai `lib/man-hinh.ts` ("operations" · "miniapp" ·
+   * "xem-truoc"). BẮT BUỘC truyền, không có giá trị mặc định.
+   *
+   * Vì sao (đo 05/08/2026): chỗ này từng viết chết `active="home"` cho MỌI màn dùng khung
+   * này. Sidebar sáng một mục theo `active` và một mục nữa theo `pathname === item.href`,
+   * nên trên /dieu-hanh, /quan-tri/mini-app và /quan-tri/xem-truoc có ĐÚNG HAI phần tử
+   * cùng mang aria-current="page". Trình đọc màn hình đọc ra hai "trang hiện tại" và
+   * người dùng bàn phím không còn cách nào biết mình đang đứng đâu.
+   */
+  active: string;
   toolbar?: ReactNode;
   children: ReactNode;
 }) {
@@ -43,10 +55,8 @@ export function OperationsShell({
     <StaffVoice>
       <div className="flex min-h-screen w-full md:h-screen md:overflow-hidden">
         <div className="hidden w-[240px] flex-none md:flex">
-          {/* `active="home"`: màn này chưa có mục riêng trong sidebar (thêm mục là việc
-              của file hub-sidebar.tsx, ngoài phạm vi gói này — xem ghi chú bàn giao).
-              Trỏ vào "home" để không có mục nào sáng lên sai chỗ. */}
-          <HubSidebar roles={roles} active="home" fullName={displayName} email={email} />
+          {/* `active` đến từ nơi gọi, không viết chết ở đây — xem lý lẽ ở khai báo prop. */}
+          <HubSidebar roles={roles} active={active} fullName={displayName} email={email} />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
@@ -74,7 +84,16 @@ export function OperationsShell({
               này gọi là tình huống thật. */}
           <MainContent className="flex flex-1 flex-col md:overflow-y-auto">
             <div className="flex flex-col gap-4 p-4 md:p-7">
-              <div className="flex flex-wrap items-end justify-between gap-3">
+              {/* MỘT lần render `toolbar`, đổi chỗ bằng flex chứ không bằng hai nhánh
+                  hiển thị (sửa 05/08/2026).
+                  Bản cũ đặt `{toolbar}` ở HAI nơi — một trong `hidden md:block`, một trong
+                  `md:hidden`. `display:none` không gỡ phần tử khỏi DOM, nên trang luôn có
+                  hai bản: hai ô `input type="date"` cùng lúc ở màn Điều hành, và ở sổ Mini
+                  App là hai `NutThemApp` với state React ĐỘC LẬP — mở form khai app ở khổ
+                  hẹp rồi xoay ngang là form biến mất cùng mọi chữ vừa gõ, vì bản đang hiện
+                  ra là bản kia, bản chưa ai bấm.
+                  Xếp dọc dưới tiêu đề ở khổ hẹp, về cuối hàng từ `md` — đúng hai vị trí cũ. */}
+              <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
                 <div className="min-w-0">
                   <h1 className="text-[19px] font-black leading-tight text-navy md:text-[24px]">{title}</h1>
                   {subtitle && (
@@ -83,9 +102,8 @@ export function OperationsShell({
                     </div>
                   )}
                 </div>
-                <div className="hidden md:block">{toolbar}</div>
+                {toolbar}
               </div>
-              <div className="md:hidden">{toolbar}</div>
 
               {children}
             </div>

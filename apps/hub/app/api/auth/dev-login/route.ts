@@ -13,6 +13,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
+  DEV_GATE_ATTEMPTS_PER_MINUTE,
   DEV_GATE_COOKIE_NAME,
   DEV_GATE_HEADER,
   evaluateDevGate,
@@ -23,6 +24,8 @@ import {
   sessionCookieOptionsFor,
 } from "@hub/core/auth-adapter";
 import { log } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFrom } from "@/lib/client-ip";
 
 const Body = z.object({ authUid: z.string().uuid() });
 
@@ -49,6 +52,34 @@ export async function POST(req: NextRequest) {
     );
   }
   if (gate === "locked") {
+    // ĐẾM LƯỢT ĐOÁN Ở ĐÂY NỮA — CỬA THỨ HAI VÀO CÙNG MỘT Ổ KHOÁ (đo 07/08/2026).
+    //
+    // `/api/auth/dev-gate` giới hạn 5 lượt/phút/IP. Route này thì KHÔNG — mà nó cũng nhận
+    // đúng bí mật ấy qua header `x-hub-dev-secret`, và trả 200 kèm cookie phiên khi đúng.
+    // Đo thật trên bản đang chạy: 8 lượt sai liên tiếp vào `/dev-gate` → `401×5` rồi `429`;
+    // 7 lượt sai vào route này → `401` cả bảy, không lượt nào bị chặn. Nghĩa là hàng rào
+    // chống dò mã có thật, nhưng đi vòng qua nó chỉ tốn việc đổi đường dẫn.
+    //
+    // Dùng CHUNG khoá đếm `dev-gate:<ip>`: hai cửa vào một ổ khoá thì phải tiêu chung một
+    // ngân sách, không phải mỗi cửa một ngân sách riêng — nếu không thì hai cửa nghĩa là
+    // gấp đôi số lượt đoán.
+    //
+    // Chỉ đếm khi người gọi CÓ đưa mã và mã sai. Người chưa từng nhập mã (không header,
+    // không cookie) là người dùng bình thường vừa mở trang; tính họ vào hạn mức là khoá cửa
+    // đúng vào lúc họ sắp gõ mã đúng.
+    const coDuaMa = !!req.headers.get(DEV_GATE_HEADER) || !!req.cookies.get(DEV_GATE_COOKIE_NAME)?.value;
+    if (coDuaMa) {
+      const ip = clientIpFrom(req);
+      const verdict = checkRateLimit(`dev-gate:${ip}`, DEV_GATE_ATTEMPTS_PER_MINUTE);
+      if (!verdict.allowed) {
+        log("warn", "dev_login.gate_rate_limited", { ip });
+        return NextResponse.json(
+          { state: "locked", error: "Thử quá nhiều lần. Đợi một phút rồi thử lại." },
+          { status: 429, headers: { "retry-after": String(verdict.retryAfterSeconds ?? 60) } },
+        );
+      }
+    }
+
     // Màn đăng nhập đọc `state` để bật ô nhập mã mở khoá rồi thử lại chính tài khoản
     // vừa bấm — nhờ vậy người dùng chỉ nhập bí mật ĐÚNG MỘT LẦN.
     return NextResponse.json(
