@@ -166,10 +166,45 @@ function themUriCauNoi(uris: string[], coNhung: boolean): string[] {
   return [...new Set([...uris, `${hubUrl()}/embed/relay`])];
 }
 
+/**
+ * Chuỗi ĐĂNG NHẬP dùng chung cho mọi app — quyết định chủ đầu tư 08/08/2026 (*"gộp đi"*).
+ *
+ * Cùng một chuỗi với đường webhook: chủ đầu tư muốn MỘT chuỗi cho cả hệ, đổi một lần là mọi
+ * app đổi theo. Đọc từ cùng biến `EMBED_WEBHOOK_SECRET_CHUNG` chứ không sinh biến thứ hai —
+ * hai biến cho "một chuỗi dùng chung" là hai chỗ để lệch nhau, và lệch ở đây nghĩa là một
+ * nửa số app đăng nhập được còn nửa kia thì không.
+ *
+ * Rủi ro đã ghi đầy đủ ở đầu migration `0057` và `DEBT.md` #65 — tóm tắt: KHÔNG tự chế được
+ * token (PKCE + redirect_uri vẫn gác), nhưng MẤT ranh giới giữa các app ở tầng xác thực
+ * client (một đội lộ là lộ cho tất cả; ai có chuỗi thì thu hồi được token của app khác).
+ */
+const SECRET_CHUNG_MAC_DINH = "vietanh2026";
+
+function secretChung(): string {
+  const v = (process.env.EMBED_WEBHOOK_SECRET_CHUNG ?? "").trim();
+  return v.length > 0 ? v : SECRET_CHUNG_MAC_DINH;
+}
+
 function doiHang(r: Dong): OidcClientConfig | null {
-  // Ràng buộc `embedded_apps_sso_du_bo` đã chặn ca này ở tầng bảng; kiểm lại ở đây vì
-  // TypeScript không biết điều đó, và vì một cột nullable thì kiểu của nó là nullable.
-  if (!r.client_secret_env) return null;
+  // Hai đường, ranh giới là LỜI KHAI chứ không phải giá trị — chép đúng ngữ nghĩa của
+  // `server/embed/registry-db.ts` để hai cửa của cùng một hệ không hành xử khác nhau:
+  //   · KHÔNG khai biến riêng → chuỗi chung. Đường mặc định, mọi app mới.
+  //   · CÓ khai biến riêng    → BẮT BUỘC đúng biến đó; chưa đặt thì KHÔNG nạp client.
+  // Vế hai giữ cho một app được cấp khoá riêng (vì cần mạnh hơn, hoặc cần thu hồi riêng)
+  // không lặng lẽ tụt xuống chạy bằng chuỗi ai cũng đoán được.
+  if (!r.client_secret_env) {
+    return {
+      client_id: r.client_id,
+      client_secret: secretChung(),
+      redirect_uris: themUriCauNoi(r.redirect_uris, !!r.origin),
+      backchannel_logout_uri: r.backchannel_logout_uri ?? undefined,
+      scopes: r.scopes,
+      // Cửa sổ xoay khoá đọc `<tên biến>_PREVIOUS`. Với chuỗi chung, tên đó là
+      // `EMBED_WEBHOOK_SECRET_CHUNG_PREVIOUS` — một cửa sổ cho TẤT CẢ app cùng lúc, đúng
+      // hệ quả của việc dùng chung mà chủ đầu tư đã nhận khi quyết.
+      secret_env: "EMBED_WEBHOOK_SECRET_CHUNG",
+    };
+  }
 
   const secret = process.env[r.client_secret_env];
   if (!secret || secret.length === 0) {

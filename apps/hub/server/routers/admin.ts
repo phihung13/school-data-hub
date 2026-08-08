@@ -136,7 +136,9 @@ function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
     ssoScopes: r.sso_scopes,
     ssoClientSecretEnv: r.sso_client_secret_env,
     // Cùng phép tính, cùng lý do với `daCapSecret` ngay trên — bảng chỉ biết TÊN biến.
-    daCapSsoSecret: !!ssoEnv && ssoEnv.length > 0,
+    // Cùng ranh giới với `oidc/clients.ts`: khai khoá riêng thì phải có đúng khoá đó;
+    // không khai thì chuỗi chung luôn có sẵn.
+    daCapSsoSecret: r.sso_client_secret_env ? !!ssoEnv && ssoEnv.length > 0 : coSecretChung(),
     // Xem chú thích ở `MiniAppRow.conThieu`. Thứ tự CÓ NGHĨA: hai việc làm được ngay trên
     // màn hình đứng trước, việc phải nhờ người vận hành chạm vào máy chủ đứng cuối.
     conThieu: [
@@ -150,8 +152,11 @@ function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
       r.webhook_secret_env && !(env && env.length > 0)
         ? `Đặt ${r.webhook_secret_env} trên máy chủ rồi khởi động lại — app này khai khoá RIÊNG, chưa đặt thì webhook trả 401`
         : null,
+      // App KHÔNG khai khoá riêng thì dùng chuỗi chung — không còn việc gì phải làm.
+      // Chỉ app cố ý khai khoá riêng mà bỏ trống mới cần nhắc, và phải nói rõ vì sao nó
+      // không rơi về chuỗi chung, nếu không câu nhắc này đọc thành một lỗi của hệ.
       r.sso_enabled && r.sso_client_secret_env && !(ssoEnv && ssoEnv.length > 0)
-        ? `Đặt ${r.sso_client_secret_env} trên máy chủ rồi khởi động lại — chưa có thì đăng nhập trả invalid_client`
+        ? `Đặt ${r.sso_client_secret_env} trên máy chủ rồi khởi động lại — app này khai khoá RIÊNG, chưa đặt thì đăng nhập trả invalid_client`
         : null,
     ].filter((c): c is string => c !== null),
     // Lọc ở đây thay vì một truy vấn con cho mỗi app: danh sách app ngắn (chục dòng), và

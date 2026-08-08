@@ -18,7 +18,7 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
-select plan(39);
+select plan(40);
 select test_support.seed_basic();
 
 -- ---------------------------------------------------------------------------
@@ -70,13 +70,27 @@ select throws_ok(
   '23514', null,
   'bật SSO mà không redirect_uri thì bị chặn — RP sẽ nhận redirect_uri mismatch, một câu lỗi không chỉ về ô bỏ trống');
 
-select throws_ok(
+-- ĐỔI CHỦ Ý 08/08/2026 (migration 0057, chủ đầu tư: *"gộp đi"*) — ghi lại thay vì xoá.
+--
+-- Bản gốc của phép kiểm này đòi database TỪ CHỐI một app bật SSO mà không khai tên biến
+-- secret. Đúng khi mỗi app một khoá: khai SSO mà không nói lấy khoá ở đâu thì client dựng
+-- lên hỏng câm.
+--
+-- Nay `NULL` có một nghĩa RÕ RÀNG và hợp lệ — "dùng chuỗi chung của trường" — và đó là
+-- đường MẶC ĐỊNH của mọi app mới. Giữ nguyên phép kiểm cũ là cấm đúng cái đường mặc định.
+-- Vế còn lại của ràng buộc (`cardinality(sso_redirect_uris) >= 1`) vẫn gánh việc và vẫn
+-- được đo ở phép kiểm ngay trên.
+select lives_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
                                     sso_enabled, sso_redirect_uris)
-    values ('sso-thieu-secret', 'Bật SSO không secret', 'xanh', 'ai đó', current_date,
+    values ('sso-thieu-secret', 'Bật SSO dùng chuỗi chung', 'xanh', 'ai đó', current_date + 200,
             true, array['https://a.vn/cb'])$$,
-  '23514', null,
-  'bật SSO mà không khai tên biến secret thì bị chặn — client dựng lên sẽ hỏng câm');
+  'bật SSO mà KHÔNG khai tên biến secret thì khai được — NULL nghĩa là dùng chuỗi chung (0057)');
+
+select is(
+  (select sso_client_secret_env from core.embedded_apps where app_id = 'sso-thieu-secret'),
+  null,
+  'và cột đó để trống, đúng dấu hiệu "app này dùng chuỗi chung"');
 
 select lives_ok(
   $$insert into core.embedded_apps (app_id, display_name, basket, owner, review_due_on,
@@ -224,10 +238,19 @@ select is(
   (select sso_backchannel_logout_uri from core.embedded_apps where app_id = 'factory'),
   'https://factory.vietanh.org/api/auth/oidc/backchannel-logout',
   'backchannel_logout_uri của Factory giữ nguyên — ADR-016 "thoát Hub = thoát mọi RP" dựa vào nó');
+-- ĐỔI 08/08/2026 bởi migration `0057` — ghi lại thay vì sửa lặng.
+--
+-- Khi `0055` viết ra, phép kiểm này khoá đúng một điều: tên biến secret của Factory không
+-- được đổi, vì đổi là Factory mất đăng nhập lúc deploy. Nó đúng khi mỗi app một khoá.
+--
+-- `0057` chuyển Factory sang CHUỖI CHUNG của trường (quyết định chủ đầu tư), nên cột này
+-- nay là `NULL` — và `NULL` chính là dấu hiệu "dùng chuỗi chung". Điều đáng khoá vẫn được
+-- khoá, chỉ đổi giá trị: một thay đổi ngoài ý muốn ở cột này vẫn làm bài test đỏ.
+-- Chi tiết đo riêng ở `0057_mot_chuoi_cho_ca_dang_nhap_test.sql`.
 select is(
   (select sso_client_secret_env from core.embedded_apps where app_id = 'factory'),
-  'OIDC_CLIENT_SECRET_FACTORY',
-  'tên biến secret của Factory giữ nguyên — đổi tên biến là Factory mất đăng nhập lúc deploy');
+  null,
+  'Factory dùng CHUỖI CHUNG của trường (0057) — cột để trống là dấu hiệu của điều đó');
 select is(
   (select sso_scopes from core.embedded_apps where app_id = 'factory'),
   array['openid','profile']::text[],

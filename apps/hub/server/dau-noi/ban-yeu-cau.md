@@ -226,7 +226,7 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 | Bản khai (discovery) | `{{HUB_URL}}/.well-known/openid-configuration` |
 | issuer | `{{HUB_URL}}` |
 | `client_id` | **chính là mã app của bạn** |
-| `client_secret` | Nhà trường cấp, đặt trong biến môi trường phía máy chủ |
+| `client_secret` | **Cùng một chuỗi với mục 4.6** — nhà trường dùng chung một chuỗi cho cả gửi dữ liệu lẫn đăng nhập |
 | Cách gửi secret | **`client_secret_basic`** — Hub chỉ nhận đúng cách này |
 | PKCE | **`S256`, bắt buộc**, kể cả với confidential client |
 | scope được xin | Chỉ những scope bạn khai trong phiếu |

@@ -979,6 +979,24 @@ Chốt 2 là chỗ đáng đọc kỹ: `can_see_student` là hợp của sáu nh
 
 **Toàn bộ pgTAP sau đợt L: 1.034 assertion / 55 file**, khớp mốc.
 
+## Đợt M (`0057`, 08/08/2026) — một chuỗi cho cả đường đăng nhập
+
+Nới đúng MỘT vế của `embedded_apps_sso_du_bo`: bỏ `sso_client_secret_env IS NOT NULL`, giữ `cardinality(sso_redirect_uris) >= 1`.
+
+**Vì sao.** Chủ đầu tư quyết hai lượt trong cùng buổi: *"mặc định chuỗi là vietanh2026, cho mọi app"* → rồi khi được nêu rủi ro của việc gộp nốt đường đăng nhập: *"gộp đi"*. Ràng buộc cũ đúng khi mỗi app một khoá — khai SSO mà không nói lấy khoá ở đâu thì client dựng lên hỏng câm. Nay `NULL` mang một nghĩa **rõ ràng và hợp lệ**: *dùng chuỗi chung của trường*, và đó là đường **mặc định** của mọi app mới. Giữ nguyên ràng buộc là cấm đúng cái đường mặc định.
+
+**Đổi lấy gì, đo được:** khai một app mới nay **không còn bước nào chạm vào máy chủ**. Trước `0057` còn đúng một bước (đặt `OIDC_CLIENT_SECRET_<APP>` rồi khởi động lại), và đó là bước duy nhất giữa "dán phiếu" và "app chạy đủ ba đường". Đo trọn vòng với app mới sau khi áp: dán phiếu → cấp vai → bật → **nhúng 200 · webhook `promoted` (dữ liệu vào đúng hồ sơ em Minh) · đăng nhập 303**, thẻ app hiện *"Sẵn sàng — không còn việc nào"*.
+
+**Mất gì — nói bằng phép đo, không bằng lời doạ.** KHÔNG mất: người biết chuỗi vẫn không tự chế được token, vì hai hàng rào còn nguyên và cả hai không đụng `client_secret` — **PKCE bắt buộc** (đo lại sau khi gộp: thiếu `code_challenge` → `error=invalid_request`) và **`redirect_uri` khớp tuyệt đối** (đo: URI lạ → `invalid_redirect_uri`). MẤT: ranh giới giữa các app ở tầng xác thực client — đội làm app A cầm luôn chìa của app B; ai có chuỗi thì gọi được `/oidc/token/revocation` dưới danh nghĩa app bất kỳ, tức **thu hồi được token của app khác** (quấy rối, không đọc được dữ liệu); và xoay chuỗi phải xoay **đồng loạt** cho mọi app. Điều kiện thoát ở `DEBT.md` #65 — cùng mốc #19 và #63, trước ngày nạp danh sách học sinh thật.
+
+**Ranh giới ở tầng nạp là LỜI KHAI, không phải giá trị** (`oidc/clients.ts`, chép đúng ngữ nghĩa của `embed/registry-db.ts` để hai cửa của cùng một hệ không hành xử khác nhau): app **không** khai biến riêng → chuỗi chung; app **có** khai → bắt buộc đúng biến đó, chưa đặt thì **không nạp client**. Vế sau giữ cho một app được cấp khoá riêng — vì cần mạnh hơn hoặc cần thu hồi riêng — không lặng lẽ tụt xuống chạy bằng chuỗi ai cũng đoán được.
+
+**Factory chuyển cùng lượt**, một-đổi-một. Để nó ở khoá riêng trong khi mọi app sau dùng chuỗi chung là để lại đúng một ngoại lệ mà sáu tháng nữa không ai nhớ vì sao nó ngoại lệ.
+
+**Kiểm chứng.** `0057_mot_chuoi_cho_ca_dang_nhap_test.sql` — **8 assertion**, khẳng định **cả hai chiều** vì nới một ràng buộc là việc dễ nới quá tay: vế bị bỏ thì thật sự hết chặn, vế phải giữ (`redirect_uris >= 1`, tên biến viết HOA) thì vẫn chặn, khoá riêng vẫn khai được, và Factory **vẫn có mặt** trong `core.v_oidc_clients` — `NULL` không được làm hàng biến mất khỏi danh sách RP, nếu không thì "chuyển sang chuỗi chung" thành "mất đăng nhập". Một assertion của `0055` đổi theo và **ghi rõ là bị supersede**, không sửa lặng.
+
+**Toàn bộ pgTAP sau đợt M: 1.043 assertion / 56 file**, khớp mốc.
+
 ## Quy tắc migration (§2)
 
 - Mọi thay đổi qua file trong `packages/core/db/migrations/`, đặt tên `NNNN_mo_ta.sql`. **Số phải duy nhất** — `tools/schema-lint.mjs` chặn trùng số từ 31/07/2026, sau khi trùng số xảy ra thật trong một phiên có nhiều agent làm song song (hai file cùng mang `0030`). Trước khi đặt tên file, `ls` thư mục migration một lần: "số trống" ghi trong một bản giao việc có thể đã bị lấp trong lúc bạn đọc nó.

@@ -40,7 +40,7 @@ const PHIEU_DU = {
 };
 
 describe("phiếu đấu nối → khai báo app", () => {
-  it("phiếu đủ ba nhánh ánh xạ đúng, và tên biến secret do HUB sinh chứ không do phiếu khai", () => {
+  it("phiếu đủ ba nhánh ánh xạ đúng — mọi giá trị nghiệp vụ về đúng chỗ", () => {
     const phieu = PhieuDauNoi.parse(PHIEU_DU);
     const kb = phieuThanhKhaiBao(phieu, "2027-02-07");
 
@@ -52,14 +52,13 @@ describe("phiếu đấu nối → khai báo app", () => {
     expect(kb.ssoEnabled).toBe(true);
     expect(kb.ssoScopes).toEqual(["openid", "profile", "hub_profile"]);
 
-    // Đây là chỗ phiếu KHÔNG được chạm tới: mã app viết thường có gạch ngang, tên biến viết
-    // HOA có gạch dưới. Để đội ngoài tự khai là mở đường cho một ký tự gõ sai biến thành
-    // `undefined` — cùng giá trị với "chưa đặt", không phân biệt được từ trong hệ.
-    expect(kb.ssoClientSecretEnv).toBe("OIDC_CLIENT_SECRET_THE_LUC");
+    // `tenBienSecret` GIỮ LẠI dù phiếu không dùng nữa: nó vẫn là quy ước đặt tên cho ca một
+    // app CẦN khoá riêng (quản trị khai tay ở form Sửa cấu hình), và quy ước đó phải nằm ở
+    // một chỗ chứ không nằm trong đầu người gõ.
     expect(tenBienSecret("OIDC_CLIENT_SECRET", "a-b-c")).toBe("OIDC_CLIENT_SECRET_A_B_C");
   });
 
-  it("dán phiếu KHÔNG BAO GIỜ khai khoá webhook riêng — mọi app dùng chuỗi chung", () => {
+  it("dán phiếu KHÔNG BAO GIỜ khai khoá riêng — CẢ webhook LẪN đăng nhập dùng chuỗi chung", () => {
     // Luật của chủ đầu tư 08/08/2026: một chuỗi webhook dùng chung cho mọi app, bỏ hẳn bước
     // đặt biến môi trường cho từng app mới.
     //
@@ -72,8 +71,12 @@ describe("phiếu đấu nối → khai báo app", () => {
     for (const phieu of [PHIEU_DU, { ...PHIEU_DU, webhook: { cacLoaiSuKien: ["a", "b"] } }]) {
       const kb = phieuThanhKhaiBao(PhieuDauNoi.parse(phieu), "2027-02-07");
       expect(kb.webhookSecretEnv, "phiếu vừa khai một khoá webhook RIÊNG — app sẽ nhận 401").toBeNull();
+      // Đăng nhập gộp cùng chuỗi từ 08/08/2026 (*"gộp đi"*, migration 0057). Cùng cái bẫy:
+      // khai tên biến riêng ⇒ `clients.ts` không rơi về chuỗi chung ⇒ `invalid_client`.
+      expect(kb.ssoClientSecretEnv, "phiếu vừa khai một khoá đăng nhập RIÊNG — RP sẽ invalid_client").toBeNull();
       // Cửa vẫn phải MỞ: khoá đến từ chuỗi chung, không phải từ chỗ trống này.
       expect(kb.allowedEventTypes.length).toBeGreaterThan(0);
+      expect(kb.ssoEnabled).toBe(true);
     }
   });
 

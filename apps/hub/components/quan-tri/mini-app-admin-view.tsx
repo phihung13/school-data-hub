@@ -649,8 +649,10 @@ function KhoiSso({
           onChange={(e) => {
             const v = e.target.checked;
             setBat(v);
-            // Bật lần đầu mà chưa có tên biến thì điền sẵn — xem `tenBien()`.
-            if (v && !bien) setBien(tenBien("OIDC_CLIENT_SECRET", appId));
+            // KHÔNG điền sẵn tên biến nữa (08/08/2026, *"gộp đi"*): app mặc định dùng
+            // CHUỖI CHUNG của trường, và điền sẵn một tên biến RIÊNG là dựng lại đúng
+            // bước "đặt biến trên máy chủ" mà quyết định đó vừa bỏ đi.
+
           }}
           className="h-4 w-4 accent-gold"
         />
@@ -710,12 +712,14 @@ function KhoiSso({
               })}
             </div>
           </fieldset>
-          <O nhan="Tên biến môi trường chứa client_secret" goiY="CHỈ tên biến, không phải giá trị.">
+          <O
+            nhan="Khoá riêng cho app này (bỏ trống = dùng chuỗi chung của trường)"
+            goiY="Chỉ điền khi app cần khoá riêng. Điền rồi thì phải đặt biến đó trên máy chủ, không thì đăng nhập trả invalid_client."
+          >
             <input
               value={bien}
               onChange={(e) => setBien(e.target.value.toUpperCase())}
-              required
-              placeholder="OIDC_CLIENT_SECRET_TENAPP"
+              placeholder="để trống"
               className={`${O_INPUT} font-mono`}
             />
           </O>

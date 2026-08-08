@@ -128,18 +128,6 @@ export const MiniAppRow = z.object({
   daCapSsoSecret: z.boolean(),
 
   /**
-   * App này ĐÃ GỬI VỀ những gì — một dòng cho mỗi loại sự kiện.
-   *
-   * Sinh ra từ một câu chủ đầu tư hỏi 08/08/2026: *"các app mini nhúng vào bây giờ đổ dữ
-   * liệu của app về hết được chưa"*. Trước trường này, câu đó chỉ trả lời được bằng một lời
-   * hứa — bảng nhận `ops.embedded_app_events` không vai nào đọc được, không màn hình nào
-   * hiện, nên "dữ liệu có về không" là chuyện phải tin.
-   *
-   * Mảng RỖNG có nghĩa rõ ràng và cần nói ra trên màn: app chưa gửi về gì cả. Đó là trạng
-   * thái bình thường của một app vừa khai, và là trạng thái ĐÁNG NGỜ của một app đã bật ba
-   * tuần — hai ca đó chỉ phân biệt được khi có con số đứng cạnh.
-   */
-  /**
    * CÒN THIẾU GÌ ĐỂ APP NÀY CHẠY — theo đúng thứ tự phải làm, rỗng nghĩa là sẵn sàng.
    *
    * Sinh ra từ một phép thử trọn vòng ngày 08/08/2026 và một câu hỏi đi kèm: *"tôi tải file
@@ -157,6 +145,18 @@ export const MiniAppRow = z.object({
    */
   conThieu: z.array(z.string()),
 
+  /**
+   * App này ĐÃ GỬI VỀ những gì — một dòng cho mỗi loại sự kiện.
+   *
+   * Sinh ra từ một câu chủ đầu tư hỏi 08/08/2026: *"các app mini nhúng vào bây giờ đổ dữ
+   * liệu của app về hết được chưa"*. Trước trường này, câu đó chỉ trả lời được bằng một lời
+   * hứa — bảng nhận `ops.embedded_app_events` không vai nào đọc được, không màn hình nào
+   * hiện, nên "dữ liệu có về không" là chuyện phải tin.
+   *
+   * Mảng RỖNG có nghĩa rõ ràng và cần nói ra trên màn: app chưa gửi về gì cả. Đó là trạng
+   * thái bình thường của một app vừa khai, và là trạng thái ĐÁNG NGỜ của một app đã bật ba
+   * tuần — hai ca đó chỉ phân biệt được khi có con số đứng cạnh.
+   */
   daNhan: z.array(
     z.object({
       eventType: z.string(),
@@ -373,7 +373,12 @@ export function phieuThanhKhaiBao(phieu: PhieuDauNoi, ngayRaLai: string): Create
     ssoRedirectUris: phieu.sso?.redirectUris ?? [],
     ssoBackchannelLogoutUri: phieu.sso?.backchannelLogoutUri ?? null,
     ssoScopes: phieu.sso?.scopes ?? ["openid", "profile"],
-    ssoClientSecretEnv: phieu.sso ? tenBienSecret("OIDC_CLIENT_SECRET", phieu.maApp) : null,
+    // LUÔN `null` từ 08/08/2026 (*"gộp đi"*) — app dán từ phiếu dùng CHUỖI CHUNG cho cả
+    // đường đăng nhập, y như đường webhook ở trên. Cùng một cái bẫy, cùng một cách gỡ: khai
+    // một tên biến RIÊNG nghĩa là "app này dùng khoá riêng", và `clients.ts` cố ý KHÔNG rơi
+    // về chuỗi chung khi khoá riêng chưa đặt — nên sinh sẵn tên biến ở đây là dựng lại đúng
+    // bước "đặt biến trên máy chủ rồi khởi động lại" mà cả gói này sinh ra để bỏ.
+    ssoClientSecretEnv: null,
   };
 }
 
