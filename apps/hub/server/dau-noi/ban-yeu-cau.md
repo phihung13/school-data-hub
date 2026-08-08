@@ -21,7 +21,9 @@ Bạn (đội phát triển, hoặc AI được giao) sắp nối một ứng d�
 >
 > Người nhận sẽ **dán thẳng** nội dung đó vào một ô trên màn quản trị của Hub. Bất kỳ chữ nào ngoài JSON sẽ làm bước dán thất bại, và người nhận không phải là kỹ sư để đi cắt bớt hộ bạn.
 
-Nếu bạn **không hoàn thành được** một phần nào đó: vẫn trả về JSON, nhưng **bỏ hẳn** nhánh tương ứng (`nhung`, `webhook`, hoặc `sso` để `null`). Đừng khai một nhánh chưa chạy được — khai rồi mà không chạy là dạng hỏng tệ nhất ở đây: nó im lặng, và người phát hiện ra là một cô giáo đang cần dùng.
+Nếu bạn **không hoàn thành được** một phần nào đó: vẫn trả về JSON, nhưng **bỏ hẳn** nhánh tương ứng (`nhung` hoặc `sso` để `null`). Đừng khai một nhánh chưa chạy được — khai rồi mà không chạy là dạng hỏng tệ nhất ở đây: nó im lặng, và người phát hiện ra là một cô giáo đang cần dùng.
+
+**Nhánh `webhook` thì không bỏ được** — mọi app phải đổ dữ liệu về (mục 4). Chưa làm kịp thì **báo lại nhà trường**, đừng lặng lẽ để `null`.
 
 ---
 
@@ -40,10 +42,10 @@ Có **ba đường** nối vào Hub. App của bạn dùng một, hai, hoặc c�
 | Đường | Để làm gì | Khai trong phiếu |
 |---|---|---|
 | **Nhúng** | App hiện lên trong khung của Hub | `nhung` |
-| **Webhook** | App đẩy dữ liệu về kho của Hub | `webhook` |
+| **Webhook** | App đẩy dữ liệu về kho của Hub | `webhook` — **bắt buộc**, xem mục 4 |
 | **SSO** | Người dùng vào app bằng tài khoản Hub, không gõ lại mật khẩu | `sso` |
 
-Nhánh nào không dùng thì để `null`.
+Nhánh `nhung` và `sso` không dùng thì để `null`. **`webhook` thì khác** — mọi app đều phải đổ dữ liệu về, xem mục 4.
 
 ---
 
@@ -106,7 +108,15 @@ Hub **không** đặt token vào query string. Luồng bắt buộc:
 
 ---
 
-## 4. Nếu app GỬI DỮ LIỆU VỀ — yêu cầu bắt buộc
+## 4. GỬI DỮ LIỆU VỀ HUB — mặc định là BẮT BUỘC
+
+> **Luật của nhà trường:** *mọi app cắm vào Hub đều phải đổ dữ liệu của mình về.* Đây không phải một tuỳ chọn để cân nhắc — nó là lý do Hub tồn tại.
+>
+> Dữ liệu về một đứa trẻ hôm nay nằm rải trong những app không nói chuyện với nhau. Nhà trường chỉ nhìn thấy vài mảnh, và thường nhìn thấy muộn. App của bạn giữ một mảnh; **mảnh đó phải về được một chỗ** thì thầy cô mới ghép được bức tranh.
+>
+> **Ngoại lệ duy nhất, và phải nói rõ khi gửi phiếu:** app thuần hiển thị nội dung chung, không sinh ra dữ liệu nào của riêng nó (bảng tin, trang giới thiệu). Nếu app bạn *có* sinh ra bất kỳ bản ghi nào — ai làm gì, lúc nào, kết quả ra sao — thì nó không thuộc ngoại lệ này.
+>
+> **Rổ Xanh vẫn phải gửi.** Rổ dữ liệu quyết định bạn có được **gắn tên em** hay không, KHÔNG quyết định bạn có phải gửi hay không. App rổ Xanh gửi dữ liệu không gắn tên ai — thực đơn tuần, học liệu đã soạn, lịch câu lạc bộ — và nó vẫn phải gửi.
 
 ### 4.1 Một cửa duy nhất
 
@@ -398,7 +408,7 @@ Mạng trường có lọc nội dung. **Tự host phông chữ, icon và thư v
 | `nhung` | — | `null` nếu app không có giao diện nhúng |
 | `nhung.origin` | ✔ nếu có `nhung` | Dạng `https://ten-mien` — **không đường dẫn, không dấu `/` cuối** |
 | `nhung.urlIframe` | ✔ nếu có `nhung` | `https`, **phải nằm trong `origin`** ở trên |
-| `webhook` | — | `null` nếu app không gửi dữ liệu về |
+| `webhook` | **✔ bắt buộc** | Chỉ được `null` cho app thuần hiển thị nội dung chung, không sinh ra bản ghi nào — và phải nói rõ lý do khi gửi phiếu. Xem mục 4 |
 | `webhook.cacLoaiSuKien` | ✔ nếu có `webhook` | Mảng tên loại sự kiện, chữ thường và gạch dưới. **Không dùng `"*"`** trừ khi rổ Xanh và có lý do đã được duyệt |
 | `sso` | — | `null` nếu app không đăng nhập bằng tài khoản Hub |
 | `sso.redirectUris` | ✔ nếu có `sso` | Mảng ≥1. `https`, **không dấu `#`**. Khớp chính xác chuỗi |

@@ -343,12 +343,24 @@ function TheApp({
       {/* DỮ LIỆU ĐÃ VỀ CHƯA — câu chủ đầu tư hỏi 08/08/2026, và trước hôm nay chỉ trả lời
           được bằng một lời hứa. Bảng nhận không vai nào đọc được, không màn hình nào hiện.
 
-          Chỉ vẽ khi app CÓ khai webhook: app nhúng thuần (trang tin) không gửi gì về, nên
-          một khối "chưa nhận được gì" ở đó là một lời trách oan. */}
-      {app.webhookSecretEnv && (
+          VẼ CHO MỌI APP, kể cả app chưa khai cửa gửi (đổi 08/08/2026). Bản trước chỉ vẽ khi
+          app đã khai `webhookSecretEnv`, nên một app KHÔNG gửi gì về trông y hệt một app
+          không có gì để hiện — im lặng, không ai để ý.
+          Chủ đầu tư ra luật: *"tất cả mọi app phải đổ dữ liệu về"*. Luật đó chỉ sống được
+          nếu app chưa đổ thì NHÌN THẤY, nên ba trạng thái đều nói ra bằng chữ. */}
+      {(
         <div className="mt-3 rounded-2xl border border-line bg-surface-alt p-3">
           <div className="text-[10.5px] font-black uppercase tracking-wide text-muted">App đã gửi về</div>
-          {app.daNhan.length === 0 ? (
+          {!app.webhookSecretEnv ? (
+            <p className="mt-1 flex items-start gap-1.5 text-[12.5px] font-bold text-gold-textDark">
+              <span className="msr mt-px flex-none text-[16px]" aria-hidden>
+                error
+              </span>
+              <span>
+                Chưa khai đường gửi dữ liệu — bật ở <b>Sửa cấu hình</b>.
+              </span>
+            </p>
+          ) : app.daNhan.length === 0 ? (
             // Thể RỖNG phải nói ra, không để trống. Một app vừa khai chưa gửi gì là bình
             // thường; một app đã bật ba tuần mà chưa gửi gì là chuyện cần biết — và hai ca
             // đó chỉ phân biệt được khi màn hình chịu nói cả hai.
@@ -373,6 +385,10 @@ function TheApp({
       )}
 
       {/* CÒN THIẾU GÌ ĐỂ APP NÀY CHẠY — gom, không thêm (08/08/2026).
+          Ghi chú cho người sửa sau: khối trên cố ý bọc trong `{( … )}` chứ không phải một
+          điều kiện — nó vẽ cho MỌI app. Đừng "dọn dẹp" cặp ngoặc đó thành `{app.x && …}`;
+          đó chính là hình dạng vừa bị bỏ, và bỏ vì nó giấu mất app chưa đổ dữ liệu về. */}
+      {/* (tiếp)
           Bản trước ở đây chỉ có khối đỏ về biến môi trường. Nó đúng nhưng chỉ là MỘT trong
           ba việc còn lại, và hai việc kia (cấp vai, bật app) nằm rải hai chỗ khác trên thẻ.
           Người vừa dán phiếu xong không có cách nào biết mình còn mấy việc.
@@ -903,7 +919,10 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
   const [origin, setOrigin] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
   const [bienSecret, setBienSecret] = useState("");
-  const [webhook, setWebhook] = useState(false);
+  // MẶC ĐỊNH BẬT (08/08/2026). Luật của chủ đầu tư: *"tất cả mọi app phải đổ dữ liệu về"*.
+  // Một luật mà mặc định của form đi ngược lại thì nó chỉ là một câu nói — người khai app
+  // vội sẽ để nguyên mặc định, và mặc định phải là điều đúng. Tắt được, nhưng phải cố ý tắt.
+  const [webhook, setWebhook] = useState(true);
   const [loaiSuKien, setLoaiSuKien] = useState("");
   const [sso, setSso] = useState(false);
   const [uri, setUri] = useState("");
@@ -921,7 +940,7 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
       setOrigin("");
       setIframeUrl("");
       setBienSecret("");
-      setWebhook(false);
+      setWebhook(true); // về đúng mặc định, không về "tắt" — xem lý lẽ ở khai báo state
       setLoaiSuKien("");
       setSso(false);
       setUri("");
