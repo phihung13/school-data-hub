@@ -469,6 +469,103 @@ const MOI_SCOPE: { ma: MiniAppScope; nhan: string }[] = [
 ];
 
 /**
+ * Khối WEBHOOK trong form sửa cấu hình — thêm 08/08/2026.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * VÌ SAO NÓ CHƯA TỪNG CÓ, VÀ CÁI GIÁ CỦA VIỆC ĐÓ
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Chủ đầu tư chỉ vào khối đỏ trên thẻ Factory — *"Thêm EMBED_WEBHOOK_SECRET_FACTORY vào
+ * .env.local rồi khởi động lại"* — và hỏi: **có cần thiết không?**
+ *
+ * Đo ra: KHÔNG. Factory chạy từ 29/07, và tới 08/08 nó gửi về **0 bản ghi** (0 trong phòng
+ * chờ, 0 trong kho, 0 alias đã cấp). Nó chỉ dùng đăng nhập và nhúng. Khối đỏ ấy cảnh báo
+ * về một con đường không ai đi.
+ *
+ * Nhưng khối đỏ KHÔNG sai — nó chỉ đang trung thành báo cáo một dòng dữ liệu **khai thừa**:
+ * hàng của Factory mang `webhook_secret_env` VÀ `allowed_event_types = {*}` (chép nguyên từ
+ * `registry.ts` khi migration 0052 chuyển sổ sang database). Một app chưa từng gửi gì mà
+ * giữ giấy phép "nhận MỌI loại sự kiện" là đúng cái mẫu "cấp quyền bằng cách quên không gỡ".
+ *
+ * Đường sửa đúng là **gỡ lời khai đó khỏi hàng của Factory**, không phải đi đặt secret cho
+ * một con đường không ai dùng. Và lúc định làm thế thì lộ ra chuyện thứ hai: **form sửa cấu
+ * hình không có ô nào cho hai trường đó** — hợp đồng nhận chúng, cơ sở dữ liệu lưu chúng,
+ * màn hình hiện chúng, nhưng không ai sửa được từ màn hình. Đúng điều 17 hiến pháp UI (đủ
+ * vòng đời: tạo được thì phải sửa được). Khối này lấp chỗ đó.
+ */
+function KhoiWebhook({
+  appId,
+  bat,
+  setBat,
+  loai,
+  setLoai,
+  bien,
+  setBien,
+}: {
+  appId: string;
+  bat: boolean;
+  setBat: (v: boolean) => void;
+  loai: string;
+  setLoai: (v: string) => void;
+  bien: string;
+  setBien: (v: string) => void;
+}) {
+  const coSao = tachDong(loai).includes("*");
+  return (
+    <fieldset className="rounded-2xl border border-line bg-white p-3">
+      <legend className="px-1 text-[10.5px] font-black uppercase tracking-wide text-muted">
+        Gửi dữ liệu về Hub
+      </legend>
+
+      <label className="flex min-h-[44px] cursor-pointer items-center gap-2.5">
+        <input
+          type="checkbox"
+          checked={bat}
+          onChange={(e) => {
+            const v = e.target.checked;
+            setBat(v);
+            if (v && !bien) setBien(tenBien("EMBED_WEBHOOK_SECRET", appId));
+          }}
+          className="h-4 w-4 accent-gold"
+        />
+        <span className="text-[12.5px] font-extrabold text-cardtitle2">App này gửi dữ liệu về Hub</span>
+      </label>
+
+      {bat && (
+        <div className="mt-2 flex flex-col gap-3">
+          <O nhan="Loại sự kiện được nhận — mỗi dòng một loại" goiY="Chữ thường và gạch dưới, ví dụ ket_qua_the_luc.">
+            <textarea
+              value={loai}
+              onChange={(e) => setLoai(e.target.value)}
+              rows={2}
+              required
+              placeholder="ket_qua_the_luc"
+              className={`${O_INPUT} py-2 font-mono leading-relaxed`}
+            />
+          </O>
+          {coSao && (
+            // `*` hợp lệ với rổ Xanh (ràng buộc của bảng chỉ chặn rổ Vàng), nhưng hợp lệ
+            // không có nghĩa là nên. Nói ra ở đây vì đây là chỗ duy nhất người ta gõ nó.
+            <p className="rounded-xl bg-surface-warnSoft px-3 py-2 text-[11.5px] font-bold text-gold-textDark">
+              Dấu <span className="font-mono">*</span> nhận MỌI loại sự kiện — kể cả loại app chưa từng gửi và chưa ai
+              rà. Khai đúng tên từng loại thì Hub trả lại 403 cho thứ ngoài danh sách.
+            </p>
+          )}
+          <O nhan="Tên biến môi trường chứa secret webhook" goiY="CHỈ tên biến, không phải giá trị.">
+            <input
+              value={bien}
+              onChange={(e) => setBien(e.target.value.toUpperCase())}
+              required
+              placeholder="EMBED_WEBHOOK_SECRET_TENAPP"
+              className={`${O_INPUT} font-mono`}
+            />
+          </O>
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
+/**
  * Khối SSO trong form sửa cấu hình.
  *
  * Các ô CHỈ hiện khi công tắc bật — điều 15 của hiến pháp UI: hành động không dùng được thì
@@ -595,6 +692,11 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
   const [ngayRa, setNgayRa] = useState(app.reviewDueOn);
   const [vai, setVai] = useState<HubRole[]>(app.allowedRoles);
   const [gioiThieu, setGioiThieu] = useState(app.intro ?? "");
+  // "App có gửi dữ liệu về không" suy từ việc nó đã KHAI tên biến secret — đó là dấu hiệu
+  // duy nhất trong dữ liệu, và cũng chính là thứ làm khối cảnh báo đỏ nổi lên.
+  const [webhook, setWebhook] = useState(!!app.webhookSecretEnv);
+  const [loaiSuKien, setLoaiSuKien] = useState(app.allowedEventTypes.join("\n"));
+  const [bienWebhook, setBienWebhook] = useState(app.webhookSecretEnv ?? "");
   const [sso, setSso] = useState(app.ssoEnabled);
   // Mỗi dòng một URI. Textarea chứ không phải một ô có dấu phẩy: URI đã dài sẵn, và một
   // danh sách ngăn bằng dấu phẩy thì không ai thấy được mình vừa dán thừa khoảng trắng vào
@@ -618,6 +720,10 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
           reviewDueOn: ngayRa,
           allowedRoles: vai,
           intro: gioiThieu.trim() || null,
+          // Tắt webhook là DỌN CẢ HAI trường, không chỉ ẩn ô đi: để lại `allowedEventTypes`
+          // của một app không còn cửa webhook là để lại một giấy phép không ai thấy.
+          allowedEventTypes: webhook ? tachDong(loaiSuKien) : [],
+          webhookSecretEnv: webhook ? bienWebhook.trim() || null : null,
           ssoEnabled: sso,
           ssoRedirectUris: tachDong(uri),
           ssoBackchannelLogoutUri: bcl.trim() || null,
@@ -702,6 +808,16 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
         )}
       </fieldset>
 
+      <KhoiWebhook
+        appId={app.appId}
+        bat={webhook}
+        setBat={setWebhook}
+        loai={loaiSuKien}
+        setLoai={setLoaiSuKien}
+        bien={bienWebhook}
+        setBien={setBienWebhook}
+      />
+
       <KhoiSso
         appId={app.appId}
         bat={sso}
@@ -770,6 +886,8 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
   const [origin, setOrigin] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
   const [bienSecret, setBienSecret] = useState("");
+  const [webhook, setWebhook] = useState(false);
+  const [loaiSuKien, setLoaiSuKien] = useState("");
   const [sso, setSso] = useState(false);
   const [uri, setUri] = useState("");
   const [bcl, setBcl] = useState("");
@@ -786,6 +904,8 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
       setOrigin("");
       setIframeUrl("");
       setBienSecret("");
+      setWebhook(false);
+      setLoaiSuKien("");
       setSso(false);
       setUri("");
       setBcl("");
@@ -836,10 +956,10 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
           owner: chuTri.trim(),
           reviewDueOn: ngayRa,
           allowedRoles: [],
-          allowedEventTypes: [],
+          allowedEventTypes: webhook ? tachDong(loaiSuKien) : [],
           origin: origin.trim() || null,
           iframeUrl: iframeUrl.trim() || null,
-          webhookSecretEnv: bienSecret.trim() || null,
+          webhookSecretEnv: webhook ? bienSecret.trim() || null : null,
           ssoEnabled: sso,
           ssoRedirectUris: tachDong(uri),
           ssoBackchannelLogoutUri: bcl.trim() || null,
@@ -881,20 +1001,19 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
       <O nhan="URL nạp vào iframe" goiY="Phải nằm trong origin ở trên.">
         <input value={iframeUrl} onChange={(e) => setIframeUrl(e.target.value)} placeholder="https://app.vidu.vn/embed" className={`${O_INPUT} font-mono`} />
       </O>
-      <O
-        nhan="Tên biến môi trường chứa secret webhook"
-        goiY="CHỈ tên biến, không phải giá trị."
-      >
-        <input
-          value={bienSecret}
-          onChange={(e) => setBienSecret(e.target.value.toUpperCase())}
-          onFocus={() => {
-            if (!bienSecret && maApp.trim()) setBienSecret(tenBien("EMBED_WEBHOOK_SECRET", maApp));
-          }}
-          placeholder="EMBED_WEBHOOK_SECRET_TENAPP"
-          className={`${O_INPUT} font-mono`}
-        />
-      </O>
+      {/* CÙNG khối với form sửa, không phải một ô secret trần như bản trước (08/08/2026).
+          Bản cũ chỉ hỏi tên biến rồi gửi `allowedEventTypes: []` — tức là khai một app có
+          cửa webhook mà cửa đó từ chối MỌI loại sự kiện. App im lặng không gửi được gì, và
+          màn hình thì hiện một cảnh báo về secret, tức là chỉ sai chỗ. */}
+      <KhoiWebhook
+        appId={maApp.trim() || "tenapp"}
+        bat={webhook}
+        setBat={setWebhook}
+        loai={loaiSuKien}
+        setLoai={setLoaiSuKien}
+        bien={bienSecret}
+        setBien={setBienSecret}
+      />
 
       <KhoiSso
         appId={maApp.trim() || "tenapp"}
