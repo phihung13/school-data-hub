@@ -372,20 +372,37 @@ function TheApp({
         </div>
       )}
 
-      {/* CẢNH BÁO THIẾU SECRET PHẢI LÀM ĐƯỢC GÌ ĐÓ (07/08/2026).
-          Hai dòng đỏ ở trên nói ĐÚNG chuyện gì hỏng, rồi bỏ mặc người đọc: họ biết biến
-          chưa đặt nhưng không biết đặt ở đâu, đặt cái gì, và đặt xong có phải khởi động lại
-          không. Điều 22 của hiến pháp UI đòi mọi trạng thái lỗi kèm đường ra. Khối này LÀ
-          đường ra, và nó chỉ hiện đúng lúc có thứ để làm. */}
-      {thieuBien.length > 0 && (
+      {/* CÒN THIẾU GÌ ĐỂ APP NÀY CHẠY — gom, không thêm (08/08/2026).
+          Bản trước ở đây chỉ có khối đỏ về biến môi trường. Nó đúng nhưng chỉ là MỘT trong
+          ba việc còn lại, và hai việc kia (cấp vai, bật app) nằm rải hai chỗ khác trên thẻ.
+          Người vừa dán phiếu xong không có cách nào biết mình còn mấy việc.
+          Đo thật 08/08: dán phiếu → cả ba đường đều chưa chạy. Khối này là câu trả lời duy
+          nhất cho "app này chạy chưa", và nó biến mất khi không còn gì để làm. */}
+      {app.conThieu.length > 0 ? (
         <div className="mt-3 rounded-2xl border border-[#F0C9CB] bg-surface-danger p-3">
           <div className="text-[10.5px] font-black uppercase tracking-wide text-dangerText">
-            Thêm vào apps/hub/.env.local trên máy chủ rồi khởi động lại
+            Còn {app.conThieu.length} việc để app chạy
           </div>
-          <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11.5px] font-semibold text-ink">
-            {thieuBien.map((b) => `${b}=<sinh ngẫu nhiên 32 byte>`).join("\n")}
-          </pre>
+          <ol className="mt-1.5 flex list-decimal flex-col gap-1 pl-4 text-[12px] font-semibold text-ink">
+            {app.conThieu.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ol>
+          {thieuBien.length > 0 && (
+            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-white px-2.5 py-2 font-mono text-[11.5px] font-semibold text-ink">
+              {thieuBien.map((b) => `${b}=<sinh ngẫu nhiên 32 byte>`).join("\n")}
+            </pre>
+          )}
         </div>
+      ) : (
+        // Thể "xong" cũng phải nói ra. Không có nó thì "đã sẵn sàng" và "màn hình chưa kịp
+        // tính" trông giống hệt nhau — đúng cái mơ hồ mà khối này sinh ra để dẹp.
+        <p className="mt-3 flex items-center gap-1.5 text-[12.5px] font-extrabold text-successText">
+          <span className="msr text-[17px]" aria-hidden>
+            check_circle
+          </span>
+          Sẵn sàng — không còn việc nào
+        </p>
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-3">

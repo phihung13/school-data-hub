@@ -118,6 +118,18 @@ function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
     ssoClientSecretEnv: r.sso_client_secret_env,
     // Cùng phép tính, cùng lý do với `daCapSecret` ngay trên — bảng chỉ biết TÊN biến.
     daCapSsoSecret: !!ssoEnv && ssoEnv.length > 0,
+    // Xem chú thích ở `MiniAppRow.conThieu`. Thứ tự CÓ NGHĨA: hai việc làm được ngay trên
+    // màn hình đứng trước, việc phải nhờ người vận hành chạm vào máy chủ đứng cuối.
+    conThieu: [
+      r.allowed_roles.length === 0 ? "Chưa cấp cho vai nào — không ai mở được app" : null,
+      !r.enabled ? "Đang tắt — bấm “Bật app”" : null,
+      r.webhook_secret_env && !(env && env.length > 0)
+        ? `Đặt ${r.webhook_secret_env} trên máy chủ rồi khởi động lại — chưa có thì webhook trả 401`
+        : null,
+      r.sso_enabled && r.sso_client_secret_env && !(ssoEnv && ssoEnv.length > 0)
+        ? `Đặt ${r.sso_client_secret_env} trên máy chủ rồi khởi động lại — chưa có thì đăng nhập trả invalid_client`
+        : null,
+    ].filter((c): c is string => c !== null),
     // Lọc ở đây thay vì một truy vấn con cho mỗi app: danh sách app ngắn (chục dòng), và
     // một truy vấn phụ cho mỗi dòng là mẫu N+1 trên đúng màn mà quản trị mở nhiều nhất.
     daNhan: daNhan

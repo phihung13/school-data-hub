@@ -131,6 +131,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "ssoScopes",
 //       "ssoClientSecretEnv",
 //       "daCapSsoSecret",
+//       "conThieu",
 //       "daNhan",
 //       "daNhan.eventType",
 //       "daNhan.soSuKien",

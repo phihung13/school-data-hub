@@ -139,6 +139,24 @@ export const MiniAppRow = z.object({
    * thái bình thường của một app vừa khai, và là trạng thái ĐÁNG NGỜ của một app đã bật ba
    * tuần — hai ca đó chỉ phân biệt được khi có con số đứng cạnh.
    */
+  /**
+   * CÒN THIẾU GÌ ĐỂ APP NÀY CHẠY — theo đúng thứ tự phải làm, rỗng nghĩa là sẵn sàng.
+   *
+   * Sinh ra từ một phép thử trọn vòng ngày 08/08/2026 và một câu hỏi đi kèm: *"tôi tải file
+   * md đưa app khác, nó trả về json mà tôi paste vào không chạy thì bạn chịu trách nhiệm"*.
+   * Đo thật: dán phiếu xong, app vào sổ đúng — nhưng **cả ba đường đều chưa chạy**
+   * (`/embed` 404 · `/oidc/auth` invalid_client · webhook 401). Phải làm thêm ba việc nữa.
+   *
+   * Ba việc đó ĐỀU đã hiện trên thẻ app từ trước — badge "ĐANG TẮT", chip "chưa cấp cho vai
+   * nào", khối đỏ tên biến môi trường — nhưng **rải ba chỗ**, và người vừa dán phiếu không
+   * có cách nào biết mình còn mấy việc hay đã xong. Trường này gom chúng lại thành một câu
+   * trả lời duy nhất, do MÁY CHỦ tính: nó là bên duy nhất đọc được `process.env`.
+   *
+   * Thứ tự trong mảng là thứ tự nên làm: hai việc trên màn hình trước, việc chạm máy chủ
+   * sau cùng — vì đó là việc phải nhờ người khác.
+   */
+  conThieu: z.array(z.string()),
+
   daNhan: z.array(
     z.object({
       eventType: z.string(),

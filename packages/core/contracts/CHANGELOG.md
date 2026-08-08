@@ -19,6 +19,22 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ### Added
 
+- **`MiniAppRow.conThieu` — còn thiếu gì để app này chạy** (08/08/2026), mảng câu tiếng Việt
+  theo đúng thứ tự nên làm; **rỗng = sẵn sàng**.
+
+  **Vì sao:** chủ đầu tư đặt bài toán *"tôi tải file md đưa app khác, nó trả về json mà tôi
+  paste vào không chạy thì bạn chịu hoàn toàn trách nhiệm"*. Chạy thử trọn vòng với một app
+  mới (`can-tin`) và đo: dán phiếu xong app vào sổ **đúng**, nhưng **cả ba đường đều chưa
+  chạy** — `/embed` 404 · `/oidc/auth` `invalid_client` · webhook 401. Còn ba việc nữa.
+
+  Ba việc đó đều **đã** hiện trên thẻ app từ trước (badge "ĐANG TẮT", chip "chưa cấp cho vai
+  nào", khối đỏ tên biến môi trường) — nhưng **rải ba chỗ**, nên người vừa dán phiếu không có
+  cách nào biết còn mấy việc hay đã xong. Trường này gom lại thành một câu trả lời.
+
+  **Máy chủ tính, client không tự suy**: hai trong bốn điều kiện đọc `process.env`, mà màn
+  hình thì không đọc được. Client dựng lại logic này bằng `daCapSecret`/`enabled`/… sẽ đúng
+  hôm nay và sai vào ngày thêm điều kiện thứ năm.
+
 - **`MiniAppRow.daNhan` — app này đã gửi về những gì** (08/08/2026, ADR-033, migration 0056).
   Mảng một dòng mỗi loại sự kiện: `eventType` · `soSuKien` · `soEm` · `lanCuoi`.
 
