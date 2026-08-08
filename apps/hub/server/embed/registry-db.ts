@@ -69,15 +69,64 @@ export function xoaDem(): void {
   xoaDemOidc();
 }
 
+/**
+ * MỘT CHUỖI DÙNG CHUNG CHO MỌI APP — quyết định của chủ đầu tư 08/08/2026.
+ *
+ * Nguyên văn: *"ko cần chuỗi bí mật nào đâu, mặc định chuỗi là vietanh2026, cho mọi app,
+ * nào tôi đổi chuỗi thì mọi app đều cần đổi"*.
+ *
+ * Đổi lấy gì: bỏ hẳn bước "đặt một biến môi trường cho mỗi app mới + khởi động lại". Đó là
+ * bước duy nhất còn bắt người vận hành chạm vào máy chủ mỗi lần cắm một app, và nó là chỗ
+ * quy trình hay tắc nhất.
+ *
+ * ─── RỦI RO, ĐO CHỨ KHÔNG ĐOÁN ────────────────────────────────────────────────────────
+ * `vietanh2026` đoán được trong vài lần thử, và cổng webhook mở ra Internet. Người đoán
+ * trúng làm được gì:
+ *   · BƠM DỮ LIỆU RÁC vào `staging` + `ops.embedded_app_events` dưới tên app bất kỳ. Có
+ *     thật, phải đi dọn.
+ *   · KHÔNG đọc được gì — cổng này chỉ ghi, phản hồi chỉ có một mã trạng thái.
+ *   · KHÔNG gắn được vào em nào — alias là chuỗi ngẫu nhiên 32 ký tự trong `id_mappings`,
+ *     không đoán ra; alias sai thì `promote()` đẩy vào hàng đợi lỗi (0056).
+ *   · KHÔNG chạm được tới đăng nhập — `OIDC_CLIENT_SECRET_*` vẫn riêng từng app, xem dưới.
+ * Nên thiệt hại là rác phải dọn, không phải lộ dữ liệu. Chấp nhận được khi kho còn 109 em
+ * bịa tên; PHẢI đổi sang chuỗi không đoán được trước ngày nạp danh sách thật (nợ #65).
+ *
+ * SSO KHÔNG dùng chuỗi này. `client_secret` của OIDC canh đường ĐĂNG NHẬP — nó quyết định
+ * ai được nhận token đại diện một người dùng thật, chứ không phải ai được ghi thêm một dòng.
+ * Hai thứ khác hạng rủi ro nên không gộp; mỗi app vẫn giữ khoá đăng nhập riêng.
+ */
+const SECRET_CHUNG_MAC_DINH = "vietanh2026";
+
+function secretChung(): string {
+  const v = (process.env.EMBED_WEBHOOK_SECRET_CHUNG ?? "").trim();
+  return v.length > 0 ? v : SECRET_CHUNG_MAC_DINH;
+}
+
 function doiHang(r: Dong): EmbedAppConfig {
   // Secret KHÔNG nằm trong database (xem đầu 0052). Bảng chỉ nói tên biến; giá trị lấy từ
-  // môi trường tại đây. Biến chưa đặt ⇒ `undefined` ⇒ `verifyWebhookSecret` đóng cổng —
-  // KHÔNG rơi về chuỗi rỗng, vì `"" === ""` là true và đó đúng là lỗ hổng đã có thật hồi
-  // 31/07/2026 (gửi header `x-embed-secret:` rỗng là qua được).
-  const env = r.webhook_secret_env ? process.env[r.webhook_secret_env] : undefined;
+  // môi trường tại đây.
+  //
+  // Hai đường, và ranh giới là LỜI KHAI chứ không phải giá trị:
+  //   · App KHÔNG khai biến riêng  → dùng chuỗi chung. Đây là đường mặc định, mọi app mới.
+  //   · App CÓ khai biến riêng     → BẮT BUỘC dùng đúng biến đó. Khai mà chưa đặt giá trị
+  //                                   thì cổng ĐÓNG (undefined), không lặng lẽ rơi về chuỗi
+  //                                   chung.
+  //
+  // Vế thứ hai quan trọng hơn nó trông. Rơi về chuỗi chung khi biến riêng chưa đặt nghĩa là:
+  // một app được khai khoá riêng — thường vì nó cần mạnh hơn hoặc cần thu hồi riêng — vẫn
+  // chạy ngon lành bằng chuỗi ai cũng đoán được, và KHÔNG có tín hiệu nào cho biết. Đó là
+  // hạ cấp bảo mật trong im lặng, đúng loại lỗi cả kho này tồn tại để chặn.
+  //
+  // KHÔNG bao giờ rơi về chuỗi rỗng: `"" === ""` là true, và đó đúng là lỗ hổng đã có thật
+  // hồi 31/07/2026 (gửi header `x-embed-secret:` rỗng là qua được).
+  const rieng = r.webhook_secret_env ? process.env[r.webhook_secret_env] : undefined;
   return {
     appId: r.app_id,
-    webhookSecret: env && env.length > 0 ? env : undefined,
+    webhookSecret: r.webhook_secret_env
+      ? rieng && rieng.length > 0
+        ? rieng
+        : undefined // khai khoá riêng mà chưa đặt ⇒ đóng cổng, KHÔNG rơi về chuỗi chung
+      : secretChung(),
     basket: r.basket as EmbedAppConfig["basket"],
     allowedEventTypes: r.allowed_event_types,
     allowedRoles: r.allowed_roles as HubRole[],

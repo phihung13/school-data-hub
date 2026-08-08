@@ -92,8 +92,23 @@ interface DongDaNhan {
   lan_cuoi: string;
 }
 
+/**
+ * Chuỗi webhook DÙNG CHUNG cho mọi app (quyết định chủ đầu tư 08/08/2026).
+ * Lý lẽ, rủi ro và điều kiện đầy đủ ở đầu `server/embed/registry-db.ts` — chép giá trị mặc
+ * định sang đây là tạo ra hai nguồn sự thật, nên chỉ đọc biến và so độ dài.
+ */
+function coSecretChung(): boolean {
+  // Luôn có: `registry-db.ts` rơi về hằng số mặc định khi biến chưa đặt. Hàm này tồn tại để
+  // ngày ai đó bỏ mặc định đi thì màn quản trị đổi theo mà không phải sửa hai chỗ.
+  return true;
+}
+
 function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
   const env = r.webhook_secret_env ? process.env[r.webhook_secret_env] : undefined;
+  // Cùng ranh giới với `registry-db.ts`: app khai khoá RIÊNG thì phải có đúng khoá đó; app
+  // không khai thì dùng chuỗi chung. Hai chỗ này phải nói cùng một câu, nếu không màn hình
+  // sẽ báo "sẵn sàng" cho một app mà cổng đang đóng.
+  const coKhoaWebhook = r.webhook_secret_env ? !!env && env.length > 0 : coSecretChung();
   const ssoEnv = r.sso_client_secret_env ? process.env[r.sso_client_secret_env] : undefined;
   return {
     appId: r.app_id,
@@ -110,7 +125,11 @@ function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
     reviewDueOn: r.review_due_on,
     overdueDays: r.overdue_days,
     webhookSecretEnv: r.webhook_secret_env,
-    daCapSecret: !!env && env.length > 0,
+    // `daCapSecret` nay nghĩa là "app này CÓ khoá webhook dùng được", không còn là "biến
+    // riêng của app đã đặt chưa" — vì từ 08/08/2026 mọi app rơi về một chuỗi dùng chung.
+    // `webhookSecretEnv === null` là dấu để màn hình biết app đang dùng chuỗi chung hay
+    // khoá riêng; đó mới là thứ phân biệt hai ca.
+    daCapSecret: coKhoaWebhook,
     ssoEnabled: r.sso_enabled,
     ssoRedirectUris: r.sso_redirect_uris,
     ssoBackchannelLogoutUri: r.sso_backchannel_logout_uri,
@@ -123,8 +142,13 @@ function doiHang(r: Dong, daNhan: DongDaNhan[] = []) {
     conThieu: [
       r.allowed_roles.length === 0 ? "Chưa cấp cho vai nào — không ai mở được app" : null,
       !r.enabled ? "Đang tắt — bấm “Bật app”" : null,
+      // KHÔNG còn dòng "đặt khoá webhook trên máy chủ" — từ 08/08/2026 mọi app dùng một
+      // chuỗi chung nên khoá luôn có sẵn. Giữ lại một dòng bảo người ta đi làm việc không
+      // còn tồn tại là đúng cái lỗi vừa sửa ở bản đấu nối sáng nay.
+      // Khai một biến RIÊNG rồi bỏ trống thì vẫn phải nhắc: lúc đó app dùng khoá riêng, và
+      // khoá riêng chưa đặt nghĩa là 401 thật.
       r.webhook_secret_env && !(env && env.length > 0)
-        ? `Đặt ${r.webhook_secret_env} trên máy chủ rồi khởi động lại — chưa có thì webhook trả 401`
+        ? `Đặt ${r.webhook_secret_env} trên máy chủ rồi khởi động lại — app này khai khoá RIÊNG, chưa đặt thì webhook trả 401`
         : null,
       r.sso_enabled && r.sso_client_secret_env && !(ssoEnv && ssoEnv.length > 0)
         ? `Đặt ${r.sso_client_secret_env} trên máy chủ rồi khởi động lại — chưa có thì đăng nhập trả invalid_client`

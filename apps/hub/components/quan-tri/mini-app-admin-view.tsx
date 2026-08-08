@@ -270,8 +270,11 @@ function TheApp({
           )}
         </Muc>
         <Muc nhan="Secret webhook">
+          {/* Ba ca từ 08/08/2026, không còn hai. `webhookSecretEnv === null` nay nghĩa là
+              "dùng chuỗi chung của trường" chứ không còn nghĩa "chưa khai" — mọi app đều có
+              khoá dùng được. Ca thứ ba (khai khoá riêng mà chưa đặt) vẫn phải nói to. */}
           {!app.webhookSecretEnv ? (
-            <span className="text-caption">Chưa khai biến môi trường</span>
+            <span className="font-bold text-successText">Chuỗi chung của trường</span>
           ) : app.daCapSecret ? (
             <span className="font-bold text-[#126B45]">
               Đã cấp — <span className="font-mono text-[11.5px]">{app.webhookSecretEnv}</span>
@@ -285,7 +288,8 @@ function TheApp({
               <span className="msr text-[15px]" aria-hidden>
                 error
               </span>
-              <span className="font-mono text-[11.5px]">{app.webhookSecretEnv}</span> chưa đặt — webhook 401
+              <span className="font-mono text-[11.5px]">{app.webhookSecretEnv}</span> chưa đặt — webhook 401 (app
+              khai khoá RIÊNG nên không rơi về chuỗi chung)
             </span>
           )}
         </Muc>
@@ -351,7 +355,7 @@ function TheApp({
       {(
         <div className="mt-3 rounded-2xl border border-line bg-surface-alt p-3">
           <div className="text-[10.5px] font-black uppercase tracking-wide text-muted">App đã gửi về</div>
-          {!app.webhookSecretEnv ? (
+          {app.allowedEventTypes.length === 0 ? (
             <p className="mt-1 flex items-start gap-1.5 text-[12.5px] font-bold text-gold-textDark">
               <span className="msr mt-px flex-none text-[16px]" aria-hidden>
                 error
@@ -727,7 +731,10 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
   const [gioiThieu, setGioiThieu] = useState(app.intro ?? "");
   // "App có gửi dữ liệu về không" suy từ việc nó đã KHAI tên biến secret — đó là dấu hiệu
   // duy nhất trong dữ liệu, và cũng chính là thứ làm khối cảnh báo đỏ nổi lên.
-  const [webhook, setWebhook] = useState(!!app.webhookSecretEnv);
+  // Cửa gửi dữ liệu MỞ hay ĐÓNG nay do `allowedEventTypes` quyết, không do tên biến —
+  // từ 08/08/2026 app không khai biến riêng vẫn có khoá (chuỗi chung), nên tên biến không
+  // còn là dấu hiệu của "có webhook hay không".
+  const [webhook, setWebhook] = useState(app.allowedEventTypes.length > 0);
   const [loaiSuKien, setLoaiSuKien] = useState(app.allowedEventTypes.join("\n"));
   const [bienWebhook, setBienWebhook] = useState(app.webhookSecretEnv ?? "");
   const [sso, setSso] = useState(app.ssoEnabled);

@@ -202,11 +202,17 @@ Mọi loại sự kiện bạn gửi đều **vào kho và đọc được**. Nh
 
 Nếu app của bạn cần dữ liệu trở thành nghiệp vụ thật, **ghi rõ trong phiếu** ở khoá `webhook.cacLoaiSuKien` và nói với nhà trường — đó là một việc của kỹ sư Hub, không phải một ô tích trên màn hình.
 
-### 4.6 Chuỗi bí mật nằm ở đâu
+### 4.6 Chuỗi bí mật — MỘT chuỗi dùng chung cho mọi app
 
-**Ở máy chủ của bạn, trong biến môi trường.** Không bao giờ trong mã nguồn phía trình duyệt, không trong biến `NEXT_PUBLIC_*`/`VITE_*`, không trong file cấu hình đẩy lên kho mã.
+Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các app**. Bạn không có chuỗi riêng, và không cần xin cấp riêng.
 
-**App không có phần hậu trường riêng (app dựng bằng Base44, Lovable, v0, Bolt… chỉ có giao diện) thì KHÔNG được cấp chuỗi bí mật** — không có chỗ nào kín để cất. App loại đó chỉ đi được đường nhúng, và ghi dữ liệu dưới danh nghĩa chính người đang dùng.
+**Ba điều đi kèm, đọc kỹ:**
+
+1. **Chuỗi để ở máy chủ của bạn, trong biến môi trường.** Không bao giờ trong mã chạy phía trình duyệt, không trong biến `NEXT_PUBLIC_*`/`VITE_*`, không trong file cấu hình đẩy lên kho mã. Vì nó dùng chung, lộ chuỗi của bạn là lộ chuỗi của **mọi app khác**.
+2. **Nhà trường đổi chuỗi lúc nào cũng được, và khi đó MỌI app phải đổi theo cùng lúc.** Hãy để nó là một biến môi trường đọc lúc chạy — đừng ghi cứng vào mã, đừng nhúng vào bản build. Đổi chuỗi phải là sửa một dòng cấu hình rồi khởi động lại, không phải một lần phát hành mới.
+3. **App không có phần hậu trường riêng thì KHÔNG được cấp chuỗi.** App dựng bằng Base44, Lovable, v0, Bolt… chỉ có giao diện, không có chỗ kín để cất — nhét chuỗi vào đó thì ai mở trang cũng nhặt được. App loại đó ghi dữ liệu dưới danh nghĩa chính người đang dùng, qua đường ở mục 3.2.
+
+> Nếu app của bạn có lý do thật sự cần một chuỗi **riêng** — ví dụ nó chạy trên hạ tầng của một nhà cung cấp khác, hoặc nhà trường cần thu hồi riêng nó mà không đụng app khác — thì **nói rõ khi gửi phiếu**. Nhà trường cấp riêng được, và khi đó app bạn **chỉ** dùng chuỗi riêng đó; chuỗi chung sẽ không còn mở cửa cho bạn nữa.
 
 ---
 
