@@ -144,6 +144,25 @@ export const MAN_HINH: ManHinh[] = [
     menu: { thuTu: 20 },
   },
   {
+    key: "thi-dua",
+    href: "/thi-dua",
+    // `emoji_events` CÓ trong font đã cắt gọn (public/fonts/icon-names.txt) — tên ngoài
+    // danh sách đó vẽ ra một ô trống, và `tests/unit/a11y.test.ts` canh đúng chỗ này.
+    icon: "emoji_events",
+    nhan: "Bảng thi đua",
+    // Mọi vai TRONG TRƯỜNG — không phải `"moi-nguoi"`. Bản đầu khai `"moi-nguoi"` và
+    // `tests/unit/nav-links.test.ts` bắt ngay hai hệ quả không ai muốn:
+    //   · tài khoản CHƯA ĐƯỢC GÁN VAI NÀO cũng nhận tile — một tài khoản vừa tạo,
+    //     chưa ai duyệt, mở ra là thấy tên và thứ hạng của cả trường;
+    //   · phụ huynh cũng nhận tile, trong khi ADR-034 đã đưa phụ huynh RA KHỎI phạm vi
+    //     đợt này — thêm cho họ một màn mới là đi ngược quyết định vừa ghi.
+    // Bảng thi đua công khai TRONG TRƯỜNG (ADR-037), và "trong trường" là một danh sách
+    // vai cụ thể, không phải "ai đăng nhập được".
+    vai: ["student", "teacher", "homeroom", "counselor", "principal", "board", "admin"],
+    luoi: { thuTu: 25, nhan: "Thi đua" },
+    menu: { thuTu: 25 },
+  },
+  {
     key: "attendance",
     href: "/diem-danh",
     icon: "fact_check",
@@ -375,4 +394,20 @@ export function manChoTab(roles: readonly HubRole[]): MucDieuHuong[] {
 /** Tra một màn theo đường dẫn — dùng cho cổng đối chiếu và cho màn xem trước. */
 export function timMan(href: string): ManHinh | undefined {
   return MAN_HINH.find((m) => m.href === href);
+}
+
+/**
+ * Vai này vào được màn `href` không — dùng ở CHÍNH `page.tsx` của màn đó.
+ *
+ * Vì sao có hàm này thay vì để mỗi trang tự chép danh sách vai: `man-hinh.ts` đã là
+ * nguồn duy nhất cho lưới/menu/tab, và `tests/unit/man-hinh.test.ts` đối chiếu bản khai
+ * với hàng rào THẬT trong `page.tsx`. Chép tay danh sách sang trang là dựng nguồn thứ
+ * hai — và nguồn thứ hai rồi sẽ lệch, đúng ba lần kho này đã sửa (xem đầu file).
+ *
+ * `href` không có trong bản khai ⇒ `false`: một màn không khai thì không ai vào được,
+ * an toàn hơn hẳn chiều ngược lại.
+ */
+export function vaoDuocMan(href: string, roles: readonly HubRole[]): boolean {
+  const m = timMan(href);
+  return m ? voiVai(m, roles) : false;
 }

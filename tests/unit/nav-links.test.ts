@@ -29,6 +29,7 @@ const COUNSELOR_SOON = resolveNav(["counselor"]).soon;
 const ADMIN_SOON = resolveNav(["admin"]).soon;
 import { STUDENT_TABBAR_HREFS, resolveTabs } from "@/components/tab-bar";
 import { buildMiniApps } from "@/server/mini-apps";
+import { MAN_HINH } from "@/lib/man-hinh";
 
 import type { HubRole } from "@hub/core/contracts";
 
@@ -133,6 +134,21 @@ function rolesAllowedBy(href: string): HubRole[] | null {
   if (!file) return [];
   const src = stripComments(readFileSync(file, "utf8"));
   if (!src.includes('redirect("/home")')) return null;
+
+  // KHUÔN THỨ BA (21/08/2026): trang gọi `vaoDuocMan("<href>", session.roles)` — hàng
+  // rào ĐỌC THẲNG bản khai `MAN_HINH` thay vì chép tay danh sách vai sang trang.
+  //
+  // Bộ đọc này (và bộ song sinh trong `man-hinh.test.ts`) phải biết khuôn đó, nếu không
+  // nó trả `[]` = "không vai nào vào được" — và đó là kiểu sai NGUY HIỂM mà chính chú
+  // thích ở nhánh `/embed/` phía trên đã gọi tên: một câu trả lời đoán làm mọi phép
+  // kiểm bên dưới xanh (hoặc đỏ) vì lý do không liên quan gì tới mã. Đo được ngày
+  // 21/08/2026: bài đỏ với câu "student: Thi đua → /thi-dua (chỉ không ai vào được)"
+  // trong khi trang cho student vào.
+  if (src.includes(`vaoDuocMan("${href}"`)) {
+    const m = MAN_HINH.find((x) => x.href === href);
+    if (m && m.vai !== "moi-nguoi") return ALL_ROLES.filter((r) => (m.vai as HubRole[]).includes(r));
+  }
+
   const found = [...src.matchAll(/roles\.includes\("([a-z]+)"\)/g)].map((m) => m[1]);
   return ALL_ROLES.filter((r) => found.includes(r));
 }

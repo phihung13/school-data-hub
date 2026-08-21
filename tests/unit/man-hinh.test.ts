@@ -65,6 +65,21 @@ function vaiTheoTrang(href: string): HubRole[] | null {
   const src = boChuThich(readFileSync(f, "utf8"));
   if (!/redirect\("\/home"\)/.test(src)) return null;
 
+  // KHUÔN THỨ TƯ (21/08/2026): trang gọi `vaoDuocMan("<href>", session.roles)` — hàng
+  // rào ĐỌC THẲNG bản khai thay vì chép tay danh sách vai sang trang.
+  //
+  // Với khuôn này, phép so "khai vs thật" của bài test trở thành hiển nhiên đúng — và
+  // đó là điều TỐT, không phải một lỗ hổng: hai bên không thể lệch vì chỉ có một bên.
+  // Ba khuôn còn lại vẫn cần so, vì chúng chép tay. Ghi ra đây để người đọc sau không
+  // tưởng đây là một ca bị bỏ qua.
+  // `includes` chứ không `RegExp`: href chứa `/` và chuỗi ghép vào regex phải thoát —
+  // lượt viết đầu quên đúng chỗ đó và cả bài đỏ với "Unterminated group". Một phép so
+  // chuỗi thẳng thì không có gì để thoát.
+  if (src.includes(`vaoDuocMan("${href}"`)) {
+    const m = MAN_HINH.find((x) => x.href === href);
+    if (m && m.vai !== "moi-nguoi") return [...(m.vai as HubRole[])];
+  }
+
   const vai = new Set<string>();
   for (const m of src.matchAll(/if\s*\(\s*!\s*session\.roles\.includes\("([a-z]+)"\)\s*\)\s*redirect/g)) {
     vai.add(m[1]!);

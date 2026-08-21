@@ -19,6 +19,15 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ### Added
 
+- **`thi-dua.ts` (mới)** — `DongXepHangCaNhan` · `DongXepHangLop` · `DongXepHangKhoi` ·
+  `GetBangXepHangInput` · `GetBangXepHangOutput`. Bảng xếp hạng thi đua (ADR-037,
+  21/08/2026; migration `0063`). Hợp đồng này **cố ý không có chỗ chở cảm xúc** — không
+  field mood, không "vì sao em này điểm thấp", và `chiTiet` thô của từng dòng điểm không
+  đi ra màn hình. Ranh giới nguyên văn của chủ đầu tư: *"ko đưa cảm xúc vào"*; hàng rào
+  thật ở tầng dữ liệu (pgTAP `0063` đọc thân hàm tính điểm), hình dạng ở đây là hàng rào
+  thứ hai. `thuHang` dùng `rank()` nên hai em bằng điểm thì **bằng hạng** — đánh số tuần
+  tự sẽ bịa ra một thứ tự giữa hai em ngang nhau, và với bảng thi đua của trẻ con thì
+  đúng cái thứ tự bịa đó là thứ các em sẽ tranh cãi.
 - `StudentCheckinDay.mood` (`number 1..4 | null`) — GVCN đọc lại được nhật ký cảm xúc
   (ADR-035, 21/08/2026, đảo ADR-026; migration `0059`). Nguồn là LEFT JOIN
   `attendance.checkins_care` theo `id` trong `care.getStudentDetail` — cột `mood` của

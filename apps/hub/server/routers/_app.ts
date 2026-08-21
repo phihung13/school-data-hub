@@ -7,6 +7,7 @@ import { reportRouter } from "./report";
 import { sessionRouter } from "./session";
 import { profileRouter } from "./profile";
 import { teachingRouter } from "./teaching";
+import { thiDuaRouter } from "./thi-dua";
 
 export const appRouter = router({
   admin: adminRouter,
@@ -18,6 +19,8 @@ export const appRouter = router({
   profile: profileRouter,
   // Vai `teacher` (giáo viên bộ môn) — CHỈ ĐỌC, xem đầu routers/teaching.ts.
   teaching: teachingRouter,
+  // Bảng xếp hạng thi đua (ADR-037) — CHỈ ĐỌC, không mutation nào.
+  thiDua: thiDuaRouter,
 });
 
 export type AppRouter = typeof appRouter;

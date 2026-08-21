@@ -886,6 +886,41 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "asOfDate",
 //       "students"
 //     ],
+//     "DongXepHangCaNhan": [
+//       "hoTen",
+//       "lop",
+//       "khoi",
+//       "tongDiem",
+//       "thuHang",
+//       "laToi"
+//     ],
+//     "DongXepHangLop": [
+//       "lop",
+//       "khoi",
+//       "tongDiem",
+//       "diemTrungBinh",
+//       "thuHang",
+//       "laLopToi"
+//     ],
+//     "DongXepHangKhoi": [
+//       "khoi",
+//       "tongDiem",
+//       "diemTrungBinh",
+//       "thuHang"
+//     ],
+//     "GetBangXepHangInput": [
+//       "gioiHan"
+//     ],
+//     "GetBangXepHangOutput": [
+//       "caNhan",
+//       "lop",
+//       "khoi",
+//       "toiDangODau",
+//       "tinhLuc",
+//       "luat",
+//       "luat.maLuat",
+//       "luat.nhan"
+//     ],
 //     "parseSemver": [
 //       "#function#"
 //     ],

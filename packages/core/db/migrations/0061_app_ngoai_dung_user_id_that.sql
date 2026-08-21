@@ -61,7 +61,7 @@ declare
 begin
   select * into v_row from staging.raw_embedded_events where id = p_raw_id for update;
   if not found then
-    return 'raw_not_found';
+    return 'not_found';
   end if;
   if v_row.promoted_at is not null then
     return 'already_promoted';

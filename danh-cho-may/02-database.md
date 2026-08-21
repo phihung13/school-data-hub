@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 36
+sync-version: 37
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1109,6 +1109,53 @@ Chủ đầu tư: *"user_id thật, như tờ sơ đồ vẽ"*. `core.promote_em
 | app rổ Xanh (Factory) gửi kèm `user_id` | bị trigger `0056` chặn — rổ Xanh không gắn tên em nào |
 
 Ca cuối đáng ghi: nó chứng minh hai hàng rào **độc lập** vẫn xếp chồng đúng thứ tự sau khi đổi tầng định danh.
+
+## Đợt S (`0062`–`0065`, 21/08/2026) — bảng xếp hạng thi đua (ADR-037)
+
+Bốn migration cho một tính năng, và **ba trong bốn là sửa lỗi của chính đợt này**. Ghi đủ cả bốn, vì mỗi lỗi là một loại khác nhau và cả ba đều bị bắt bởi một cổng khác nhau.
+
+| # | Việc | Ai bắt được |
+|---|---|---|
+| `0062` | Sửa `promote_embedded_event` trả `not_found` thay vì `raw_not_found` (lỗi tôi gây khi viết lại hàm ở `0061`) | pgTAP `0019` assertion 12 — bài đã có sẵn từ trước |
+| `0063` | Sổ điểm + luật tính điểm + ba bảng xếp hạng + job | — |
+| `0064` | Ba view phải **thôi** `security_invoker` | Đo tay trên máy chủ đang chạy |
+| `0065` | `la_toi`/`la_lop_toi` không được là NULL | Hợp đồng `zod` ở tầng `output` |
+
+**Vì sao `0062` là một migration riêng chứ không phải sửa `0061`.** Tôi đã sửa thẳng vào file `0061` sau khi nó chạy trên `hub_dev`, và sổ migration (`0050`) chặn ở lượt áp kế tiếp: **LỆCH BĂM**. Cổng nói đúng một điều — file trong kho không còn mô tả thứ đang chạy trong database, và đó là kiểu sai không lỗi nào nổ ra. Hai cửa nó cho: hoàn nguyên file, hoặc viết migration mới. Chọn cửa thứ hai.
+
+### `0063` — sổ điểm
+
+**`evidence.luat_tinh_diem`** mượn khuôn `care.thresholds`: đổi trọng số không cần deploy. Nói rõ để không ai chép nhầm — đây **không** phải ngưỡng cảnh báo nên không thuộc §6 theo nghĩa đen; nó mượn khuôn vì khuôn đó đúng.
+
+**`evidence.diem_thi_dua`**, khoá chính `(student_id, ngay, ma_luat)`. **§9 nằm ngay ở khoá chính**: chạy lại job cho cùng một ngày là upsert, không cộng dồn. Đây là chỗ chống gian lận rẻ nhất của một bảng thi đua — điểm không đến từ *lượt gửi* mà từ một phép **tính lại** trên dữ liệu nguồn, nên "bấm hai lần" không thành hai lần điểm. Đo trên `hub_dev`: 428 dòng / 4.070 điểm, chạy lại → **428 dòng / 4.070 điểm**.
+
+**Ba bảng xếp hạng:** `evidence.v_xep_hang_ca_nhan` (tên · lớp · khối · tổng điểm · thứ hạng · `la_toi`) · `evidence.v_xep_hang_lop` (theo **điểm trung bình mỗi em** — xếp bằng tổng thì bảng đo sĩ số chứ không đo thi đua) · `evidence.v_xep_hang_khoi`. Cửa sổ 30 ngày ở cả ba: bảng thi đua phải quên được, một tuần ốm hồi tháng trước không nên đè lên cả học kỳ. Cửa GHI duy nhất là `evidence.tinh_diem_thi_dua(date)`; `authenticated` chỉ có SELECT.
+
+**Ranh giới §5, cưỡng chế chứ không hứa.** Nguyên văn chủ đầu tư 21/08/2026: *"xếp hạng thời gian dùng app thì ok, xếp hạng thi đua cá nhân/lớp/khối... thì ok, **ko đưa cảm xúc vào**"*. Vế thứ ba dễ mất nhất — chỉ cần một người thấy "ngày nào em cũng Vui thì cộng điểm chăm ngoan" là hợp lý. Nên pgTAP `0063` đọc `pg_proc.prosrc` của `evidence.tinh_diem_thi_dua` và khẳng định thân hàm **không nhắc** `mood`, `checkins_care`, `can_read_mood`, `care.`. **Thử ngược**: viết lại hàm để cộng điểm theo `mood = 4` → assertion §5 **đỏ ngay câu đầu tiên**. Thêm một tầng nữa: role `reporting` (§5) không được cấp gì trên sổ điểm.
+
+### `0064` — cái lỗi đáng nhớ nhất đợt này
+
+`0063` đặt `security_invoker = on` cho cả ba view, theo đúng bài học `0024`. Bài học đó **đúng cho view chở dữ liệu riêng của từng người**. Bảng thi đua thì ngược hẳn: nó là **công bố có chủ ý**, và RLS bên dưới (`core.students` chỉ cho em đọc dòng của mình) cắt đúng thứ tính năng này sinh ra để hiện.
+
+Đo thật, đăng nhập tài khoản em Minh, mở `/thi-dua`: trang **200**, bảng vẽ đẹp, nội dung là **một dòng — chính em, hạng 1/1**. Lớp 6A1: tổng 138, trung bình 138. **Không lỗi nào nổ ra.**
+
+`security_invoker` không "an toàn hơn" — nó chỉ **đẩy quyết định xuống RLS**. Khi RLS trả lời một câu hỏi khác câu view đang hỏi, kết quả là một màn hình nói dối rất thuyết phục: mỗi em đều thấy mình nhất trường.
+
+Cách sửa: ba view chạy quyền chủ schema, **đổi lại chúng tự thu hẹp** — bỏ `student_id` khỏi bảng cá nhân và `class_id` khỏi bảng lớp (bảng xếp hạng cần TÊN và ĐIỂM, không cần khoá chính của một đứa trẻ để cả trường cùng cầm), và `la_toi`/`la_lop_toi` tính **trong** view bằng `core.current_user_id()`. Chính nhu cầu "so id để tô đậm dòng của mình" là lý do id phải đi ra ngoài; tính trong view thì nhu cầu ấy biến mất. Thứ một người lạ đọc được qua ba view: tên · lớp · khối · điểm · hạng — đúng bằng một tờ giấy dán bảng tin.
+
+### `0065` — `bool_or` trên nhóm toàn NULL
+
+`coalesce(bool_or(...), false)`. `core.students.user_id` NULL là **hợp lệ** (chú thích ngay tại cột: "em chưa có tài khoản"), nên lớp toàn em chưa có tài khoản cho ra `la_lop_toi = NULL`. Hợp đồng `zod` bắt ngay: `caNhan[2].laToi: Expected boolean, received null`. Một lỗi có địa chỉ, sửa trong một phút — khác hẳn `0064`, nơi không gì nổ ra cả.
+
+### Tầng trên
+
+`thiDua.getBangXepHang` — **chỉ đọc, không mutation nào trong cả router**. Điểm chỉ sinh từ job; muốn đổi điểm thì đổi **luật**, không ai cộng tay được, kể cả quản trị. Đó là thứ giữ cho một bảng thi đua của trẻ con không thành chỗ xin-cho.
+
+Màn `/thi-dua` mở cho **mọi vai trong trường**, không phải `"moi-nguoi"`: bản khai đầu tiên dùng `"moi-nguoi"` và `tests/unit/nav-links.test.ts` bắt ngay hai hệ quả — tài khoản **chưa được gán vai nào** cũng thấy tên và thứ hạng cả trường, và **phụ huynh** cũng thấy trong khi ADR-034 vừa đưa họ ra khỏi phạm vi. Hàng rào của trang đọc thẳng bản khai (`vaoDuocMan`), nên hai bên không thể lệch; hai bộ đọc hàng rào trong bộ test được dạy khuôn mới, kèm lý do.
+
+Job `run-tinh-diem.mjs` tính lại **7 ngày gần nhất** mỗi đêm, không chỉ hôm qua: dữ liệu nguồn đến muộn được (một dòng gửi muộn có thể được duyệt sau hai ngày), và §9 ở khoá chính làm việc tính lại an toàn. Chạy thật trên `hub_dev` với `--so-ngay=30`: **1.078 dòng, 8.630 điểm, 64ms**.
+
+**Toàn bộ pgTAP sau đợt S: 1.084 assertion / 59 file**, khớp mốc.
 
 ## Quy tắc migration (§2)
 
