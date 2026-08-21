@@ -53,6 +53,7 @@ export default defineConfig({
       "@hub/core/contracts": `${root}packages/core/contracts/index.ts`,
       "@hub/core/auth-adapter": `${root}packages/core/auth-adapter/index.ts`,
       "@hub/core/db": `${root}packages/core/db/client.ts`,
+      "@hub/core/pii-stripper": `${root}packages/core/pii-stripper/index.ts`,
       "@": `${root}apps/hub`,
     },
   },

@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 38
+sync-version: 39
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1177,6 +1177,54 @@ Job `run-tinh-diem.mjs` tính lại **7 ngày gần nhất** mỗi đêm, không
 **Kiểm chứng.** `0066_vai_doc_cho_metabase_test.sql` — **11 assertion**: vai có thật · `NOLOGIN` · **KHÔNG** `BYPASSRLS` · **KHÔNG** superuser · đọc được `attendance.checkins`/`care.care_cases`/`evidence.diem_thi_dua` · **bảng tạo SAU cũng tự có quyền** (default privileges có thật, không chỉ ghi trong chú thích) · không INSERT/UPDATE · không chạm `staging`.
 
 **Toàn bộ pgTAP sau đợt T: 1.095 assertion / 60 file**, khớp mốc.
+
+## Đợt U (`0068`–`0069`, 21/08/2026) — trạm AI (§7 + ADR-034)
+
+**§7 đã là luật từ ngày đầu và cho tới hôm nay chưa có gì thi hành nó** — vì chưa lời gọi AI nào tồn tại trong kho, nên chưa ai vi phạm. Đợt này dựng cả ba phần: wrapper bóc định danh, trạm có sáu bước, và cổng CI cưỡng chế.
+
+### `packages/core/pii-stripper/` — wrapper §7
+
+`bocPii` · `hoanPii` · `conSotPii`. Bốn khuôn **chắc chắn** là định danh (mã học sinh, email, căn cước, điện thoại) + tên theo **khai báo của nơi gọi**.
+
+**Cố ý KHÔNG đoán tên bằng heuristic.** Đánh đổi phải hiểu trước khi sửa: bỏ sót một tên ⇒ tên một đứa trẻ rời khỏi trường (nặng); bóc nhầm một từ ⇒ câu hỏi mất nghĩa, model trả lời sai, **không ai biết vì sao** (hỏng câm). "Long", "An", "Nam" vừa là tên vừa là từ thường dùng — một bộ đoán tên tiếng Việt sẽ bóc "em ở Long An" thành "em ở HS-01 HS-02". Nên tên đi vào bằng đường khai báo: nơi gọi vừa truy vấn ra danh sách đó, nó biết mình nói về ai.
+
+**Giới hạn còn lại, ghi ra chứ không giấu:** người gõ tay tên bạn cùng lớp vào ô tự do thì tên đó không được khai và sẽ đi ra ngoài. Đóng bằng tầng khác (nhắc trên màn hình + bộ lọc), không bằng heuristic. Có một ca test mang đúng tên đó.
+
+**Thứ tự bóc đo ra chứ không suy ra.** Bản đầu để điện thoại trước căn cước: `001234567890` (12 số) khớp khuôn điện thoại **bắt đầu từ ký tự thứ hai**, ăn 11 ký tự và để lại một chữ số lạc → `CCCD 0[SĐT]`. Một chữ số lọt ra thì vô hại; một khuôn ăn **lệch một ký tự** thì sẽ lệch ở chỗ khác đau hơn. Bộ eval bắt ngay.
+
+**Bộ eval 30 ca** (`tests/unit/pii-stripper.test.ts`) — RULES §7 đòi "~30 ca mẫu chạy trong CI". Nhóm "KHÔNG được bóc nhầm" có 11 ca và quan trọng ngang nhóm "phải bóc": năm học `2026-2027`, sĩ số, `5/5 ngày`, điểm `8.5`, giờ `7h30`, ngày `21/08/2026`, "em ở Long An", `30m/5.8 giây`, mã lớp `6A1-2026`, số 9 chữ số.
+
+### `ai.han_muc` + `ai.nhat_ky_goi` + `ai.con_luot()`
+
+Hai ý lấy từ sơ đồ AI OS mà §7 chưa nói: **hạn mức chi phí theo app/người** và **lọc nội dung theo lứa tuổi**.
+
+`ai.han_muc` — ba tầng (`app` · `nguoi` · `truong`), trần đổi bằng `UPDATE`, không deploy. `so_luot_ngay = 0` là **công tắc dừng khẩn**: một câu cắt đường ra model của cả trường trong một giây. Trần khởi điểm cố ý nhỏ (2000 toàn trường / 30 mỗi người) — một trần quá rộng ngày đầu thì hoá đơn tháng đầu là thứ dạy ta con số đúng, và đó là cách học đắt tiền.
+
+`ai.nhat_ky_goi` — **ghi chữ ĐÃ BÓC, không ghi bản gốc và không ghi bản đồ đường về.** Sơ đồ viết "log toàn bộ hội thoại phục vụ kiểm định"; làm đúng chữ đó là dựng một kho lưu **nguyên văn lời trẻ con nói với AI**, mà bản sao lưu mang kho ấy ra khỏi máy chủ mỗi ngày (ADR-006). Bảng này trả lời được *"AI đã nói gì với trẻ"*, **không** trả lời được *"em nào kể chuyện gì"* — câu thứ hai là câu §7 sinh ra để không ai trả lời được. Có bài test đọc `information_schema` đòi không cột nào tên `duong_ve`/`goc`/`nguyen_van`.
+
+**Lượt BỊ CHẶN cũng ghi.** Không ghi thì *"hôm nay không ai gọi AI"* và *"hôm nay mọi lượt gọi đều bị chặn"* trông y hệt nhau — đúng loại im lặng bị đọc thành kết luận mà Rev B/C điều 3 cấm.
+
+`ai.con_luot()` trả về **tên tầng** chạm trần trước: *"hết lượt của con hôm nay"* và *"cả trường hết lượt"* dẫn tới hai hành động khác nhau; gộp thành "thử lại sau" là bắt người dùng chờ vô ích. Chỉ đếm lượt `ket_qua = 'ok'` — **lượt bị chặn không tiêu hạn mức**, nếu không thì một vòng lặp hỏng khoá cả trường.
+
+### `apps/hub/server/ai/tram.ts` — sáu bước, thứ tự là một phần của hàng rào
+
+hạn mức → bóc → **khai lại** → gọi → lọc → ghi sổ (trong `finally`).
+
+Bước 3 là bước dễ bỏ nhất: `conSotPii` chạy trên **đúng chuỗi sắp gửi**, sau khi ghép prompt hệ thống. Ghép ngữ cảnh SAU khi bóc là cách một mẩu định danh đi ra mà không ai phải sửa bộ bóc cả. Có một ca test bắn đúng nó, và **thử ngược**: tắt bước 3 → đỏ đúng một câu.
+
+Lọc nội dung **cố ý được khai là một SÀN, không phải giải pháp**: một danh sách từ khoá bắt được thứ thô thiển nhất và trượt mọi thứ tinh vi. Nó có mặt vì (a) sàn rẻ hơn không có gì khi cửa vừa mở, (b) nó là **chỗ để cắm** bộ lọc thật. Điều **cấm**: viết trong tài liệu cho phụ huynh rằng "có bộ lọc nội dung phù hợp lứa tuổi" và để câu đó đứng một mình.
+
+### Cổng CI `tools/ai-import-gate.mjs`
+
+§7 nói "import SDK AI ở nơi khác là lỗi lint" — nay có người canh. Đúng **một file** được phép: `apps/hub/server/ai/nha-cung-cap.ts`, ghim cứng trong cổng. Không phải "trong thư mục ai/": một thư mục thì thêm file vào đó là chuyện của một cú `touch` và cổng sẽ im; một tên file cụ thể thì mở rộng phạm vi là một dòng phải sửa **trong chính cổng**, tức một quyết định có dấu vết. **Thử ngược**: cắm `import Anthropic from "@anthropic-ai/sdk"` vào `server/routers/` → cổng đỏ, mã thoát 1, gọi đúng tên file.
+
+**Hôm nay chưa SDK nào được cài, và đó là trạng thái đúng.** Bộ nối dùng HTTP thuần; ngày trường chốt nhà cung cấp thì cài đúng một gói và sửa đúng một file. `AI_API_KEY` thiếu ⇒ **trạm đóng với tất cả**, không nhánh nào chạy không khoá (cùng luật `dev-gate.ts`).
+
+### `0069` — cấp quyền trên bảng mà quên cấp quyền vào schema
+
+`grant select on <bảng>` không đủ: người gọi còn phải có `usage` trên schema. `0068` làm vế thứ nhất, quên vế thứ hai → **13/13 ca đỏ cùng một câu** `permission denied for schema ai` ở lượt chạy đầu. Loại lỗi đọc mã không thấy: câu `grant` trông đầy đủ, và cái thiếu là một câu **không có mặt**. `0069` cấp nốt, và cấp luôn cho vai Metabase — hệ quả nói rõ: tài khoản Metabase từ đây đọc được **mọi câu trẻ hỏi trợ lý** (đã bóc định danh, nhưng nội dung nguyên vẹn).
+
+**Toàn bộ pgTAP sau đợt U: 1.095 assertion / 60 file** (đợt này không thêm pgTAP — trạm AI đo bằng `tests/db/tram-ai.test.ts`, 13 ca, vì nó cần chạy TypeScript thật của trạm chứ không chỉ SQL).
 
 ## Quy tắc migration (§2)
 

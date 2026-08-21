@@ -53,6 +53,17 @@ jobs:
           node-version: "20"
       - run: node tools/secret-scan.mjs
 
+  # ── §7 ──────────────────────────────────────────────────────────────────
+  ai-import:
+    name: "AI · §7 SDK model chỉ import trong một file"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node tools/ai-import-gate.mjs
+
   # ── Kiểu dữ liệu: cả mã sản phẩm LẪN mã test ────────────────────────────
   typecheck:
     name: Kiểu · tsc toàn workspace + thư mục tests

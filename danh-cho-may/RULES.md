@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 11
+sync-version: 12
 ---
 
 # RULES — 10 điều khoản hợp đồng kiến trúc (luật cứng, máy cưỡng chế)
@@ -40,7 +40,7 @@ Không số ngưỡng nào hard-code trong flag engine — đọc từ `care.thr
 ## §7 — PII stripper trước mọi AI API
 
 Mọi lời gọi model ngoài đi qua wrapper duy nhất `packages/core/pii-stripper/` (tên → mã, xóa SĐT/địa chỉ). Import SDK AI ở nơi khác là lỗi lint.
-**Cưỡng chế:** lint rule + bộ eval ~30 ca mẫu chạy trong CI.
+**Cưỡng chế:** `tools/ai-import-gate.mjs` (chạy trong CI, job `ai-import`) + bộ eval 30 ca `tests/unit/pii-stripper.test.ts`. **Từ 21/08/2026 điều khoản này mới thật sự có người canh** — trước đó nó đúng vì chưa lời gọi AI nào tồn tại, không phải vì có gì chặn. Cổng cho phép import SDK model ở **đúng một file**: `apps/hub/server/ai/nha-cung-cap.ts` (tên ghim cứng trong cổng, mở rộng phạm vi là một dòng phải sửa trong chính cổng). Mọi lời gọi đi qua `apps/hub/server/ai/tram.ts` — sáu bước: hạn mức → bóc → khai lại → gọi → lọc → ghi sổ. Hai thứ §7 **không** nói mà nay có (ADR-034, lấy từ sơ đồ AI OS): trần chi phí ba tầng (`ai.han_muc`) và sàn lọc nội dung — sàn ấy **cố ý được khai là sàn, không phải giải pháp**.
 
 ## §8 — Connector chỉ ghi staging
 

@@ -6,7 +6,8 @@
   "exports": {
     "./contracts": "./contracts/index.ts",
     "./auth-adapter": "./auth-adapter/index.ts",
-    "./db": "./db/client.ts"
+    "./db": "./db/client.ts",
+    "./pii-stripper": "./pii-stripper/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
