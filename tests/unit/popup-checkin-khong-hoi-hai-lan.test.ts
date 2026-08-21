@@ -87,6 +87,47 @@ describe("popup check-in — năm lỗi đã sửa, mỗi lỗi một người c
     expect(maCong, "quay lại dùng useEffect thì HTML máy chủ lại hở").not.toContain("useEffect");
   });
 
+  it("6. CHỈ MỘT bản popup check-in trong kho — không còn `CheckinModal` của trang chủ", () => {
+    // Lượt rà thứ hai (chủ đầu tư: *"vẫn còn, checkin 2 lần… có 2 loại checkin"*).
+    // `home-view.tsx` có sẵn MỘT popup check-in riêng, tự mở bằng useEffect khi
+    // `checkedInToday === false`, với lưới cảm xúc riêng và đường gửi riêng. Nó ra đời
+    // trước cổng ADR-036, và tôi thêm cổng mà không thấy nó — nên trên máy tính em nhận
+    // HAI popup chồng nhau.
+    const ma = boChuThich(HOME);
+    expect(ma, "CheckinModal của trang chủ đã gỡ, đừng dựng lại").not.toContain("function CheckinModal");
+    expect(ma, "và cả cái effect tự mở nó").not.toContain("setModalOpen");
+    // Thẻ máy tính Ở LẠI (khổ máy tính không có thanh tab, nó là đường duy nhất để mở
+    // lại popup) — nhưng nút của nó phải gọi popup CHUNG, và phải tắt khi cổng đang khoá.
+    const the = ma.slice(ma.indexOf("function CheckinCardDesktop"), ma.indexOf("function ThisWeekCard"));
+    expect(the).toContain("moCheckin");
+    expect(the).toMatch(/if\s*\(dangKhoa\)\s*return null/);
+  });
+
+  it("7. `CheckinView` tải RỜI khỏi gói của layout gốc", () => {
+    // Cổng đứng ở layout gốc = có mặt trên MỌI trang. Import thẳng `CheckinView` (~950
+    // dòng, kèm hàng đợi IndexedDB) là kéo nó vào gói JS của mọi trang, kể cả trang của
+    // giáo viên và của em đã khai xong. Gói nặng thì hydrate lâu, mà trang chủ chỉ chọn
+    // được bố cục máy tính SAU hydrate — nên cú nháy "hiện bản điện thoại rồi mới đổi"
+    // dài ra đúng bằng phần vừa thêm.
+    const ma = boChuThich(CONG);
+    expect(ma).toContain('dynamic(() => import("./checkin-view")');
+    expect(ma, "import thẳng là kéo lại vào gói mọi trang").not.toMatch(
+      /import \{ CheckinView \} from "\.\/checkin-view"/,
+    );
+  });
+
+  it("8. gợi ý khổ màn đọc ở module SERVER, không phải module `\"use client\"`", () => {
+    // `lib/viewport.ts` mở đầu bằng `"use client"`, nên mọi thứ nó xuất ra đều là tham
+    // chiếu client: Server Component import hàm từ đó sẽ nhận cái vỏ và nổ
+    // `TypeError: … is not a function`. Đo được: trang chủ trả **500** ở lượt chạy đầu.
+    // Bỏ chú thích trước khi soi: chính file đó GIẢI THÍCH vì sao nó không được có
+    // `"use client"`, nên soi cả chú thích là bài test đỏ vì lời giải thích của nó —
+    // lần thứ tư trong buổi này tôi mắc đúng lỗi ấy.
+    const khoMan = boChuThich(doc("apps/hub/lib/kho-man.ts"));
+    expect(khoMan, "file này phải dùng được ở server").not.toContain('"use client"');
+    expect(boChuThich(doc("apps/hub/lib/viewport.ts"))).not.toContain("export function khoManTuHeader");
+  });
+
   it("chế độ khoá cứng vẫn KHÔNG có nút đóng — hàng rào chính không bị dọn nhầm", () => {
     // Bốn lỗi trên đều sửa bằng cách BỚT thứ trong popup. Câu này đứng cạnh để lần dọn
     // sau không bớt luôn thứ làm nên cái cổng.

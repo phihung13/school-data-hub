@@ -46,3 +46,10 @@ function getServerSnapshot() {
 export function useIsDesktop(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
+
+// `khoManTuHeader` KHÔNG nằm ở file này — nó ở `lib/kho-man.ts`.
+//
+// File này mở đầu bằng `"use client"`, nên MỌI thứ nó xuất ra đều là tham chiếu client:
+// một Server Component `import` hàm từ đây sẽ nhận về cái vỏ, và gọi vào thì nổ
+// `TypeError: khoManTuHeader is not a function`. Đo được đúng như vậy 21/08/2026 —
+// trang chủ trả 500 ở lượt chạy đầu.

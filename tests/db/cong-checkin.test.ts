@@ -120,6 +120,11 @@ vi.mock("next/navigation", () => ({
     throw err;
   },
 }));
+// `headers()` của Next chỉ sống trong ngữ cảnh một request, mà bài này gọi thẳng
+// `HomePage()`. Mock `next/headers` KHÔNG ăn (vitest coi `next` là gói ngoài), nên lời
+// gọi ấy được tách sang một module của mình — xem `server/kho-man-request.ts`.
+// `null` = trình duyệt không khai khổ màn, tức nhánh dự phòng (Safari/Firefox).
+vi.mock("@/server/kho-man-request", () => ({ docKhoManTuRequest: () => null }));
 vi.mock("@/lib/session", () => ({ getCurrentSession: vi.fn() }));
 vi.mock("@hub/core/auth-adapter", () => ({
   resolveIdentity: async () => ({ email: "minh@va.edu.vn", className: "6A1" }),

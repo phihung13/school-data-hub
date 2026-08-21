@@ -91,7 +91,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useIsDesktop } from "@/lib/viewport";
 import type { GetLichHomNayOutput, HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/core/contracts";
@@ -173,6 +173,7 @@ export function HomeView({
   classCode,
   initialMiniApps,
   initialLich,
+  khoManBanDau,
 }: {
   displayName: string;
   email: string;
@@ -186,6 +187,11 @@ export function HomeView({
   initialMiniApps: MiniAppTileType[];
   /** Lịch dựng sẵn phía máy chủ. `null` = đọc hỏng — thẻ tự thử lại bằng query. */
   initialLich: GetLichHomNayOutput | null;
+  /**
+   * Khổ màn trình duyệt tự khai (`Sec-CH-UA-Mobile`). `null` = nó không khai.
+   * Chỉ dùng cho LƯỢT VẼ ĐẦU; sau hydrate `useIsDesktop()` giành lại quyền quyết định.
+   */
+  khoManBanDau: boolean | null;
 }) {
   // initialData chứ không phải "đợi query xong": lưới vẽ đúng ngay lần sơn đầu, query chỉ
   // xác nhận lại. Không có nó, miniApps là [] trong ~1s → hiện "0 app" với ô trống rồi mới
@@ -194,7 +200,19 @@ export function HomeView({
   const todayStatus = trpc.checkin.getTodayStatus.useQuery(undefined, { enabled: isStudent });
   const growthReport = trpc.report.getMyLatestReport.useQuery(undefined, { enabled: isStudent });
   const today = new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
-  const isDesktop = useIsDesktop();
+  const khoManThat = useIsDesktop();
+  // HAI LƯỢT VẼ, CÓ CHỦ Ý — và thứ tự là toàn bộ điểm của nó.
+  //
+  // Lượt đầu (cả trên máy chủ lẫn lượt hydrate đầu tiên của trình duyệt) dùng GỢI Ý của
+  // trình duyệt. Hai bên phải cho ra CÙNG một cây, nếu không React kêu "hydration
+  // mismatch" và vứt cả cây đi dựng lại — đắt hơn hẳn cú nháy đang muốn sửa. Vì thế
+  // `daHydrate` khởi tạo `false` ở CẢ hai phía, và chỉ effect mới bật nó.
+  //
+  // Từ lượt hai trở đi, `useIsDesktop()` (đo bề rộng thật bằng matchMedia) quyết định —
+  // vì gợi ý chỉ nói "máy này có phải điện thoại không", không nói cửa sổ rộng bao nhiêu.
+  const [daHydrate, setDaHydrate] = useState(false);
+  useEffect(() => setDaHydrate(true), []);
+  const isDesktop = daHydrate ? khoManThat : khoManBanDau === true;
   // Chuông chỉ dựng cho vai người lớn ở màn này (xem `khoiChoVai`), nên truy vấn cũng chỉ
   // chạy cho họ. Máy chủ CÓ trả mục cho học sinh và phụ huynh; đưa chuông vào nhánh học
   // sinh là việc của gói giữ màn đó, không phải một dòng sửa kèm ở đây.
@@ -590,21 +608,11 @@ function DesktopHome({ data }: { data: HomeData }) {
       soMuc: data.viecCho.data?.items.length ?? 0,
     },
   });
-  const [modalOpen, setModalOpen] = useState(false);
-  const [autoOpened, setAutoOpened] = useState(false);
-
-  // V3: popup mở tự động lần đầu trang chủ tải xong khi chưa check-in hôm nay —
-  // chỉ tự mở MỘT lần/phiên tải trang, không mở lại nếu em tự bấm đóng.
-  useEffect(() => {
-    if (data.isStudent && data.checkedInToday === false && !autoOpened) {
-      setModalOpen(true);
-      setAutoOpened(true);
-    }
-  }, [data.isStudent, data.checkedInToday, autoOpened]);
+  // Popup check-in tự mở ĐÃ GỠ: cổng ở `app/layout.tsx` làm đúng việc đó, và làm ở
+  // mọi trang chứ không riêng đây. Xem khối lý lẽ ở chỗ `CheckinModal` cũ đứng.
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-      {modalOpen && <CheckinModal onClose={() => setModalOpen(false)} />}
       <div className="flex-1 overflow-y-auto pb-[26px]">
         <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light px-7 pb-[74px] pt-4">
           <div
@@ -695,7 +703,7 @@ function DesktopHome({ data }: { data: HomeData }) {
             nhánh vai vì đây là luật của bố cục, không phải lựa chọn theo vai. */}
         <div className="relative z-[2] mt-[-34px] flex flex-wrap items-start gap-5 px-7">
           <div className="flex min-w-0 flex-[1.65_1_520px] flex-col gap-[18px]">
-            {khoi.theCheckin && <CheckinCardDesktop data={data} onOpenModal={() => setModalOpen(true)} />}
+            {khoi.theCheckin && <CheckinCardDesktop data={data} />}
 
             {/* BÓNG THẺ VỀ ĐÚNG SPEC (DESIGN.md "Thẻ": `0 3px 12–14px rgba(10,42,94,.06)`).
                 Năm thẻ của bản desktop đang chồng ba lớp bóng, lớp giữa tới .18 và lớp cuối
@@ -758,15 +766,14 @@ function HeroStat({ value, label, gold }: { value: React.ReactNode; label: strin
   );
 }
 
-const MOOD_STYLE: Record<MoodValue, { bg: string; shadow: string; text: string; icon: string }> = {
-  4: { bg: "linear-gradient(160deg,#00D97A,#00A85E)", shadow: "0 8px 18px rgba(0,168,94,.3)", text: "text-white", icon: "sentiment_very_satisfied" },
-  3: { bg: "linear-gradient(160deg,#4E9BFF,#2C7BF2)", shadow: "0 8px 18px rgba(44,123,242,.3)", text: "text-white", icon: "sentiment_neutral" },
-  2: { bg: "linear-gradient(160deg,#FFC833,#F5A300)", shadow: "0 8px 18px rgba(245,163,0,.3)", text: "text-[#6B4A00]", icon: "sentiment_dissatisfied" },
-  1: { bg: "linear-gradient(160deg,#FF7A7F,#F0474D)", shadow: "0 8px 18px rgba(240,71,77,.3)", text: "text-white", icon: "sentiment_sad" },
-};
-const MOOD_ORDER: MoodValue[] = [4, 3, 2, 1];
+// `MOOD_STYLE` và `MOOD_ORDER` đã gỡ cùng `CheckinModal` (21/08/2026): chúng là bảng
+// màu và thứ tự của LƯỚI CẢM XÚC RIÊNG mà popup cũ tự dựng. Bảng màu thật của bốn ô
+// nằm ở `components/mood-tile.tsx` — một chỗ, và nay là chỗ duy nhất.
 
-function CheckinCardDesktop({ data, onOpenModal }: { data: HomeData; onOpenModal: () => void }) {
+function CheckinCardDesktop({ data }: { data: HomeData }) {
+  const { moCheckin, dangKhoa } = useCongCheckin();
+  // Cùng luật với thẻ bản điện thoại: KHÔNG hỏi lần thứ hai khi popup đang hỏi.
+  if (dangKhoa) return null;
   return (
     <div className="relative -translate-y-1.5 rounded-[22px] border border-white bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
       <div className="flex items-center justify-between">
@@ -788,7 +795,8 @@ function CheckinCardDesktop({ data, onOpenModal }: { data: HomeData; onOpenModal
         {data.todayState === "ready" && data.checkedInToday === false && (
           <button
             type="button"
-            onClick={onOpenModal}
+            onClick={moCheckin}
+            aria-haspopup="dialog"
             className="flex-none rounded-[14px] bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[13.5px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)]"
           >
             Check-in ngay
@@ -809,209 +817,27 @@ function CheckinCardDesktop({ data, onOpenModal }: { data: HomeData; onOpenModal
 }
 
 // ---------------------------------------------------------------------------
-// V3/V3b (Hub Desktop V2): MỘT popup nổi trên trang chủ, hai trạng thái — chọn
-// cảm xúc rồi đổi thẳng sang ăn mừng, không điều hướng/không tải trang mới.
-//
-// Sửa 01/08/2026 (gói "tuong-phan-man-hoc-sinh") — POPUP TỰ MỞ MÀ KHÔNG PHẢI HỘP THOẠI.
-//
-// Đọc mã hôm 01/08: `grep -n 'role="dialog"\|aria-modal\|Escape'` trên trọn 10 file màn học
-// sinh trả về RỖNG. Khối này là một `<div className="fixed inset-0 z-50 …">` trần, mà nó TỰ
-// MỞ khi trang chủ tải xong (useEffect ở DesktopHome, điều kiện checkedInToday === false).
-// Bốn hậu quả, tất cả đọc thẳng ra từ mã:
-//   1. Focus vẫn nằm ở <body> phía sau. Người dùng bàn phím bấm Tab lần đầu rơi vào
-//      skip-link rồi menu trái — những thứ nằm DƯỚI lớp phủ, tức bấm vào một thứ không
-//      nhìn thấy được.
-//   2. Trình đọc màn hình không được báo là vừa có gì mở ra; nó vẫn đang đọc trang chủ.
-//   3. Không có Escape. Cách duy nhất đóng là tìm cho ra nút ✕ và bấm chuột vào.
-//   4. Nút ✕ đo được 36×36px — dưới mốc 44px của §11.
-//
-// Cách sửa: giữ nguyên toàn bộ phần nhìn thấy, thêm đủ hợp đồng của một hộp thoại —
-// role/aria-modal/aria-labelledby, đặt focus vào trong khi mở, TRẢ focus về chỗ cũ khi
-// đóng, Escape đóng, và vòng Tab quẩn trong hộp. Không dùng <dialog>+showModal() (trình
-// duyệt sẽ tự lo cả bốn việc) vì nó kéo theo ::backdrop và một tầng z-index riêng, đủ để
-// đổi hình dạng lớp phủ hiện tại — mà việc hôm nay là vá hành vi, không phải vẽ lại.
 // ---------------------------------------------------------------------------
-function CheckinModal({ onClose }: { onClose: () => void }) {
-  const utils = trpc.useUtils();
-  const [done, setDone] = useState<{ mood: MoodValue; checkedInAt: string; streakDays: number } | null>(null);
-  const submitMood = trpc.checkin.submitMood.useMutation({
-    onSuccess: (result, variables) => {
-      void utils.checkin.getTodayStatus.invalidate();
-      void utils.report.getMyLatestReport.invalidate();
-      setDone({
-        mood: variables.mood,
-        checkedInAt: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-        streakDays: result.streakDays,
-      });
-    },
-  });
+// POPUP CHECK-IN THỨ HAI ĐÃ GỠ 21/08/2026 — và đây là lý do, không phải dọn dẹp.
+// ---------------------------------------------------------------------------
+// Chỗ này từng có `CheckinModal`: một popup RIÊNG của trang chủ, tự mở bằng `useEffect`
+// khi `checkedInToday === false`, với lưới cảm xúc riêng, đường gửi riêng, màn ăn mừng
+// riêng. Nó ra đời trước cổng ADR-036 và làm gần đúng việc mà cổng nay làm.
+//
+// Ngày 21/08/2026 tôi thêm popup cổng ở `app/layout.tsx` mà KHÔNG thấy cái này — nên
+// một em học sinh mở trang chủ trên máy tính nhận HAI popup check-in chồng lên nhau.
+// Chủ đầu tư gọi đúng tên: *"có 2 loại checkin"*.
+//
+// Cái được giữ là cái của cổng, vì nó làm được ba việc cái cũ không làm được:
+//   · khoá THẬT (không ✕, không Escape) — cái cũ tự mở nhưng đóng lúc nào cũng được;
+//   · phủ MỌI trang, không riêng trang chủ;
+//   · dùng lại NGUYÊN ruột `CheckinView` — cùng hàng đợi ngoại tuyến, cùng đường gửi,
+//     cùng lời nhắn "cần gặp thầy cô". Cái cũ có một bản sao của tất cả những thứ đó,
+//     và một bản sao là một chỗ sẽ lệch.
+//
+// Thẻ `CheckinCardDesktop` thì Ở LẠI — nó là chỗ DUY NHẤT ở khổ máy tính (không có
+// thanh tab) để em mở lại popup mà đổi tâm trạng. Nút của nó nay gọi `moCheckin()`.
 
-  const panelRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  // Đưa focus vào hộp khi mở, và TRẢ nó về đúng phần tử vừa mở hộp khi đóng. Vế trả về
-  // mới là vế hay bị quên: thiếu nó thì đóng xong focus rơi về <body> và người dùng bàn
-  // phím phải Tab lại từ đầu trang — popup này còn TỰ mở, nên "chỗ cũ" có thể là chỗ em
-  // đang đọc dở chứ không phải một cái nút nào.
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
-    return () => opener?.focus?.();
-  }, []);
-
-  // Escape đóng, và Tab quẩn trong hộp. Danh sách phần tử focus được tính LẠI mỗi lần bấm
-  // phím chứ không chụp một lần lúc mở: nội dung hộp đổi hẳn sau khi em chọn cảm xúc (bốn
-  // ô biến mất, hai nút ăn mừng hiện ra), nên một ảnh chụp lúc mở sẽ giam focus vào những
-  // nút không còn tồn tại.
-  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      onClose();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    const focusables = panelRef.current?.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])',
-    );
-    if (!focusables || focusables.length === 0) return;
-    const first = focusables[0]!;
-    const last = focusables[focusables.length - 1]!;
-    if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    } else if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    }
-  }
-
-  return (
-    // onKeyDown đặt ở LỚP PHỦ chứ không phải trên từng nút: phím Tab/Escape đến từ bất kỳ
-    // phần tử nào bên trong và nổi bọt lên đây, nên một chỗ bắt là đủ cho cả hộp — kể cả
-    // sau khi nội dung hộp đổi hẳn sang màn ăn mừng.
-    <div
-      onKeyDown={onKeyDown}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1A32]/50 p-6 backdrop-blur-[2px]"
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        // Trỏ vào chính câu hỏi đang hiện, không vào một nhãn ẩn viết riêng: hai chuỗi thì
-        // sớm muộn có một chuỗi lạc hậu, mà chuỗi lạc hậu ở đây chỉ người mù mới nghe thấy.
-        aria-labelledby={done ? "checkin-modal-xong" : "checkin-modal-hoi"}
-        className="relative w-full max-w-[560px] overflow-hidden rounded-[28px] bg-white shadow-[0_30px_70px_rgba(6,20,45,.4)]"
-      >
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-[5px]"
-          style={{ background: "linear-gradient(90deg,#00D97A,#2C7BF2,#FFC833,#F0474D)" }}
-        />
-        <div className="flex items-center justify-end p-3">
-          {/* h-11 w-11 = 44×44 (§11). Màu icon #9AA5B5 cũ chỉ 2,49:1 trên trắng — dưới cả
-              mốc 3:1 dành cho thành phần phi văn bản (WCAG 1.4.11); token muted = 5,03:1. */}
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Đóng"
-            className="flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-[#F1F4F8]"
-          >
-            <span aria-hidden="true" className="msr text-[22px]">close</span>
-          </button>
-        </div>
-
-        {!done ? (
-          <div className="flex flex-col items-center px-8 pb-8 pt-1">
-            <Mascot pose="wave" width={64} />
-            <div id="checkin-modal-hoi" className="mt-2 text-center text-[24px] font-black text-ink">
-              Hôm nay con thấy thế nào?
-            </div>
-            <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#6B7789]">
-              <span aria-hidden="true" className="msr text-[15px] text-caption">lock</span>
-              {/* Nhãn nay đến từ MỘT hằng số dùng chung (ui/labels.ts), không chép tay.
-                  Vì sao: câu này đã đổi ba lần trong ngày 01/08/2026 — "Chỉ thầy cô chủ
-                  nhiệm thấy" → "…chủ nhiệm và thầy cô tâm lý thấy" → câu hiện tại, mỗi lần
-                  vì phạm vi core.can_read_mood() ở tầng dữ liệu đổi. Lần cuối là ADR-026 +
-                  migration 0044: nhánh chủ nhiệm bị cắt hẳn, cô không đọc được ô cảm xúc
-                  nữa (cô vẫn nhận cờ "cần để ý" và vẫn nhận ngay tín hiệu cần gặp). Ba lần
-                  chép tay ra ba màn là ba cơ hội cho một màn quên sửa — và popup này là màn
-                  duy nhất TỰ MỞ trước mặt em, tức chỗ lời hứa sai sẽ được đọc nhiều nhất. */}
-              {NHAN_AI_DOC_CAM_XUC}
-            </div>
-            <div className="mt-5 grid w-full grid-cols-4 gap-3">
-              {MOOD_ORDER.map((mood) => {
-                const style = MOOD_STYLE[mood];
-                return (
-                  <button
-                    key={mood}
-                    type="button"
-                    disabled={submitMood.isPending}
-                    onClick={() => submitMood.mutate({ mood })}
-                    className={`flex flex-col items-center gap-2 rounded-[18px] px-2 py-5 disabled:opacity-60 ${style.text}`}
-                    style={{ background: style.bg, boxShadow: style.shadow }}
-                  >
-                    <span aria-hidden="true" className="msr text-[40px]">{style.icon}</span>
-                    <span className="text-[13.5px] font-black">{MOOD_LABEL[mood]}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {/* Trước đây mutation hỏng thì bốn ô chỉ hết mờ rồi đứng im — em bấm lại
-                mãi mà không hiểu vì sao không có gì xảy ra. */}
-            {submitMood.isError && (
-              <div className="mt-4 w-full">
-                <MutationError error={submitMood.error} />
-              </div>
-            )}
-            <Link
-              href="/can-gap-thay-co"
-              className="mt-5 flex items-center gap-2 rounded-[14px] border-[1.7px] border-gold bg-[#FFFBEE] px-5 py-3.5 text-[13.5px] font-black text-gold-textDark"
-            >
-              <span aria-hidden="true" className="msr text-[19px] text-gold-textDark">waving_hand</span>
-              Mình cần gặp thầy cô
-            </Link>
-          </div>
-        ) : (
-          <div role="status" aria-live="polite" className="flex flex-col items-center px-8 pb-8 pt-1 text-center">
-            <Mascot pose="celebrate" width={76} />
-            <div id="checkin-modal-xong" className="mt-2 text-[26px] font-black text-ink">Tuyệt vời!</div>
-            <p className="mt-2 max-w-[420px] text-[13.5px] leading-relaxed text-[#5B6B80]">
-              Hôm nay con thấy <b className="text-successText">{MOOD_LABEL[done.mood]}</b> — đã ghi lúc{" "}
-              <b className="text-navy">{done.checkedInAt}</b>.
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <span className="flex items-center gap-2 rounded-2xl bg-[#E3F8ED] px-[18px] py-3">
-                <span aria-hidden="true" className="msr text-[21px] text-[#00A05F]">check_circle</span>
-                <span className="text-[12.5px] font-black text-[#00693F]">Điểm danh hôm nay</span>
-              </span>
-              <span className="flex items-center gap-2 rounded-2xl bg-[#FFF7E0] px-[18px] py-3">
-                <span aria-hidden="true" className="msr text-[21px] text-[#F58F00]">local_fire_department</span>
-                <span className="text-[12.5px] font-black text-[#8A5A00]">Chuỗi {done.streakDays} ngày</span>
-              </span>
-            </div>
-            <div className="mt-5 flex w-full flex-wrap justify-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 basis-[200px] rounded-[15px] bg-gradient-to-r from-navy to-navy-light py-[15px] text-[14px] font-black text-white shadow-[0_9px_22px_rgba(10,42,94,.28)]"
-              >
-                Xong, về trang chủ
-              </button>
-              <Link
-                href="/can-gap-thay-co"
-                className="flex items-center gap-2 rounded-[15px] border-[1.7px] border-gold bg-[#FFFBEE] px-5 py-[15px] text-[14px] font-black text-gold-textDark"
-              >
-                <span aria-hidden="true" className="msr text-[19px] text-gold-textDark">waving_hand</span>
-                Cần gặp thầy cô
-              </Link>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function ThisWeekCard({
   state,

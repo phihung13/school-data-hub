@@ -37,9 +37,25 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import type { HubRole } from "@hub/core/contracts";
-import { CheckinView } from "./checkin-view";
 import { HopThoai } from "./ui/hop-thoai";
+
+/**
+ * `CheckinView` TẢI RỜI (21/08/2026) — và đây là một lỗi tôi tự gây rồi tự sửa.
+ *
+ * Cổng này đứng ở `app/layout.tsx`, tức nó có mặt trên MỌI trang. Import thẳng
+ * `CheckinView` vào đây là kéo một component ~950 dòng (kèm hàng đợi IndexedDB, bộ gửi
+ * lại, bốn thể màn) vào gói JS của mọi trang — kể cả trang của giáo viên, của phụ huynh,
+ * và của em đã khai xong. Gói nặng thì hydrate lâu, mà trang chủ chỉ chọn được bố cục
+ * máy tính SAU khi hydrate (`useIsDesktop`, xem `lib/viewport.ts`) — nên cú nháy
+ * "hiện bản điện thoại rồi mới đổi" dài ra đúng bằng phần tôi vừa thêm. Chủ đầu tư đo
+ * bằng mắt: *"mới vào giao diện dạng mobile ở desktop hiện 1s"*.
+ *
+ * `ssr: true` (mặc định) nên popup KHOÁ vẫn có trong HTML máy chủ — thứ đã đo ở lượt rà
+ * trước không mất. Chỉ khác: mảnh JS ấy chỉ tải khi popup thật sự mở.
+ */
+const CheckinView = dynamic(() => import("./checkin-view").then((m) => m.CheckinView));
 
 interface CongCheckinCtx {
   /** Mở popup theo ý người dùng (nút tròn giữa thanh tab) — luôn có đường ra. */
