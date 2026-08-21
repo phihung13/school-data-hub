@@ -40,7 +40,9 @@ import {
   ATTENDANCE_UNKNOWN_LABEL,
   HELP_REQUEST_TOPIC_LABEL,
   HELP_REQUEST_URGENCY_LABEL,
+  MOOD_LABEL,
   type AttendanceStatus,
+  type MoodValue,
   type StudentCheckinDay,
 } from "@hub/core/contracts";
 import { EmptyState, ErrorState, LoadingState } from "../ui/query-state";
@@ -350,9 +352,12 @@ function CheckinStrip({
           câu 96 ký tự — chú giải ngay trên đã cho "Chưa điểm danh" và "Vắng" hai icon,
           hai màu nền, hai cái tên khác nhau. Chip chỉ còn nói phần chú giải không nói
           được: hôm nay có bao nhiêu ngày như thế.
-          Chip thứ hai là NHÃN QUYỀN RIÊNG TƯ (ADR-026 · §9) — giữ, kèm icon `lock`. Chữ
-          "điểm danh" phải đứng ngay trước nó: `a11y-man-nguoi-lon.test.ts` đo rằng câu
-          này nằm đúng chỗ lịch điểm danh, chứ không trôi sang một khối khác. */}
+          Chip thứ hai LẬT 21/08/2026 (ADR-035 · §9): cô đọc lại được cảm xúc, nên câu
+          cũ "cảm xúc chỉ thầy cô tâm lý đọc được" thành nói dối nếu để nguyên. Câu mới
+          in ra ràng buộc CÒN LẠI — §5, cấm dùng cảm xúc xếp loại — đặt đúng chỗ cô vừa
+          đọc được cảm xúc, tức đúng lúc lời nhắc có việc để làm. Vẫn icon `lock`, và chữ
+          "điểm danh" vẫn đứng ngay trước: `a11y-man-nguoi-lon.test.ts` đo rằng câu này
+          nằm đúng chỗ lịch điểm danh, chứ không trôi sang một khối khác. */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-chip px-2.5 py-1 text-[10.5px] font-black text-subtle">
           <span className="msr text-[14px]" aria-hidden>
@@ -366,7 +371,7 @@ function CheckinStrip({
           <span className="msr text-[14px]" aria-hidden>
             lock
           </span>
-          Lịch điểm danh · cảm xúc chỉ thầy cô tâm lý đọc được
+          Lịch điểm danh · cảm xúc em ghi không dùng để xếp loại
         </span>
       </div>
       {/* GỠ `ARRIVAL_BAND_UNAVAILABLE_NOTE` khỏi màn này (06/08/2026). Hai câu 187 ký tự
@@ -394,6 +399,12 @@ export function dayCellLabel(iso: string, entry: StudentCheckinDay | null): stri
   return [
     formatDate(iso),
     entry?.status ? statusWord(entry.status) : "chưa có dữ liệu",
+    // TRỞ LẠI 21/08/2026 (ADR-035, migration 0059): cảm xúc em ghi đọc ra ở đây —
+    // đúng chỗ cô bấm vào MỘT ngày, tức đọc theo từng ngày như nhật ký, không phải một
+    // cột màu tô sẵn cả lưới (bài học MOOD_CELL cũ ở đầu file vẫn đứng: lịch khoá theo
+    // ĐIỂM DANH, cảm xúc là chi tiết của ngày được chọn). Không có mood thì im — dòng
+    // cô ghi hộ và ngày em không ghi đều không có, và "không ghi" không phải tín hiệu.
+    entry?.mood != null ? `em ghi cảm xúc: ${MOOD_LABEL[entry.mood as MoodValue]}` : null,
     // Giờ CHỈ đọc ra khi em tự bấm. Nhãn cũ ghép "lúc HH:MM" cho mọi dòng, nên ô ngày
     // cô đánh vắng đọc thành "… vắng · lúc 03:28 · thầy cô ghi hộ" — vừa nói em vắng
     // vừa nói em có giờ check-in, mà con số đó là giờ cô bấm Lưu.

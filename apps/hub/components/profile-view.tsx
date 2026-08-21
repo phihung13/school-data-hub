@@ -186,25 +186,20 @@ function LogoutBox({ className = "" }: { className?: string }) {
 /**
  * "Ai thấy gì của mình?" — bắt buộc có ở MỌI khổ màn (DESIGN-GUIDELINES §9).
  *
- * Viết lại 01/08/2026 (ADR-026, migration 0044). Đây là màn SINH RA để nói thật, nên
- * nó mà nói thiếu thì hỏng gấp đôi — và dòng cô chủ nhiệm là dòng dễ nói thiếu nhất.
+ * Dòng cô chủ nhiệm đã đổi chiều BA LẦN, mỗi lần theo một quyết định chủ đầu tư,
+ * và mỗi lần thẻ này phải đổi CÙNG migration — vì đây là màn SINH RA để nói thật:
+ *   · 31/07/2026 (ADR-025): cô đọc được cảm xúc.
+ *   · 01/08/2026 (ADR-026, 0044): cô bị cắt — dòng tách làm hai ý, có câu
+ *     "biết vậy thôi, không biết con đã ghi gì" vạch ranh giới cho em.
+ *   · 21/08/2026 (ADR-035, 0059): cô đọc lại được — dòng GỘP về một ý.
  *
- * Cái đã đổi ở tầng dữ liệu: `core.can_read_mood()` mất nhánh chủ nhiệm, nay chỉ còn
- * `is_me ∨ in_my_cluster`. Cô KHÔNG đọc được ô cảm xúc nữa — không trên màn hình, và
- * hỏi thẳng cơ sở dữ liệu cũng bị Postgres từ chối. Nhưng cô KHÔNG mất hết: cô vẫn
- * thấy điểm danh, vẫn đọc lời nhắn "cần gặp thầy cô", và vẫn nhận tín hiệu "em này cần
- * để ý" khi có nhiều ngày liền không vui.
+ * Vì sao lần này phải GỘP chứ không giữ câu hai-ý cho "an toàn": câu hai-ý nay nói
+ * ÍT hơn sự thật — em tưởng ô cảm xúc là chỗ cô không thấy và viết như viết chỗ
+ * riêng tư, trong khi cô đọc được. Trấn an sai chỗ chính là kiểu nói dối mà §9 cấm,
+ * và ở màn này nó sai theo hướng nguy hiểm nhất cho em.
  *
- * Vì thế dòng của cô phải TÁCH LÀM HAI Ý, đúng như §9 chốt, và không được gộp:
- *  · gộp thành "cô không thấy gì" là nói QUÁ — em sẽ tưởng bấm nút cần gặp cũng vô ích,
- *    và đó là đường an toàn duy nhất em có.
- *  · gộp thành "cô thấy cảm xúc" là nói THIẾU SỰ THẬT MỚI — đúng câu vừa bị bỏ.
- * Câu "biết vậy thôi, không biết con đã ghi gì" là câu quan trọng nhất cả khối: nó nói
- * cho em biết ranh giới, để em không phải tự đoán ranh giới đó bằng cách thử.
- *
- * KHÔNG viết lại theo ảnh mẫu. Ảnh ghi "Cô Thu (GVCN) — cảm xúc…" — chữ đó đã hết đúng
- * từ ADR-026, và nó sai theo hướng nguy hiểm nhất: hứa với em rằng cô đọc được thứ cô
- * không đọc được nữa.
+ * Nếu có lần đổi thứ tư: sửa DESIGN-GUIDELINES §9 trước (nhãn là hợp đồng), rồi sửa
+ * đây + NHAN_AI_DOC_CAM_XUC trong labels.ts CÙNG một commit với migration.
  */
 function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
   const teacher = teacherLabel(teacherName);
@@ -222,16 +217,15 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
           <b>Thầy cô tâm lý</b> — đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
         </span>
       </div>
-      {/* Dòng dài nhất của khối, và cố ý dài: nó là chỗ DUY NHẤT em đọc được ranh giới
-          mới của cô chủ nhiệm. Icon `visibility` (không phải check/cancel) vì dòng này
-          không thuộc hẳn nhóm nào — cô thấy một phần, và phần đó phải được kể ra. */}
+      {/* GỘP LẠI 21/08/2026 (ADR-035, migration 0059): cô chủ nhiệm đọc lại được nhật ký
+          cảm xúc, nên dòng hai-ý của ADR-026 ("cô không đọc được... biết vậy thôi") đã hết
+          đúng và PHẢI gộp — giữ nó là hứa với em một ranh giới không còn tồn tại, sai theo
+          hướng nguy hiểm: em tưởng cô không thấy và viết như chỗ riêng tư. Icon đổi về
+          check_circle vì cô nay thuộc hẳn nhóm "đọc được", không còn lưng chừng. */}
       <div className="flex items-start gap-2.5">
-        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#2C7BF2]">visibility</span>
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
         <span className="text-[12.5px] leading-relaxed text-link">
-          <b>{teacher}</b> — xem điểm danh và đọc lời nhắn con gửi. Cô <b>không đọc</b> được con đã
-          ghi cảm xúc gì mỗi ngày. Cô chỉ biết là con <b>cần được để ý</b> khi con bấm nút cần gặp,
-          hoặc khi hệ thống thấy con có nhiều ngày liền không vui — biết vậy thôi, không biết con đã
-          ghi gì.
+          <b>{teacher}</b> — xem điểm danh, đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
         </span>
       </div>
       {/* RÚT NGẮN 06/08/2026 (§1.5). Vế trong ngoặc là một GIỚI HẠN QUYỀN, không phải chữ

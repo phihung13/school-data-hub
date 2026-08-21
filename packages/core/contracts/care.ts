@@ -634,12 +634,13 @@ export const ReportApprovalRow = z.object({
   /** Số ngày em CÓ dòng điểm danh trong tuần — đọc từ `attendance.checkins`. */
   checkinDays: z.number().int().nonnegative(),
   /**
-   * Số ngày tâm trạng "Vui". **`null` với GVCN** kể từ ADR-026 — cô không đọc được nguồn
-   * của con số này.
+   * Số ngày tâm trạng "Vui". Với GVCN: `null` từ ADR-026 (01/08) → SỐ THẬT trở lại từ
+   * ADR-035 (21/08, migration 0059) — nguồn là `attendance.happy_days(em, thứ Hai, thứ
+   * Sáu)`, cổng của hàm nay có nhánh chủ nhiệm.
    *
-   * `.nullable()` chứ không để rơi xuống `0`: `0` ở đây là một lời nói dối thay cho
-   * "không được phép biết", và nó là loại nói dối tệ nhất vì trông giống hệt một phép đo.
-   * Cô sẽ đọc "tuần này em không có ngày nào vui" về một em có thể vui cả tuần.
+   * `.nullable()` GIỮ NGUYÊN: hàm vẫn trả NULL cho người ngoài phạm vi, và `0` vẫn không
+   * được phép thay thế nó — `0` ở đây là một lời nói dối thay cho "không được phép biết",
+   * loại nói dối tệ nhất vì trông giống hệt một phép đo.
    */
   happyDays: z.number().int().nonnegative().nullable(),
   /** Bản xem trước bắt buộc — không optional: thiếu nó thì màn duyệt quay lại ký mù. */
@@ -846,6 +847,16 @@ export const StudentCheckinDay = z.object({
   checkedInAt: z.string().nullable(),
   /** 'app' | 'teacher' | … — để phân biệt "em tự bấm" với "cô ghi hộ" (ADR-007). */
   source: z.string().nullable(),
+  /**
+   * Mức cảm xúc em ghi hôm đó (1 "Buồn" … 4 "Vui"). TRỞ LẠI 21/08/2026 (ADR-035,
+   * migration 0059 — đảo ADR-026): GVCN của em đọc lại được nhật ký cảm xúc. Nguồn là
+   * `attendance.checkins_care` (LEFT JOIN theo id), KHÔNG phải cột `mood` của bảng gốc —
+   * cột đó vẫn nằm ngoài grant của authenticated (0038), nên với người xem không thuộc
+   * `core.can_read_mood()` giá trị này là `null` chứ không phải lỗi. `null` gộp hai
+   * nghĩa "em không ghi" và "không được đọc" — chấp nhận Ở ĐÂY vì màn này chỉ mở được
+   * bởi đúng GVCN của lớp (homeroomProcedure), tức người luôn thuộc phạm vi đọc.
+   */
+  mood: z.number().int().min(1).max(4).nullable(),
 });
 export type StudentCheckinDay = z.infer<typeof StudentCheckinDay>;
 

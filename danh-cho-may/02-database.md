@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 32
+sync-version: 33
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1020,6 +1020,22 @@ Ba phép kiểm ở `0052`/`0055` đổi theo và **ghi rõ là bị supersede**
 **Hợp đồng `@hub/core/contracts` lên 0.3.0** — có mục `Removed` thì phải tăng phiên bản, và `tools/contracts-lint.mjs` đã chặn đúng một lần trước khi tôi tăng. Sáu field bị gỡ đều sinh trong hai ngày 07–08/08 và chưa từng qua một bản phát hành nào, nên không đi expand–contract; lý do nêu tường minh trong chính mục đó.
 
 **Toàn bộ pgTAP sau đợt N: 1.041 assertion / 56 file**, khớp mốc.
+
+## Đợt O (`0059`, 21/08/2026) — GVCN đọc lại nhật ký cảm xúc (ADR-035, đảo ADR-026)
+
+Trong đợt hợp nhất sơ đồ "AI OS" của cấp trên (ADR-034), chủ đầu tư đảo quyết định 01/08: `core.can_read_mood()` **nhận lại nhánh `is_homeroom_of`** — phạm vi nay là *chính em ∨ tâm lý cụm ∨ GVCN của em*. Nhánh viết **tường minh**, không quay về `can_see_care` (hàm đó thêm phụ huynh qua `is_my_child` — không nằm trong quyết định; bài học ADR-025 "bốn câu hỏi phạm vi, bốn hàm" giữ nguyên).
+
+**Ba cửa của `0044`: mở MỘT, chỉnh MỘT, không đụng MỘT.** `checkins_care` mở theo hàm (view không sửa); `happy_days()` thêm nhánh chủ nhiệm vào cổng — **sàn 5 ngày giữ nguyên cho mọi vai**, vì nó che phụ huynh và ADR-035 không mở gì cho phụ huynh; `mood_trends` không sửa một chữ — policy trỏ `can_read_mood` từ `0044` nên mở/đóng theo hàm, đúng phần thưởng của việc dồn phạm vi về một chỗ.
+
+**Đo thật trên hub_dev (21/08/2026, kho seed dựng lại 02/08 nên khác số 01/08):** cô Lan (GVCN 6A1) qua `checkins_care`: **0 → 63** dòng — đúng tổng mood của 12 em đang enrolled lớp cô, trên kho 538 dòng; cô Hạnh (GVCN 6A2) đọc em 6A1: **0** (không rò theo cơ sở); cô Mai (tâm lý cụm): **478 → 478**; phụ huynh: **0 → 0**, số tổng hợp vẫn trả; `happy_days` 1 ngày dưới danh tính được phép: vẫn nổ `22023`.
+
+**Bốn assertion lật, không xoá** — `0038` (1: "0 DÒNG" → "đọc được ĐÚNG GIÁ TRỊ", lần đổi chiều thứ HAI của cùng một câu, lịch sử ba lần ghi ngay tại chỗ) và `0044` (3: cửa view, cửa mood_trends, cửa happy_days + một câu khoá hình dạng `prosrc` đảo từ *không nhắc* sang *có* `is_homeroom_of`). File mới `0059_gvcn_doc_lai_mood_test.sql` (**12 assertion**) canh phần một lần MỞ quyền hay làm rơi nhất: GVCN **lớp khác** vẫn 0 ở cả ba cửa, bộ môn/quản trị không hưởng gì, phụ huynh không mở theo **và không mất theo**, `can_read_mood` không lén mang `is_my_child`.
+
+**Tầng màn hình đi cùng đợt** (nhãn là lời hứa in ra, để nguyên là nói dối): nhãn chuẩn §9 DESIGN-GUIDELINES đổi thành *"Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc"* (`labels.ts` một nguồn); thẻ "Ai thấy gì của mình?" gộp dòng cô về một ý; hồ sơ em phía GVCN đọc mood qua **LEFT JOIN `checkins_care` theo `id`** (bảng gốc vẫn là khung — bài học "view lọc theo DÒNG" của [QĐ-1] còn nguyên) và in cảm xúc ở dòng chi tiết từng ngày; màn duyệt báo cáo gọi lại `happy_days` (khoảng thứ Hai→thứ Sáu khít sàn); chip dưới lịch đổi từ lời hứa hết hạn sang ràng buộc còn hiệu lực: *"cảm xúc em ghi không dùng để xếp loại"* (§5). Contract: `StudentCheckinDay.mood` (Added, 0.3.0 Unreleased); `happyDays` không đổi kiểu — chỉ hết là `null` cố định với GVCN.
+
+**Cái §5 mất và giữ, nói thẳng (chép từ ADR-035):** `reporting` vẫn bị revoke, `class_pulse`/`grade_pulse` vẫn gác cổng vai, `care.flags.detail` vẫn khoá (`0049` không đảo theo). Thứ không còn: bức tường kỹ thuật giữa chính-cô-GVCN và nhật ký em lớp cô — §5 với cô từ nay sống bằng kỷ luật cá nhân và sổ vết.
+
+**Toàn bộ pgTAP sau đợt O: 1.053 assertion / 57 file**, khớp mốc, trên database dựng lại từ đầu.
 
 ## Quy tắc migration (§2)
 

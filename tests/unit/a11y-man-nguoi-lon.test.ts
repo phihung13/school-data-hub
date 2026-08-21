@@ -247,26 +247,33 @@ describe("không màn người lớn nào dựa vào title= để giải thích 
 // 3. Im lặng không phải kết luận — mỗi ô trống nói đúng loại trống của nó
 // ---------------------------------------------------------------------------
 
-describe("cô giáo phải biết VÌ SAO không đọc được cảm xúc của em ([QĐ-1])", () => {
-  // CHUYỂN CHỖ KIỂM, KHÔNG BỎ KIỂM (02/08/2026).
+describe("chỗ cô đọc cảm xúc phải in ra ràng buộc còn hiệu lực (ADR-035 lật [QĐ-1])", () => {
+  // LẬT LẦN HAI 21/08/2026 (ADR-035, migration 0059) — vẫn không bỏ kiểm.
   //
-  // Ô "Cảm xúc lớp hôm nay" đã gỡ khỏi buồng lái theo yêu cầu chủ đầu tư ("nếu bị khoá
-  // rồi thì hiển thị lên đây làm gì") — nó không có dữ liệu, không có việc để làm, và chỉ
-  // lặp lại một quy định đã có hiệu lực từ 01/08.
-  //
-  // Nhưng TÍNH CHẤT phải giữ nguyên: cô không được để mặc tự đoán vì sao lịch của em
-  // thôi tô màu theo tâm trạng. Câu đó nay đứng ở `gvcn/student-detail-view.tsx`, ngay
-  // dưới lịch điểm danh của từng em — đúng chỗ người ta đi tìm nó. Bài kiểm đi theo câu
-  // chữ, không đi theo cái ô đã gỡ.
+  // Bản 02/08 canh câu "cảm xúc chỉ thầy cô tâm lý đọc được" dưới lịch điểm danh — đúng
+  // với ADR-026. ADR-035 mở lại quyền đọc cho GVCN nên câu đó thành NÓI DỐI nếu còn in.
+  // Tính chất bài kiểm giữ nguyên: ngay chỗ lịch của em, màn hình phải nói THẬT về quy
+  // định đang hiệu lực. Quy định còn lại đáng in nhất là §5 — cảm xúc không dùng xếp
+  // loại — đặt đúng lúc cô vừa đọc được cảm xúc, tức đúng lúc lời nhắc có việc để làm.
   const src = read(join("gvcn", "student-detail-view.tsx"));
 
   it("màn hồ sơ một em nói ra quy định, không để cô tự đoán", () => {
-    expect(src).toContain("chỉ thầy cô tâm lý đọc được");
+    expect(src).toContain("cảm xúc em ghi không dùng để xếp loại");
+    // Câu của thời ADR-026 phải BIẾN MẤT — giữ nó là hứa một ranh giới không còn tồn tại.
+    expect(src).not.toContain("chỉ thầy cô tâm lý đọc được");
   });
 
-  it("và nói ở ĐÚNG chỗ lịch điểm danh, nơi màu sắc vừa đổi", () => {
-    const i = src.indexOf("chỉ thầy cô tâm lý đọc được");
+  it("và nói ở ĐÚNG chỗ lịch điểm danh, nơi cảm xúc vừa quay lại", () => {
+    const i = src.indexOf("cảm xúc em ghi không dùng để xếp loại");
     expect(src.slice(Math.max(0, i - 400), i)).toMatch(/điểm danh/);
+  });
+
+  it("cảm xúc đọc ra theo TỪNG NGÀY cô chạm vào, qua MOOD_LABEL chuẩn", () => {
+    // dayCellLabel là đường đọc nhật ký của cô — phải dùng nhãn chung, không tự bịa chữ.
+    const i = src.indexOf("function dayCellLabel");
+    const block = src.slice(i, src.indexOf("function DayCell"));
+    expect(block).toContain("MOOD_LABEL");
+    expect(block).toContain("em ghi cảm xúc");
   });
 });
 

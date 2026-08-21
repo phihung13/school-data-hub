@@ -531,7 +531,8 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "occurredOn",
 //       "status",
 //       "checkedInAt",
-//       "source"
+//       "source",
+//       "mood"
 //     ],
 //     "StudentHelpRequest": [
 //       "helpRequestId",

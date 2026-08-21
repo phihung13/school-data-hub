@@ -179,9 +179,10 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
     const row = await rowOf(STUDENT_FULL, week);
     expect(row).toBeDefined();
     expect(row!.checkinDays).toBe(5);
-    // ADR-026: cô không đọc được số ngày "Vui". `null`, KHÔNG phải 0 — 0 sẽ đọc thành
-    // "em không có ngày nào vui" về một em vừa có 4 ngày Vui thật trong tuần đó.
-    expect(row!.happyDays).toBeNull();
+    // LẬT 21/08/2026 (ADR-035, 0059): cô đọc lại được số ngày "Vui" — seedWeek gieo đúng
+    // 4 ngày Vui, nên phải ra ĐÚNG 4, không phải "một số nào đó". Bản ADR-026 của câu
+    // này đòi `null`; nghĩa của `null` ("không được phép biết") vẫn sống cho vai khác.
+    expect(row!.happyDays).toBe(4);
 
     // Không so với hằng số viết tay: bản xem trước phải là HỆ QUẢ của chính hai con số
     // đứng cạnh nó. Lệch nhau ở đây nghĩa là màn hình hiện một đằng, phụ huynh đọc một nẻo.
@@ -192,12 +193,13 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
         streakDays: row!.preview.streakDays,
       }),
     );
-    // Bản của CÔ chỉ dựng được mục Glow từ điểm danh — mục tâm trạng cần nguồn cô không
-    // đọc được. Nên headline nhẹ hơn bản phụ huynh đọc, và màn hình PHẢI nói ra chỗ hụt
-    // đó thay vì để nó biến mất lặng lẽ.
-    expect(row!.preview.headline).toBe("Một tuần ổn định");
-    expect(row!.preview.glow).toHaveLength(1);
-    expect(row!.preview.glowIncomplete).toBe(true);
+    // LẬT 21/08/2026 (ADR-035): bản của cô nay dựng đủ CẢ HAI mục Glow — điểm danh và
+    // tâm trạng — nên trùng với bản phụ huynh đọc, headline lên nấc đầy đủ, và không còn
+    // chỗ hụt nào để `glowIncomplete` phải khai. Bản ADR-026 của ba câu này kiểm chiều
+    // "cô thiếu một mục và màn hình nói ra chỗ hụt".
+    expect(row!.preview.headline).toBe("Một tuần rực rỡ!");
+    expect(row!.preview.glow).toHaveLength(2);
+    expect(row!.preview.glowIncomplete).toBe(false);
     // Ở đây TỪNG có `expect(row!.preview.streakDays).toBeGreaterThan(0)`. Bỏ 01/08/2026:
     // câu đó xanh hay đỏ phụ thuộc HÔM NAY LÀ THỨ MẤY. seedWeek() gieo 5 ngày Hai→Sáu,
     // còn chuỗi chỉ tính khi có check-in ĐÚNG NGÀY HÔM NAY — nên chạy trong tuần thì
@@ -261,12 +263,14 @@ describe("cô ký cái gì · listReportApprovals trả về bản phụ huynh s
     const text = JSON.stringify(row!.preview).toLowerCase();
     // Mệnh lệnh 4: dữ liệu cảm xúc không lọt ra ngoài phạm vi đã hứa với đứa trẻ. Em bấm
     // nút để GẶP THẦY CÔ, không để việc đó được kể lại cho bố mẹ dưới dạng lời khen.
+    // Hai câu này là LÕI của bài — ADR-035 mở quyền đọc cho cô, KHÔNG đổi một chữ nào
+    // ở đây: tín hiệu "cần gặp" vẫn tuyệt đối không được xuất hiện trong bản gửi bố mẹ.
     expect(text).not.toContain("cần gặp");
     expect(text).not.toContain("dũng cảm");
-    // Đúng một lời khen — từ điểm danh. Lời khen về tâm trạng cần nguồn cô không đọc
-    // được sau ADR-026; `glowIncomplete` là chỗ nói ra điều đó.
-    expect(row!.preview.glow).toHaveLength(1);
-    expect(row!.preview.glowIncomplete).toBe(true);
+    // LẬT 21/08/2026 (ADR-035): hai lời khen — điểm danh VÀ tâm trạng (cô đọc được nguồn
+    // trở lại) — nhưng vẫn không mảy may một dòng nào từ help_requests, như hai câu trên canh.
+    expect(row!.preview.glow).toHaveLength(2);
+    expect(row!.preview.glowIncomplete).toBe(false);
   });
 
   it("IM LẶNG · em chưa có dữ liệu vẫn có mặt, kèm bản xem trước trống thật", async ({ skip }) => {

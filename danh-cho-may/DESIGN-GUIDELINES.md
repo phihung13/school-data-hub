@@ -86,21 +86,21 @@
 
 ## 9. Riêng tư & phân quyền
 
-- Mood/check-in cảm xúc: **chỉ chính em và thầy cô tâm lý** đọc được (`core.can_read_mood()` = `is_me ∨ in_my_cluster`, migration `0044`, ADR-026 — quyết định chủ đầu tư 01/08/2026). Giáo viên chủ nhiệm **không** đọc được nữa: không trên màn hình, và hỏi thẳng cơ sở dữ liệu cũng bị Postgres từ chối. Cô **vẫn** nhận cờ "cần để ý" (`care.flags`) và **vẫn** nhận ngay tín hiệu "cần gặp thầy cô". Câu cũ ở dòng này ("chỉ GVCN và tâm lý cụm thấy") **đã sai từ 01/08/2026** — giữ lại đây để không ai chép nhầm.
+- Mood/check-in cảm xúc: **chính em, thầy cô tâm lý, và giáo viên chủ nhiệm CỦA EM** đọc được (`core.can_read_mood()` = `is_me ∨ in_my_cluster ∨ is_homeroom_of`, migration `0059`, ADR-035 — quyết định chủ đầu tư 21/08/2026, đảo ADR-026). Dòng này đã đổi chiều **ba lần** (31/07 mở GVCN → 01/08 cắt → 21/08 mở lại) — ai định đổi lần thứ tư phải đọc đủ ADR-025/026/035 trước. Phụ huynh, BGH, giáo viên bộ môn, GVCN lớp khác: **vẫn không** đọc được, cả ba lần đều thế.
 
   **NHÃN CHUẨN — hai câu dưới đây là hợp đồng, tầng màn hình in ĐÚNG chữ này.** Lý do phải chốt ở đây chứ không để mỗi màn tự viết: nhãn nói ít hơn hoặc nhiều hơn sự thật đều là nói dối, và một màn viết lệch là cả lời hứa lệch. Viết cho trẻ 11 tuổi đọc — §8 cấm từ vựng vận hành (cờ / ngưỡng / quét / leo thang) trước mặt học sinh, nên hai câu này không được chứa chữ nào trong số đó.
 
-  1. **Nhãn ngắn, đặt ngay tại chỗ em nhập** (dưới bốn ô mặt cười ở `/checkin`, lưới check-in trang chủ, mọi ô nhập cảm xúc phát sinh sau này), kèm icon `lock`:
+  1. **Nhãn ngắn, đặt ngay tại chỗ em nhập** (dưới bốn ô mặt cười ở `/checkin`, lưới check-in trang chủ, mọi ô nhập cảm xúc phát sinh sau này), kèm icon `lock` (đổi 21/08/2026 theo ADR-035 — bản cũ "Chỉ thầy cô tâm lý đọc" hết đúng):
 
-     > **Chỉ thầy cô tâm lý đọc**
+     > **Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc**
 
-  2. **Câu dài, trong thẻ "Ai thấy gì của mình?"** (`profile-view.tsx`) — dòng dành cho giáo viên chủ nhiệm phải tách làm hai ý đúng sự thật mới, không được gộp:
+  2. **Câu dài, trong thẻ "Ai thấy gì của mình?"** (`profile-view.tsx`) — dòng giáo viên chủ nhiệm gộp lại được từ 21/08/2026, vì sự thật đã gộp lại:
 
      > **Thầy cô tâm lý** — đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
      >
-     > **{tên cô chủ nhiệm}** — xem điểm danh và đọc lời nhắn con gửi. Cô **không đọc** được con đã ghi cảm xúc gì mỗi ngày. Cô chỉ biết là con **cần được để ý** khi con bấm nút cần gặp, hoặc khi hệ thống thấy con có nhiều ngày liền không vui — biết vậy thôi, không biết con đã ghi gì.
+     > **{tên cô chủ nhiệm}** — xem điểm danh, đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
 
-  Ba điều **cấm** in ra phía GVCN, vì cả ba đều nói nhiều hơn "cần để ý": chiều của cảm xúc ("cảm xúc đi xuống", "buồn/mệt"), **số ngày** (`negativeDays`, `negativeStreak`), và bất kỳ trích dẫn nào từ ô nhập của em. Cắt tại contract (`packages/core/contracts/care.ts`, `FlagSummary.detail`), không chỉ ẩn bằng CSS — ẩn bằng CSS thì số vẫn đi tới trình duyệt của cô.
+  Hai điều **vẫn cấm** in ra phía GVCN (điều thứ ba của bản 01/08 — "chiều của cảm xúc" — đã hết hiệu lực vì cô đọc được nhật ký rồi): **số ngày trong chi tiết cờ** (`negativeDays`, `negativeStreak` — cột `care.flags.detail` vẫn khoá với authenticated, migration `0049` không đảo theo ADR-035) và **mọi từ vựng vận hành** trong giao diện của em (§8). Chi tiết cờ vẫn cắt tại contract (`packages/core/contracts/care.ts`, `FlagSummary.detail`), không chỉ ẩn bằng CSS.
 - Ghi chú tư vấn (Tâm lý cụm): GVCN & PH không xem được — luôn hiện badge `visibility_off`.
 - BGH/Điều hành: chỉ dữ liệu **tổng hợp theo lô**, ghi rõ "không tra cứu học sinh cá nhân".
 - Cờ chỉ ghi *loại tín hiệu*, không sao chép nội dung tâm sự.

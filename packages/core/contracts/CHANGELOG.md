@@ -17,6 +17,16 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ## [Unreleased]
 
+### Added
+
+- `StudentCheckinDay.mood` (`number 1..4 | null`) — GVCN đọc lại được nhật ký cảm xúc
+  (ADR-035, 21/08/2026, đảo ADR-026; migration `0059`). Nguồn là LEFT JOIN
+  `attendance.checkins_care` theo `id` trong `care.getStudentDetail` — cột `mood` của
+  bảng gốc vẫn ngoài grant, nên với người xem ngoài `core.can_read_mood()` field này là
+  `null`, không phải lỗi. Cùng đợt: `ReportApprovalRow.happyDays` (đã `nullable` từ
+  trước, không đổi kiểu) bắt đầu mang SỐ THẬT cho GVCN thay vì `null` cố định — client
+  nào lỡ coi `null` là hằng số thì đọc lại ghi chú tại field.
+
 ## [0.3.0] — 08/08/2026
 
 **Phiên bản tăng vì có mục `Removed`.** Luật của kho (03-api.md luật 6) đòi expand–contract:

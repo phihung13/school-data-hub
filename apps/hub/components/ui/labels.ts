@@ -18,14 +18,14 @@
  * sống lâu nhất ở chỗ khó bắt nhất. Nhãn nói ít hơn hoặc nhiều hơn sự thật đều là nói
  * dối, và đây là lời hứa với một đứa trẻ về chính câu nó vừa viết ra.
  *
- * Nguồn chốt: `danh-cho-may/DESIGN-GUIDELINES.md` §9 (ADR-026, migration 0044 —
- * `core.can_read_mood()` = `is_me ∨ in_my_cluster`). ĐỔI QUYỀN THÌ ĐỔI CÂU NÀY TRONG
+ * Nguồn chốt: `danh-cho-may/DESIGN-GUIDELINES.md` §9 (ADR-035, migration 0059 —
+ * `core.can_read_mood()` = `is_me ∨ in_my_cluster ∨ is_homeroom_of`). ĐỔI QUYỀN THÌ ĐỔI CÂU NÀY TRONG
  * CÙNG MỘT LẦN, không hẹn lại.
  *
  * §8 cấm từ vựng vận hành trước mặt học sinh, nên câu này không có chữ "GVCN", "cờ",
  * "ngưỡng", "quét".
  */
-export const NHAN_AI_DOC_CAM_XUC = "Chỉ thầy cô tâm lý đọc";
+export const NHAN_AI_DOC_CAM_XUC = "Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc";
 
 /** "6A2" → "Lớp 6A2". null/rỗng → "" (nơi gọi phải bỏ hẳn dòng, không thay bằng gì). */
 export function classLabel(classCode: string | null | undefined): string {

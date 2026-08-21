@@ -8,12 +8,21 @@
 //   `attendance.checkins_care`. Cô VẪN nhận cờ (`care.flags`) và VẪN nhận tín hiệu "cần
 //   gặp thầy cô" — biết CÓ CHUYỆN mà không đọc được CHUYỆN GÌ.
 //
+//   ── ĐẢO 21/08/2026 (ADR-035, migration 0059) ─────────────────────────────
+//   Chủ đầu tư mở lại: `can_read_mood` = `is_me ∨ in_my_cluster ∨ is_homeroom_of`.
+//   Hai chỗ trong file này đọc lại nguồn cảm xúc, theo đúng KIỂU hợp lệ:
+//   `getStudentDetail` LEFT JOIN `checkins_care` lấy đúng cột `mood` (bảng gốc vẫn
+//   là khung — bài học "view lọc theo DÒNG" bên dưới còn nguyên), và
+//   `listReportApprovals` gọi lại `attendance.happy_days` (cổng hàm đã thêm nhánh
+//   chủ nhiệm). Phần còn lại của [QĐ-1] — cờ, tín hiệu cần gặp, detail bị cắt — không đổi.
+//
 //   Ba chỗ từng đọc `checkins_care` cho CẢ cột điểm danh chứ không riêng mood, và cả ba
 //   sẽ hỏng câm nếu để nguyên (view lọc theo DÒNG, không theo CỘT): `getClassRoster`,
 //   `getStudentDetail`, `listReportApprovals`. Đo cùng câu LEFT JOIN dưới phiên Cô Lan:
 //   nguồn `checkins_care` trả 5/5 em `status = NULL`, nguồn `attendance.checkins` trả
 //   5/5 em `status = present`. Không đổi lại thì bảng lớp trắng toàn NULL và màn hình vẽ
-//   NULL thành "Chưa điểm danh" — tức là hệ tự khai lớp chưa ai điểm danh.
+//   NULL thành "Chưa điểm danh" — tức là hệ tự khai lớp chưa ai điểm danh. (Bài học này
+//   là lý do bản 21/08 join view vào khung bảng gốc thay vì đổi nguồn lần nữa.)
 //
 // [QĐ-2] Em bấm nút cần gặp thì báo cô NGAY. E_URGENT vì thế vẫn được TÍNH THẲNG từ
 //   `attendance.help_requests` trong lượt gọi, không chờ `care.run_flag_engine`. Còn
@@ -535,10 +544,11 @@ function mondayIso(date?: string): string {
 export function buildReportPreview(stats: {
   checkinDays: number;
   /**
-   * `null` = NGƯỜI ĐANG XEM không được đọc nguồn của con số này (ADR-026 — GVCN). Khác
-   * hẳn `0`, và khác đúng ở chỗ nguy hiểm nhất: `0` làm mục Glow biến mất y như khi em
-   * thật sự không có ngày vui nào, nên bản xem trước im lặng thiếu một mục so với bản
-   * phụ huynh đọc. `null` làm mục đó biến mất KÈM một lời khai (`glowIncomplete`).
+   * `null` = NGƯỜI ĐANG XEM không được đọc nguồn của con số này. Từ 21/08/2026 (ADR-035)
+   * GVCN nhận số thật trở lại nên nhánh này với cô hết kích hoạt — nhưng KHÔNG xoá nhánh:
+   * nó vẫn là câu trả lời đúng cho mọi người xem ngoài `core.can_read_mood()`, và nó khác
+   * `0` đúng ở chỗ nguy hiểm nhất: `0` làm mục Glow biến mất y như khi em thật sự không
+   * có ngày vui nào; `null` làm mục đó biến mất KÈM một lời khai (`glowIncomplete`).
    */
   happyDays: number | null;
   streakDays: number;
@@ -1424,6 +1434,7 @@ export const careRouter = router({
           note: string | null;
           checkin_days: number;
           streak_days: number;
+          happy_days: number | null;
         }>(
           `with roster as (
              select e.student_id, s.student_code, s.full_name
@@ -1432,12 +1443,15 @@ export const careRouter = router({
               where e.class_id = $1 and e.valid_to is null
            ),
            -- attendance.checkins, KHÔNG phải checkins_care: view kia lọc theo DÒNG sau
-           -- core.can_read_mood(), nên với cô nó trả 0 dòng và checkin_days tụt về 0 cho
-           -- CẢ LỚP. Một bản xem trước ghi "0 ngày đi học" cho em đi đủ 5 buổi là thứ cô
-           -- ký nhầm mà không có cách nào biết.
+           -- core.can_read_mood(), nên lấy nó làm nguồn ĐẾM NGÀY là checkin_days lệ
+           -- thuộc quyền đọc mood — hai câu hỏi khác nhau. Một bản xem trước ghi
+           -- "0 ngày đi học" cho em đi đủ 5 buổi là thứ cô ký nhầm mà không cách nào biết.
            --
-           -- KHÔNG còn happy_days ở đây. Số ngày "Vui" đọc từ cột cảm xúc, mà ADR-026
-           -- đóng cột đó với cô. Không thay bằng 0: xem ReportApprovalRow.happyDays.
+           -- happy_days TRỞ LẠI 21/08/2026 (ADR-035, 0059 — đảo ghi chú ADR-026 cũ ở
+           -- đây): cổng của hàm nay có nhánh chủ nhiệm nên với cô nó trả số thật.
+           -- Khoảng hỏi thứ Hai → thứ Sáu ($2, $2+4) khít sàn 5 ngày — đúng khoảng mà
+           -- sàn được đo ni (xem 0044 mục 3b). Hàm là SECURITY DEFINER stable, gọi
+           -- từng dòng roster (≤ ~40 em) — không đáng một CTE vật liệu riêng.
            week_stats as (
              select r.student_id,
                     count(*) filter (where c.kind = 'in')::int as checkin_days
@@ -1475,7 +1489,8 @@ export const careRouter = router({
                   a.reviewed_at::text as reviewed_at,
                   a.note,
                   coalesce(w.checkin_days, 0) as checkin_days,
-                  coalesce(st.streak_days, 0) as streak_days
+                  coalesce(st.streak_days, 0) as streak_days,
+                  attendance.happy_days(r.student_id, $2::date, $2::date + 4) as happy_days
              from roster r
              left join report.growth_report_approvals a
                on a.student_id = r.student_id and a.week_start = $2::date
@@ -1497,11 +1512,13 @@ export const careRouter = router({
             reviewedAt: r.reviewed_at,
             note: r.note,
             checkinDays: r.checkin_days,
-            // `null` = "cô không được phép biết", KHÔNG phải "em không có ngày vui nào".
-            happyDays: null,
+            // Số thật từ 21/08/2026 (ADR-035) — hàm tự trả NULL nếu người gọi ngoài
+            // phạm vi, nên nghĩa "null = không được phép biết" vẫn nguyên, chỉ là với
+            // GVCN nó không còn kích hoạt.
+            happyDays: r.happy_days,
             preview: buildReportPreview({
               checkinDays: r.checkin_days,
-              happyDays: null,
+              happyDays: r.happy_days,
               streakDays: r.streak_days,
             }),
           })),
@@ -1806,22 +1823,27 @@ export const careRouter = router({
         status: string | null;
         checked_in_at: string | null;
         source: string | null;
+        mood: number | null;
       }>(
-        // Nguồn đổi từ `attendance.checkins_care` về `attendance.checkins` (01/08/2026),
-        // cùng lý do đã ghi dài ở `getClassRoster`: view kia lọc theo DÒNG, nên sau 0044
-        // lịch của cô trắng trơn và mọi ngày em đi học đầy đủ đọc ra thành "chưa có dữ
-        // liệu". Cột `mood` biến mất khỏi câu SELECT — đó là [QĐ-1], không phải sơ suất.
+        // Nguồn cột điểm danh vẫn là `attendance.checkins` (bài học 01/08/2026: view
+        // checkins_care lọc theo DÒNG, lấy nó làm gốc là lịch của cô trắng trơn).
+        // Cột `mood` TRỞ LẠI 21/08/2026 (ADR-035, migration 0059 — đảo [QĐ-1]) bằng
+        // LEFT JOIN checkins_care theo id: bảng gốc giữ vai trò khung, view chỉ góp
+        // đúng một cột nó gác. Hỏi `c.mood` thẳng bảng gốc vẫn nổ 42501 (grant theo
+        // cột không đổi) — đường này là đường HỢP LỆ duy nhất, đúng như 0038 thiết kế.
         //
         // `checked_in_at` chỉ có nghĩa khi `source = 'app'`: dòng cô ghi hộ mang giờ cô
         // bấm Lưu (đo thật: một ngày cách đây 30 hôm mang "giờ check-in" là 03:28 sáng
         // nay), dòng gửi bù mang giờ máy chủ nhận. In giờ đó như giờ em vào lớp là bịa.
-        `select occurred_on::text,
-                status,
-                case when source = 'app' then to_char(occurred_at, 'HH24:MI') end as checked_in_at,
-                source
-           from attendance.checkins
-          where student_id = $1 and kind = 'in' and occurred_on >= $2::date
-          order by occurred_on desc`,
+        `select c.occurred_on::text,
+                c.status,
+                case when c.source = 'app' then to_char(c.occurred_at, 'HH24:MI') end as checked_in_at,
+                c.source,
+                cc.mood
+           from attendance.checkins c
+           left join attendance.checkins_care cc on cc.id = c.id
+          where c.student_id = $1 and c.kind = 'in' and c.occurred_on >= $2::date
+          order by c.occurred_on desc`,
         [input.studentId, bounds.from_date],
       );
 
@@ -1914,6 +1936,7 @@ export const careRouter = router({
           status: r.status as AttendanceStatus | null,
           checkedInAt: r.checked_in_at,
           source: r.source,
+          mood: r.mood,
         })),
         helpRequests: helpRes.rows.map((r) => ({
           helpRequestId: r.id,
@@ -1965,14 +1988,12 @@ export const careRouter = router({
   //
   // HAI THỨ KHÔNG ĐỌC Ở ĐÂY — và sau ADR-026 chúng có HAI lý do khác hẳn nhau, đừng gộp:
   //
-  //   · `attendance.checkins_care.mood` — KHÔNG phải bị cấm. Từ 01/08/2026 nhãn tại chỗ
-  //     em nhập là "Chỉ thầy cô tâm lý đọc", và `core.can_read_mood()` = `is_me ∨
-  //     in_my_cluster`: tâm lý cụm là vai DUY NHẤT còn đọc được nhật ký cảm xúc. Hai màn
-  //     này không hiện nó chỉ vì chúng là màn QUẢN LÝ VIỆC ("hôm nay ai đang chờ tôi" ·
-  //     "đọc gì trước khi đóng hồ sơ"), chưa phải màn đọc nhật ký. Đây là MỘT MÀN CÒN
-  //     THIẾU, không phải một quyền bị chặn. Lý lẽ cũ ở chỗ này ("tâm lý cụm không phải
-  //     thầy cô chủ nhiệm") nay ngược hướng, và để nguyên là dựng sẵn lý do cho người đọc
-  //     sau cắt nốt quyền của vai cuối cùng còn nhìn thấy chuỗi ngày em không vui.
+  //   · `attendance.checkins_care.mood` — KHÔNG phải bị cấm. Từ 21/08/2026 (ADR-035)
+  //     phạm vi đọc là `is_me ∨ in_my_cluster ∨ is_homeroom_of` — tâm lý cụm và GVCN của
+  //     em cùng đọc được, nhãn tại chỗ em nhập là "Chỉ thầy cô tâm lý và thầy cô chủ
+  //     nhiệm đọc". Hai màn này không hiện nó chỉ vì chúng là màn QUẢN LÝ VIỆC ("hôm nay
+  //     ai đang chờ tôi" · "đọc gì trước khi đóng hồ sơ"), chưa phải màn đọc nhật ký.
+  //     Đây là MỘT MÀN CÒN THIẾU, không phải một quyền bị chặn.
   //
   //   · `attendance.help_requests.note` — ĐÚNG là đang bị lời hứa chặn. Màn
   //     /can-gap-thay-co in cho em đọc trước khi gửi rằng phòng tâm lý chỉ đọc SAU một

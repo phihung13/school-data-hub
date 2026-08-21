@@ -16,16 +16,20 @@
 -- ── SỬA 01/08/2026 (ADR-026, migration 0044) ───────────────────────────────
 -- Chủ đầu tư siết thêm một nấc: GVCN cũng KHÔNG còn đọc mood từng ngày. Phạm vi
 -- `core.can_read_mood` nay là `is_me ∨ in_my_cluster` — chính em và tâm lý cụm.
--- Assertion đầu tiên của file này vì thế ĐÃ ĐỔI CHIỀU (xem chú thích tại chỗ);
--- phần còn lại của bài test không đổi một chữ, vì thứ nó canh — che CỘT chứ không
--- chặn DÒNG, phụ huynh giữ điểm danh và số tổng hợp — vẫn nguyên giá trị.
--- Chiều mới của GVCN được canh đầy đủ ở `0044_mood_chi_tam_ly_test.sql`.
+--
+-- ── SỬA 21/08/2026 (ADR-035, migration 0059) ───────────────────────────────
+-- Đảo lại nấc trên: GVCN đọc lại được mood của em LỚP MÌNH. Phạm vi
+-- `core.can_read_mood` nay là `is_me ∨ in_my_cluster ∨ is_homeroom_of`.
+-- Assertion đầu tiên của file này đổi chiều lần thứ hai (xem chú thích tại chỗ);
+-- phần còn lại không đổi một chữ, vì thứ nó canh — che CỘT chứ không chặn DÒNG,
+-- phụ huynh giữ điểm danh và số tổng hợp, GVCN LỚP KHÁC vẫn 0 dòng — vẫn nguyên
+-- giá trị. Chiều GVCN được canh đầy đủ ở `0044_mood_chi_tam_ly_test.sql` (cũng
+-- đã đảo theo) và `0059_gvcn_doc_lai_mood_test.sql`.
 --
 -- Bốn nhóm assertion. Nhóm 2 là lý do bài test tồn tại; nhóm 3 là lý do nó không
 -- được siết tay quá đà; nhóm 4 chặn kiểu hồi quy mà ba nhóm trên không thấy.
---   1. CHO PHÉP   — chính em, tâm lý cụm (GVCN đã rời nhóm này từ ADR-026).
---   2. TỪ CHỐI    — GVCN của em, phụ huynh, hiệu trưởng/quản trị, GV bộ môn,
---                   GVCN lớp khác.
+--   1. CHO PHÉP   — chính em, tâm lý cụm, GVCN của em (rời nhóm 01/08, trở lại 21/08).
+--   2. TỪ CHỐI    — phụ huynh, hiệu trưởng/quản trị, GV bộ môn, GVCN lớp khác.
 --   3. KHÔNG SIẾT NHẦM — phụ huynh vẫn đọc được DÒNG điểm danh và số tổng hợp;
 --      học sinh vẫn ghi được mood (đường check-in hằng ngày không gãy).
 --   4. HÌNH DẠNG  — cột `mood` phải nằm ngoài grant, mọi cột khác phải nằm trong
@@ -51,18 +55,19 @@ insert into attendance.checkins (student_id, occurred_on, kind, mood, status, so
   ('70000000-0000-0000-0000-000000000001', current_date - 1, 'in', 4, 'present', 'app');
 
 -- ═══ 1. CHIỀU CHO PHÉP ═════════════════════════════════════════════════════
--- ĐÃ ĐỔI CHIỀU 01/08/2026 — ADR-026, migration 0044.
--- Câu cũ ở đây là: "GVCN CỦA EM đọc được ĐÚNG GIÁ TRỊ mood — 'chỉ thầy cô chủ
--- nhiệm thấy' nghĩa là cô PHẢI thấy". Câu đó đúng với quyết định 31/07/2026 và
--- hết đúng với quyết định 01/08/2026: chủ đầu tư chốt cô chủ nhiệm không còn đọc
--- nhật ký cảm xúc từng ngày, chỉ còn nhận cờ "cần để ý" và tín hiệu "cần gặp
--- thầy cô". Không xoá assertion — LẬT nó, để chỗ này vẫn có người canh và để ai
--- đọc sau còn thấy hệ đã từng hứa điều gì. Lý do đầy đủ + đánh đổi: ADR-026.
+-- Assertion này đã đổi chiều HAI LẦN, cả hai lần đều bằng quyết định chủ đầu tư,
+-- và cả hai lần đều LẬT chứ không xoá — chỗ này phải luôn có người canh:
+--   31/07/2026 (ADR-025, 0038): cô PHẢI thấy — "chỉ thầy cô chủ nhiệm thấy".
+--   01/08/2026 (ADR-026, 0044): cô KHÔNG thấy — chỉ còn cờ và tín hiệu cần gặp.
+--   21/08/2026 (ADR-035, 0059): cô THẤY LẠI — hợp nhất sơ đồ AI OS của cấp trên.
+-- Lịch sử đó là một phần của hợp đồng: ai định đổi lần thứ tư phải thấy đủ ba
+-- lần trước và giá của từng lần (ghi trong ADR-026/035).
 select test_support.login_as('90000000-0000-0000-0000-000000000001');  -- cô Lan, GVCN 6A1
-select is_empty(
-  $$ select 1 from attendance.checkins_care
-      where student_id = '70000000-0000-0000-0000-000000000001' $$,
-  'GVCN CỦA EM đọc attendance.checkins_care ra 0 DÒNG (ADR-026 lật assertion cũ) — 0 dòng chứ không phải lỗi, để màn hình cô hiện "không có" chứ không hiện "hỏng"');
+select is(
+  (select mood from attendance.checkins_care
+    where student_id = '70000000-0000-0000-0000-000000000001' and occurred_on = current_date),
+  1::smallint,
+  'GVCN CỦA EM đọc được ĐÚNG GIÁ TRỊ mood (ADR-035 lật lại assertion ADR-026) — mood=1 "Buồn" cố ý: nếu quyền này lại bị cắt thì bài này đỏ NGAY, không đỏ im lặng');
 select test_support.logout();
 
 select test_support.login_as('90000000-0000-0000-0000-000000000003');  -- cô Mai, tâm lý cụm

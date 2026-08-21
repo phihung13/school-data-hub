@@ -6,6 +6,12 @@
 --    hình, và cả khi hỏi thẳng cơ sở dữ liệu cũng bị từ chối. Cô VẪN nhận cờ 'em
 --    này cần để ý', và VẪN nhận ngay khi em bấm nút cần gặp."
 --
+-- ── ĐẢO 21/08/2026 (ADR-035, migration 0059) ───────────────────────────────
+-- Chủ đầu tư đảo vế đầu: GVCN đọc LẠI được nhật ký của em lớp mình. Bốn assertion
+-- lật theo, có ghi chú tại chỗ; các nhóm GIỮ / KHÔNG SIẾT NHẦM / phần lớn nhóm
+-- HÌNH DẠNG không đổi một chữ — chúng canh những lời hứa ADR-035 không đụng tới
+-- (cờ vẫn về, đường vòng vẫn nổ 42501, tâm lý cụm và chính em không mất gì).
+--
 -- Một lời hứa hai vế thì bài test phải có hai chiều, nếu không nó chỉ canh được
 -- nửa lời hứa và nửa kia rơi mất trong im lặng. Bố cục vì thế là:
 --
@@ -59,15 +65,21 @@ insert into care.flags (student_id, rule_code, as_of_date, detail, origin) value
 insert into attendance.help_requests (student_id, requested_on, urgency)
      values ('70000000-0000-0000-0000-000000000001', current_date, 'urgent');
 
--- ═══ 1. CHIỀU CẮT — ba cửa, đóng theo đúng KIỂU đã hứa ═════════════════════
+-- ═══ 1. CHIỀU CẮT — ĐẢO 21/08/2026 (ADR-035, migration 0059) ═══════════════
+-- Nhóm này viết cho ADR-026: ba cửa mood đóng với GVCN. ADR-035 mở lại cửa cho
+-- GVCN CỦA EM — ba assertion GVCN dưới đây LẬT theo (không xoá: chỗ này canh
+-- đúng ranh giới, chỉ là ranh giới đã dời). Hai thứ KHÔNG lật: đường vòng hỏi
+-- thẳng bảng gốc vẫn phải nổ 42501 (grant theo cột không đổi), và khoảng hỏi
+-- hẹp của happy_days vẫn phải bị từ chối (sàn 5 ngày che phụ huynh, ADR-035
+-- không mở gì cho phụ huynh). Đo thật hub_dev 21/08/2026: cô Lan 0→63 dòng,
+-- cô Hạnh (lớp khác) vẫn 0 dòng với em 6A1, cô Mai nguyên 478.
 select test_support.login_as('90000000-0000-0000-0000-000000000001');  -- cô Lan, GVCN 6A1
 
--- 0 DÒNG chứ không phải lỗi: màn hình của cô phải hiện "không có", không hiện
--- "hỏng". Đây là khác biệt có thật với người dùng, không phải chi tiết kỹ thuật.
-select is_empty(
-  $$ select 1 from attendance.checkins_care
-      where student_id = '70000000-0000-0000-0000-000000000001' $$,
-  'GVCN CỦA EM đọc attendance.checkins_care ra 0 DÒNG — cửa đóng bằng phạm vi, không bằng lỗi (ADR-026 đảo assertion cùng tên ở 0038)');
+select is(
+  (select count(*)::int from attendance.checkins_care
+    where student_id = '70000000-0000-0000-0000-000000000001' and mood is not null),
+  3,
+  'GVCN CỦA EM đọc lại được mood qua attendance.checkins_care (ADR-035 lật assertion ADR-026) — đủ 3 dòng, đúng KIỂU cũ: qua cửa hợp lệ, không qua đường vòng');
 
 -- Đường vòng thì phải nổ. Nếu chỗ này im lặng trả rỗng thì một ngày nào đó grant
 -- theo cột bị cấp lại và không ai biết.
@@ -77,15 +89,15 @@ select throws_ok(
   null,
   'GVCN hỏi THẲNG attendance.checkins.mood → Postgres TỪ CHỐI (42501) — "cả khi hỏi thẳng cơ sở dữ liệu cũng bị từ chối"');
 
-select is_empty(
+select isnt_empty(
   $$ select 1 from attendance.mood_trends
       where student_id = '70000000-0000-0000-0000-000000000001' $$,
-  'GVCN đọc attendance.mood_trends ra 0 dòng — cửa hậu "trung bình mood 12 tháng của từng em" đã đóng (bảng CÓ dòng thật, không xanh giả)');
+  'GVCN đọc được attendance.mood_trends của em lớp mình (ADR-035 lật) — policy mood_trends_scope trỏ can_read_mood từ 0044 nên mở/đóng THEO HÀM, đúng như 0044 thiết kế');
 
 select is(
   attendance.happy_days('70000000-0000-0000-0000-000000000001', current_date - 7, current_date),
-  null,
-  'GVCN gọi happy_days nhận NULL — hàm này là cổng của Báo cáo Trưởng thành (phụ huynh), không phải cổng quản lý lớp');
+  1,
+  'GVCN gọi happy_days nhận SỐ NGUYÊN (ADR-035 lật — cổng thêm nhánh is_homeroom_of); trước 21/08/2026 chỗ này là NULL');
 
 -- Cửa hậu tinh vi nhất: hỏi từng ngày một thì happy_days trả 0/1, tức là đọc lại
 -- được nguyên nhật ký "hôm nay em có Vui không". Đo thật trên hub_dev trước khi
@@ -210,10 +222,14 @@ select ok(
     where oid = 'core.can_read_mood(uuid)'::regprocedure),
   'core.can_read_mood KHÔNG gọi core.can_see_student() — giữ nguyên bài học ADR-025: bốn câu hỏi phạm vi, bốn hàm');
 
+-- ĐẢO 21/08/2026 (ADR-035): câu cũ khẳng định prosrc KHÔNG nhắc is_homeroom_of —
+-- "điều khoản trung tâm của ADR-026". Điều khoản đó đã bị chủ đầu tư đảo; nay
+-- khẳng định chiều ngược để nếu ai cắt lại nhánh chủ nhiệm mà không qua ADR thì
+-- đỏ ở đây trước khi đỏ ở hành vi.
 select ok(
-  (select prosrc not like '%is_homeroom_of%' from pg_proc
+  (select prosrc like '%is_homeroom_of%' from pg_proc
     where oid = 'core.can_read_mood(uuid)'::regprocedure),
-  'core.can_read_mood KHÔNG nhắc is_homeroom_of ở bất kỳ dạng nào — đây là điều khoản trung tâm của ADR-026');
+  'core.can_read_mood CÓ nhánh is_homeroom_of, viết TƯỜNG MINH (ADR-035 lật ADR-026) — và vẫn không mượn can_see_care/can_see_student, hai câu trên canh');
 
 -- Chiều ngược lại, quan trọng ngang: cắt quá tay là mất cờ.
 select ok(

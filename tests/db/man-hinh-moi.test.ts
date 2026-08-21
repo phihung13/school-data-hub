@@ -159,8 +159,10 @@ describe("màn 5 · hồ sơ một học sinh (care.getStudentDetail)", () => {
     expect(d.checkins[0]!.source).toBe("app");
     // Dòng do EM tự bấm ⇒ có giờ thật, dạng HH:MM (không phải chuỗi timestamp thô).
     expect(d.checkins[0]!.checkedInAt).toMatch(/^\d{2}:\d{2}$/);
-    // Cột tâm trạng đã rời khỏi hợp đồng của màn GVCN (ADR-026) — kiểm bằng hình dạng.
-    expect(Object.keys(d.checkins[0]!)).not.toContain("mood");
+    // LẬT 21/08/2026 (ADR-035, 0059): cột tâm trạng TRỞ LẠI hợp đồng màn GVCN — qua
+    // LEFT JOIN checkins_care, và dòng seed ở trên gieo mood = 4 nên phải đọc ra ĐÚNG
+    // GIÁ TRỊ, không chỉ "có key". Bản ADR-026 của câu này kiểm chiều ngược (not.toContain).
+    expect(d.checkins[0]!.mood).toBe(4);
   });
 
   it("hồ sơ chăm sóc ĐANG MỞ vẫn hiện dù mở từ trước cửa sổ ngày", async ({ skip }) => {

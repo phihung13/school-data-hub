@@ -203,14 +203,17 @@ describe("nhãn riêng tư của ô cảm xúc: một câu, một nguồn", () =
     );
   });
 
-  it("thẻ “Ai thấy gì của mình?” tách dòng cô chủ nhiệm làm HAI ý, không gộp", () => {
-    // §9 chốt: gộp thành "cô không thấy gì" là nói QUÁ (em sẽ tưởng bấm nút cần gặp cũng
-    // vô ích — đường an toàn duy nhất em có), gộp thành "cô thấy cảm xúc" là nói THIẾU
-    // sự thật mới. Phải có cả vế MẤT lẫn vế CÒN trong cùng một dòng.
+  it("thẻ “Ai thấy gì của mình?” — dòng cô chủ nhiệm GỘP về một ý, và không còn vế cũ", () => {
+    // LẬT 21/08/2026 (ADR-035, migration 0059). Bản ADR-026 của bài này đòi dòng cô tách
+    // HAI ý ("cô không đọc được" · "cô vẫn biết cần để ý") — nay cô đọc lại được, nên câu
+    // hai-ý thành nói ÍT hơn sự thật: em tưởng ô cảm xúc là chỗ cô không thấy và viết như
+    // chỗ riêng tư. Trấn an sai chỗ là kiểu nói dối §9 cấm. Kiểm cả hai chiều: câu mới
+    // phải CÓ, và vế cũ "không đọc" phải BIẾN MẤT khỏi dòng của cô.
     const src = readComponent("profile-view.tsx");
-    expect(src, "thiếu vế 'cô KHÔNG đọc được cảm xúc'").toMatch(/không đọc/);
-    expect(src, "thiếu vế 'cô vẫn biết con cần được để ý'").toContain("cần được để ý");
-    expect(src, "thiếu vế 'cô vẫn thấy điểm danh và lời nhắn'").toMatch(/xem điểm danh và đọc lời nhắn/);
+    expect(src, "thiếu dòng gộp mới của cô").toMatch(/xem điểm danh, đọc được nhật ký cảm xúc/);
+    expect(src, "vế cũ 'cô không đọc được' vẫn còn — lời hứa hết hạn chưa gỡ").not.toMatch(
+      /Cô <b>không đọc<\/b> được/,
+    );
   });
 });
 
@@ -276,19 +279,18 @@ describe("§1.5 — ít chữ trên màn của trẻ và phụ huynh", () => {
   it("câu dài DUY NHẤT còn lại là câu hợp đồng §9, và nó được phép dài", () => {
     // Đây là ngoại lệ CÓ TÊN, không phải chỗ sót. DESIGN-GUIDELINES §9 chốt nguyên văn dòng
     // dành cho cô chủ nhiệm trong thẻ "Ai thấy gì của mình?" và bắt "tầng màn hình in ĐÚNG
-    // chữ này". Dòng đó dài vì nó phải tách làm hai ý (cô KHÔNG đọc được cảm xúc · cô VẪN
-    // biết em cần được để ý) — gộp lại cho ngắn là nói quá hoặc nói thiếu, và §9 gọi cả hai
-    // là nói dối. §1.5 nhường §9 ở đúng một chỗ này, và chỗ đó phải nêu đích danh để lần
+    // chữ này". §1.5 nhường §9 ở đúng một chỗ này, và chỗ đó phải nêu đích danh để lần
     // dọn sau không ai "tiện tay" cắt nó cho tròn con số.
-    // Mốc nhận dạng là ĐUÔI của dòng đó, không phải cụm "cần được để ý": cụm ấy nằm trong
-    // <b>…</b> nên nó CẮT đoạn chữ làm đôi, và mảnh dài còn lại không chứa nó. Đây đúng cái
-    // bẫy mà phép đo `>…<` hay sập — nó đo mảnh chữ, không đo câu.
-    // "biết vậy thôi, không biết con đã ghi gì" là nguyên văn §9, và §9 gọi nó là câu quan
-    // trọng nhất cả khối (nó vẽ ranh giới để em khỏi phải thử mới biết).
+    //
+    // LẬT MỐC 21/08/2026 (ADR-035): mốc cũ là "biết vậy thôi, không biết con đã ghi gì" —
+    // đuôi của dòng hai-ý thời ADR-026. Dòng đó đã GỘP (cô đọc lại được nhật ký), nên mốc
+    // nhận dạng đổi theo nguyên văn §9 mới. Vẫn nhận bằng ĐUÔI ổn định của dòng, không
+    // nhận bằng cụm nằm trong <b>…</b> — thẻ đậm CẮT đoạn chữ làm đôi và phép đo `>…<`
+    // sẽ đo mảnh, không đo câu (bẫy cũ, vẫn nguyên).
     const cauDai = MAN_DA_DON_CHU.flatMap((f) => cauDaiTrenMan(readComponent(f)));
     for (const cau of cauDai) {
       expect(cau, `câu dài chưa được §9 miễn: "${cau.slice(0, 70)}…"`).toMatch(
-        /biết vậy thôi, không biết con đã ghi gì/,
+        /xem điểm danh, đọc được nhật ký cảm xúc của con và lời nhắn con gửi/,
       );
     }
   });

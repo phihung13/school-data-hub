@@ -35,6 +35,13 @@
 //     Minh    (chính em)    9 → 9
 //     phụ huynh của Minh    0 → 0
 //
+// ── SỬA 21/08/2026 (ADR-035, migration 0059) — ĐẢO MỘT PHẦN ────────────────
+// Chủ đầu tư mở lại cho GVCN CỦA EM trong đợt hợp nhất sơ đồ AI OS. Hai ca GVCN
+// đổi chiều lần nữa (ghi chú tại chỗ); các ca phụ huynh / hiệu trưởng / GVCN lớp
+// khác KHÔNG đổi một chữ — ba vai đó đứng ngoài cả ba lần quyết.
+// Đo thật hub_dev 21/08/2026 (kho seed dựng lại 02/08): cô Lan 0 → 63 · cô Mai
+// 478 → 478 · phụ huynh 0 → 0 · tổng kho 538.
+//
 // Phân công với bài pgTAP song sinh (`0038_checkins_mood_scope_test.sql`): bài kia
 // chạy trên fixture `seed_basic()` nên có GIÁO VIÊN BỘ MÔN được phân công đúng lớp
 // 6A1 — nhánh đó chỉ chứng minh được ở đó. Dữ liệu seed dev (`seed.mjs`) không có
@@ -85,7 +92,7 @@ async function docMoodQuaVienChamSoc(authUid: string): Promise<number> {
   return Number(rows[0]?.n ?? 0);
 }
 
-describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm lý (0038 + 0044)", () => {
+describe("Tâm trạng check-in: chính em, tâm lý cụm, và GVCN của em (0038 + 0044 + 0059)", () => {
   beforeAll(async () => {
     ready = await requireDb();
     if (!ready) return;
@@ -138,29 +145,30 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     expect(await docMoodQuaVienChamSoc(DEV.admin)).toBe(0);
   });
 
-  it("GVCN lớp khác KHÔNG đọc được — sau ADR-026 mọi GVCN đều không đọc được", async ({ skip }) => {
+  it("GVCN lớp khác KHÔNG đọc được — is_homeroom_of là chủ nhiệm CỦA EM, không phải mang chức (0059 giữ nguyên)", async ({ skip }) => {
     if (!ready) return skip();
     expect(await docMoodTrucTiep(DEV.gvcn2)).toBe(TU_CHOI_QUYEN);
     expect(await docMoodQuaVienChamSoc(DEV.gvcn2)).toBe(0);
   });
 
-  // ĐÃ ĐỔI CHIỀU 01/08/2026 — ADR-026. Ca này trước đây tên là "GVCN của em đọc
-  // được ĐÚNG GIÁ TRỊ mood — lời hứa nói 'chỉ cô thấy', nghĩa là cô PHẢI thấy",
-  // và nó đúng cho tới hết ngày 31/07. Không xoá, LẬT: chỗ này vẫn phải có người
-  // canh, và người đọc sau còn thấy hệ đã từng hứa điều gì.
-  it("GVCN của em đọc ra 0 dòng ở checkins_care VÀ bị từ chối khi hỏi thẳng cột mood (ADR-026)", async ({ skip }) => {
+  // ĐỔI CHIỀU LẦN HAI 21/08/2026 — ADR-035, migration 0059. Lịch sử đủ ba nấc của
+  // đúng một ca này, giữ nguyên để ai định đổi lần thứ tư thấy đủ giá từng lần:
+  //   31/07 (ADR-025): "cô PHẢI thấy" · 01/08 (ADR-026): "cô đọc ra 0 dòng"
+  //   21/08 (ADR-035): cô đọc lại được — qua CỬA HỢP LỆ. Không xoá, LẬT.
+  it("GVCN của em đọc được mood qua checkins_care, NHƯNG hỏi thẳng cột mood vẫn bị từ chối (ADR-035)", async ({ skip }) => {
     if (!ready) return skip();
-    // 0 dòng ở đường hợp lệ: màn hình của cô phải hiện "không có", không hiện "hỏng".
-    expect(await docMoodQuaVienChamSoc(DEV.gvcn)).toBe(0);
+    // Đường hợp lệ: có dòng thật, giá trị thật.
+    expect(await docMoodQuaVienChamSoc(DEV.gvcn)).toBeGreaterThan(0);
     const { rows } = await asUser(DEV.gvcn, (c) =>
       c.query<{ mood: number }>(
         "select mood from attendance.checkins_care where student_id = $1 and occurred_on = $2::date",
         [FIXTURE.studentMinh, NGAY_DO],
       ),
     );
-    expect(rows).toHaveLength(0);
-    // Đường vòng thì phải NỔ. Im lặng ở đây nghĩa là một ngày nào đó grant theo
-    // cột được cấp lại mà không ai biết.
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.mood).toBeGreaterThanOrEqual(1);
+    // Đường vòng thì VẪN phải NỔ — ADR-035 mở cửa hợp lệ, không đụng grant theo cột.
+    // Im lặng ở đây nghĩa là một ngày nào đó grant được cấp lại mà không ai biết.
     expect(await docMoodTrucTiep(DEV.gvcn)).toBe(TU_CHOI_QUYEN);
   });
 
@@ -223,11 +231,12 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
     expect(rows[0]?.trang_thai).toBeTruthy();
   });
 
-  it("GVCN KHÔNG lách được qua happy_days: cả tuần trả NULL, hỏi một ngày thì NỔ (22023)", async ({ skip }) => {
+  // LẬT MỘT NỬA 21/08/2026 (ADR-035): vế "cả tuần trả NULL" đảo — cổng happy_days
+  // nay có nhánh chủ nhiệm nên cô nhận SỐ THẬT. Vế "hỏi một ngày thì NỔ" GIỮ NGUYÊN:
+  // sàn 5 ngày che phụ huynh và ADR-035 không nới — kể cả vai được phép cũng không
+  // hỏi được khoảng hẹp (đúng khuôn ca cô Lan trong pgTAP 0044, đã lật cùng ngày).
+  it("GVCN nhận SỐ THẬT từ happy_days (ADR-035), nhưng hỏi một ngày thì vẫn NỔ (22023)", async ({ skip }) => {
     if (!ready) return skip();
-    // Đo thật trên hub_dev TRƯỚC khi vá: cô Lan hỏi happy_days từng ngày một cho
-    // 25/07 → 01/08 nhận đúng chuỗi 1/0/1/1/0/0/0/0 — tức là đọc lại được nguyên
-    // nhật ký "hôm nay em có Vui không", chỉ khác cách gõ.
     const { rows } = await asUser(DEV.gvcn, (c) =>
       c.query<{ n: number | null }>("select attendance.happy_days($1, $2::date, $3::date) as n", [
         FIXTURE.studentMinh,
@@ -235,7 +244,8 @@ describe("Tâm trạng check-in là chuyện riêng của em và thầy cô tâm
         "2030-01-01",
       ]),
     );
-    expect(rows[0]?.n).toBeNull();
+    expect(rows[0]?.n).not.toBeNull();
+    expect(Number(rows[0]?.n)).toBeGreaterThanOrEqual(0);
 
     let ma = "khong-nem-loi";
     try {
