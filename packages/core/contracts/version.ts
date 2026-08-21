@@ -921,6 +921,20 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "luat.maLuat",
 //       "luat.nhan"
 //     ],
+//     "SuKienHomNay": [
+//       "id",
+//       "tieuDe",
+//       "loai",
+//       "gio",
+//       "gioKetThuc",
+//       "diaDiem",
+//       "caTruong",
+//       "lop"
+//     ],
+//     "GetLichHomNayOutput": [
+//       "suKien",
+//       "daNoiGoogle"
+//     ],
 //     "parseSemver": [
 //       "#function#"
 //     ],

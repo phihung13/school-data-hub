@@ -83,3 +83,34 @@ export const GetBangXepHangOutput = z.object({
   luat: z.array(z.object({ maLuat: z.string(), nhan: z.string() })),
 });
 export type GetBangXepHangOutput = z.infer<typeof GetBangXepHangOutput>;
+
+// ---------------------------------------------------------------------------
+// Lịch hôm nay (ADR-034) — ở chung file vì cùng một đợt và cùng một bề mặt (trang chủ).
+// ---------------------------------------------------------------------------
+
+export const SuKienHomNay = z.object({
+  id: z.string().uuid(),
+  tieuDe: z.string(),
+  loai: z.enum(["chung", "hoc", "hop", "nghi", "hoat_dong"]),
+  /** "07:15" — giờ VN, cắt từ chuỗi máy chủ. KHÔNG để client tự đọc timestamp. */
+  gio: z.string(),
+  /** "07:45" hoặc null khi sự kiện không khai giờ kết thúc. */
+  gioKetThuc: z.string().nullable(),
+  diaDiem: z.string().nullable(),
+  /** true = sự kiện của cả trường; false = của một lớp cụ thể. */
+  caTruong: z.boolean(),
+  lop: z.string().nullable(),
+});
+export type SuKienHomNay = z.infer<typeof SuKienHomNay>;
+
+export const GetLichHomNayOutput = z.object({
+  suKien: z.array(SuKienHomNay),
+  /**
+   * Lịch Google đã nối chưa. **Luôn `false` cho tới khi trả nợ #19** — và màn hình phải
+   * nói ra, vì "hôm nay không có sự kiện nào" và "lịch Google chưa nối nên chỉ thấy
+   * lịch trường tự nhập" là hai câu khác nhau. Gộp chúng là để im lặng bị đọc thành
+   * kết luận, đúng thứ Rev B/C điều 3 cấm.
+   */
+  daNoiGoogle: z.boolean(),
+});
+export type GetLichHomNayOutput = z.infer<typeof GetLichHomNayOutput>;

@@ -5,6 +5,7 @@ import { HomeView } from "@/components/home-view";
 import { buildMiniAppsWithEmbedded, ghimAppDungNhieu } from "@/server/mini-apps";
 import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
 import { phaiDungOCheckin } from "@/server/checkin-gate";
+import { docLichHomNay } from "@/server/lich";
 import { log, describeError } from "@/lib/logger";
 
 export default async function HomePage() {
@@ -73,6 +74,11 @@ export default async function HomePage() {
         await buildMiniAppsWithEmbedded(session.roles),
         session.authUid,
       )}
+      // Lịch dựng sẵn phía máy chủ, cùng lý do với lưới app ngay trên: một thẻ nhấp
+      // nháy từ "…" sang nội dung là đúng cảnh đã bắt gặp 30/07/2026 với lưới app.
+      // Hỏng thì trả lịch RỖNG chứ không đổ trang chủ — thẻ tự nói "không có lịch",
+      // và query tRPC bên trong vẫn thử lại được.
+      initialLich={await docLichHomNay(session.authUid).catch(() => null)}
     />
   );
 }

@@ -19,6 +19,13 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
 
 ### Added
 
+- **`SuKienHomNay` · `GetLichHomNayOutput`** — lịch hôm nay trên trang chủ (ADR-034,
+  21/08/2026; migration `0070`). Giờ được **cắt trong SQL** (`to_char`) chứ không trả
+  timestamp thô: máy chủ đã ghim `Asia/Ho_Chi_Minh`, máy người dùng thì không chắc, và
+  một em để máy sai múi giờ sẽ đọc một giờ lệch mà không ai thấy. `daNoiGoogle` là một
+  **hằng số `false` có chủ ý** cho tới khi trả nợ #19 — không phải chỗ chưa làm xong:
+  "hôm nay không có sự kiện nào" và "chỉ thấy lịch trường tự nhập vì Google chưa nối"
+  là hai câu khác nhau, và màn hình phải nói được câu thứ hai.
 - **`thi-dua.ts` (mới)** — `DongXepHangCaNhan` · `DongXepHangLop` · `DongXepHangKhoi` ·
   `GetBangXepHangInput` · `GetBangXepHangOutput`. Bảng xếp hạng thi đua (ADR-037,
   21/08/2026; migration `0063`). Hợp đồng này **cố ý không có chỗ chở cảm xúc** — không

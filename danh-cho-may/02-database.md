@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 39
+sync-version: 40
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1225,6 +1225,28 @@ Lọc nội dung **cố ý được khai là một SÀN, không phải giải ph
 `grant select on <bảng>` không đủ: người gọi còn phải có `usage` trên schema. `0068` làm vế thứ nhất, quên vế thứ hai → **13/13 ca đỏ cùng một câu** `permission denied for schema ai` ở lượt chạy đầu. Loại lỗi đọc mã không thấy: câu `grant` trông đầy đủ, và cái thiếu là một câu **không có mặt**. `0069` cấp nốt, và cấp luôn cho vai Metabase — hệ quả nói rõ: tài khoản Metabase từ đây đọc được **mọi câu trẻ hỏi trợ lý** (đã bóc định danh, nhưng nội dung nguyên vẹn).
 
 **Toàn bộ pgTAP sau đợt U: 1.095 assertion / 60 file** (đợt này không thêm pgTAP — trạm AI đo bằng `tests/db/tram-ai.test.ts`, 13 ca, vì nó cần chạy TypeScript thật của trạm chứ không chỉ SQL).
+
+## Đợt V (`0070`, 21/08/2026) — lịch hôm nay trên trang chủ (ADR-034)
+
+`core.su_kien_lich` + `core.v_lich_hom_nay`. Hạng mục lấy từ sơ đồ AI OS.
+
+**Sơ đồ vẽ "Google Calendar API"; đợt này KHÔNG làm điều đó, và đây là lý do.** Nối Google Calendar đòi Google OAuth, mà Hub **chưa nối Google** (nợ #19 — hôm nay đăng nhập vẫn qua cửa thử). Dựng bộ đồng bộ hôm nay là dựng một đường ống **không chạy được và không đo được**: nó nằm trong kho, trông như một tính năng, và không ai biết nó đúng hay sai cho tới ngày cắm thật.
+
+Nên đợt này dựng phần **chạy được ngay và đo được ngay** — lịch của trường, do trường nhập, hiện trên trang chủ — và chừa **mối nối đúng một chỗ**: cột `nguon` (`'hub'` | `'google'`) + `external_id`, `UNIQUE (nguon, external_id)`. Ngày trả nợ #19, bộ đồng bộ ghi vào **chính bảng này**, không dựng bảng thứ hai rồi ghép hai nguồn ở tầng màn hình. Hai CHECK giữ mối nối sạch: nguồn ngoài **phải** mang `external_id` (thiếu thì lượt đồng bộ sau không nhận ra dòng cũ và sinh bản đôi), nguồn `hub` **không được** mang (một dòng người nhập tay mà có mã ngoài sẽ bị lượt đồng bộ ghi đè mất). Ghi thành nợ #69.
+
+**Phạm vi đọc là câu hỏi THỨ NĂM.** Một sự kiện lịch không thuộc về một EM mà thuộc về một LỚP hoặc cả TRƯỜNG — nên nó không mượn `can_see_student`/`can_see_care`/`can_read_mood`/`principal_of`. Policy: `class_id is null` ⇒ ai cũng đọc; của một lớp ⇒ người có mặt trong lớp đó (chính em ∨ bố mẹ em ∨ thầy cô nhìn thấy em). Đo dưới bốn danh tính: học sinh 6A1 thấy *trường + 6A1*; GVCN 6A2 thấy *trường + 6A2*; phụ huynh thấy lịch lớp **của con** và không thấy lớp khác; sự kiện ngày mai không lọt vào.
+
+**`v_lich_hom_nay` CÓ `security_invoker`, và ở đây nó ĐÚNG** — khác hẳn bảng xếp hạng (`0064`). Phân biệt đáng nhớ: view này hỏi *"lịch của TÔI hôm nay"* và RLS cũng đang trả lời *"của tôi"*; bảng xếp hạng hỏi *"cả trường xếp thế nào"* trong khi RLS trả lời *"em được thấy ai"* — hai câu khác nhau, và đó là lý do một cái giữ `security_invoker` còn cái kia phải bỏ.
+
+**Giờ cắt trong SQL** (`to_char`), không trả timestamp thô: máy chủ ghim `Asia/Ho_Chi_Minh`, máy người dùng thì không chắc. Bẫy này cắn ngay trong lúc làm — tôi gieo dữ liệu mẫu trong một phiên `psql` **không ghim múi giờ**, và sự kiện 7:15 hiện ra thành **14:15**. Dữ liệu mẫu sai chứ không phải mã sai, nhưng nó là đúng cái bẫy `run-retention.mjs` đã ghi, và nó xuất hiện lần nữa trong cùng một buổi.
+
+**Lịch dựng sẵn phía máy chủ**, cùng tiền lệ và cùng lý do với lưới Mini App: một thẻ nhấp nháy từ "…" sang nội dung là đúng cảnh "Giai đoạn 1 · 0 app" đã bắt gặp 30/07/2026. `server/lich.ts` là **một hàm dùng chung** cho cả đường máy chủ lẫn tRPC — hai câu SQL cho cùng một thẻ là hai chỗ sẽ lệch, và chỗ lệch là chỗ HTML lần đầu nói khác lượt tải sau. Đọc hỏng ⇒ trả `null` ⇒ thẻ tự thử lại bằng query, **không đổ trang chủ**.
+
+**`daNoiGoogle` là hằng số `false` CÓ CHỦ Ý**, không phải chỗ chưa làm xong: nợ #19 chưa trả thì không có đường nào để nó thành `true`, và một cờ đọc từ env sẽ cho phép ai đó bật nó lên mà không có bộ đồng bộ nào phía sau. Màn hình in ra dòng *"Đây là lịch do trường nhập. Lịch Google chưa được nối."* ở **cả hai** nhánh có và không có sự kiện — bỏ nó khi có sự kiện là để người đọc tưởng đây đã là lịch đầy đủ của mình.
+
+**Kiểm chứng.** `0070_lich_hom_nay_test.sql` — **10 assertion** (bốn danh tính · hai CHECK mối nối · §9 đồng bộ lại không sinh bản đôi · ngày mai không lọt · `security_invoker` · `authenticated` không thêm được sự kiện). Đo đầu-cuối trên máy chủ đang chạy: `GET /home` **200**, và HTML **lần đầu** đã chứa `Lịch hôm nay` · `07:15` · `09:00` · `Chào cờ đầu tuần` · `Kiểm tra Toán 15 phút` · `Sân trường` · `Lịch Google chưa được nối`.
+
+**Toàn bộ pgTAP sau đợt V: 1.117 assertion / 62 file**, khớp mốc.
 
 ## Quy tắc migration (§2)
 

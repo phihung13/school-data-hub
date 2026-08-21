@@ -20,7 +20,26 @@
 //    109 dòng tên trẻ con không giúp ai, và càng nhiều dòng thì càng giống danh sách
 //    xếp loại.
 import { router, protectedProcedure } from "../trpc";
-import { GetBangXepHangInput, GetBangXepHangOutput } from "@hub/core/contracts";
+import { GetBangXepHangInput, GetBangXepHangOutput, GetLichHomNayOutput } from "@hub/core/contracts";
+import { docLichHomNay } from "../lich";
+
+/**
+ * Lịch hôm nay (ADR-034). Ở chung router vì cùng một đợt và cùng một bề mặt (trang chủ).
+ *
+ * `daNoiGoogle` LUÔN false cho tới khi trả nợ #19 — Hub chưa nối Google, và màn hình
+ * phải nói ra điều đó. "Hôm nay không có sự kiện nào" và "chỉ thấy lịch trường tự nhập
+ * vì Google chưa nối" là hai câu khác nhau; gộp chúng là để im lặng bị đọc thành kết luận.
+ *
+ * Đọc từ `core.v_lich_hom_nay` — view `security_invoker`, nên RLS quyết ai thấy gì và
+ * router này không tự so vai một lần nữa.
+ */
+export const lichRouter = router({
+  getHomNay: protectedProcedure.output(GetLichHomNayOutput).query(async ({ ctx }) => {
+    // Dùng chung ĐÚNG một hàm với đường máy chủ (`server/lich.ts`): hai câu SQL cho cùng
+    // một thẻ là hai chỗ sẽ lệch, và chỗ lệch là chỗ HTML lần đầu nói khác lượt tải sau.
+    return docLichHomNay(ctx.authUid);
+  }),
+});
 
 export const thiDuaRouter = router({
   getBangXepHang: protectedProcedure
