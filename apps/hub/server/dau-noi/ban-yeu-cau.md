@@ -140,38 +140,30 @@ Thân request:
 
 **Không có cửa thứ hai.** App không bao giờ nối thẳng vào cơ sở dữ liệu của Hub, không bao giờ được cấp `service_role`, không bao giờ gọi API nội bộ nào khác.
 
-### 4.2 GỌI TÊN MỘT EM HỌC SINH — đọc kỹ, đây là chỗ khác mọi hệ thống bạn từng nối
+### 4.2 GỌI TÊN MỘT EM HỌC SINH — dùng đúng thứ bạn đã có trong tay
 
-App của bạn **không bao giờ biết mã học sinh thật của trường**, và không được tự đặt mã cho em. Thay vào đó Hub cấp cho app bạn một **mã riêng** (alias) cho từng em:
+Khi em đăng nhập vào app bạn bằng nút "Đăng nhập bằng tài khoản trường", token Hub trả về có trường `sub`. **Đó chính là mã người dùng của em trong hệ thống trường** — bạn không phải xin thêm ở đâu cả, không phải gọi thêm API nào.
 
-```
-POST {{HUB_URL}}/api/embed/alias
-x-embed-app: <mã app của bạn>
-Authorization: Bearer <access_token của CHÍNH em đang dùng app>
-
-→ 200  { "alias": "…" }
-```
-
-**Bốn điều phải nắm:**
-
-1. **Mã do Hub sinh, app không tự khai.** Bạn gọi endpoint trên với token của em đang đăng nhập; Hub trả về mã. Không có đường nào khác để biết một em là ai.
-2. **Mỗi app một dải mã riêng.** Cùng một em, app thể lực và app căn tin nhận **hai chuỗi khác nhau**. Đây là chủ ý: hai app ngoài không ghép được dữ liệu học sinh với nhau, chỉ Hub ghép lại được. Dùng mã của app khác sẽ bị Hub từ chối.
-3. **Mã dùng đi dùng lại.** Nó là mã của **EM**, không phải của sự kiện — mọi sự kiện của em đó đều mang cùng một mã. Đừng nhầm với `external_id` ở mục 4.3, thứ phải **khác nhau** giữa hai lần gửi.
-4. **Chỉ học sinh mới có mã.** Gọi bằng token của giáo viên sẽ nhận `403`. Nếu app của bạn để giáo viên nhập hộ, thì token dùng để lấy mã vẫn phải là của em đó.
-
-**Đặt mã vào đâu khi gửi dữ liệu:** trường `alias` trong `payload`.
+**Đặt nó vào đâu khi gửi dữ liệu:** trường `user_id` trong `payload`.
 
 ```json
 {
   "external_id": "the-luc-2026-08-08-em01",
   "event_type": "ket_qua_the_luc",
-  "payload": { "alias": "<mã Hub cấp>", "chay_30m": "5.8s" }
+  "payload": { "user_id": "<sub lấy từ token của em>", "chay_30m": "5.8s" }
 }
 ```
 
-> **Gửi `alias` mà Hub không nhận ra thì sự kiện bị đẩy vào hàng đợi lỗi, không được lưu.** Cố ý: một mã sai lưu vào thành `null` sẽ trông y hệt một sự kiện không gắn em nào, và từ đó không ai còn cách nào phân biệt. Thà hỏng ngay, thấy được.
+**Bốn điều phải nắm:**
+
+1. **`user_id` là mã của EM, không phải của sự kiện.** Mọi sự kiện của em đó đều mang cùng một `user_id`. Đừng nhầm với `external_id` ở mục 4.3 — thứ phải **khác nhau** giữa hai lần gửi.
+2. **Chỉ gửi được dữ liệu của người ĐÃ ĐĂNG NHẬP vào app bạn.** Hub từ chối một `user_id` chưa bao giờ đăng nhập vào app này, kể cả khi mã đó có thật. Đây là hàng rào cố ý: chuỗi bí mật webhook dùng chung cho mọi app, nên nếu không có điều kiện này thì bất kỳ ai cầm chuỗi đó đều ghi được dữ liệu dưới tên một em bất kỳ.
+3. **`user_id` không nhất thiết là học sinh.** Thầy cô dùng app cũng có `sub`. Sự kiện của thầy cô vẫn được nhận — nó chỉ không gắn vào hồ sơ em nào. Nếu app bạn để thầy cô nhập hộ cho một em, thì `user_id` phải là của **em đó** (và em đó phải đã từng đăng nhập vào app bạn), còn người thao tác đặt ở `actor_user_id`.
+4. **Không gửi `user_id` cũng hợp lệ** — dùng cho sự kiện không thuộc về ai (thực đơn tuần, lịch câu lạc bộ). Nhưng nếu app bạn khai rổ **Xanh** thì gửi `user_id` của một em sẽ **bị chặn**: rổ Xanh nghĩa là không gắn tên em nào, và Hub cưỡng chế điều đó chứ không chỉ ghi trong tài liệu.
+
+> **Gửi `user_id` mà Hub không nhận ra — hoặc người đó chưa từng đăng nhập vào app bạn — thì sự kiện vào hàng đợi lỗi, không được lưu.** Cố ý: lưu thành `null` sẽ trông y hệt một sự kiện không gắn em nào, và từ đó không ai còn cách nào phân biệt. Thà hỏng ngay, thấy được, đọc được lý do.
 >
-> **Không gửi `alias` cũng hợp lệ** — dùng cho sự kiện không thuộc về em nào (thực đơn tuần, lịch câu lạc bộ). Nhưng nếu app bạn khai rổ **Xanh** thì gửi `alias` sẽ **bị chặn**: rổ Xanh nghĩa là không gắn tên em nào, và Hub cưỡng chế điều đó chứ không chỉ ghi trong tài liệu.
+> **Nếu bạn dựng app theo bản brief trước ngày 21/08/2026** và đang gửi trường `alias`: Hub **từ chối tường minh** trường đó kèm câu chỉ đường. Đổi `alias` thành `user_id` và bỏ lời gọi `POST /api/embed/alias` — endpoint đó đã gỡ.
 
 ### 4.3 `external_id` phải LẶP LẠI ĐƯỢC — đây là chỗ hay hỏng nhất
 

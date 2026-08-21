@@ -41,17 +41,27 @@ select lives_ok(
   'Map mã Tutor với học sinh'
 );
 
--- ── ADR-017: alias do Hub sinh, idempotent, mỗi app một dải ────────────────
+-- ── ADR-038 (21/08/2026) — alias ĐÃ BỎ, và bỏ hẳn khỏi kho ─────────────────
+-- Hai assertion cũ ở đây khoá hợp đồng của `core.issue_embed_alias` (gọi hai lần trả
+-- cùng một alias · mỗi app một dải riêng). Chủ đầu tư quyết app ngoài dùng `user_id`
+-- thật, nên hai hàm cấp alias bị DROP trong `0061`. Không xoá chỗ này mà LẬT: khẳng
+-- định chúng không còn tồn tại. Lý do phải có người canh cả chiều "đã bỏ": một hàm
+-- SECURITY DEFINER được dựng lại lặng lẽ là một đường ghi thứ hai vào `core.id_mappings`
+-- mà không ADR nào nói tới.
 select is(
-  core.issue_embed_alias('fitness', '70000000-0000-0000-0000-000000000001'),
-  core.issue_embed_alias('fitness', '70000000-0000-0000-0000-000000000001'),
-  'Gọi hai lần trả cùng một alias (§9)'
+  (select count(*)::int from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'core' and p.proname like 'issue_embed_alias%'),
+  0,
+  'ADR-038 — core.issue_embed_alias* KHÔNG còn tồn tại; app ngoài gọi tên em bằng user_id thật (0061)'
 );
 
-select isnt(
-  core.issue_embed_alias('fitness', '70000000-0000-0000-0000-000000000001'),
-  core.issue_embed_alias('canteen', '70000000-0000-0000-0000-000000000001'),
-  'Cùng một em, hai app khác nhau -> hai alias khác nhau: không ghép chéo được (ADR-017)'
+-- Chiều ngược, quan trọng ngang: bảng ánh xạ VẪN CÒN. `0061` ngừng cấp alias mới chứ
+-- không xoá sổ cũ — xoá là mất khả năng đọc lại lịch sử của các connector khác
+-- (`tutor`, `cor`…) vốn dùng chung bảng này và không liên quan gì tới app nhúng.
+select has_table(
+  'core', 'id_mappings',
+  'core.id_mappings VẪN còn — 0061 chỉ ngừng cấp alias cho app nhúng, không đụng connector khác'
 );
 
 select * from finish();

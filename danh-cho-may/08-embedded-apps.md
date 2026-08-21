@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 6
+sync-version: 7
 ---
 
 # Embedded Apps — chuẩn nhúng Mini App/tool ngoài vào Super App Shell (ADR-015, mở rộng ADR-017)
@@ -13,8 +13,8 @@ Tier trả lời "nhúng bằng cách nào". Rổ trả lời "được đụng 
 
 | Rổ | App kiểu gì | Được làm gì | Ai duyệt |
 |---|---|---|---|
-| **Xanh** — không gắn định danh học sinh | Bảng tin, thực đơn tuần căn tin, lịch CLB, nội dung hướng dẫn chung | Đọc & ghi dữ liệu chung. Không nhận alias, không nhận `student_id` dưới bất kỳ hình thức nào | 1 dev bảo trợ, PR thường |
-| **Vàng** — có gắn định danh từng em | Fitness (chỉ số cơ thể, kết quả thể lực), căn tin (suất ăn, dị ứng), điểm danh CLB | Đọc & ghi qua ổ cắm chuẩn (mục 1): alias theo app + đường ghi staging + quyền theo người dùng | Hội đồng dữ liệu duyệt App Manifest |
+| **Xanh** — không gắn định danh học sinh | Bảng tin, thực đơn tuần căn tin, lịch CLB, nội dung hướng dẫn chung | Đọc & ghi dữ liệu chung. Không nhận `user_id` của một em, không nhận `student_id` dưới bất kỳ hình thức nào — trigger `ops.tg_su_kien_ro_xanh_khong_gan_em` cưỡng chế | 1 dev bảo trợ, PR thường |
+| **Vàng** — có gắn định danh từng em | Fitness (chỉ số cơ thể, kết quả thể lực), căn tin (suất ăn, dị ứng), điểm danh CLB | Đọc & ghi qua ổ cắm chuẩn (mục 1): `user_id` từ token SSO + đường ghi staging + quyền theo người dùng | Hội đồng dữ liệu duyệt App Manifest |
 | **Đỏ** — cấm tuyệt đối | `care.*`, `care.counselor_notes`, `health.*`, `attendance.checkins` (mood) | Không app ngoài nào chạm, ở mọi Tier, kể cả read-only | — không có đường xin |
 
 **Cảnh báo phân loại sai hay gặp:** fitness và căn tin *nghe* như rổ Xanh nhưng là **rổ Vàng** — app fitness ghi chỉ số cơ thể của từng em, căn tin ghi em nào dị ứng món gì; cả hai buộc phải biết "đây là em nào" mới chạy được. Chỉ app hiển thị nội dung chung cho cả trường (thực đơn tuần, lịch CLB) mới là rổ Xanh.
@@ -25,7 +25,9 @@ Vì hướng đi là lâu dài và sẽ có nhiều app (quyết định 27/07/2
 
 ### 1.1 Alias riêng theo từng app, do Hub sinh
 
-`core.id_mappings(system='embed:<app-id>', external_id=<alias ngẫu nhiên>, student_id)` — **Hub sinh alias, app ngoài không được gửi external_id của riêng nó lên để tự khai**. Mỗi app một dải alias riêng: cùng một em thì app căn tin và app fitness nhận hai chuỗi khác nhau, nên hai app ngoài **không đối chiếu chéo dữ liệu học sinh với nhau được**; chỉ Hub ghép lại được.
+**ĐỔI 21/08/2026 — ADR-038, migration `0061`.** App gọi tên một em bằng `core.users.id`, chính là `sub` trong token SSO nó đã cầm sẵn; trường mang nó trong payload webhook là `user_id`. Bản cũ ở dòng này — `core.id_mappings(system='embed:<app-id>', external_id=<alias ngẫu nhiên>, student_id)`, Hub sinh alias, mỗi app một dải riêng — **đã bỏ**; hai hàm `core.issue_embed_alias*` bị DROP và `POST /api/embed/alias` gỡ. Điều ít ai nhớ và nó làm quyết định này nhỏ hơn vẻ ngoài: `sub` **đã là** `core.users.id` từ 30/07/2026, nên alias chưa bao giờ giấu được định danh — nó chỉ che đường dữ liệu về.
+
+**Cái mất:** hai app ngoài đối chiếu chéo được cùng một em; id thật nằm trong kho của nền tảng ngoài. **Hàng rào thay thế, cưỡng chế trong `promote()`:** app chỉ gửi được dữ liệu của người **đã từng đăng nhập vào chính nó** — `core.identity_links(system='embed-login:<app-id>')`, dòng do `provider.ts` ghi ở `grant.success`. `user_id` lạ, hoặc chưa đăng nhập, hoặc còn gửi trường `alias` cũ: vào `staging.import_errors` kèm lý do có tên, **không** lưu `null` trong im lặng. Người không phải học sinh vẫn gửi được — dòng vào kho với `student_id` NULL, mang `actor_user_id`; đây là mở rộng có chủ ý cho app của giáo viên (bản alias từ chối hẳn).
 
 ### 1.2 Ghi qua staging, nhưng xử lý ngay
 
@@ -128,7 +130,7 @@ Cookie phiên của Hub **không tự chia sẻ được** sang domain khác qua
    - Schema thông điệp cố định trong `packages/core/contracts` (`embed:ready`, `embed:token`, `embed:resize`, `embed:error`), có version.
    - Có timeout: app con không gửi `ready` trong 10 giây → Shell hiện lỗi và giữ nguyên nút thoát.
 5. Nếu nền tảng ngoài cho chạy script khởi tạo tùy chỉnh (nhiều no-code builder cho việc này): app con tự POST tới `/oidc/token` của Hub (server-to-server, không qua trình duyệt) để đổi code lấy `id_token` (`sub = core.users.id`).
-6. Nếu nền tảng ngoài **không** cho chạy script tùy chỉnh để tự đổi token (chỉ cho nhúng UI thuần): hạ xuống chế độ tối thiểu — app ngoài chỉ nhận **context token** (alias do Hub sinh theo mục 1.1, không phải định danh thật), TTL ≤ 5 phút, cũng qua `postMessage`. Đây KHÔNG phải "đăng nhập" theo chuẩn OIDC đầy đủ, chỉ là truyền ngữ cảnh hiển thị; mọi lệnh ghi dữ liệu vẫn bắt buộc qua Embed API (mục 4) có xác thực riêng.
+6. Nếu nền tảng ngoài **không** cho chạy script tùy chỉnh để tự đổi token (chỉ cho nhúng UI thuần): hạ xuống chế độ tối thiểu — app ngoài chỉ nhận **context token** (TTL ≤ 5 phút), cũng qua `postMessage`. Đây KHÔNG phải "đăng nhập" theo chuẩn OIDC đầy đủ, chỉ là truyền ngữ cảnh hiển thị; mọi lệnh ghi dữ liệu vẫn bắt buộc qua Embed API (mục 4) có xác thực riêng.
 7. Mọi ghi dữ liệu từ app ngoài gọi vào **Embed API** — không bao giờ tự lưu trực tiếp vào DB riêng của nền tảng ngoài.
 
 ### Vì sao nút quay lại phải nằm NGOÀI iframe
@@ -150,7 +152,7 @@ Không bao giờ cấp `service_role` hay quyền tRPC đầy đủ cho app ngo�
 2. **Chỉ khi app tự host có máy chủ riêng:** cấp thêm **một API key phạm vi hẹp** (scoped, rate-limited theo `packages/core/contracts`, mặc định **30 req/phút/app**, khai khác thì ghi trong Manifest), chỉ gọi được đúng 1–2 tRPC procedure đã khai báo. Ví dụ: "Sổ tay đọc sách" chỉ được gọi `evidence.logDear` — không gọi được gì khác, kể cả đọc. Key nằm trong biến môi trường phía máy chủ của app, không bao giờ trong bundle client.
 3. **Nếu nền tảng ngoài chỉ hỗ trợ webhook** (không gọi API tùy ý): dùng lại **nguyên xi** pattern connector đã có — webhook → `staging.raw_embedded_events` (UQ theo `source, external_id`, đúng §9) → `promote()` xử lý giống Tutor/Moodle/COR (chạy ngay theo sự kiện, mục 1.2). Không có luật mới, không có đường ghi thứ ba — đây vẫn là Đường 2 đã định nghĩa trong `03-api.md`, chỉ thêm một nguồn.
 
-**`external_id` phải lặp lại được cho cùng một sự kiện.** Hub **từ chối** webhook thiếu `external_id`; Manifest phải khai cách sinh nó (ví dụ hash của `app-id + alias + ngày + loại sự kiện`). Công cụ no-code thường sinh UUID mới mỗi lần gửi lại — khi đó unique constraint vô hiệu và §9 chỉ còn trên giấy.
+**`external_id` phải lặp lại được cho cùng một sự kiện.** Hub **từ chối** webhook thiếu `external_id`; Manifest phải khai cách sinh nó (ví dụ hash của `app-id + user_id + ngày + loại sự kiện`). Công cụ no-code thường sinh UUID mới mỗi lần gửi lại — khi đó unique constraint vô hiệu và §9 chỉ còn trên giấy.
 
 ### Cấm tuyệt đối — điểm mấu chốt tuân thủ Luật 91/2025/QH15
 
@@ -169,7 +171,7 @@ App ngoài (Base44/Firebase Studio/v.v. đều có hạ tầng lưu trữ riêng
 | Owner | Tên vibe team + 1 dev bảo trợ |
 | Quyền Embed API | `evidence.logDear` (chỉ ghi), không đọc gì |
 | Rate limit | mặc định 30 req/phút/app |
-| Cách sinh `external_id` | `sha256(app-id + alias + ngày + 'dear')` — lặp lại được |
+| Cách sinh `external_id` | `sha256(app-id + user_id + ngày + 'dear')` — lặp lại được |
 | Dữ liệu chạm tới | `evidence` (không `care`/`health`) |
 | Đăng ký OIDC RP | Không (chỉ dùng context token, không tự đổi token) — nếu **có** thì khai luôn `redirect_uris` · `backchannel_logout_uri` · `scope` · tên biến chứa `client_secret`, xem dưới |
 | Ngày rà lại | mỗi 6 tháng — quá hạn không rà thì thu hồi quyền |
@@ -203,7 +205,7 @@ Quy trình này in thẳng trên `/quan-tri/mini-app` (nút "Quy trình đấu n
 
 **Điều bước 4 KHÔNG hứa:** mọi `event_type` đều vào kho, nhưng chỉ `dear_log` có luật ánh xạ thành dữ liệu nghiệp vụ. Loại khác nằm ở `ops.embedded_app_events` dưới dạng JSON thô — đọc được, thống kê được, **không** tự thành khoá học hay buổi điểm danh. Thêm luật ánh xạ là một migration, không phải một ô trên màn quản trị. Ghi ra vì "dữ liệu tự đổ về" là câu dễ hiểu thành "app con khai gì Hub hiểu nấy", và mở đúng cửa đó là bỏ chính hàng rào §8.
 
-**Vòng đời app, không chỉ ngày sinh:** mỗi Manifest có ngày rà lại. Đến hạn mà owner không xác nhận app còn dùng → thu hồi alias + key, gỡ khỏi `frame-src`. App bị nền tảng ngoài khai tử (Base44 đóng cửa, domain hết hạn) xử lý y như vậy. Dữ liệu đã promote vào Hub vẫn giữ — nó thuộc về trường, không thuộc về app.
+**Vòng đời app, không chỉ ngày sinh:** mỗi Manifest có ngày rà lại. Đến hạn mà owner không xác nhận app còn dùng → tắt `enabled` (cắt cả nhúng, webhook lẫn đăng nhập trong ≤10 giây), gỡ khỏi `frame-src`. App bị nền tảng ngoài khai tử (Base44 đóng cửa, domain hết hạn) xử lý y như vậy. Dữ liệu đã promote vào Hub vẫn giữ — nó thuộc về trường, không thuộc về app.
 
 ## 6. Không đổi — mọi luật cũ áp dụng nguyên xi, không có ngoại lệ cho embedded app
 
@@ -222,7 +224,7 @@ Quy trình này in thẳng trên `/quan-tri/mini-app` (nút "Quy trình đấu n
 - **App con không gửi `embed:ready`** trong 10 giây → Shell hiện lỗi, nút thoát vẫn hoạt động.
 - Embed API: gọi ngoài phạm vi được cấp (endpoint không thuộc manifest) → bị chặn, có log.
 - Webhook (nếu dùng): bắn 2 lần cùng payload → không tạo bản ghi đôi (idempotency, §9); thiếu `external_id` → bị từ chối.
-- **Alias không trùng dải giữa hai app:** cùng một `student_id` qua hai `app-id` khác nhau phải cho hai alias khác nhau.
+- **App không mượn được người của app khác:** cùng một `user_id` gửi qua một `app-id` mà người đó chưa đăng nhập vào phải bị từ chối (thay cho phép kiểm "alias không trùng dải" của bản trước ADR-038).
 - Rà thủ công: không trường nào trong request/response gửi cho app ngoài chứa `student_code`/tên thật ngoài phạm vi đã khai trong Manifest.
 - **Rổ Đỏ bị chặn ở tầng contract:** Manifest khai procedure chạm `care`/`health`/mood → CI fail, không đợi review người.
 

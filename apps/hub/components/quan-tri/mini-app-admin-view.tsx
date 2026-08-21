@@ -703,7 +703,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
         </summary>
         <p className="mt-1.5">
           Mã (<span className="font-mono">{app.appId}</span>) nằm trong URL, trong mọi webhook app đang gửi và
-          trong alias đã sinh cho từng em; rổ dữ liệu là thứ Hội đồng dữ liệu duyệt. Muốn đổi thì tắt app này
+          trong sổ ghi ai đã đăng nhập vào app; rổ dữ liệu là thứ Hội đồng dữ liệu duyệt. Muốn đổi thì tắt app này
           và khai app mới — chậm hơn, và chậm ở đây là cố ý.
         </p>
       </details>

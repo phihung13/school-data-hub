@@ -84,8 +84,13 @@ export function xoaDem(): void {
  *   · BƠM DỮ LIỆU RÁC vào `staging` + `ops.embedded_app_events` dưới tên app bất kỳ. Có
  *     thật, phải đi dọn.
  *   · KHÔNG đọc được gì — cổng này chỉ ghi, phản hồi chỉ có một mã trạng thái.
- *   · KHÔNG gắn được vào em nào — alias là chuỗi ngẫu nhiên 32 ký tự trong `id_mappings`,
- *     không đoán ra; alias sai thì `promote()` đẩy vào hàng đợi lỗi (0056).
+ *   · GẮN ĐƯỢC vào một em, nhưng chỉ em ĐÃ TỪNG ĐĂNG NHẬP vào chính app đó — ĐỔI TỪ
+ *     21/08/2026 (ADR-038, migration 0061), và đổi theo chiều XẤU ĐI, nên ghi lại rõ.
+ *     Bản cũ: alias là chuỗi ngẫu nhiên 32 ký tự, không đoán ra ⇒ "không gắn được vào
+ *     em nào". Bản nay: app gửi `user_id` thật, mà id của một em lộ ra ở nhiều chỗ hơn
+ *     hẳn một chuỗi ngẫu nhiên. Hàng rào còn lại là `core.identity_links` — người đoán
+ *     trúng chuỗi chỉ ghi bậy được cho những người đã dùng app đó, không phải cho cả
+ *     trường. `user_id` lạ hoặc chưa đăng nhập ⇒ hàng đợi lỗi, không lưu (0061).
  *   · KHÔNG tự chế được token đăng nhập — chuỗi này dùng cho CẢ đường đăng nhập từ 08/08
  *     (*"gộp đi"*, migration 0057), nhưng PKCE bắt buộc và `redirect_uri` khớp tuyệt đối
  *     vẫn gác, và cả hai không đụng tới `client_secret`.

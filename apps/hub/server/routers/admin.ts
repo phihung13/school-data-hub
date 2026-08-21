@@ -21,9 +21,11 @@
 // HAI TRƯỜNG KHÔNG SỬA ĐƯỢC, VÀ VÌ SAO
 // ═══════════════════════════════════════════════════════════════════════════════
 //   · `appId` — nó nằm trong URL `/embed/<app_id>`, trong `x-embed-app` của mọi webhook
-//     app đang gửi, và trong mã alias đã sinh cho từng em (`sha256(app-id + alias + …)`,
-//     08-embedded-apps.md mục 5). Đổi mã app là làm đứt cả ba thứ cùng lúc, trong đó thứ
-//     ba KHÔNG dựng lại được: alias cũ không còn ánh xạ về đâu.
+//     app đang gửi, trong `client_id` OIDC, và trong khoá sổ đăng nhập
+//     `core.identity_links.system = 'embed-login:<app_id>'`. Đổi mã app là làm đứt cả bốn
+//     thứ cùng lúc, trong đó thứ tư khiến MỌI webhook có `user_id` của app đó bị từ chối
+//     (0061: người gửi phải đã đăng nhập vào chính app đó). Vế cũ ở dòng này nói mã app
+//     nằm trong alias đã sinh — alias đã bỏ từ ADR-038, xem 0061.
 //   · `basket` — rổ dữ liệu quyết định app được chạm vào gì, và nó là thứ Hội đồng dữ
 //     liệu duyệt (mục 0). Đổi rổ trên một màn hình là đi vòng qua chính cái hội đồng đó.
 //     Đường đúng là tắt app cũ, khai app mới, để lịch sử còn lại hai dòng.

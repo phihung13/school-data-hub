@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 10
+sync-version: 11
 ---
 
 # RULES — 10 điều khoản hợp đồng kiến trúc (luật cứng, máy cưỡng chế)
@@ -100,7 +100,7 @@ PR chạm `packages/core/**` bắt buộc approve của cả 2 dev chính. Vibe 
 Chi tiết kỹ thuật đầy đủ: `08-embedded-apps.md`. Tóm tắt bốn điều cưỡng chế:
 
 1. **Ba tầng tin cậy bắt buộc phân loại trước khi build:** Tier 1 (native, trong monorepo) · Tier 2 (embedded, nền tảng ngoài cho phép nhúng iframe) · Tier 3 (linked, nền tảng chặn nhúng). Tier 2/3 phải qua Hội đồng dữ liệu duyệt App Manifest trước khi vibe team bắt đầu build trên nền tảng ngoài (Base44, Google AI Studio, Lovable hay tương đương).
-2. **Cấm app ngoài lưu `student_code`/tên thật/bất kỳ định danh học sinh nào** trong DB riêng của nền tảng ngoài — chỉ external reference qua `core.id_mappings(system='embed:<app-id>', ...)`, đúng cơ chế connector đã có, không ngoại lệ.
+2. **Cấm app ngoài lưu `student_code` hoặc tên thật của em** trong DB riêng của nền tảng ngoài. App gọi tên một em bằng `core.users.id` — chính là `sub` trong token SSO mà nó đã cầm sẵn (**ADR-038, 21/08/2026, tu chính điều này**; bản cũ bắt đi qua alias trong `core.id_mappings`). **Nói thẳng cái mất:** id thật rời khỏi tầm kiểm soát của trường và hai app ngoài đối chiếu chéo được cùng một em — đó là đánh đổi chủ đầu tư đã nhận khi quyết. Hàng rào còn lại, cưỡng chế trong `promote()` (`0061`): app chỉ gửi được dữ liệu của người **đã từng đăng nhập vào chính nó** (`core.identity_links`, `embed-login:<app-id>`); `user_id` lạ hoặc chưa đăng nhập thì vào hàng đợi lỗi, không lưu.
 3. **Mọi ghi dữ liệu từ app ngoài qua Embed API scoped** (1–2 procedure khai báo trước trong Manifest) hoặc webhook → `staging` → `promote()` — không service_role, không quyền tRPC rộng, không đường ghi thứ ba ngoài Đường 2 đã định nghĩa.
 4. **Nút điều hướng quay lại Hub phải do Hub tự vẽ, nằm ngoài DOM của iframe** — app ngoài không được có khả năng ẩn/vô hiệu hóa đường thoát của người dùng.
 
@@ -109,7 +109,7 @@ Chi tiết kỹ thuật đầy đủ: `08-embedded-apps.md`. Tóm tắt bốn đ
 Chốt 27/07/2026. Chi tiết: `08-embedded-apps.md` mục 0–1, `03-api.md` mục định danh.
 
 1. **Rổ dữ liệu khai trước Tier.** Xanh (không gắn định danh học sinh) · Vàng (gắn từng em: fitness, căn tin, điểm danh CLB) · **Đỏ (cấm tuyệt đối: `care.*`, `counselor_notes`, `health.*`, mood trong `attendance.checkins`)**. Manifest khai procedure chạm rổ Đỏ → **CI fail**, không đợi review người. Fitness/căn tin là rổ Vàng — phân loại xuống Xanh là lỗi chặn merge.
-2. **Alias do Hub sinh, mỗi app một dải riêng.** App ngoài không được tự khai `external_id` định danh học sinh. Hai app ngoài không được nhận cùng một alias cho cùng một em.
+2. **~~Alias do Hub sinh, mỗi app một dải riêng.~~ BỎ 21/08/2026 (ADR-038, `0061`).** Giữ dòng gạch để ai đọc sau biết hệ đã từng đứng ở đâu và vì sao rời đi. Điều thay thế: **app gọi tên em bằng `user_id` thật, và chỉ gọi được tên người đã đăng nhập vào chính app đó.** Hai hàm `core.issue_embed_alias*` đã bị DROP; `core.id_mappings` **vẫn còn** và vẫn phục vụ các connector khác (`tutor`, `cor`…) — `0061` không đụng tới chúng. App ngoài vẫn **không** được tự khai `external_id` định danh học sinh: `external_id` là mã của SỰ KIỆN (điều 4), không phải mã của em.
 3. **Không cấp API key cho app không có backend riêng.** App chỉ có frontend (no-code thuần) đi đường quyền-theo-người-dùng hoặc webhook. Cấp key cho bundle client là vi phạm §4 dưới tên khác.
 4. **`external_id` phải lặp lại được**; Hub từ chối webhook thiếu nó. Không có ràng buộc này thì §9 chỉ còn trên giấy đối với nguồn ngoài.
 5. **`postMessage` bắt buộc kiểm `event.origin`** khớp Manifest, có schema trong `packages/core/contracts` và có timeout. Cấm trao mã/token qua query string của `iframe src`.

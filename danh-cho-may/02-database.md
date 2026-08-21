@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 35
+sync-version: 36
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1076,6 +1076,39 @@ Hạng mục lấy về từ sơ đồ AI OS của cấp trên ("4 app dùng nhi
 Đo đầu-cuối trên máy chủ thật (dev, 21/08/2026), phiên cô Lan: lưới `Bảng điều khiển | Factory` → gieo 5 lượt mở Factory → tải lại trang chủ → **`Factory | Bảng điều khiển`**. Đường beacon: hai `POST` sát nhau → `204` + `204`, `so_lan = 1`; không đăng nhập → `204` và **0 dòng ghi thêm**; thân hỏng → `204`.
 
 **Toàn bộ pgTAP sau đợt Q: 1.067 assertion / 58 file**, khớp mốc.
+
+## Đợt R (`0061`, 21/08/2026) — app ngoài gọi tên em bằng `user_id` thật (ADR-038)
+
+Chủ đầu tư: *"user_id thật, như tờ sơ đồ vẽ"*. `core.promote_embedded_event` nay giải `payload.user_id` → `core.students.user_id` → `student_id`, cho **mọi** loại sự kiện; hai hàm `core.issue_embed_alias*` bị DROP; `POST /api/embed/alias` gỡ.
+
+**Điều ít ai nhớ, và nó làm quyết định này nhỏ hơn vẻ ngoài:** `sub` trong token SSO **đã là** `core.users.id` từ 30/07/2026 (ghi ngay dòng 4 `provider.ts`). App nào đăng nhập được là đã cầm id thật từ lúc đó. Alias vì thế chưa bao giờ giấu được định danh — nó chỉ còn che **đường dữ liệu về**.
+
+**Hai trường khác việc, không gộp:** `actor_user_id` = ai LÀM; `user_id` = dữ liệu này CỦA AI. App học sinh thì hai cái trùng; app thầy cô ghi hộ thì khác.
+
+**Hàng rào thay alias — thứ giữ cho quyết định này không thành cửa mở.** Alias có một tính chất `user_id` không có: không đoán được. Bỏ mà không bù thì ai cầm chuỗi webhook chung cũng ghi được dữ liệu dưới tên một em bất kỳ họ đọc được id. Chủ đầu tư chọn bỏ alias, **không** chọn "mọi app ghi được cho mọi em". Nên `0061` đòi thêm: **`user_id` phải đã từng đăng nhập vào chính app đó** (`core.identity_links`, `embed-login:<app_id>` — dòng `provider.ts` ghi ở `grant.success`). Chặn được: app đoán id của em chưa bao giờ dùng nó. Không chặn được: app ghi bậy cho chính người đang dùng nó. Làm vướng: app cần ghi cho em chưa mở nó bao giờ (thầy cô nhập hộ cả lớp) sẽ nhận lỗi có tên — đánh đổi có chủ ý, hỏng ồn ào hơn là mở lặng.
+
+**`payload.alias` bị TỪ CHỐI tường minh**, không nuốt im lặng: app dựng theo brief cũ phải hỏng và đọc được câu chỉ đường. Nuốt nó thì dòng vào kho không gắn em nào, **trông y hệt một sự kiện rổ Xanh hợp lệ**.
+
+**Nhánh `dear_log` hết di sản.** Trước `0061` nó tra `core.id_mappings` bằng chính `external_id` CỦA SỰ KIỆN — vết tích `0018`, khi external_id còn kiêm vai mã học sinh. Nay một chỗ giải danh tính, không phải hai.
+
+**`core.id_mappings` KHÔNG bị xoá** — `0061` chỉ ngừng cấp alias cho app nhúng; bảng vẫn phục vụ connector `tutor`/`cor`. Đo trước khi gỡ: dải `embed:*` có **0 dòng**, tức gỡ một cơ chế chưa ai dùng.
+
+**Tu chính luật đi cùng commit** (không sửa trước, để luật không tả trạng thái chưa có): `RULES.md` Rev E.2 + Rev F.2, `08-embedded-apps.md` mục 0–1 và checklist, hai phần đối ứng trong hồ sơ HTML, `sync-version` tăng cả hai phía. **Rev F.4 giữ nguyên** — `external_id` vẫn phải lặp lại được, §9 không đổi.
+
+**Kiểm chứng.** Bốn bài pgTAP đổi theo, **lật chứ không xoá**: `0003` (hàm cấp alias không còn tồn tại — và `core.id_mappings` thì VẪN còn), `0018` (nhánh dear_log đi đường mới), `0028` (ca I đổi trọn sang `promote()`), `0056` (+1 assertion: brief cũ gửi `alias` phải hỏng ồn ào). **1.068 assertion / 58 file**, khớp mốc, trên kho dựng lại từ đầu.
+
+Đo đầu-cuối trên máy chủ thật (dev, 21/08/2026) — dựng một app rổ Vàng, cho em Minh đăng nhập bằng **luồng OIDC thật** (PKCE, đổi code lấy token), rồi bắn webhook:
+
+| Ca | Kết quả |
+|---|---|
+| `user_id` của thầy cô đã đăng nhập app | `promoted`, `student_id` NULL — đúng, thầy cô không phải học sinh |
+| `user_id` của em **chưa** đăng nhập app | `import_error` — *"user_id chưa từng đăng nhập vào app này"* |
+| còn gửi `alias` theo brief cũ | `import_error` — *"trường alias đã bỏ từ ADR-038 — gửi user_id"* |
+| `user_id` bịa | `import_error` — *"user_id không khớp core.users nào"* |
+| em Minh **sau khi** đăng nhập thật vào app | `promoted`, vào đúng hồ sơ **em Nguyễn Văn Minh** |
+| app rổ Xanh (Factory) gửi kèm `user_id` | bị trigger `0056` chặn — rổ Xanh không gắn tên em nào |
+
+Ca cuối đáng ghi: nó chứng minh hai hàng rào **độc lập** vẫn xếp chồng đúng thứ tự sau khi đổi tầng định danh.
 
 ## Quy tắc migration (§2)
 

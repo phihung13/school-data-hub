@@ -1,4 +1,4 @@
--- pgTAP — core.promote_embedded_event(), nhánh rổ Vàng "DEAR log qua alias" (0018)
+-- pgTAP — core.promote_embedded_event(), nhánh rổ Vàng "DEAR log" (0018 → 0061)
 -- Chạy: pg_prove -d "$DATABASE_URL" packages/core/db/tests/0018_embed_promote_test.sql
 --
 -- Vì sao file này tồn tại: 0018 đưa vào hệ một hàm SECURITY DEFINER — bề mặt phân
@@ -9,8 +9,14 @@
 -- đồng do 0018 đặt ra: nhánh event_type = 'dear_log'. Nhánh rổ Xanh là việc của 0019.
 --
 -- Ba điều phải khoá, theo thứ tự rủi ro:
---   1. §8 — alias không map được thì DỪNG và để lại dấu vết cho người xử, không tự đoán,
---           và bản ghi thô phải còn nguyên (promoted_at NULL) để xử lại được sau.
+--   1. §8 — không giải được ra em nào thì DỪNG và để lại dấu vết cho người xử, không tự
+--           đoán, và bản ghi thô phải còn nguyên (promoted_at NULL) để xử lại được sau.
+--
+-- ĐỔI 21/08/2026 (ADR-038, migration 0061): nhánh này trước đây tra `core.id_mappings`
+-- bằng chính `external_id` CỦA SỰ KIỆN — di sản 0018, khi external_id còn kiêm vai mã học
+-- sinh. Nay nó đi cùng một đường với mọi loại sự kiện khác: `payload.user_id` (là `sub`
+-- của token SSO) + điều kiện em đã từng đăng nhập vào app đó. Các assertion đổi theo, KHÔNG
+-- xoá — ba điều phải khoá ở trên không đổi một chữ, chỉ đổi cách gọi tên một em.
 --   2. §9 — gọi lại promote() trên cùng bản ghi thô không sinh dòng thứ hai.
 --   3. Dữ liệu bơm vào evidence.dear_logs đúng em, đúng ngày, đúng số phút, đúng sách.
 
@@ -30,9 +36,9 @@ select is_definer(
   'Hàm chạy SECURITY DEFINER — connector không cần (và không được có) quyền evidence/core'
 );
 
--- ── §8: alias chưa có trong sổ đối chiếu ────────────────────────────────────
+-- ── §8: sự kiện không nói được nó thuộc về em nào ───────────────────────────
 insert into staging.raw_embedded_events (id, source, external_id, payload)
-     values (9101, 'embed:dear-app', 'alias-chua-map',
+     values (9101, 'embed:dear-app', 'sk-khong-co-nguoi',
              jsonb_build_object('event_type', 'dear_log',
                                 'logged_on',  '2026-07-30',
                                 'minutes',    20,
@@ -41,37 +47,41 @@ insert into staging.raw_embedded_events (id, source, external_id, payload)
 select is(
   core.promote_embedded_event(9101),
   'import_error',
-  '§8 — alias không map được student_id thì trả import_error, KHÔNG tự đoán em nào'
+  '§8 — dear_log không có user_id thì trả import_error, KHÔNG tự đoán em nào'
 );
 -- Gộp số dòng và nội dung reason vào một assertion: subquery vô hướng trả nhiều
 -- dòng sẽ ném lỗi, nên phép so sánh này cũng chính là phép kiểm "đúng một dòng".
 select is(
   (select count(*) || '|' || coalesce(max(reason), '(không có)')
      from staging.import_errors where raw_id = 9101),
-  '1|alias không map được student_id',
+  '1|dear_log phải gắn một em: thiếu user_id của học sinh',
   '§8 — đúng một dòng staging.import_errors, reason nói rõ người xử phải làm gì'
 );
 select is(
   (select promoted_at from staging.raw_embedded_events where id = 9101),
   null::timestamptz,
-  'Bản ghi thô còn nguyên promoted_at NULL — xử lại được sau khi người gắn alias'
+  'Bản ghi thô còn nguyên promoted_at NULL — xử lại được sau khi app gửi kèm user_id'
 );
 
--- ── Đường đi đúng: alias đã có trong core.id_mappings ───────────────────────
-insert into core.id_mappings (system, external_id, student_id)
-     values ('embed:dear-app', 'alias-minh', '70000000-0000-0000-0000-000000000001');
+-- ── Đường đi đúng: em đã đăng nhập app, sự kiện mang user_id của em ─────────
+-- Dòng identity_links này chính là thứ `provider.ts` ghi ở `grant.success` mỗi lần Hub
+-- cấp token cho app. Không có nó thì `0061` từ chối — và đó là hàng rào thay cho alias.
+insert into core.identity_links (system, external_id, user_id)
+     values ('embed-login:dear-app', '40000000-0000-0000-0000-000000000005',
+             '40000000-0000-0000-0000-000000000005');
 
 insert into staging.raw_embedded_events (id, source, external_id, payload)
-     values (9102, 'embed:dear-app', 'alias-minh',
-             jsonb_build_object('event_type', 'dear_log',
-                                'logged_on',  '2026-07-30',
-                                'minutes',    25,
-                                'book_title', 'Dế Mèn phiêu lưu ký'));
+     values (9102, 'embed:dear-app', 'sk-cua-minh',
+             jsonb_build_object('event_type',  'dear_log',
+                                'user_id',     '40000000-0000-0000-0000-000000000005',
+                                'logged_on',   '2026-07-30',
+                                'minutes',     25,
+                                'book_title',  'Dế Mèn phiêu lưu ký'));
 
 select is(
   core.promote_embedded_event(9102),
   'promoted',
-  'Có alias trong core.id_mappings — sự kiện được promote'
+  'Em đã đăng nhập app đó và sự kiện mang user_id của em — được promote (ADR-038)'
 );
 select is(
   (select format('%s|%s|%s|%s', student_id, to_char(logged_on, 'YYYY-MM-DD'), minutes, book_title)
@@ -102,14 +112,16 @@ select is(
 --
 -- Không khoá cứng một trong hai hành vi: kỳ vọng được suy ra từ chính thân hàm,
 -- nên assertion tự chuyển sang đòi 'import_error' ngay khi 0028 đổ vào — và đỏ
--- nếu ai đó gỡ block EXCEPTION đi. Alias thứ hai (app khác) là bắt buộc: khóa
--- duy nhất (source, external_id) không cho gửi hai bản ghi thô cùng một alias.
-insert into core.id_mappings (system, external_id, student_id)
-     values ('embed:dear-app-2', 'alias-minh-2', '70000000-0000-0000-0000-000000000001');
+-- nếu ai đó gỡ block EXCEPTION đi. Dùng app THỨ HAI là bắt buộc: khóa duy nhất
+-- (source, external_id) không cho gửi hai bản ghi thô cùng một mã sự kiện.
+insert into core.identity_links (system, external_id, user_id)
+     values ('embed-login:dear-app-2', '40000000-0000-0000-0000-000000000005',
+             '40000000-0000-0000-0000-000000000005');
 
 insert into staging.raw_embedded_events (id, source, external_id, payload)
-     values (9103, 'embed:dear-app-2', 'alias-minh-2',
+     values (9103, 'embed:dear-app-2', 'sk-thieu-ngay',
              jsonb_build_object('event_type', 'dear_log',
+                                'user_id',    '40000000-0000-0000-0000-000000000005',
                                 'minutes',    20,
                                 'book_title', 'Sách quên ghi ngày'));
 

@@ -4,7 +4,7 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- BÀI NÀY HỎI BA CÂU
 --
---   A. Thư có được PHÂN vào đúng hồ sơ không — alias giải ra đúng em, và alias không
+--   A. Thư có được PHÂN vào đúng hồ sơ không — user_id giải ra đúng em, và user_id không
 --      giải được thì vào hàng đợi lỗi chứ KHÔNG lưu null trong im lặng. Lưu null là
 --      biến một lỗi thành một dòng trông y hệt "sự kiện không gắn em nào", và từ đó
 --      không ai còn cách nào phân biệt.
@@ -20,7 +20,7 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
-select plan(34);
+select plan(35);
 select test_support.seed_basic();
 
 -- ---------------------------------------------------------------------------
@@ -55,10 +55,14 @@ values
   ('t-chi-gv', 'App thử chỉ cho giáo viên', 'vang', true,
    array['homeroom']::text[], array['ket_qua'], 'bài test', current_date + 180);
 
--- Alias của em Minh trong dải riêng của từng app. Hub sinh, app không tự khai.
-insert into core.id_mappings (system, external_id, student_id) values
-  ('embed:t-vang',   'alias-minh-vang',   '70000000-0000-0000-0000-000000000001'),
-  ('embed:t-chi-gv', 'alias-minh-chi-gv', '70000000-0000-0000-0000-000000000001');
+-- ĐỔI 21/08/2026 (ADR-038, migration 0061): alias đã bỏ, app gửi `user_id` thật.
+-- Điều kiện thay thế là em phải TỪNG ĐĂNG NHẬP vào chính app đó — dòng
+-- `core.identity_links` dưới đây chính là thứ `provider.ts` ghi mỗi lần cấp token.
+-- Cố ý chỉ liên kết Minh với `t-vang`, KHÔNG với `t-chi-gv`: chỗ trống đó là mẫu số
+-- của assertion "app khác không mượn được người của app này".
+insert into core.identity_links (system, external_id, user_id) values
+  ('embed-login:t-vang', '40000000-0000-0000-0000-000000000005',
+   '40000000-0000-0000-0000-000000000005');
 
 -- ---------------------------------------------------------------------------
 -- 2. (A) Thư có được phân vào đúng hồ sơ không
@@ -69,14 +73,14 @@ insert into core.id_mappings (system, external_id, student_id) values
 select is(
   core.promote_embedded_event(
     staging.ingest_embedded_event('embed:t-vang', 'sk-01',
-      '{"event_type":"ket_qua","alias":"alias-minh-vang","chay_30m":"5.8s"}'::jsonb)),
+      '{"event_type":"ket_qua","user_id":"40000000-0000-0000-0000-000000000005","chay_30m":"5.8s"}'::jsonb)),
   'promoted',
-  'sự kiện có alias hợp lệ được nhận');
+  'sự kiện mang user_id của người ĐÃ đăng nhập app đó được nhận (ADR-038 thay alias)');
 
 select is(
   (select student_id from ops.embedded_app_events where app_id = 't-vang' and external_id = 'sk-01'),
   '70000000-0000-0000-0000-000000000001'::uuid,
-  'ĐÃ PHÂN ĐÚNG HỒ SƠ — alias giải ra đúng em, không còn nằm chìm trong JSON');
+  'ĐÃ PHÂN ĐÚNG HỒ SƠ — user_id giải qua core.students.user_id ra đúng em, không còn nằm chìm trong JSON');
 
 select is(
   (select payload ->> 'chay_30m' from ops.embedded_app_events where app_id = 't-vang' and external_id = 'sk-01'),
@@ -87,23 +91,32 @@ select is(
 select is(
   core.promote_embedded_event(
     staging.ingest_embedded_event('embed:t-vang', 'sk-02',
-      '{"event_type":"ket_qua","alias":"alias-bia-ra"}'::jsonb)),
+      '{"event_type":"ket_qua","user_id":"40000000-0000-0000-0000-0000000000ff"}'::jsonb)),
   'import_error',
-  'alias Hub không nhận ra thì vào hàng đợi lỗi — app tự bịa mã, hoặc dùng alias của app khác');
+  'user_id Hub không nhận ra thì vào hàng đợi lỗi — không lưu null trong im lặng');
 
 select is(
   (select count(*)::int from ops.embedded_app_events where app_id = 't-vang' and external_id = 'sk-02'),
   0,
   'và KHÔNG để lại một dòng student_id null trông y hệt "sự kiện không gắn em nào"');
 
--- Alias của app KHÁC: mỗi app một dải riêng, không dùng chéo được. Đây là chỗ giữ cho hai
--- app ngoài không đối chiếu dữ liệu học sinh với nhau.
+-- Hàng rào THAY CHO alias (ADR-038): app chỉ gửi được dữ liệu của người đã đăng nhập vào
+-- CHÍNH NÓ. Minh có liên kết với `t-vang` nhưng KHÔNG với `t-chi-gv`, nên app kia không
+-- mượn được id của em — đây là thứ giữ cho một app không bơm dữ liệu dưới tên người lạ.
 select is(
   core.promote_embedded_event(
-    staging.ingest_embedded_event('embed:t-vang', 'sk-03',
-      '{"event_type":"ket_qua","alias":"alias-minh-chi-gv"}'::jsonb)),
+    staging.ingest_embedded_event('embed:t-chi-gv', 'sk-03',
+      '{"event_type":"ket_qua","user_id":"40000000-0000-0000-0000-000000000005"}'::jsonb)),
   'import_error',
-  'alias của app KHÁC không dùng được — mỗi app một dải, hai app không ghép được dữ liệu em');
+  'app mà em CHƯA đăng nhập vào thì không gửi được dữ liệu của em — hàng rào thay alias');
+
+-- Trường `alias` của bản brief cũ phải hỏng ỒN ÀO, không bị nuốt trong im lặng.
+select is(
+  core.promote_embedded_event(
+    staging.ingest_embedded_event('embed:t-vang', 'sk-03b',
+      '{"event_type":"ket_qua","alias":"alias-minh-vang"}'::jsonb)),
+  'import_error',
+  'app dựng theo brief CŨ gửi alias thì bị từ chối tường minh — nuốt nó là để dòng dữ liệu vào kho không gắn em nào, trông y hệt một sự kiện rổ Xanh hợp lệ');
 
 -- Không alias: hợp lệ, đó là sự kiện không gắn em nào.
 select is(
@@ -111,7 +124,7 @@ select is(
     staging.ingest_embedded_event('embed:t-xanh', 'sk-04',
       '{"event_type":"thuc_don","mon":"com ga"}'::jsonb)),
   'promoted',
-  'sự kiện không alias vẫn nhận — thực đơn tuần không gắn em nào là chuyện bình thường');
+  'sự kiện không user_id vẫn nhận — thực đơn tuần không gắn em nào là chuyện bình thường');
 
 select is(
   (select student_id from ops.embedded_app_events where app_id = 't-xanh' and external_id = 'sk-04'),
@@ -170,9 +183,16 @@ select lives_ok(
 -- ---------------------------------------------------------------------------
 
 -- Dựng thêm dữ liệu cho em Minh ở app CHỈ-GIÁO-VIÊN (mẫu số của CHỐT 2).
+-- Liên kết đăng nhập phải có TRƯỚC (ADR-038) — và cố ý thêm ở ĐÂY chứ không ở khối seed
+-- đầu file: khối trên cần Minh CHƯA liên kết với app này để assertion "app em chưa đăng
+-- nhập thì không gửi được" có mẫu số thật.
+insert into core.identity_links (system, external_id, user_id) values
+  ('embed-login:t-chi-gv', '40000000-0000-0000-0000-000000000005',
+   '40000000-0000-0000-0000-000000000005');
+
 select core.promote_embedded_event(
   staging.ingest_embedded_event('embed:t-chi-gv', 'sk-gv-01',
-    '{"event_type":"ket_qua","alias":"alias-minh-chi-gv"}'::jsonb));
+    '{"event_type":"ket_qua","user_id":"40000000-0000-0000-0000-000000000005"}'::jsonb));
 
 -- MẪU SỐ: nói rõ có bao nhiêu dòng để mà thấy, TRƯỚC khi đăng nhập bất kỳ ai.
 select ok(
@@ -257,13 +277,22 @@ select test_support.logout();
 -- Dùng một em DỰNG RIÊNG cho phép kiểm này, không xoá em Minh của bộ dữ liệu mẫu: Minh có
 -- điểm danh, cờ, báo cáo, phụ huynh… nên lệnh xoá sẽ vấp một khoá ngoại khác và bài test sẽ
 -- đỏ vì một lý do không liên quan gì tới thứ nó muốn đo.
-insert into core.students (id, student_code, full_name, school_id)
-values ('70000000-0000-0000-0000-0000000000ff', 'VA-2026-99999', 'Em dựng để đo xoá', '20000000-0000-0000-0000-000000000001');
-insert into core.id_mappings (system, external_id, student_id)
-values ('embed:t-vang', 'alias-em-xoa-thu', '70000000-0000-0000-0000-0000000000ff');
+-- Em này cần một TÀI KHOẢN thì mới có `user_id` để app gọi tên (ADR-038) — alias cũ
+-- không đòi điều đó. Đây là một hệ quả thật của quyết định 21/08/2026: em chưa có tài
+-- khoản (mầm non, theo chú thích ở `core.students.user_id`) thì app ngoài KHÔNG gửi được
+-- dữ liệu về em đó nữa. Ghi ra đây để lần sau không ai coi là chuyện đương nhiên.
+insert into core.users (id, auth_uid, email, full_name, status)
+values ('40000000-0000-0000-0000-0000000000ff', '90000000-0000-0000-0000-0000000000ff',
+        'em-xoa-thu@va.edu.vn', 'Em dựng để đo xoá', 'active');
+insert into core.students (id, student_code, full_name, school_id, user_id)
+values ('70000000-0000-0000-0000-0000000000ff', 'VA-2026-99999', 'Em dựng để đo xoá',
+        '20000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-0000000000ff');
+insert into core.identity_links (system, external_id, user_id)
+values ('embed-login:t-vang', '40000000-0000-0000-0000-0000000000ff',
+        '40000000-0000-0000-0000-0000000000ff');
 select core.promote_embedded_event(
   staging.ingest_embedded_event('embed:t-vang', 'sk-xoa-01',
-    '{"event_type":"ket_qua","alias":"alias-em-xoa-thu"}'::jsonb));
+    '{"event_type":"ket_qua","user_id":"40000000-0000-0000-0000-0000000000ff"}'::jsonb));
 
 select is(
   (select count(*)::int from ops.embedded_app_events where student_id = '70000000-0000-0000-0000-0000000000ff'),

@@ -1511,7 +1511,7 @@
         <div class="callout warn"><div class="callout-title"><span class="dot amber"></span>Cổng pháp lý độc lập</div><p>Trước vườn ươm phải hoàn tất DPIA, cơ chế đồng thuận, quy trình quyền truy cập/chỉnh sửa/xóa và mẫu thông báo sự cố dữ liệu. Hồ sơ kiến trúc không thay thế ý kiến pháp lý.</p></div>
       </section>
 
-            <section class="part" id="nhung-app" data-pair="danh-cho-may/08-embedded-apps.md" data-sync-version="6">
+            <section class="part" id="nhung-app" data-pair="danh-cho-may/08-embedded-apps.md" data-sync-version="7">
         <div class="section-head">
           <div class="section-no">08</div>
           <div><p class="eyebrow">Integration standard</p><h2>Chuẩn nhúng Mini App ngoài &mdash; tự code hay dựng bằng AI đều một luật</h2></div>
@@ -1525,7 +1525,7 @@
             <thead><tr><th>Rổ</th><th>App kiểu gì</th><th>Được làm gì</th><th>Ai duyệt</th></tr></thead>
             <tbody>
               <tr><td><b>Xanh</b><br><span class="micro muted">không gắn tên em nào</span></td><td>Bảng tin, thực đơn tuần căn tin, lịch CLB, hướng dẫn tập luyện chung</td><td>Đọc &amp; ghi dữ liệu chung. Không nhận mã học sinh nào cả.</td><td>1 dev bảo trợ, PR bình thường</td></tr>
-              <tr><td><b>Vàng</b><br><span class="micro muted">có gắn tên từng em</span></td><td>Fitness (chỉ số cơ thể, kết quả thể lực), căn tin (suất ăn, dị ứng thức ăn), điểm danh CLB</td><td>Đọc &amp; ghi qua ổ cắm chuẩn bên dưới: mã ẩn danh riêng theo app, ghi qua phòng chờ, chỉ đúng vài việc đã khai.</td><td>Hội đồng dữ liệu duyệt App Manifest</td></tr>
+              <tr><td><b>Vàng</b><br><span class="micro muted">có gắn tên từng em</span></td><td>Fitness (chỉ số cơ thể, kết quả thể lực), căn tin (suất ăn, dị ứng thức ăn), điểm danh CLB</td><td>Đọc &amp; ghi qua ổ cắm chuẩn bên dưới: mã tài khoản thật của em (từ lần đăng nhập), ghi qua phòng chờ, chỉ đúng vài việc đã khai.</td><td>Hội đồng dữ liệu duyệt App Manifest</td></tr>
               <tr><td><b>Đỏ</b><br><span class="micro muted">cấm, không ngoại lệ</span></td><td>Hồ sơ chăm sóc, ghi chú tư vấn tâm lý, y tế, check-in cảm xúc</td><td>Không app ngoài nào chạm tới, ở bất kỳ Tier nào, kể cả chỉ để đọc.</td><td>&mdash; không có đường xin</td></tr>
             </tbody>
           </table>
@@ -1538,7 +1538,7 @@
         <h3>Ổ cắm chuẩn &mdash; làm một lần, mọi app sau cắm vào là chạy</h3>
         <p class="lede">Vì hướng đi là lâu dài và sẽ có nhiều app, Hub xây sẵn một ổ cắm thay vì mỗi app một kiểu đấu dây. Ba tính chất, không đổi theo app:</p>
         <div class="grid-3">
-          <div class="card blue"><span class="card-no">01</span><h4>Mã ẩn danh riêng theo từng app</h4><p>App ngoài không bao giờ biết tên thật hay mã học sinh. Nó chỉ nhận một chuỗi vô nghĩa do Hub cấp &mdash; và cùng một em thì app căn tin nhận mã khác app fitness, nên hai app không tự ghép dữ liệu của nhau được. Chỉ Hub ghép được.</p></div>
+          <div class="card blue"><span class="card-no">01</span><h4>App chỉ chạm được người đã đăng nhập vào nó</h4><p><b>Đổi 21/08/2026</b> theo quyết định của chủ đầu tư. Trước đây Hub cấp cho mỗi app một mã ẩn danh riêng cho từng em; nay app dùng thẳng mã tài khoản của em &mdash; thứ nó đã cầm sẵn từ lần em bấm &quot;Đăng nhập bằng tài khoản trường&quot;. <b>Mất:</b> hai app ngoài đối chiếu được dữ liệu của cùng một em. <b>Còn giữ:</b> một app chỉ gửi được dữ liệu của người <b>đã từng đăng nhập vào chính nó</b> &mdash; gửi mã của em chưa bao giờ mở app đó thì dữ liệu bị chặn lại ở phòng chờ, không vào kho, và có ghi lý do.</p></div>
           <div class="card green"><span class="card-no">02</span><h4>Ghi qua phòng chờ, chạy ngay</h4><p>App gửi dữ liệu vào phòng chờ, Hub kiểm rồi mới vào sổ chính &mdash; đúng cửa mà Tutor và Moodle đang đi, không mở cửa mới. Khác một điểm: với app ngoài, Hub xử lý ngay khi nhận chứ không đợi ca đêm, nên người dùng thấy gần như tức thì.</p></div>
           <div class="card violet"><span class="card-no">03</span><h4>Đọc theo người đang mở app</h4><p>Em nào mở fitness thì thấy đúng số của em đó. App không cầm chìa khóa của riêng nó để lôi cả trường ra xem &mdash; quyền đi theo người dùng, không đi theo app.</p></div>
         </div>
@@ -1652,7 +1652,7 @@
           <div class="detail-body">
             <ul class="plain-list">
               <li><b>Ghi dưới danh nghĩa ai &mdash; điểm đã chốt:</b> mặc định app ngoài <b>không cầm khóa riêng</b>; mọi lệnh ghi mang theo thẻ ngắn hạn của chính người đang dùng app, nên RLS chạy đúng như khi người đó thao tác trong Hub, và audit log ghi tên người chứ không ghi tên app. Chỉ app <b>tự host có máy chủ riêng</b> mới được cấp thêm scoped key cho việc máy-gọi-máy (đồng bộ đêm), và key đó vẫn chỉ mở 1&ndash;2 procedure đã khai.</li>
-              <li><b>Mã ẩn danh do Hub sinh, không phải app gửi lên:</b> alias ngẫu nhiên, lưu <code>core.id_mappings(system='embed:&lt;app-id&gt;', external_id=alias, student_id)</code>. Mỗi app một dải alias riêng &mdash; hai app không đối chiếu chéo được dữ liệu học sinh với nhau.</li>
+              <li><b>Gọi tên một em bằng mã tài khoản thật</b> (đổi 21/08/2026): app gửi <code>user_id</code> &mdash; chính là mã Hub trả cho nó lúc em đăng nhập. Hàng rào thay cho mã ẩn danh cũ: Hub từ chối nếu người đó <b>chưa từng đăng nhập vào chính app ấy</b> (<code>core.identity_links</code>), và cũng từ chối nếu app còn gửi trường <code>alias</code> theo bản hướng dẫn cũ &mdash; hỏng ồn ào, đọc được lý do, không lưu im lặng.</li>
               <li><b>Embed API:</b> mỗi Mini App Tier 2 được cấp một API key phạm vi hẹp, chỉ gọi được 1&ndash;2 tRPC procedure đã khai trong Manifest &mdash; không bao giờ <code>service_role</code> hay quyền tRPC đầy đủ (&sect;4, &sect;10 không đổi). Rate limit riêng theo app: 30 req/phút mặc định, khai khác thì ghi trong Manifest.</li>
               <li><b>Chống ghi trùng không phó mặc app ngoài:</b> Hub từ chối webhook thiếu <code>external_id</code>, và Manifest phải nói rõ <code>external_id</code> được sinh ra sao (phải lặp lại được cho cùng một sự kiện &mdash; công cụ no-code hay sinh mã mới mỗi lần gửi lại, gửi lại là ghi thêm bản nữa).</li>
               <li><b>Không đưa thẻ qua thanh địa chỉ:</b> mã trao cho iframe đi bằng <code>postMessage</code> sau khi khung đã tải, không nhét vào query string (query string lọt vào log và <code>Referer</code> của nền tảng ngoài). Hub bắt buộc kiểm <code>event.origin</code> khớp domain trong Manifest, có schema thông điệp cố định và có thời gian chờ &mdash; app con treo thì Shell vẫn thoát được.</li>
@@ -1940,7 +1940,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         </div>
       </section>
 
-      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="35">
+      <section class="part" id="du-lieu" data-pair="danh-cho-may/02-database.md" data-sync-version="36">
         <div class="part-group-banner"><b>Phần C &middot; Thiết kế Database</b></div>
         <div class="section-head">
           <div class="section-no">10</div>
@@ -2143,6 +2143,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
           <div class="card"><h4><code>tutor</code></h4><p>Mastery snapshot, CEFR, quỹ đạo, milestone, tiến độ Moodle.</p></div>
           <div class="card"><h4><code>health</code></h4><p>Dữ liệu y tế thuộc vùng lõi và có RLS riêng. <b>Sửa 31/07/2026:</b> hồ sơ trước đây nói &quot;mọi lượt xem dữ liệu y tế đều được ghi nhật ký&quot;. Kiểm lại thì câu đó chưa đúng &mdash; nó được viết ra nhưng chưa từng được xây. Nay đã xây thật: <b>nội dung y tế</b> (uống thuốc gì, dị ứng gì) chỉ lấy được qua một cửa duy nhất, và mỗi lần mở cửa đó đều ghi lại ai xem, xem của em nào, lúc mấy giờ &mdash; <b>kể cả những lần bị từ chối</b>. Phần chưa xây, nói cho rõ để không hứa thừa lần nữa: nhật ký này phủ đường lấy dữ liệu, chưa phủ từng màn hình có hiển thị dữ liệu y tế.</p></div>
           <div class="card"><h4><code>staging</code></h4><p>Phòng chờ cho dữ liệu ngoài; lỗi mapping nằm lại đây. <b>Sửa 31/07/2026:</b> trước đây một bản ghi hỏng từ app ngoài làm hỏng luôn cả lượt nhận &mdash; bản ghi không nằm lại phòng chờ, không ai biết nó tồn tại, còn app bên kia thì gửi lại vô hạn. Nay bản ghi hỏng luôn nằm lại đúng chỗ chờ người xử, và gửi lại bao nhiêu lần cũng chỉ sinh một dòng chờ. <b>Thêm 01/08/2026:</b> phòng chờ này nay có <b>cửa nhận danh sách học sinh của trường</b> và một bảng ghi mức chịu lỗi cho từng nguồn &mdash; quá mức thì dừng cả lô thay vì đổ tiếp rác vào kho chính. Đổi mức đó là sửa một dòng trong bảng, không phải sửa phần mềm.</p></div>
+          <div class="card"><h4><code>ops</code> &middot; dữ liệu app ngoài</h4><p>Thư từ các app nhúng gửi về được <b>gắn vào đúng hồ sơ từng em</b> rồi mới vào kho. <b>Đổi 21/08/2026:</b> app gọi tên em bằng <b>mã tài khoản thật</b> (thứ nó nhận lúc em đăng nhập), thay cho mã ẩn danh Hub cấp riêng cho từng app trước đây &mdash; quyết định của chủ đầu tư. Ba cửa vẫn đóng như cũ, đã đo lại từng cửa: app gửi mã của người <b>chưa từng đăng nhập vào chính nó</b> &rarr; chặn; app gửi mã bịa &rarr; chặn; app khai <b>rổ Xanh</b> mà gửi kèm tên một em &rarr; chặn. Cả ba đều <b>dừng ở phòng chờ kèm lý do</b>, không lặng lẽ lưu thành &quot;không gắn em nào&quot; &mdash; vì một dòng như thế trông y hệt dữ liệu hợp lệ và sau đó không ai phân biệt được nữa.</p></div>
           <div class="card"><h4><code>ops</code> &middot; lượt mở app</h4><p><b>Thêm 21/08/2026:</b> một cuốn sổ nhỏ đếm <b>mỗi người mở app nào bao nhiêu lần</b>, để trang chủ tự đưa 4 app hay dùng nhất lên hàng đầu &mdash; ý lấy từ bản kiến trúc của cấp trên. Ba điều đã chốt khi làm: (1) sổ này <b>chỉ chính chủ đọc được</b>, cô chủ nhiệm cũng không &mdash; &quot;em mở app nào lúc mấy giờ&quot; không nằm trong lời hứa nào của trường với ai; (2) <b>chỉ đếm số lần theo ngày</b>, không lưu từng cú chạm &mdash; với dữ liệu hành vi của trẻ, giữ thừa là một khoản nợ chứ không phải một tài sản; (3) app phải được mở <b>ít nhất 3 lần trong 30 ngày</b> mới lên hàng đầu, để lưới không nhảy chỗ mỗi khi ai đó thử một app mới &mdash; ghim mà nhảy thì tệ hơn không ghim.</p></div>
           <div class="card"><h4><code>ops</code></h4><p>Job runs, heartbeat, outbox; biết hệ có đang sống hay không. <b>Thêm 31/07/2026:</b> một bảng ghi rõ <b>những chỗ cố ý không khóa</b>, mỗi chỗ phải có tên và có lý do &mdash; thay cho cách cũ là một danh sách viết tay mà bảng sinh sau sẽ lọt ra ngoài không ai hay. Và một bảng theo dõi &quot;hai quyển sổ ghi tên giáo viên chủ nhiệm có đang lệch nhau không&quot;.</p></div>
           <div class="card"><h4><code>report</code></h4><p>View tổng hợp, xu hướng cơ sở, VAAR và báo cáo trưởng thành. <b>Thêm 31/07/2026:</b> một cuốn sổ duyệt báo cáo &mdash; giáo viên chủ nhiệm đọc lại Báo cáo Trưởng thành của từng em rồi bấm &quot;duyệt gửi phụ huynh&quot; hoặc &quot;trả lại kèm lý do&quot;. Sổ chỉ ghi <b>quyết định của cô</b>, không chép nội dung báo cáo: nội dung vẫn được dựng lại từ dữ liệu thật mỗi lần mở, nên không có bản sao nào để sai lệch. Mỗi em mỗi tuần đúng một dòng, bấm hai lần cũng vậy. Phụ huynh và học sinh không nhìn thấy cuốn sổ này &mdash; họ thấy bản báo cáo, không thấy phần trao đổi nội bộ.</p></div>
@@ -3043,7 +3044,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
         <div class="callout risk"><div class="callout-title"><span class="dot red"></span>Kế hoạch rút lui</div><p>Khi chạm tiêu chí dừng: chuyển chỉ-đọc, lớp về quy trình giấy trong một ngày, xuất dữ liệu bàn giao, xử lý dữ liệu cảm xúc theo Hiến chương và làm postmortem trước khi quyết định xây lại.</p></div>
       </section>
 
-      <section class="part" id="hop-dong" data-pair="danh-cho-may/RULES.md" data-sync-version="10">
+      <section class="part" id="hop-dong" data-pair="danh-cho-may/RULES.md" data-sync-version="11">
         <div class="part-group-banner"><b>Hợp đồng &amp; Phê duyệt</b></div>
         <div class="section-head">
           <div class="section-no">16</div>
@@ -3128,7 +3129,7 @@ SAU KHI XONG, BÁO CÁO LẠI 5 THÔNG TIN:
               <li>Mini App không đọc <code>auth.users</code> hoặc import Supabase SDK trực tiếp.</li>
               <li>Realtime mặc định tắt; chỉ bật khi có nhu cầu thật và ADR.</li>
               <li><b>App ngoài phải khai rổ dữ liệu trước khi build</b> (Xanh / Vàng / Đỏ — xem mục 08). Rổ Đỏ không có đường xin: chăm sóc, tư vấn, y tế, check-in cảm xúc không mở cho app ngoài ở bất kỳ Tier nào.</li>
-              <li><b>Mã ẩn danh do Hub sinh, mỗi app một dải riêng</b> — app ngoài không cầm mã học sinh thật, và hai app ngoài không đối chiếu chéo dữ liệu với nhau được.</li>
+              <li><b>App ngoài gọi tên một em bằng mã tài khoản thật</b> &mdash; <b>đổi 21/08/2026</b> theo quyết định của chủ đầu tư (trước đó Hub cấp cho mỗi app một mã ẩn danh riêng cho từng em). <b>Cái mất, nói thẳng:</b> mã thật của em nằm trong kho của nền tảng ngoài, và hai app ngoài đối chiếu được với nhau. <b>Cái còn giữ:</b> một app chỉ gửi được dữ liệu của <b>người đã từng đăng nhập vào chính app đó</b> &mdash; máy cưỡng chế điều này, mã lạ thì dữ liệu vào hàng đợi lỗi chứ không được lưu.</li>
             </ul>
           </div>
         </details>
