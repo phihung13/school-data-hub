@@ -511,7 +511,14 @@ function MobileHome({ data }: { data: HomeData }) {
 }
 
 function CheckinCardMobile({ data }: { data: HomeData }) {
-  const { moCheckin } = useCongCheckin();
+  const { moCheckin, dangKhoa } = useCongCheckin();
+  // KHÔNG hỏi lần thứ hai khi popup đang hỏi (sửa 21/08/2026). Đo được trong HTML thật:
+  // popup hỏi "Hôm nay con thấy thế nào?" trong khi thẻ này hỏi "Check-in cảm xúc · Đang
+  // xem hôm nay con đã check-in chưa…" — cùng một việc, cùng một lúc, hai chỗ.
+  //
+  // Chỉ ẩn lúc ĐANG KHOÁ, không ẩn hẳn: khai xong thì thẻ này là chỗ duy nhất ở khổ máy
+  // tính (không có thanh tab) để em mở lại popup mà đổi tâm trạng.
+  if (dangKhoa) return null;
   return (
     <div className="relative z-[2] -mt-[46px] flex flex-col gap-2.5 rounded-[22px] bg-white p-3.5 shadow-[0_14px_32px_rgba(10,42,94,.14)]">
       <div className="flex items-center justify-between">

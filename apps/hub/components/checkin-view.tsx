@@ -181,8 +181,21 @@ export function checkinStage(args: {
   isError: boolean;
   checkedInToday: boolean | undefined;
   wantsChange: boolean;
+  /**
+   * MÁY CHỦ ĐÃ BIẾT em chưa khai hôm nay (cổng vừa dùng chính điều đó để mở popup).
+   *
+   * Đứng TRƯỚC nhánh `isPending`: không có nó thì popup mở ra bằng một vòng quay 40px
+   * kèm câu "Đang xem hôm nay con đã check-in chưa…" — hỏi lại máy chủ đúng thứ máy chủ
+   * vừa trả lời. Đo được ngày 21/08/2026 trong HTML của trang chủ: đó là toàn bộ nội
+   * dung popup ở lượt vẽ đầu.
+   *
+   * KHÔNG đặt trước `wantsChange`: em tự bấm "đổi tâm trạng" thì phải ra ô chọn dù cờ
+   * này nói gì.
+   */
+  mayChuDaBietChuaKhai?: boolean;
 }): CheckinStage {
   if (args.wantsChange) return "pick";
+  if (args.mayChuDaBietChuaKhai) return "pick";
   if (args.isPending) return "loading";
   if (args.isError) return "pick";
   return args.checkedInToday === true ? "recorded" : "pick";
@@ -338,6 +351,17 @@ function QueueFailureNotice({
 
 /** Người đang đứng ở màn này — chỉ dùng để dựng menu trái và thanh tab, không đụng dữ liệu. */
 export type CheckinViewProps = {
+  /**
+   * Máy chủ ĐÃ BIẾT em chưa khai hôm nay (cổng vừa dùng chính điều đó để mở popup).
+   *
+   * Không có cờ này thì popup mở ra bằng một vòng quay 40px kèm câu "Đang xem hôm nay
+   * con đã check-in chưa…" — hỏi lại máy chủ đúng thứ máy chủ vừa trả lời, và bắt em
+   * nhìn một ô trống trong lúc chờ. Với cờ này, bốn ô cảm xúc hiện NGAY.
+   *
+   * Chỉ dùng cho nhánh CỔNG BẮT BUỘC. Khi em tự mở để đổi tâm trạng thì KHÔNG bật —
+   * lúc đó trạng thái hôm nay là thứ chưa ai biết, và đoán bừa là nói dối.
+   */
+  chuaKhaiHomNay?: boolean;
   displayName: string;
   email: string;
   roles: HubRole[];
@@ -423,7 +447,7 @@ function CheckinShell({
   );
 }
 
-export function CheckinView({ displayName, email, roles, classCode, trongPopup, onGhiXong }: CheckinViewProps) {
+export function CheckinView({ displayName, email, roles, classCode, trongPopup, onGhiXong, chuaKhaiHomNay }: CheckinViewProps) {
   const utils = trpc.useUtils();
   const [state, setState] = useState<ViewState>("pick");
   const [wantsHelp, setWantsHelp] = useState(false);
@@ -533,6 +557,10 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
     isError: todayStatus.isError,
     checkedInToday: today?.checkedInToday,
     wantsChange,
+    // Chỉ đúng ở lượt vẽ ĐẦU: sau khi em bấm, `todayStatus` đã có dữ liệu thật và
+    // `state` đã sang "success", nên cờ này không còn cản gì. Nó không phải một lời
+    // khẳng định vĩnh viễn, chỉ là "đừng bắt em chờ câu trả lời đã có sẵn".
+    mayChuDaBietChuaKhai: chuaKhaiHomNay && todayStatus.isPending,
   });
   /** Đang mở ô chọn mà KHÔNG đọc được trạng thái hôm nay — phải nói ra, xem `checkinStage`. */
   const unknownToday = stage === "pick" && todayStatus.isError;
@@ -853,15 +881,23 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
 
   return (
     <CheckinShell {...shellProps}>
-      <div className="flex flex-1 flex-col px-5 pb-6 pt-5 md:px-10 md:py-10">
-        <div className="text-center">
-          <div className="text-[20px] font-black text-ink md:text-[26px]">
-            {wantsChange ? "Đổi lại tâm trạng hôm nay" : "Hôm nay em thấy thế nào?"}
+      <div className={trongPopup ? "flex flex-col" : "flex flex-1 flex-col px-5 pb-6 pt-5 md:px-10 md:py-10"}>
+        {/* TIÊU ĐỀ CHỈ IN KHI KHÔNG Ở TRONG POPUP (sửa 21/08/2026).
+            Popup đã hỏi "Hôm nay con thấy thế nào?" ngay trên đầu hộp thoại; in tiếp
+            "Hôm nay em thấy thế nào?" ở đây là hỏi hai lần, lệch đại từ (con/em), và
+            tốn ~50px trong một hộp vốn đã cao gần hết màn điện thoại.
+            Nhãn quyền riêng tư thì Ở LẠI cả hai chế độ — nó là lời hứa in tại chỗ em
+            nhập (§9), không phải chữ trang trí. */}
+        {!trongPopup && (
+          <div className="text-center">
+            <div className="text-[20px] font-black text-ink md:text-[26px]">
+              {wantsChange ? "Đổi lại tâm trạng hôm nay" : "Hôm nay em thấy thế nào?"}
+            </div>
           </div>
-          <div className="mt-1.5 flex items-center justify-center gap-1">
-            <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-            <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
-          </div>
+        )}
+        <div className={`flex items-center justify-center gap-1 ${trongPopup ? "" : "mt-1.5"}`}>
+          <span aria-hidden className="msr text-[13px] text-caption">lock</span>
+          <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
         </div>
 
         {/* Đang đổi: nói rõ cái sắp bị thay là gì, và cho đường quay lại giữ nguyên. */}
@@ -920,13 +956,13 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
         {/* Điện thoại 2×2 (ô ~162px, vừa ngón cái). Máy tính MỘT HÀNG bốn ô — cùng cách
             trang chủ desktop bày thẻ check-in (D2), và là lý do duy nhất đáng để có chiều
             ngang: bốn lựa chọn nằm ngang tầm mắt, không phải quét dọc hai lượt. */}
-        <div className="mt-4 grid grid-cols-2 gap-3 md:mt-7 md:grid-cols-4 md:gap-5">
+        <div className={`grid grid-cols-2 md:grid-cols-4 ${trongPopup ? "mt-3 gap-2.5 md:mt-4 md:gap-3" : "mt-4 gap-3 md:mt-7 md:gap-5"}`}>
           {/* `selected`: khi đang đổi, ô đang được ghi phải tự nói ra mình đang được
               chọn — cho cả mắt lẫn trình đọc màn hình (mood-tile khai aria-pressed). */}
-          <MoodTile mood={4} selected={wantsChange && moodToday === 4} onSelect={pick} />
-          <MoodTile mood={3} selected={wantsChange && moodToday === 3} onSelect={pick} />
-          <MoodTile mood={2} selected={wantsChange && moodToday === 2} onSelect={pick} />
-          <MoodTile mood={1} selected={wantsChange && moodToday === 1} onSelect={pick} />
+          <MoodTile mood={4} gon={trongPopup} selected={wantsChange && moodToday === 4} onSelect={pick} />
+          <MoodTile mood={3} gon={trongPopup} selected={wantsChange && moodToday === 3} onSelect={pick} />
+          <MoodTile mood={2} gon={trongPopup} selected={wantsChange && moodToday === 2} onSelect={pick} />
+          <MoodTile mood={1} gon={trongPopup} selected={wantsChange && moodToday === 1} onSelect={pick} />
         </div>
 
         {/* Lỗi không tự khỏi — nói ra thay vì giả vờ đã ghi xong (xem đầu file). */}

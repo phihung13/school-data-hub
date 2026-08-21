@@ -46,9 +46,18 @@ interface CongCheckinCtx {
   moCheckin: () => void;
   /** Vai này có check-in không — thanh tab hỏi để khỏi vẽ một nút chết. */
   coCheckin: boolean;
+  /**
+   * Cổng ĐANG KHOÁ — popup đang hỏi và em chưa trả lời.
+   *
+   * Trang chủ đọc cờ này để KHÔNG hỏi lần thứ ba. Đo được 21/08/2026 trong HTML thật:
+   * cùng một lúc, popup hỏi "Hôm nay con thấy thế nào?" và thẻ trên trang chủ hỏi
+   * "Check-in cảm xúc · Đang xem hôm nay con đã check-in chưa…". Chủ đầu tư gọi đúng
+   * tên: *"checkin 2 lần"*.
+   */
+  dangKhoa: boolean;
 }
 
-const Ctx = createContext<CongCheckinCtx>({ moCheckin: () => {}, coCheckin: false });
+const Ctx = createContext<CongCheckinCtx>({ moCheckin: () => {}, coCheckin: false, dangKhoa: false });
 
 /**
  * Ba trạng thái của cổng, tách thành HÀM THUẦN để test được mà không cần dựng React.
@@ -98,21 +107,40 @@ export function CongCheckinProvider({
 
   const moCheckin = useCallback(() => setMoTay(true), []);
   const laHocSinh = roles.includes("student");
-  const ctx = useMemo(() => ({ moCheckin, coCheckin: laHocSinh }), [moCheckin, laHocSinh]);
 
   const { dangMo, khoaCung } = trangThaiCong({ batBuoc, daGhi, daDong, moTay });
   const congDangCho = batBuoc && !daDong;
+
+  const ctx = useMemo(
+    () => ({ moCheckin, coCheckin: laHocSinh, dangKhoa: khoaCung }),
+    [moCheckin, laHocSinh, khoaCung],
+  );
+
+  // NỀN PHẢI BỊ `inert` KHI POPUP MỞ.
+  //
+  // `HopThoai` bẫy phím Tab, nhưng bẫy Tab KHÔNG che được con trỏ ảo của trình đọc màn
+  // hình: người dùng NVDA/VoiceOver vẫn đọc lướt được nguyên trang phía sau, kể cả khi
+  // popup đang "khoá". Với cổng này, thứ họ đọc thấy là một lời mời check-in THỨ HAI —
+  // đúng cái trùng lặp vừa sửa ở tầng nhìn, nhưng ở tầng nghe thì vẫn còn.
+  //
+  // `inert` làm cả ba việc cùng lúc: bỏ khỏi thứ tự Tab, bỏ khỏi cây trợ năng, chặn chuột.
+  //
+  // Đặt bằng SPREAD trong JSX chứ không bằng `useEffect`: bản đầu dùng effect và đo ra
+  // thuộc tính KHÔNG có trong HTML máy chủ trả về — effect chỉ chạy sau khi hydrate, nên
+  // có một khoảng trang phía sau vẫn đọc được. Ép kiểu vì React 18 chưa biết thuộc tính
+  // này (React 19 mới nhận); nó vẫn tới DOM vì React truyền thẳng mọi thuộc tính lạ viết
+  // thường, và React tự gỡ khi prop biến mất ở lượt vẽ sau.
+  const nenInert = (dangMo ? { inert: "" } : {}) as Record<string, string>;
 
   function dong() {
     setMoTay(false);
     setDaDong(true);
   }
 
-  if (!dangMo) return <Ctx.Provider value={ctx}>{children}</Ctx.Provider>;
-
   return (
     <Ctx.Provider value={ctx}>
-      {children}
+      <div {...nenInert}>{children}</div>
+      {dangMo && (
       <HopThoai
         tieuDe="Hôm nay con thấy thế nào?"
         // Câu phụ CHỈ hiện lúc khoá, và nó phải nói THẬT lý do em không đóng được: im
@@ -124,6 +152,9 @@ export function CongCheckinProvider({
       >
         <CheckinView
           trongPopup
+          // Chỉ ở nhánh cổng: khi em TỰ mở để đổi tâm trạng thì trạng thái hôm nay là
+          // thứ chưa ai biết, và đoán bừa là nói dối.
+          chuaKhaiHomNay={khoaCung}
           displayName={displayName}
           email={email}
           roles={roles}
@@ -144,7 +175,8 @@ export function CongCheckinProvider({
             Vào Hub
           </button>
         )}
-      </HopThoai>
+        </HopThoai>
+      )}
     </Ctx.Provider>
   );
 }

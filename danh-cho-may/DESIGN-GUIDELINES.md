@@ -115,6 +115,14 @@
 
   **Đổi tâm trạng lúc 3 giờ chiều**: nút tròn giữa thanh tab mở lại chính popup đó, và lần này CÓ đường ra. Một popup, hai chế độ — không phải hai màn.
 
+  **NĂM LUẬT CỦA POPUP**, rút ra từ lượt rà 21/08/2026 khi chủ đầu tư mở app và nói *"nó bị full màn, rồi checkin 2 lần"*. Cả năm đều là "bớt đi", và cả năm đều có bài canh riêng (`tests/unit/popup-checkin-khong-hoi-hai-lan.test.ts`, thử ngược từng cái một):
+
+  1. **Hỏi ĐÚNG MỘT LẦN.** Hộp thoại đã in "Hôm nay con thấy thế nào?" ở tiêu đề — màn chọn bên trong KHÔNG in lại. Bản đầu in cả hai, lệch cả đại từ (con/em).
+  2. **Không vòng quay chờ.** Máy chủ vừa tính "em này chưa khai" để quyết định mở popup; hỏi lại chính nó rồi bày spinner là bắt em nhìn ô trống chờ một câu trả lời đã có.
+  3. **Chỉ MỘT chỗ hỏi trên màn.** Thẻ check-in ở trang chủ tự tắt khi cổng đang khoá.
+  4. **Ô cảm xúc 112px trong popup** (148px là cỡ cho một TRANG). Bốn ô 148px cộng thành 308px trên tổng ~640px của hộp; ở khổ iPhone 14 viền mờ chỉ còn 16px và mắt không đọc ra "đây là lớp phủ".
+  5. **Nền bị `inert`, ngay trong HTML máy chủ.** Bẫy Tab không che được con trỏ ảo của trình đọc màn hình — không có `inert` thì người dùng NVDA/VoiceOver vẫn đọc được nguyên trang phía sau, gồm cả lời mời check-in thứ hai. Đặt bằng prop trong JSX, KHÔNG bằng `useEffect`: effect chỉ chạy sau hydrate nên HTML lần đầu vẫn hở.
+
   Hàm cổng vẫn ở `apps/hub/server/checkin-gate.ts` (đo được, có bài kiểm riêng); ba trạng thái của popup ở `components/cong-checkin.tsx` (`trangThaiCong`, hàm thuần, 8 ca). Nó là LỚP NHỊP, không phải chốt chặn dữ liệu — người mở devtools xoá lớp phủ thì xoá được, và thứ họ giành được là quyền xem trang chủ của chính mình mà chưa khai tâm trạng.
 - Ghi chú tư vấn (Tâm lý cụm): GVCN & PH không xem được — luôn hiện badge `visibility_off`.
 - BGH/Điều hành: chỉ dữ liệu **tổng hợp theo lô**, ghi rõ "không tra cứu học sinh cá nhân".

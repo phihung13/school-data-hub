@@ -15,10 +15,23 @@ export function MoodTile({
   mood,
   selected,
   onSelect,
+  gon,
 }: {
   mood: MoodValue;
   selected?: boolean;
   onSelect: (mood: MoodValue) => void;
+  /**
+   * Chế độ GỌN cho popup (21/08/2026): 148px → 112px.
+   *
+   * 148px dựng cho một TRANG chiếm trọn màn hình. Trong popup, bốn ô ấy cộng lại thành
+   * 308px trên tổng ~640px của cả hộp — ở khổ iPhone 14 (vùng hiển thị thật ~660px sau
+   * khi trừ thanh trạng thái và thanh Safari) thì hộp thoại chiếm gần hết màn, và cái
+   * viền mờ 16px không đủ để mắt đọc ra "đây là một lớp phủ". Chủ đầu tư gọi đúng tên:
+   * *"nó bị full màn"*.
+   *
+   * 112px vẫn vượt xa mốc chạm 44px (§11, WCAG 2.5.8) — ô vẫn là ô to nhất màn hình.
+   */
+  gon?: boolean;
 }) {
   const style = MOOD_STYLE[mood];
   return (
@@ -30,7 +43,7 @@ export function MoodTile({
       // tín hiệu nào. aria-pressed nói đúng trạng thái đó bằng lời (WCAG 4.1.2).
       aria-pressed={selected ?? false}
       onClick={() => onSelect(mood)}
-      className={`h-[148px] rounded-[20px] bg-gradient-to-br ${style.gradient} ${style.shadow} flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 ${
+      className={`${gon ? "h-[112px]" : "h-[148px]"} rounded-[20px] bg-gradient-to-br ${style.gradient} ${style.shadow} flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 ${
         selected ? "ring-4 ring-white ring-offset-2 ring-offset-navy" : ""
       }`}
     >
