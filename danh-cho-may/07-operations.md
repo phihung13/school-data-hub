@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 4
+sync-version: 5
 ---
 
 # Operations — SLO, Runbook, Incident, On-call, RACI, Go-live (Rev C)
@@ -376,6 +376,54 @@ docker exec -i pg_hub psql -U postgres -d hub_dev -c "select (select count(*) fr
 6. Quản trị: MD-01 quy trình tài khoản + màn hình GVCN reset · MD-03 nội quy điện thoại · MD-04 tên người trực · MD-06 tài khoản hạ tầng tên tổ chức — *Chủ tịch*
 7. Con người: GVCN tập huấn + tự check-in 1 tuần · data champion nắm RB-03/04 · bảng 4 màu in sẵn — *hiệu trưởng*
 8. Vận hành: **năm kịch bản của mục 4d đã IN RA GIẤY và dán ở phòng trực** (`danh-cho-nguoi/so-tay-su-co.html`, Ctrl+P, mỗi kịch bản một trang A4) · **người trực đã tự diễn thử ít nhất RB-01 và RB-14 một lượt có người đứng xem** — đọc runbook không phải là biết dùng runbook · năm kịch bản còn lại của bảng mục 4 viết đủ · M1–M3 nạp sẵn · kênh báo động bắn thử · **RB-11 đã chạy thật một lượt trên máy chủ đích** (`migrate.mjs status` mã thoát 0, sổ `ops.schema_migrations` khớp số file trong kho) — *SRE-role*
+
+## 7b. Cắm Metabase — thủ tục và ba nghĩa vụ (ADR-039, 21/08/2026)
+
+Chủ đầu tư chọn **"vai rộng, đọc được tất cả"** sau khi được nêu rõ hệ quả. Mục này ghi thứ **máy không thi hành được**, nên nó phải sống bằng thủ tục.
+
+### Điều phải đọc trước
+
+Vai đăng nhập của Metabase mang `BYPASSRLS`. Nghĩa là **mọi policy trong toàn hệ ngừng có hiệu lực với nó** — `can_read_mood` (ADR-026/035), `can_see_care`, tường lửa §5, tất cả. Ai có tài khoản Metabase là truy vấn được nhật ký cảm xúc từng em, ghi chú tư vấn, hồ sơ y tế.
+
+Từ hôm nay, **ranh giới thật quanh dữ liệu nhạy cảm nhất của trẻ không còn nằm trong Postgres** — nó nằm ở *danh sách người có tài khoản Metabase*. Một hàng rào do người giữ, không do máy giữ. Đó là điều được chọn, không phải điều bị sót.
+
+### Ba bước cắm
+
+1. **Tạo vai đăng nhập** — mật khẩu sinh ngẫu nhiên 32 byte, **không** ghi vào git (§8):
+
+   ```sql
+   create role metabase_app login password '<32 byte ngẫu nhiên>' bypassrls;
+   grant metabase_doc_rong to metabase_app;
+   ```
+
+   **`bypassrls` phải nằm trên chính vai đăng nhập này, không phải trên vai nhóm.** Thuộc tính vai (`SUPERUSER`, `BYPASSRLS`, `LOGIN`…) **không kế thừa** qua membership — chỉ QUYỀN mới kế thừa. Bản đầu của `0066` đặt cờ trên vai nhóm và đo ra **0 dòng**; đặt đúng chỗ đo ra **538 dòng** (`0067` ghi lại đầy đủ). Không biết điều này thì người vận hành sẽ thấy Metabase đọc ra bảng trống và "sửa" bằng cách gần nhất trong tầm tay — thường là cấp `SUPERUSER`.
+
+2. **Cắm Metabase** trỏ vào vai đó. Chuỗi kết nối để trong biến môi trường của container Metabase, **không** trong bất kỳ file nào của kho này.
+
+3. **Nghiệm thu bằng phép đo, không bằng "trang mở được":**
+
+   ```sql
+   set role metabase_app;
+   select count(*) from attendance.checkins where mood is not null;   -- phải > 0
+   reset role;
+   ```
+
+   Ra `0` nghĩa là cờ `bypassrls` đặt sai chỗ — **đừng** vá bằng `SUPERUSER`.
+
+### Ba nghĩa vụ — điều kiện để mở cho người thứ hai
+
+| # | Nghĩa vụ | Ai chịu |
+|---|---|---|
+| 1 | **BGH duyệt TỪNG tài khoản bằng văn bản** — trước khi cấp, không phải sau | BGH |
+| 2 | **Rà lại danh sách mỗi học kỳ** — ai còn cần, ai thôi việc, ai đổi vai | BGH + SRE-role |
+| 3 | **Sổ cấp/thu** lưu trong hồ sơ vận hành: ngày cấp · người · lý do · ngày thu | SRE-role |
+
+Nghĩa vụ 1 là **điều kiện**, không phải thủ tục hành chính: nó là hàng rào duy nhất còn lại. Xem `DEBT.md` #67.
+
+### Cái Metabase KHÔNG được dùng để làm
+
+- **Không làm cảnh báo sớm.** Ngưỡng nằm trong `care.thresholds` và bộ quét của Hub là chỗ duy nhất sinh cờ (§6, ADR-034 điều 2). Một dashboard có ngưỡng riêng là bộ quét thứ hai, và ngày hai bên cãi nhau thì không ai biết bên nào đúng.
+- **Không làm báo cáo học thuật/xếp loại có dữ liệu cảm xúc.** §5 vẫn là luật; điều đổi ở đây là *hàng rào kỹ thuật cho vai này không còn*, chứ không phải *lời hứa hết hiệu lực*.
 
 ## 8. Kế hoạch rút lui
 

@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 37
+sync-version: 38
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1156,6 +1156,27 @@ Màn `/thi-dua` mở cho **mọi vai trong trường**, không phải `"moi-nguo
 Job `run-tinh-diem.mjs` tính lại **7 ngày gần nhất** mỗi đêm, không chỉ hôm qua: dữ liệu nguồn đến muộn được (một dòng gửi muộn có thể được duyệt sau hai ngày), và §9 ở khoá chính làm việc tính lại an toàn. Chạy thật trên `hub_dev` với `--so-ngay=30`: **1.078 dòng, 8.630 điểm, 64ms**.
 
 **Toàn bộ pgTAP sau đợt S: 1.084 assertion / 59 file**, khớp mốc.
+
+## Đợt T (`0066`–`0067`, 21/08/2026) — vai đọc cho Metabase (ADR-039)
+
+`metabase_doc_rong` — vai NHÓM giữ quyền đọc trên 8 schema nghiệp vụ (`core`, `attendance`, `care`, `evidence`, `tutor`, `health`, `report`, `ops`) kèm `alter default privileges` cho bảng sinh sau. Chủ đầu tư chọn *"vai rộng, đọc được tất cả"*.
+
+**Bốn thứ vai này KHÔNG có, mỗi thứ là một quyết định:** không GHI (Metabase là công cụ đọc; một vai phân tích có quyền ghi là một cú `update` gõ nhầm trong ô truy vấn tự do) · không `LOGIN` (mật khẩu không bao giờ vào migration, §8) · không đụng `reporting` (cửa MỚI có chủ ý, không phải nới cửa cũ) · không quyền trên `staging` (hàng đợi kỹ thuật, chứa payload nguyên văn từ app ngoài).
+
+**`0067` — một điều tôi hiểu sai, và nó là loại sai nguy hiểm.** `0066` đặt `BYPASSRLS` lên vai NHÓM rồi bảo người vận hành `grant` nhóm đó cho vai đăng nhập. Đo ngay sau khi áp:
+
+| Vai đăng nhập | `select count(*) from attendance.checkins where mood is not null` |
+|---|---|
+| được cấp nhóm mang cờ | **0** |
+| tự mang `bypassrls` | **538** |
+
+**Thuộc tính vai (`SUPERUSER`, `BYPASSRLS`, `CREATEDB`, `LOGIN`) KHÔNG kế thừa qua membership** — chỉ QUYỀN mới kế thừa. Cờ đặt trên một vai `NOLOGIN` dùng làm nhóm thì không có tác dụng với ai cả: `\du` in ra cờ, người đọc yên tâm, hàng rào không đứng ở đâu. Và nếu không ai đo thì người vận hành sẽ thấy Metabase đọc ra bảng trống rồi "sửa" bằng cách gần nhất trong tầm tay — thường là cấp `SUPERUSER`. `0067` gỡ cờ khỏi vai nhóm và chuyển nghĩa vụ về đúng chỗ: vai ĐĂNG NHẬP, kèm **phép đo nghiệm thu bắt buộc** trong `07-operations.md` mục 7b.
+
+**Nói thẳng cái đổi:** từ đây ranh giới thật quanh dữ liệu nhạy cảm nhất của trẻ **không còn nằm trong Postgres** — nó nằm ở danh sách người có tài khoản Metabase. Một hàng rào do người giữ. Ba nghĩa vụ đi kèm (BGH duyệt từng tài khoản · rà mỗi học kỳ · sổ cấp-thu) là **văn bản**, migration không thi hành được, và hôm nay chưa có cái nào — ghi thành nợ #67, mốc: trước khi cấp tài khoản đầu tiên.
+
+**Kiểm chứng.** `0066_vai_doc_cho_metabase_test.sql` — **11 assertion**: vai có thật · `NOLOGIN` · **KHÔNG** `BYPASSRLS` · **KHÔNG** superuser · đọc được `attendance.checkins`/`care.care_cases`/`evidence.diem_thi_dua` · **bảng tạo SAU cũng tự có quyền** (default privileges có thật, không chỉ ghi trong chú thích) · không INSERT/UPDATE · không chạm `staging`.
+
+**Toàn bộ pgTAP sau đợt T: 1.095 assertion / 60 file**, khớp mốc.
 
 ## Quy tắc migration (§2)
 
