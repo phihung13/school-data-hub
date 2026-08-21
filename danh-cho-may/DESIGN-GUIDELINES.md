@@ -101,6 +101,13 @@
      > **{tên cô chủ nhiệm}** — xem điểm danh, đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
 
   Hai điều **vẫn cấm** in ra phía GVCN (điều thứ ba của bản 01/08 — "chiều của cảm xúc" — đã hết hiệu lực vì cô đọc được nhật ký rồi): **số ngày trong chi tiết cờ** (`negativeDays`, `negativeStreak` — cột `care.flags.detail` vẫn khoá với authenticated, migration `0049` không đảo theo ADR-035) và **mọi từ vựng vận hành** trong giao diện của em (§8). Chi tiết cờ vẫn cắt tại contract (`packages/core/contracts/care.ts`, `FlagSummary.detail`), không chỉ ẩn bằng CSS.
+- **Check-in cảm xúc CHẶN CỬA trang chủ** (ADR-036, 21/08/2026 — chủ đầu tư chọn "Chặn thật"). Học sinh đăng nhập lần đầu trong ngày bị đẩy về `/checkin`; xong một lần là thôi hỏi trong ngày. Bốn ràng buộc của cổng, không được bỏ bớt cái nào:
+  1. **Em chưa có phiếu đồng ý của nhà thì KHÔNG chặn** — `0047` không cho ghi `mood` khi thiếu phiếu, nên chặn là nhốt em ngoài cửa bằng một điều kiện em không tự thoát được. Điều kiện `has_student_consent` nằm trong chính câu SQL của cổng.
+  2. **Chỉ học sinh** — giáo viên, phụ huynh, quản trị không bao giờ bị hỏi tới.
+  3. **Dòng cô ghi hộ không tính** — nhịp này là của em, không phải của sổ điểm danh.
+  4. **Lỗi cơ sở dữ liệu không được biến thành cổng** — hỏng kết nối thì cho qua và ghi log, không phạt sai người.
+
+  Không có nút "bỏ qua" (và chưa từng có). Đường về nhà vẫn nằm ở menu trái + thanh tab như mọi trang khác. Cổng đứng ở `apps/hub/server/checkin-gate.ts`, gác đúng cửa chính `/home`; nó là LỚP NHỊP, không phải chốt chặn dữ liệu.
 - Ghi chú tư vấn (Tâm lý cụm): GVCN & PH không xem được — luôn hiện badge `visibility_off`.
 - BGH/Điều hành: chỉ dữ liệu **tổng hợp theo lô**, ghi rõ "không tra cứu học sinh cá nhân".
 - Cờ chỉ ghi *loại tín hiệu*, không sao chép nội dung tâm sự.

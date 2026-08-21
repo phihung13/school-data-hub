@@ -4,6 +4,7 @@ import { resolveIdentity } from "@hub/core/auth-adapter";
 import { HomeView } from "@/components/home-view";
 import { buildMiniAppsWithEmbedded } from "@/server/mini-apps";
 import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
+import { phaiDungOCheckin } from "@/server/checkin-gate";
 import { log, describeError } from "@/lib/logger";
 
 export default async function HomePage() {
@@ -30,6 +31,20 @@ export default async function HomePage() {
       // CSDL trục trặc thì KHÔNG được biến thành cổng: chặn phụ huynh khỏi trang chủ vì
       // một lỗi kết nối là phạt sai người. Ghi log rồi đi tiếp.
       log("error", "consent.gate_read_failed", { authUid: session.authUid, ...describeError(err) });
+    }
+  }
+
+  // CỔNG CHECK-IN CẢM XÚC (ADR-036, 21/08/2026) — học sinh đăng nhập lần đầu trong
+  // ngày dừng ở màn check-in trước khi vào trang chủ. Cùng khuôn với cổng điều khoản
+  // ngay trên: chỉ là LỚP NHỊP, không phải chốt chặn dữ liệu; ba điều cố ý (em chưa có
+  // phiếu đồng ý thì KHÔNG chặn · lỗi CSDL thì cho qua · chỉ gác cửa chính) ghi đủ ở
+  // đầu server/checkin-gate.ts — sửa cổng thì đọc đó trước.
+  if (session.roles.includes("student")) {
+    try {
+      if (await phaiDungOCheckin(session.authUid)) redirect("/checkin");
+    } catch (err) {
+      if (typeof (err as { digest?: unknown })?.digest === "string") throw err;
+      log("error", "checkin.gate_read_failed", { authUid: session.authUid, ...describeError(err) });
     }
   }
 

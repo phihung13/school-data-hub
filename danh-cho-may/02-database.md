@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 33
+sync-version: 34
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1036,6 +1036,24 @@ Trong đợt hợp nhất sơ đồ "AI OS" của cấp trên (ADR-034), chủ �
 **Cái §5 mất và giữ, nói thẳng (chép từ ADR-035):** `reporting` vẫn bị revoke, `class_pulse`/`grade_pulse` vẫn gác cổng vai, `care.flags.detail` vẫn khoá (`0049` không đảo theo). Thứ không còn: bức tường kỹ thuật giữa chính-cô-GVCN và nhật ký em lớp cô — §5 với cô từ nay sống bằng kỷ luật cá nhân và sổ vết.
 
 **Toàn bộ pgTAP sau đợt O: 1.053 assertion / 57 file**, khớp mốc, trên database dựng lại từ đầu.
+
+## Đợt P (không có migration, 21/08/2026) — check-in cảm xúc chặn cửa trang chủ (ADR-036)
+
+Không đổi một dòng lược đồ nào, nhưng đổi **mẫu số của mọi phép đếm trên `attendance.checkins`**, nên phải ghi ở đây chứ không chỉ ở tài liệu thiết kế.
+
+Chủ đầu tư chốt 21/08/2026 ("Chặn thật"): học sinh đăng nhập lần đầu trong ngày bị đẩy về `/checkin` cho tới khi ghi xong tâm trạng. Cổng là `apps/hub/server/checkin-gate.ts`, gác `/home`.
+
+**Hệ quả cần biết trước khi đọc bất kỳ con số nào sau ngày này:**
+
+- Trước ADR-036, một ngày **thiếu dòng có `mood`** nghĩa là "em không muốn ghi" hoặc "em không mở app". Sau ADR-036, với em CÓ phiếu đồng ý và CÓ đăng nhập, nó gần như chỉ còn nghĩa "em không đăng nhập hôm đó" — vì mở trang chủ là bị hỏi. Mọi so sánh tỷ lệ check-in **vắt qua ngày 21/08/2026 là so hai mẫu số khác nhau**.
+- Ngưỡng `E_MOOD` trong `care.thresholds` được đặt trên dữ liệu của chế độ **tự nguyện**. Chế độ bắt buộc sẽ kéo thêm những ngày em bấm cho qua — ADR-036 ghi sẵn phép đo để phát hiện (tỷ lệ chuỗi lặp y hệt nhiều ngày liền), và ngưỡng phải rà lại sau một tháng dữ liệu thật.
+- Cổng **KHÔNG** chặn em chưa có phiếu đồng ý của nhà (`core.has_student_consent`) — `0047` không cho ghi `mood` khi thiếu phiếu, nên chặn là nhốt em ngoài cửa bằng điều kiện em không tự thoát được. Điều kiện này nằm trong chính câu SQL của cổng và có bài test canh.
+
+**Kiểm chứng.** `tests/db/cong-checkin.test.ts` — **8 ca**, hai tầng: bốn ca đo HÀM dưới danh tính thật, ba ca gọi thẳng Server Component `HomePage()` với cơ sở dữ liệu thật để đo **cổng có chạy không**. Tầng thứ hai sinh ra sau khi bản đầu (quét mã nguồn tìm chữ `phaiDungOCheckin`) **thất bại phép thử ngược**: tắt cổng bằng `if (false && …)` mà bài vẫn xanh. Bài quét ấy bị xoá — một bài canh xanh khi hàng rào đã tắt thì tệ hơn không có. Thử ngược lại trên bản hành vi: cổng tắt → **đỏ đúng một câu**, đúng câu "em chưa check-in phải bị đẩy về /checkin".
+
+Đo đầu-cuối qua máy chủ thật (dev, 21/08/2026): chưa khai → `GET /home` **307 → /checkin**; gọi `checkin.submitMood` qua tRPC thật → `moodSaved: true`; mở lại `/home` → **200**. Phiên GVCN: **200** ngay từ đầu.
+
+**Nghĩa vụ chưa xong, là cổng GO-LIVE chứ không phải cổng build:** thông báo quyền riêng tư cho phụ huynh (`danh-cho-nguoi/thong-bao-quyen-rieng-tu-check-in.html`, đang là BẢN NHÁP) và rà soát pháp lý theo Luật 91/2025 — thu thập dữ liệu nhạy cảm của trẻ theo điều kiện bắt buộc không còn là tự nguyện. Xem `DEBT.md`.
 
 ## Quy tắc migration (§2)
 

@@ -37,6 +37,17 @@ export default defineConfig({
     hookTimeout: 30_000,
     reporters: ["default"],
   },
+  // JSX theo "automatic runtime" — ĐÚNG thứ Next đang dùng (next.config.mjs không tắt
+  // nó, và tsconfig để `"jsx": "preserve"` cho Next tự biên dịch). Mặc định của esbuild
+  // là runtime cổ điển, tức sinh `React.createElement` và đòi `React` có trong tầm —
+  // các file .tsx của Hub không import React, nên bất kỳ test nào GỌI một component
+  // đều nổ `ReferenceError: React is not defined`. Đo được 21/08/2026 khi bài
+  // `tests/db/cong-checkin.test.ts` gọi thẳng Server Component `HomePage()`.
+  //
+  // Test cũ không bắt được vì chúng chỉ import HÀM từ file .tsx (dayCellLabel…) hoặc
+  // đọc mã nguồn dạng chữ — không nhánh nào chạm JSX. Đổi ở đây chứ không nhét
+  // `globalThis.React` trong một bài test: bài sau gọi component sẽ lại nổ y hệt.
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: {
       "@hub/core/contracts": `${root}packages/core/contracts/index.ts`,
