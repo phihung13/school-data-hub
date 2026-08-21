@@ -122,7 +122,13 @@ vi.mock("@/lib/session", () => ({ getCurrentSession: vi.fn() }));
 vi.mock("@hub/core/auth-adapter", () => ({
   resolveIdentity: async () => ({ email: "minh@va.edu.vn", className: "6A1" }),
 }));
-vi.mock("@/server/mini-apps", () => ({ buildMiniAppsWithEmbedded: async () => [] }));
+// Cả HAI hàm trang chủ gọi — thiếu một là `vi.mock` ném "No export is defined",
+// và đó chính là cách bài này bắt được lượt thêm `ghimAppDungNhieu` ngày 21/08/2026:
+// nó chạy trang THẬT nên mọi phụ thuộc mới của trang đều lộ ra ở đây.
+vi.mock("@/server/mini-apps", () => ({
+  buildMiniAppsWithEmbedded: async () => [],
+  ghimAppDungNhieu: async (tiles: unknown) => tiles,
+}));
 vi.mock("@/components/home-view", () => ({ HomeView: () => null }));
 
 /** Trang chủ đẩy đi đâu — `null` nghĩa là cho vào, không chuyển hướng. */

@@ -19,6 +19,7 @@
 // DESIGN-GUIDELINES §1: "phân quyền ở mini app, không ở trang chủ" — lưới này chỉ hiện/mờ
 // theo vai, KHÔNG tự kiểm quyền nghiệp vụ. Hàng rào thật nằm ở chính trang đích.
 import type { HubRole, MiniAppTile } from "@hub/core/contracts";
+import { withUserContext } from "@hub/core/db";
 import { manChoLuoi } from "@/lib/man-hinh";
 import { napApps } from "./embed/registry-db";
 import { canOpenEmbedApp } from "./embed/registry";
@@ -68,4 +69,52 @@ export async function buildMiniAppsWithEmbedded(roles: HubRole[]): Promise<MiniA
     });
   }
   return tiles;
+}
+
+/**
+ * Đưa 4 app người này mở nhiều nhất lên đầu lưới (ADR-034, hạng mục lấy từ sơ đồ AI OS).
+ *
+ * ═══ BA ĐIỀU CỐ Ý, mỗi điều đều là một cách hỏng đã lường trước ═══
+ *
+ * 1. **GIỮ NGUYÊN THỨ TỰ TƯƠNG ĐỐI của phần còn lại.** Chỉ NHẤC bốn ô lên đầu, không
+ *    xếp lại cả lưới theo tần suất. Xếp lại cả lưới thì mỗi lần mở trang chủ là một bố
+ *    cục hơi khác, và người dùng mất thứ quý nhất của một lưới icon: nhớ được ô mình
+ *    cần nằm ở đâu.
+ *
+ * 2. **KHÔNG ghim app MỜ** (`available: false`). Ghim một ô bấm không được lên hàng đầu
+ *    là lấy chỗ đẹp nhất màn hình để hứa suông. Chúng vẫn ở nguyên chỗ cũ phía dưới.
+ *
+ * 3. **Hỏng thì trả lưới gốc, không đổ trang chủ.** Cùng lý lẽ với `napApps` ngay trên:
+ *    người dùng mất thứ tự ghim — không ai chết vì thế — chứ không mất cả trang chủ.
+ *    Ngưỡng "≥3 lượt trong 30 ngày" nằm trong `ops.app_dung_nhieu_nhat`, chỗ nó ghi
+ *    được lý do; đừng nhân đôi con số đó ở đây.
+ */
+export async function ghimAppDungNhieu(
+  tiles: MiniAppTile[],
+  authUid: string,
+  soLuong = 4,
+): Promise<MiniAppTile[]> {
+  let thuTuGhim: string[];
+  try {
+    thuTuGhim = await withUserContext(authUid, async (client) => {
+      const { rows } = await client.query<{ app_key: string }>(
+        "select app_key from ops.app_dung_nhieu_nhat($1)",
+        [soLuong],
+      );
+      return rows.map((r) => r.app_key);
+    });
+  } catch {
+    return tiles;
+  }
+  if (thuTuGhim.length === 0) return tiles;
+
+  const ghim: MiniAppTile[] = [];
+  for (const key of thuTuGhim) {
+    const tile = tiles.find((t) => t.key === key && t.available);
+    if (tile) ghim.push(tile);
+  }
+  if (ghim.length === 0) return tiles;
+
+  const daGhim = new Set(ghim.map((t) => t.key));
+  return [...ghim, ...tiles.filter((t) => !daGhim.has(t.key))];
 }

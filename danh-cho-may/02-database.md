@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 34
+sync-version: 35
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1054,6 +1054,28 @@ Chủ đầu tư chốt 21/08/2026 ("Chặn thật"): học sinh đăng nhập l
 Đo đầu-cuối qua máy chủ thật (dev, 21/08/2026): chưa khai → `GET /home` **307 → /checkin**; gọi `checkin.submitMood` qua tRPC thật → `moodSaved: true`; mở lại `/home` → **200**. Phiên GVCN: **200** ngay từ đầu.
 
 **Nghĩa vụ chưa xong, là cổng GO-LIVE chứ không phải cổng build:** thông báo quyền riêng tư cho phụ huynh (`danh-cho-nguoi/thong-bao-quyen-rieng-tu-check-in.html`, đang là BẢN NHÁP) và rà soát pháp lý theo Luật 91/2025 — thu thập dữ liệu nhạy cảm của trẻ theo điều kiện bắt buộc không còn là tự nguyện. Xem `DEBT.md`.
+
+## Đợt Q (`0060`, 21/08/2026) — đếm lượt mở app để trang chủ tự ghim (ADR-034)
+
+Hạng mục lấy về từ sơ đồ AI OS của cấp trên ("4 app dùng nhiều nhất tự pin theo tần suất"). Muốn ghim thì phải đếm, mà Hub chưa có chỗ nào đếm.
+
+**Không dùng `ops.audit_log`.** Bảng đó khai rõ phạm vi của mình — "bắt buộc cho care, health, admin và mọi lần cấp token OIDC", tức những việc CÓ HỆ QUẢ. Mỗi cú chạm vào một ô app là việc không hệ quả, xảy ra vài chục lần mỗi ngày mỗi người. Đổ vào cùng bảng là pha loãng đúng cuốn sổ mà một ngày nào đó phải lật để trả lời *"ai đã xem hồ sơ em này"*. Sổ vết mà 99% là tiếng ồn thì không ai đọc nữa.
+
+**`ops.mini_app_usage` — một dòng mỗi (người · app · ngày), không phải một dòng mỗi cú chạm.** Khoá chính `(user_id, app_key, ngay)`, cột `so_lan` + `lan_cuoi`; `app_key` **cố ý không có khoá ngoại** (nó vừa nhận `key` của màn trong `man-hinh.ts` vừa nhận `app_id` của Mini App ngoài, và một FK về `core.embedded_apps` sẽ xoá lịch sử dùng đúng lúc một app bị gỡ khỏi sổ — mà lúc đó số cũ vẫn còn nghĩa). Gộp ngay tại chỗ ghi: ghim cần tần suất gần đây chứ không cần từng cú chạm; bảng không lớn theo lưu lượng (trần = người × app × ngày); và với dữ liệu hành vi của trẻ, **giữ thừa là một khoản nợ trước Luật 91/2025, không phải một tài sản**.
+
+**§9 ở một bảng ĐẾM.** Bộ đếm thì bản chất không idempotent — cộng hai lần ra hai. §9 sinh ra để chặn "double-tap và retry mạng sinh bản ghi đôi", nên chỗ này thi hành đúng tinh thần bằng **cửa sổ nguội 30 giây**: hai lượt sát nhau tính là MỘT, mở lại sau đó thì CÓ tính. Luật nằm trong câu SQL của `ops.ghi_mo_mini_app` chứ không ở tầng ứng dụng — tầng ứng dụng có nhiều lối vào, và mỗi lối tự nhớ luật là mỗi lối quên được.
+
+**RLS: chỉ của mình, cả đọc lẫn ghi — kể cả GVCN của em cũng không đọc được.** "Em nào mở app nào lúc mấy giờ" không nằm trong bất kỳ lời hứa nào của trường với ai. Muốn số tổng hợp cho quản trị thì mở một view riêng, có tên, qua ADR.
+
+**Ngưỡng ≥3 lượt / 30 ngày** trong `ops.app_dung_nhieu_nhat`: một app mở đúng một lần vì tò mò không được đẩy app dùng hằng ngày ra khỏi hàng ghim — hàng ghim mà nhảy thì tệ hơn không ghim. Đây là tham số **hiển thị**, không phải ngưỡng cảnh báo, nên không thuộc §6 (`care.thresholds`).
+
+**Đường ghi là `POST /api/mini-app/mo` gọi bằng `navigator.sendBeacon`, không phải tRPC.** Vẫn chạy dưới `withUserContext` nên RLS vẫn là hàng rào (§4 không bị phá). Lý do phải rời tRPC: chạm ô là trình duyệt điều hướng ngay, một `fetch` thường bị huỷ khi trang cũ bị tháo — số sẽ hụt **đúng ở những app mở nhanh nhất**, tức méo theo đúng chiều tính năng này quan tâm. Route luôn trả `204`: người gọi là beacon, nó không đọc phản hồi và không có ai để báo lỗi.
+
+**Kiểm chứng.** pgTAP `0060_dem_luot_mo_mini_app_test.sql` — **14 assertion** (cửa sổ nguội hai chiều · ngưỡng ≥3 · cửa sổ 30 ngày · thứ tự giảm dần · RLS đọc và ghi · hàm không phải SECURITY DEFINER · bảng đã bật RLS). `tests/db/ghim-mini-app.test.ts` — **7 ca** cho tầng xếp lưới, **thử ngược hai lần**: đảo thứ tự phần không ghim → **3 đỏ**; cho ghim cả ô mờ → **1 đỏ**.
+
+Đo đầu-cuối trên máy chủ thật (dev, 21/08/2026), phiên cô Lan: lưới `Bảng điều khiển | Factory` → gieo 5 lượt mở Factory → tải lại trang chủ → **`Factory | Bảng điều khiển`**. Đường beacon: hai `POST` sát nhau → `204` + `204`, `so_lan = 1`; không đăng nhập → `204` và **0 dòng ghi thêm**; thân hỏng → `204`.
+
+**Toàn bộ pgTAP sau đợt Q: 1.067 assertion / 58 file**, khớp mốc.
 
 ## Quy tắc migration (§2)
 

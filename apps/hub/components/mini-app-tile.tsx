@@ -12,6 +12,25 @@ const TILE_GRADIENT: Record<string, string> = {
   cockpit: "from-domain-cockpit to-domain-cockpitDark shadow-[0_5px_12px_rgba(10,42,94,.3)]",
 };
 
+/**
+ * Ghi một lượt mở app để trang chủ tự ghim app dùng nhiều (ADR-034).
+ *
+ * `sendBeacon` chứ không `fetch`: chạm vào ô là trình duyệt điều hướng ngay, và một
+ * `fetch` thường bị huỷ khi trang cũ bị tháo — số sẽ hụt đúng ở những app mở nhanh
+ * nhất, tức méo theo đúng chiều mà tính năng này quan tâm.
+ *
+ * KHÔNG chặn điều hướng và KHÔNG bao giờ ném: đây là một con số thống kê, nó không
+ * được phép đứng giữa người dùng và app họ vừa chạm vào. Trình duyệt cũ không có
+ * `sendBeacon` thì bỏ qua — thà thiếu một lượt đếm còn hơn hỏng một cú bấm.
+ */
+function ghiLuotMo(key: string): void {
+  try {
+    navigator.sendBeacon?.("/api/mini-app/mo", new Blob([JSON.stringify({ key })], { type: "application/json" }));
+  } catch {
+    // Im lặng, có chủ ý: xem chú thích trên.
+  }
+}
+
 export function MiniAppTile({ tile }: { tile: MiniAppTileType }) {
   if (!tile.available) {
     return (
@@ -46,7 +65,7 @@ export function MiniAppTile({ tile }: { tile: MiniAppTileType }) {
   const gradient = TILE_GRADIENT[tile.key] ?? "from-navy to-navy-light shadow-[0_5px_12px_rgba(10,42,94,.3)]";
 
   return (
-    <Link href={tile.href} className="flex flex-col items-center gap-1.5">
+    <Link href={tile.href} className="flex flex-col items-center gap-1.5" onClick={() => ghiLuotMo(tile.key)}>
       <span
         aria-hidden="true"
         className={`flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl ${

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/lib/session";
 import { resolveIdentity } from "@hub/core/auth-adapter";
 import { HomeView } from "@/components/home-view";
-import { buildMiniAppsWithEmbedded } from "@/server/mini-apps";
+import { buildMiniAppsWithEmbedded, ghimAppDungNhieu } from "@/server/mini-apps";
 import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
 import { phaiDungOCheckin } from "@/server/checkin-gate";
 import { log, describeError } from "@/lib/logger";
@@ -66,7 +66,13 @@ export default async function HomePage() {
       // Lưới mini app chỉ phụ thuộc vai trò, mà vai trò đã nằm sẵn trong phiên ở đây —
       // tính luôn phía server để HTML lần đầu đã có đủ tile. Query tRPC bên trong vẫn
       // chạy (nguồn sự thật duy nhất là router), nhưng nó chỉ xác nhận lại thứ đã hiện.
-      initialMiniApps={await buildMiniAppsWithEmbedded(session.roles)}
+      // Ghim 4 app dùng nhiều nhất lên đầu (ADR-034). Bọc NGOÀI chứ không nhét vào
+      // trong `buildMiniAppsWithEmbedded`: hàm đó chỉ phụ thuộc VAI nên test được không
+      // cần database, và giữ được tính chất ấy là giữ luôn khả năng kiểm nó rẻ.
+      initialMiniApps={await ghimAppDungNhieu(
+        await buildMiniAppsWithEmbedded(session.roles),
+        session.authUid,
+      )}
     />
   );
 }
