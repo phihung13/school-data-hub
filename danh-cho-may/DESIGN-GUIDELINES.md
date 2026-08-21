@@ -116,7 +116,7 @@
 
   **Đổi tâm trạng lúc 3 giờ chiều**: nút tròn giữa thanh tab mở lại chính popup đó, và lần này CÓ đường ra. Một popup, hai chế độ — không phải hai màn.
 
-  **NĂM LUẬT CỦA POPUP**, rút ra từ lượt rà 21/08/2026 khi chủ đầu tư mở app và nói *"nó bị full màn, rồi checkin 2 lần"*. Cả năm đều là "bớt đi", và cả năm đều có bài canh riêng (`tests/unit/popup-checkin-khong-hoi-hai-lan.test.ts`, thử ngược từng cái một):
+  **TÁM LUẬT CỦA POPUP**, rút ra từ ba lượt rà ngày 21/08/2026 khi chủ đầu tư mở app và nói *"nó bị full màn, rồi checkin 2 lần"*. Cả năm đều là "bớt đi", và cả năm đều có bài canh riêng (`tests/unit/popup-checkin-khong-hoi-hai-lan.test.ts`, thử ngược từng cái một):
 
   1. **Hỏi ĐÚNG MỘT LẦN.** Hộp thoại đã in "Hôm nay con thấy thế nào?" ở tiêu đề — màn chọn bên trong KHÔNG in lại. Bản đầu in cả hai, lệch cả đại từ (con/em).
   2. **Không vòng quay chờ.** Máy chủ vừa tính "em này chưa khai" để quyết định mở popup; hỏi lại chính nó rồi bày spinner là bắt em nhìn ô trống chờ một câu trả lời đã có.
@@ -125,6 +125,14 @@
   5. **CHỈ MỘT bản popup check-in trong toàn kho.** Trang chủ từng có `CheckinModal` riêng, tự mở bằng `useEffect` — nó ra đời trước cổng ADR-036 và làm gần đúng việc cổng làm. Thêm cổng mà không gỡ nó thì em nhận **hai popup chồng nhau** trên máy tính (chủ đầu tư: *"có 2 loại checkin"*). Bản giữ lại là bản của cổng, vì nó khoá thật, phủ mọi trang, và dùng lại NGUYÊN ruột `CheckinView` — một bản sao của hàng đợi ngoại tuyến là một chỗ sẽ lệch.
   6. **`CheckinView` tải RỜI khỏi gói của layout gốc** (`next/dynamic`). Cổng có mặt trên mọi trang; import thẳng là kéo ~950 dòng kèm hàng đợi IndexedDB vào gói JS của mọi trang, kể cả trang giáo viên. Gói nặng → hydrate lâu → cú nháy bố cục dài ra.
   7. **Nền bị `inert`, ngay trong HTML máy chủ.** Bẫy Tab không che được con trỏ ảo của trình đọc màn hình — không có `inert` thì người dùng NVDA/VoiceOver vẫn đọc được nguyên trang phía sau, gồm cả lời mời check-in thứ hai. Đặt bằng prop trong JSX, KHÔNG bằng `useEffect`: effect chỉ chạy sau hydrate nên HTML lần đầu vẫn hở.
+
+  8. **CHẠM MỘT Ô LÀ XONG — không màn xác nhận, không nút "Vào Hub".** Chủ đầu tư, lượt rà thứ ba: *"chỗ checkin cảm xúc, chỉ cần ấn vào icon là được, ẩn đi, không cần hiện lên xác nhận"*. Máy chủ nhận xong thì popup đóng ngay; lời cảm ơn chuyển sang thẻ trang chủ (query `getTodayStatus` được dọn ngay trong nhánh thành công, nên thẻ tự đổi thành "Đã check-in lúc … — cảm ơn con!"). Cho TAI thì vẫn phải nói: một vùng `role="status" aria-live="polite"` `sr-only` đặt **ngoài** hộp thoại — để trong thì nó bị tháo cùng hộp và trình đọc màn hình không kịp đọc.
+
+     **ĐÚNG HAI NGOẠI LỆ ở lại, và cả hai đều KHÔNG phải màn xác nhận** — chúng là những ca có một sự thật em cần biết mà không chỗ nào khác nói:
+     - **Nhà chưa có phiếu đồng ý** (0047): máy chủ nhận lượt điểm danh nhưng KHÔNG nhận mức tâm trạng. Đóng sập là để em tin mình vừa ghi được một thứ không vào kho.
+     - **Đang chờ mạng**: lượt bấm nằm trong hàng đợi trên máy em, máy chủ chưa biết, nên `getTodayStatus` không được dọn — thẻ trang chủ vẫn đọc bản cũ và **mời em check-in lần nữa**. Đóng ở đó là dựng lại đúng con lỗi "check-in 2 lần" ở một chỗ mới.
+
+     Và một luật con, học được bằng cách suýt gửi đi bản sai: **tín hiệu MỞ KHOÁ tách rời tín hiệu ĐÓNG**. `CheckinView` báo `onGhiXong` ở **mọi** ca thành công (kèm hai cờ `moodSaved`/`choMang`); việc gọi hàm đó là thứ mở khoá, hai cờ chỉ quyết đóng hay ở lại. Bản viết trước gộp làm một — im lặng ở ca "chưa có phiếu" — và nó **nhốt em vĩnh viễn**: cổng chờ đúng thứ em không thể làm, mà phiếu đồng ý thì là việc của bố mẹ.
 
   Hàm cổng vẫn ở `apps/hub/server/checkin-gate.ts` (đo được, có bài kiểm riêng); ba trạng thái của popup ở `components/cong-checkin.tsx` (`trangThaiCong`, hàm thuần, 8 ca). Nó là LỚP NHỊP, không phải chốt chặn dữ liệu — người mở devtools xoá lớp phủ thì xoá được, và thứ họ giành được là quyền xem trang chủ của chính mình mà chưa khai tâm trạng.
 - Ghi chú tư vấn (Tâm lý cụm): GVCN & PH không xem được — luôn hiện badge `visibility_off`.

@@ -128,6 +128,42 @@ describe("popup check-in — năm lỗi đã sửa, mỗi lỗi một người c
     expect(boChuThich(doc("apps/hub/lib/viewport.ts"))).not.toContain("export function khoManTuHeader");
   });
 
+  it("9. bấm xong là ĐÓNG NGAY, và ca 'chưa có phiếu' KHÔNG bị nhốt vĩnh viễn", () => {
+    // Chủ đầu tư 21/08/2026: *"chỉ cần ấn vào icon là được, ẩn đi, không cần hiện lên
+    // xác nhận"*. Popup đóng ngay khi máy chủ nhận lượt bấm.
+    //
+    // Cái bẫy suýt dựng khi làm việc đó: để `CheckinView` IM LẶNG ở ca `moodBlocked`
+    // (nhà chưa có phiếu đồng ý — máy chủ nhận lượt điểm danh nhưng không nhận mức tâm
+    // trạng). Im lặng thì cổng không bao giờ mở khoá, và em bị nhốt trong một popup đòi
+    // đúng thứ em KHÔNG THỂ làm. Bài `cong-checkin.test.ts` không bắt được — nó đo hàm
+    // thuần, còn bẫy nằm ở phía GỌI.
+    //
+    // Luật: báo ở CẢ HAI ca, và nói rõ tâm trạng có vào kho không.
+    const ma = boChuThich(CHECKIN_VIEW);
+    expect(ma, "phải báo ở MỌI ca, kèm cả hai cờ").toContain(
+      'onGhiXong?.({ moodSaved: !moodBlocked, choMang: queuedOffline })',
+    );
+    expect(ma, "gài điều kiện vào lời gọi là nhốt em vĩnh viễn").not.toMatch(
+      /"success" &&[^)]*\)\s*onGhiXong/,
+    );
+
+    // Và phía nhận: mở khoá TRƯỚC, rồi mới xét có đóng hay không.
+    const maCong = boChuThich(CONG);
+    const i = maCong.indexOf("function ghiXong");
+    const than = maCong.slice(i, i + 400);
+    expect(than.indexOf("setDaGhi(true)")).toBeGreaterThan(0);
+    expect(than.indexOf("setDaGhi(true)"), "mở khoá phải đứng TRƯỚC nhánh thoát sớm").toBeLessThan(
+      than.indexOf("return"),
+    );
+
+    // ĐÚNG HAI NGOẠI LỆ, và ca chờ mạng là ngoại lệ tôi suýt bỏ sót: mất mạng thì lượt
+    // bấm nằm trong hàng đợi, `getTodayStatus` không được dọn, nên thẻ trang chủ vẫn đọc
+    // bản cũ và MỜI EM CHECK-IN LẦN NỮA. Đóng sập ở đó là dựng lại "check-in 2 lần".
+    expect(than, "phải ở lại cả ca chưa-có-phiếu lẫn ca chờ-mạng").toContain(
+      "if (!moodSaved || choMang) return",
+    );
+  });
+
   it("chế độ khoá cứng vẫn KHÔNG có nút đóng — hàng rào chính không bị dọn nhầm", () => {
     // Bốn lỗi trên đều sửa bằng cách BỚT thứ trong popup. Câu này đứng cạnh để lần dọn
     // sau không bớt luôn thứ làm nên cái cổng.

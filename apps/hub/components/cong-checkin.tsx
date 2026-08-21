@@ -120,12 +120,24 @@ export function CongCheckinProvider({
   const [daGhi, setDaGhi] = useState(false);
   const [daDong, setDaDong] = useState(false);
   const [moTay, setMoTay] = useState(false);
+  /**
+   * Câu báo cho TAI, không cho mắt.
+   *
+   * Popup nay đóng ngay khi em chạm một ô cảm xúc — không màn xác nhận nào. Với mắt thì
+   * đủ: lớp phủ biến mất và thẻ trên trang chủ đổi thành "Đã check-in hôm nay, cảm ơn
+   * em!". Với TAI thì không: người dùng trình đọc màn hình nghe IM LẶNG đúng lúc vừa
+   * làm việc quan trọng nhất trong ngày — chính cái lỗi mà `checkin-view.tsx` đã phải
+   * sửa một lần hồi 01/08/2026, chỉ khác chỗ đứng.
+   *
+   * Vùng `role="status"` dưới đây nằm NGOÀI hộp thoại nên nó sống sót khi hộp bị tháo,
+   * và nó `sr-only` nên không thêm một chữ nào lên màn.
+   */
+  const [loiBao, setLoiBao] = useState("");
 
   const moCheckin = useCallback(() => setMoTay(true), []);
   const laHocSinh = roles.includes("student");
 
   const { dangMo, khoaCung } = trangThaiCong({ batBuoc, daGhi, daDong, moTay });
-  const congDangCho = batBuoc && !daDong;
 
   const ctx = useMemo(
     () => ({ moCheckin, coCheckin: laHocSinh, dangKhoa: khoaCung }),
@@ -153,6 +165,24 @@ export function CongCheckinProvider({
     setDaDong(true);
   }
 
+  /**
+   * Máy chủ đã nhận lượt bấm của em.
+   *
+   * `setDaGhi(true)` chạy Ở CẢ HAI CA — đó là thứ mở khoá. Em đã làm phần của mình rồi;
+   * nhốt tiếp là nhốt em vì một việc em không tự sửa được (phiếu đồng ý là của bố mẹ).
+   *
+   * Đóng thì CÓ ĐIỀU KIỆN — chỉ đóng khi MÁY CHỦ ĐÃ XÁC NHẬN và tâm trạng thật sự vào
+   * kho. Hai ca còn lại (chưa có phiếu đồng ý · đang chờ mạng) để hộp ở lại, vì ở đó có
+   * một chuyện em cần biết mà không chỗ nào khác nói. Lúc ấy hộp đã có nút ✕, vì
+   * `khoaCung` vừa tắt theo `daGhi`.
+   */
+  function ghiXong({ moodSaved, choMang }: { moodSaved: boolean; choMang: boolean }) {
+    setDaGhi(true);
+    if (!moodSaved || choMang) return;
+    setLoiBao("Đã ghi tâm trạng của con. Cảm ơn con!");
+    dong();
+  }
+
   return (
     <Ctx.Provider value={ctx}>
       <div {...nenInert}>{children}</div>
@@ -175,24 +205,24 @@ export function CongCheckinProvider({
           email={email}
           roles={roles}
           classCode={classCode}
-          onGhiXong={() => setDaGhi(true)}
+          onGhiXong={ghiXong}
         />
 
-        {/* ĐƯỜNG RA MỌC ĐÚNG LÚC VIỆC XONG.
-            Chỉ ở nhánh cổng-đang-chờ: khi em TỰ mở để đổi tâm trạng thì nút ✕ của
-            HopThoai đã là đường ra quen thuộc, thêm một nút nữa là thừa. */}
-        {congDangCho && daGhi && (
-          <button
-            type="button"
-            onClick={dong}
-            className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[14px] bg-gradient-to-br from-navy to-navy-light text-[14px] font-black text-white"
-          >
-            <span aria-hidden className="msr text-[19px]">home</span>
-            Vào Hub
-          </button>
-        )}
+        {/* NÚT "VÀO HUB" ĐÃ BỎ 21/08/2026. Nó là đường ra của một màn xác nhận, mà màn
+            xác nhận thì không còn: chạm một ô cảm xúc là popup đóng luôn. Một nút để
+            thoát khỏi thứ đã tự thoát là một cú bấm thừa.
+
+            Popup vẫn ở lại ĐÚNG MỘT ca — nhà em chưa có phiếu đồng ý nên máy chủ không
+            nhận mức tâm trạng (0047). Lúc đó `CheckinView` không báo "xong", nên hộp
+            không đóng, và nó nói thẳng chuyện gì vừa xảy ra. Đường ra ca đó là nút ✕ của
+            `HopThoai` — đã có, vì `khoaCung` tắt ngay khi lượt điểm danh được nhận. */}
         </HopThoai>
       )}
+      {/* Nằm NGOÀI khối `dangMo` — nếu ở trong, nó bị tháo cùng hộp thoại và trình đọc
+          màn hình không kịp đọc câu vừa được đặt vào. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {loiBao}
+      </p>
     </Ctx.Provider>
   );
 }

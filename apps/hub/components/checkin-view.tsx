@@ -375,8 +375,17 @@ export type CheckinViewProps = {
    * tuyến, cùng lời nhắn "cần gặp thầy cô". Không chép lại gì cả.
    */
   trongPopup?: boolean;
-  /** Popup gọi để biết em đã ghi xong — lúc đó nó mới mọc đường ra. */
-  onGhiXong?: () => void;
+  /**
+   * Em đã bấm xong phần của em. Kèm theo là hai sự thật RỜI NHAU, mỗi cái một câu hỏi:
+   *
+   *   · `moodSaved` — mức tâm trạng có vào kho không (0047: nhà chưa có phiếu đồng ý thì
+   *     lượt điểm danh được nhận, riêng ô tâm trạng để trống);
+   *   · `choMang`   — lượt bấm mới nằm trong hàng đợi trên máy em, máy chủ CHƯA biết.
+   *
+   * Việc gọi hàm này (bất kể hai cờ) là thứ MỞ KHOÁ — em đã làm phần của mình rồi, nhốt
+   * tiếp là nhốt em vì việc em không tự sửa được. Hai cờ chỉ quyết ĐÓNG hay Ở LẠI.
+   */
+  onGhiXong?: (ketQua: { moodSaved: boolean; choMang: boolean }) => void;
 };
 
 /**
@@ -493,13 +502,31 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
     if (state === "success") successHeadingRef.current?.focus();
   }, [state]);
 
-  // Báo cho popup biết em đã ghi xong — ĐÓ là lúc đường ra mọc lên, không sớm hơn.
+  // Báo cho popup biết em đã ghi xong. Popup dùng tín hiệu này để ĐÓNG NGAY — chủ đầu
+  // tư 21/08/2026: *"chỉ cần ấn vào icon là được, ẩn đi, không cần hiện lên xác nhận"*.
+  //
   // Gọi ở effect chứ không trong hàm gửi: hàng đợi ngoại tuyến cũng đặt state thành
   // "success" (em bấm khi mất mạng vẫn là đã ghi), và một lời gọi đặt trong hàm gửi sẽ
   // bỏ sót đúng nhánh đó.
+  //
+  // `moodSaved` là NGOẠI LỆ DUY NHẤT, và nó không phải một màn xác nhận: khi nhà em
+  // chưa có phiếu đồng ý (0047) thì máy chủ nhận lượt điểm danh nhưng KHÔNG nhận mức
+  // tâm trạng. Đóng sập lúc đó là để em tin mình vừa ghi được một thứ không vào kho —
+  // đúng loại im lặng bị đọc thành kết luận mà kho này cấm. Ca ấy popup ở lại và nói
+  // thẳng: "Chưa có phiếu đồng ý của bố mẹ · Không phải lỗi của con."
+  //
+  // BÁO Ở MỌI CA, không im ở ca nào: popup cần tin "đã nhận lượt" để MỞ KHOÁ. Bản viết
+  // trước im lặng ở ca `moodBlocked`, và nó khoá em VĨNH VIỄN — em không ghi được tâm
+  // trạng, mà cổng thì đang chờ đúng điều đó.
+  //
+  // `choMang` là ngoại lệ THỨ HAI, và nó cũng không phải màn xác nhận. Mất mạng thì lượt
+  // bấm nằm trong hàng đợi trên máy em; `getTodayStatus` KHÔNG được dọn (máy chủ có biết
+  // gì đâu mà hỏi lại), nên thẻ trang chủ vẫn đọc bản cũ và mời em check-in LẦN NỮA. Đóng
+  // sập lúc đó là dựng lại đúng con lỗi "check-in 2 lần" ở một chỗ mới. Ca ấy popup ở lại
+  // và nói thẳng: đã cất vào máy, sẽ gửi khi có mạng.
   useEffect(() => {
-    if (state === "success") onGhiXong?.();
-  }, [state, onGhiXong]);
+    if (state === "success") onGhiXong?.({ moodSaved: !moodBlocked, choMang: queuedOffline });
+  }, [state, moodBlocked, queuedOffline, onGhiXong]);
 
   // Gửi lại hàng đợi ngay khi có mạng — không cần em mở lại màn hình.
   //

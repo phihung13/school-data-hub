@@ -48,6 +48,19 @@ describe("cổng check-in — ba trạng thái", () => {
     expect(T(true, false, true, false)).toEqual({ dangMo: false, khoaCung: false });
   });
 
+  it("EM ĐÃ BẤM thì cổng MỞ KHOÁ, kể cả khi tâm trạng không vào được kho", () => {
+    // Cái bẫy suýt dựng ngày 21/08/2026 khi bỏ màn xác nhận.
+    //
+    // Nhà em chưa có phiếu đồng ý (0047): máy chủ NHẬN lượt điểm danh nhưng KHÔNG nhận
+    // mức tâm trạng. Bản viết đầu để `CheckinView` im lặng ở ca đó — nên `daGhi` không
+    // bao giờ bật, `khoaCung` không bao giờ tắt, và em bị nhốt VĨNH VIỄN trong một
+    // popup đòi đúng thứ em không thể làm.
+    //
+    // Luật: `daGhi` bật khi máy chủ NHẬN LƯỢT, không phải khi tâm trạng vào kho. Đóng
+    // hay không là chuyện khác, và nó do `daDong` quyết.
+    expect(T(true, true, false, false)).toEqual({ dangMo: true, khoaCung: false });
+  });
+
   it("phủ trọn 16 tổ hợp — không tổ hợp nào cho ra 'mở mà không biết có khoá hay không'", () => {
     // Phép kiểm hình dạng: `khoaCung` chỉ được đúng khi `dangMo` cũng đúng. Một trạng
     // thái "khoá cứng mà không mở" là vô nghĩa, và nếu nó lọt ra thì tầng giao diện sẽ
