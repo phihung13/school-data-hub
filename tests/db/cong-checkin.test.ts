@@ -93,22 +93,24 @@ describe("cổng check-in cảm xúc ở trang chủ (ADR-036)", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CỔNG CÓ THẬT SỰ CHẠY KHÔNG — đo HÀNH VI của trang, không đo chữ trong file
+// CỔNG CÓ THẬT SỰ CHẠY KHÔNG — và nó KHÔNG còn là chuyển trang nữa
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Bốn ca trên chứng minh HÀM trả đúng. Hàm đúng mà không ai gọi thì cổng không tồn
-// tại, và cả bốn ca vẫn xanh — đúng bài học `DEBT` #63: hàng rào `DEV_LOGIN_SECRET`
-// xây từ 02/08 nhưng CHƯA TỪNG được bật, năm ngày không ai thấy.
+// Bốn ca trên chứng minh HÀM trả đúng. Hàm đúng mà không ai gọi thì cổng không tồn tại.
 //
-// Bản đầu của khối này là một bài quét mã nguồn (`tests/unit/…`) hỏi "file trang chủ
-// có chứa chữ phaiDungOCheckin và redirect('/checkin') không". Nó bị VỨT ĐI ngay khi
-// thử ngược: sửa lời gọi thành `if (false && await phaiDungOCheckin(...))` — cổng tắt
-// hoàn toàn — bài vẫn XANH, vì cả hai chuỗi còn nguyên trong file. Một bài canh xanh
-// khi hàng rào đã tắt thì tệ hơn không có: nó đọc thành "đã có người canh".
+// ĐỔI HÌNH 21/08/2026 — chủ đầu tư bác bản chuyển trang ngay khi nhìn thấy: *"nếu lúc
+// vào bắt checkin thì phải hiện ra popup checkin, xung quanh mờ, ko thoát được, thì nó
+// mới là khóa app, chứ vô trang checkin làm gì"*. Cổng nay là một POPUP dựng ở
+// `app/layout.tsx` (phủ MỌI trang), không phải một `redirect` ở `/home`.
 //
-// Nên chỗ này gọi thẳng Server Component `HomePage()` với phiên giả và cơ sở dữ liệu
-// THẬT. `redirect()` của Next chạy bằng cách NÉM một lỗi mang `digest`, nên "có
-// chuyển hướng không" đo được chính xác: bắt lỗi, đọc URL trong digest.
+// Hai ca dưới đây vì thế ĐẢO CHIỀU, không bị xoá:
+//   · trang chủ KHÔNG còn đẩy đi đâu — nếu nó còn đẩy thì cổng cũ chưa được gỡ, và
+//     người dùng ăn cả hai lớp chặn cùng lúc;
+//   · trong khi ĐÓ, hàm cổng vẫn nói "phải dừng" — tức lớp chặn đã chuyển chỗ chứ
+//     không biến mất. Thiếu vế thứ hai thì bài này xanh cả khi ai đó gỡ luôn cổng.
+//
+// Hành vi của chính popup (mở/khoá/đường ra) đo ở `tests/unit/cong-checkin.test.ts` —
+// nó là logic thuần, không cần Postgres.
 import { vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -122,13 +124,11 @@ vi.mock("@/lib/session", () => ({ getCurrentSession: vi.fn() }));
 vi.mock("@hub/core/auth-adapter", () => ({
   resolveIdentity: async () => ({ email: "minh@va.edu.vn", className: "6A1" }),
 }));
-// Cả HAI hàm trang chủ gọi — thiếu một là `vi.mock` ném "No export is defined",
-// và đó chính là cách bài này bắt được lượt thêm `ghimAppDungNhieu` ngày 21/08/2026:
-// nó chạy trang THẬT nên mọi phụ thuộc mới của trang đều lộ ra ở đây.
 vi.mock("@/server/mini-apps", () => ({
   buildMiniAppsWithEmbedded: async () => [],
   ghimAppDungNhieu: async (tiles: unknown) => tiles,
 }));
+vi.mock("@/server/lich", () => ({ docLichHomNay: async () => ({ suKien: [], daNoiGoogle: false }) }));
 vi.mock("@/components/home-view", () => ({ HomeView: () => null }));
 
 /** Trang chủ đẩy đi đâu — `null` nghĩa là cho vào, không chuyển hướng. */
@@ -146,8 +146,8 @@ async function trangChuDayDiDau(): Promise<string | null> {
   }
 }
 
-describe("cổng có THẬT SỰ chạy trên trang chủ không (ADR-036)", () => {
-  it("em chưa check-in mở /home → BỊ ĐẨY về /checkin", async ({ skip }) => {
+describe("cổng đã CHUYỂN CHỖ, không biến mất (ADR-036 bản popup)", () => {
+  it("em chưa check-in mở /home → KHÔNG bị đẩy đi đâu nữa", async ({ skip }) => {
     if (!ready) return skip();
     const { getCurrentSession } = await import("@/lib/session");
     vi.mocked(getCurrentSession).mockResolvedValue({
@@ -158,23 +158,17 @@ describe("cổng có THẬT SỰ chạy trên trang chủ không (ADR-036)", () 
 
     await capPhieuDongY(FIXTURE.studentMinh);
     await xoaCheckinHomNay();
-    expect(await trangChuDayDiDau()).toBe("/checkin");
-  });
-
-  it("em đã check-in mở /home → VÀO ĐƯỢC, không chuyển hướng", async ({ skip }) => {
-    if (!ready) return skip();
-    await asSystem((c) =>
-      c.query(
-        `insert into attendance.checkins (student_id, occurred_on, kind, mood, status, source)
-         values ($1, current_date, 'in', 3, 'present', 'app')
-         on conflict (student_id, occurred_on, kind) do update set mood = 3`,
-        [FIXTURE.studentMinh],
-      ),
-    );
     expect(await trangChuDayDiDau()).toBeNull();
   });
 
-  it("GVCN mở /home → VÀO ĐƯỢC kể cả khi chính cô chưa check-in gì", async ({ skip }) => {
+  it("NHƯNG hàm cổng vẫn nói phải dừng — lớp chặn chuyển sang popup ở layout gốc", async ({ skip }) => {
+    if (!ready) return skip();
+    // Vế này là thứ giữ cho ca trên không xanh vì lý do sai. Không có nó, một người gỡ
+    // luôn cả cổng sẽ thấy bài test xanh và tưởng mình vừa dọn dẹp.
+    expect(await phaiDungOCheckin(DEV.student)).toBe(true);
+  });
+
+  it("GVCN mở /home → vào được, và cổng cũng không đòi gì ở cô", async ({ skip }) => {
     if (!ready) return skip();
     const { getCurrentSession } = await import("@/lib/session");
     vi.mocked(getCurrentSession).mockResolvedValue({
@@ -183,5 +177,6 @@ describe("cổng có THẬT SỰ chạy trên trang chủ không (ADR-036)", () 
       displayName: "Cô Lan",
     } as Awaited<ReturnType<typeof getCurrentSession>>);
     expect(await trangChuDayDiDau()).toBeNull();
+    expect(await phaiDungOCheckin(DEV.gvcn)).toBe(false);
   });
 });

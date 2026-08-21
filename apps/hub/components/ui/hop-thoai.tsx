@@ -39,6 +39,7 @@ export function HopThoai({
   moTa,
   onDong,
   rong = "max-w-[560px]",
+  batBuoc = false,
   children,
 }: {
   tieuDe: string;
@@ -47,6 +48,18 @@ export function HopThoai({
   onDong: () => void;
   /** Lớp Tailwind quyết định bề ngang tối đa. Form khai app hẹp; bản hướng dẫn thì rộng. */
   rong?: string;
+  /**
+   * KHOÁ CỨNG: không nút đóng, Escape không đóng, bấm ra ngoài không đóng (ADR-036).
+   *
+   * Đây là chế độ NGOẠI LỆ và nó phá một quy ước tốt — mọi hộp thoại đều phải có đường
+   * ra. Nó tồn tại cho đúng một việc: cổng check-in cảm xúc, nơi chủ đầu tư chốt "chặn
+   * thật" ngày 21/08/2026. Dùng nó cho bất cứ thứ gì khác là nhốt người dùng trong một
+   * lớp phủ, và đó là thứ tệ nhất một giao diện làm được.
+   *
+   * `onDong` VẪN được gọi khi nơi dùng tự quyết định đóng (ví dụ: em đã ghi xong) —
+   * cờ này chỉ bỏ những đường ra do NGƯỜI DÙNG chủ động bấm.
+   */
+  batBuoc?: boolean;
   children: ReactNode;
 }) {
   const khungRef = useRef<HTMLDivElement>(null);
@@ -55,7 +68,14 @@ export function HopThoai({
 
   useEffect(() => {
     const nguoiMo = document.activeElement as HTMLElement | null;
-    nutDongRef.current?.focus();
+    // Chế độ bắt buộc không có nút đóng, nên focus rơi vào phần tử bấm được ĐẦU TIÊN
+    // trong hộp. Không đặt focus thì nó ở lại trên trang phía sau — người dùng bàn phím
+    // gõ Tab và đi lạc trong một trang đang bị phủ mờ mà không biết mình ở đâu.
+    if (nutDongRef.current) nutDongRef.current.focus();
+    else
+      khungRef.current
+        ?.querySelector<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')
+        ?.focus();
     // Khoá cuộn nền: mở một hộp thoại rồi lăn chuột mà trang phía sau chạy là tín hiệu
     // "cái này không phải một lớp riêng" — và ở khổ điện thoại nó làm mất luôn hộp.
     const cuOverflow = document.body.style.overflow;
@@ -68,8 +88,10 @@ export function HopThoai({
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
+      // Chặn LUÔN CẢ khi bắt buộc: stopPropagation để Escape không rơi xuống lớp dưới
+      // và đóng một thứ khác — nhưng không gọi onDong.
       event.stopPropagation();
-      onDong();
+      if (!batBuoc) onDong();
       return;
     }
     if (event.key !== "Tab") return;
@@ -107,18 +129,22 @@ export function HopThoai({
             </h2>
             {moTa && <p className="mt-0.5 text-[12px] font-semibold text-muted">{moTa}</p>}
           </div>
-          {/* 44px (§11). Nút ✕ 36px là đúng lỗi đã đo trên popup check-in hôm 01/08/2026. */}
-          <button
-            ref={nutDongRef}
-            type="button"
-            onClick={onDong}
-            aria-label="Đóng"
-            className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-chip text-navy"
-          >
-            <span className="msr text-[20px]" aria-hidden>
-              close
-            </span>
-          </button>
+          {/* 44px (§11). Nút ✕ 36px là đúng lỗi đã đo trên popup check-in hôm 01/08/2026.
+              Chế độ bắt buộc: KHÔNG dựng nút này — một nút đóng không đóng được thì tệ
+              hơn hẳn không có nút, vì nó mời người ta bấm rồi không phản hồi. */}
+          {!batBuoc && (
+            <button
+              ref={nutDongRef}
+              type="button"
+              onClick={onDong}
+              aria-label="Đóng"
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-chip text-navy"
+            >
+              <span className="msr text-[20px]" aria-hidden>
+                close
+              </span>
+            </button>
+          )}
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>

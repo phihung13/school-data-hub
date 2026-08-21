@@ -226,7 +226,7 @@ describe("tab bar và sidebar nói cùng một điều", () => {
     expect(menu, "cô là phụ huynh mà không có đường tới báo cáo của con").toContain("/bao-cao");
     expect(resolveNav(["guardian", "homeroom"]).roleLabel).toBe("GVCN");
     expect(resolveTabs(["student", "guardian"]).map((i) => i.href)).toEqual(
-      expect.arrayContaining(["/home", "/checkin"]),
+      expect.arrayContaining(["/home"]),
     );
     // Sửa 01/08/2026: tâm lý cụm và BGH KHÔNG còn rơi vào bộ nhân viên tối thiểu.
     // Câu cũ ở đây khẳng định `counselor → STAFF_TABBAR_ITEMS` và nó ĐÚNG với mã lúc đó,

@@ -98,6 +98,7 @@ import type { GetLichHomNayOutput, HubRole, MiniAppTile as MiniAppTileType, Mood
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { MiniAppTile } from "./mini-app-tile";
 import { LichHomNay } from "./lich-hom-nay";
+import { useCongCheckin } from "./cong-checkin";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { HubSidebar } from "./hub-sidebar";
@@ -510,6 +511,7 @@ function MobileHome({ data }: { data: HomeData }) {
 }
 
 function CheckinCardMobile({ data }: { data: HomeData }) {
+  const { moCheckin } = useCongCheckin();
   return (
     <div className="relative z-[2] -mt-[46px] flex flex-col gap-2.5 rounded-[22px] bg-white p-3.5 shadow-[0_14px_32px_rgba(10,42,94,.14)]">
       <div className="flex items-center justify-between">
@@ -534,12 +536,17 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
         // min-h-[44px] (§11, WCAG 2.5.8): đo thật ra 42px cho nút này và 36px cho nút
         // "Thử lại" bên dưới. Padding dọc một mình không kéo đủ chiều cao, nên min-h
         // đi kèm flex căn giữa để chữ không dính mép khi ô cao hơn nội dung.
-        <Link
-          href="/checkin"
+        // NÚT, KHÔNG PHẢI LINK (21/08/2026): check-in nay là popup mở ngay tại chỗ,
+        // không phải một trang để đi tới. Mũi tên "→" cũng bỏ theo — nó là ký hiệu của
+        // "đi sang chỗ khác", và ở đây không đi đâu cả.
+        <button
+          type="button"
+          onClick={moCheckin}
+          aria-haspopup="dialog"
           className="flex min-h-[44px] items-center justify-center rounded-[13px] bg-gradient-to-br from-navy to-navy-light py-3 text-center text-[13.5px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)]"
         >
-          Check-in ngay →
-        </Link>
+          Check-in ngay
+        </button>
       )}
       {data.todayState === "error" && (
         <button

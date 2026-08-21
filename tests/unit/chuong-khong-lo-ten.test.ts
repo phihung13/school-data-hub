@@ -183,11 +183,28 @@ describe("hai giọng, không trộn (§8 brief thiết kế)", () => {
    */
   const VAN_HANH = /\bcờ\b|\bngưỡng\b|leo thang|định mức|\bGVCN\b|chủ nhiệm|\bca\b|hồ sơ chăm sóc/i;
 
+  // NHÁNH `student` KHÔNG CÒN TỒN TẠI từ 21/08/2026 — và đó là một quyết định, không
+  // phải một chỗ sót. Mục chuông duy nhất của học sinh là "Hôm nay chưa check-in", mà
+  // từ ADR-036 bản popup thì em chưa khai tâm trạng đang bị popup khoá app chặn ngay
+  // trước mặt: một dòng chuông nhắc lại việc em không thể tránh khỏi là tiếng ồn.
+  //
+  // Bài kiểm KHÔNG bỏ vai `student` khỏi danh sách: nó chạy phép soi CHỈ KHI nhánh có
+  // mặt. Ngày ai đó thêm lại một mục chuông cho học sinh, luật giọng nói tự có hiệu lực
+  // trở lại mà không cần ai nhớ sửa file này.
+  it("nhánh `student` vắng mặt CÓ CHỦ Ý — chuông của em rỗng vì popup đã hỏi rồi", () => {
+    expect(doc(ROUTER).indexOf('roles.has("student")')).toBe(-1);
+  });
+
   for (const vai of ["student", "guardian"] as const) {
     it(`nhãn của vai \`${vai}\` không mang từ vựng vận hành`, () => {
       const src = doc(ROUTER);
       const moc = src.indexOf(`roles.has("${vai}")`);
-      expect(moc, `không thấy nhánh ${vai} trong router`).toBeGreaterThan(0);
+      // Nhánh vắng mặt thì không có nhãn nào để soi — và ca đó đã có bài kiểm riêng ngay
+      // trên, nên ở đây thoát ra chứ không đỏ. `guardian` vẫn phải có mặt.
+      if (moc < 0) {
+        expect(vai, `vai ${vai} phải có nhánh trong router`).toBe("student");
+        return;
+      }
       const khoi = src.slice(moc, src.indexOf("}", src.indexOf("href:", moc)));
       const nhan = /label:\s*"([^"]*)"/.exec(khoi)?.[1] ?? "";
       expect(nhan.length, `nhánh ${vai} không có nhãn nào`).toBeGreaterThan(0);

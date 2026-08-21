@@ -106,7 +106,9 @@ function vaiTheoTrang(href: string): HubRole[] | null {
 describe("bộ đọc hàng rào (tự kiểm chính nó)", () => {
   it("đọc đúng ba khuôn hàng rào đang dùng thật trong kho", () => {
     // Khuôn (a): một vai.
-    expect(vaiTheoTrang("/checkin")).toEqual(["student"]);
+    // `/checkin` đã gỡ (ADR-036 bản popup) — đổi sang một màn CÒN dùng khuôn hàng rào
+    // chép tay, để bộ tự kiểm vẫn canh đúng thứ nó sinh ra để canh.
+    expect(vaiTheoTrang("/tuan-nay")).toEqual(["student"]);
     expect(vaiTheoTrang("/tam-ly")).toEqual(["counselor"]);
     // Khuôn (b): biến trung gian, hai vai.
     expect(vaiTheoTrang("/bao-cao")?.slice().sort()).toEqual(["guardian", "student"]);

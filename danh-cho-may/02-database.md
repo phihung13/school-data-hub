@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 40
+sync-version: 41
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -1041,7 +1041,7 @@ Trong đợt hợp nhất sơ đồ "AI OS" của cấp trên (ADR-034), chủ �
 
 Không đổi một dòng lược đồ nào, nhưng đổi **mẫu số của mọi phép đếm trên `attendance.checkins`**, nên phải ghi ở đây chứ không chỉ ở tài liệu thiết kế.
 
-Chủ đầu tư chốt 21/08/2026 ("Chặn thật"): học sinh đăng nhập lần đầu trong ngày bị đẩy về `/checkin` cho tới khi ghi xong tâm trạng. Cổng là `apps/hub/server/checkin-gate.ts`, gác `/home`.
+Chủ đầu tư chốt 21/08/2026 ("Chặn thật"): học sinh chưa khai tâm trạng hôm nay thì không dùng được app. **Hình của cổng đổi ngay trong ngày** — bản đầu ĐẨY em sang trang `/checkin`, chủ đầu tư bác (*"vô trang checkin làm gì"*), nên nay là **popup khoá app** dựng ở `app/layout.tsx`, phủ MỌI trang. Trang `/checkin` đã xoá. Hàm cổng vẫn là `apps/hub/server/checkin-gate.ts` — phần đo được ở tầng dữ liệu không đổi một dòng, chỉ đổi chỗ đứng của cái lớp phủ.
 
 **Hệ quả cần biết trước khi đọc bất kỳ con số nào sau ngày này:**
 
@@ -1049,9 +1049,9 @@ Chủ đầu tư chốt 21/08/2026 ("Chặn thật"): học sinh đăng nhập l
 - Ngưỡng `E_MOOD` trong `care.thresholds` được đặt trên dữ liệu của chế độ **tự nguyện**. Chế độ bắt buộc sẽ kéo thêm những ngày em bấm cho qua — ADR-036 ghi sẵn phép đo để phát hiện (tỷ lệ chuỗi lặp y hệt nhiều ngày liền), và ngưỡng phải rà lại sau một tháng dữ liệu thật.
 - Cổng **KHÔNG** chặn em chưa có phiếu đồng ý của nhà (`core.has_student_consent`) — `0047` không cho ghi `mood` khi thiếu phiếu, nên chặn là nhốt em ngoài cửa bằng điều kiện em không tự thoát được. Điều kiện này nằm trong chính câu SQL của cổng và có bài test canh.
 
-**Kiểm chứng.** `tests/db/cong-checkin.test.ts` — **8 ca**, hai tầng: bốn ca đo HÀM dưới danh tính thật, ba ca gọi thẳng Server Component `HomePage()` với cơ sở dữ liệu thật để đo **cổng có chạy không**. Tầng thứ hai sinh ra sau khi bản đầu (quét mã nguồn tìm chữ `phaiDungOCheckin`) **thất bại phép thử ngược**: tắt cổng bằng `if (false && …)` mà bài vẫn xanh. Bài quét ấy bị xoá — một bài canh xanh khi hàng rào đã tắt thì tệ hơn không có. Thử ngược lại trên bản hành vi: cổng tắt → **đỏ đúng một câu**, đúng câu "em chưa check-in phải bị đẩy về /checkin".
+**Kiểm chứng.** `tests/db/cong-checkin.test.ts` — **8 ca**, hai tầng: bốn ca đo HÀM dưới danh tính thật, ba ca gọi thẳng Server Component `HomePage()` để đo **cổng đã CHUYỂN CHỖ chứ không biến mất** (trang chủ thôi đẩy đi đâu, NHƯNG hàm cổng vẫn nói "phải dừng" — thiếu vế thứ hai thì bài xanh cả khi ai đó gỡ luôn cổng). Ba trạng thái của popup đo riêng ở `tests/unit/cong-checkin.test.ts` (**8 ca**, hàm thuần) — và bài đó tồn tại vì tôi viết sai đúng chỗ đó một lần: tính `dangKhoa = batBuoc && !daGhi` rồi dựng nút "Vào Hub" trong nhánh `dangKhoa && daGhi`, một điều kiện KHÔNG BAO GIỜ đúng, nên popup đóng sập trước khi em kịp đọc câu cảm ơn. Tầng thứ hai sinh ra sau khi bản đầu (quét mã nguồn tìm chữ `phaiDungOCheckin`) **thất bại phép thử ngược**: tắt cổng bằng `if (false && …)` mà bài vẫn xanh. Bài quét ấy bị xoá — một bài canh xanh khi hàng rào đã tắt thì tệ hơn không có. Thử ngược lại trên bản hành vi: cổng tắt → **đỏ đúng một câu**, đúng câu "em chưa check-in phải bị đẩy về /checkin".
 
-Đo đầu-cuối qua máy chủ thật (dev, 21/08/2026): chưa khai → `GET /home` **307 → /checkin**; gọi `checkin.submitMood` qua tRPC thật → `moodSaved: true`; mở lại `/home` → **200**. Phiên GVCN: **200** ngay từ đầu.
+Đo đầu-cuối qua máy chủ thật (dev, 21/08/2026), **sau khi đổi sang popup**: chưa khai → `/home`, `/tuan-nay`, `/diem-danh` đều trả **200** và HTML **cả ba** đều chứa popup + câu khoá *"Con chọn một ô rồi vào Hub nhé"*, **không** có nút đóng; gọi `checkin.submitMood` qua tRPC thật → mở lại cả ba trang, popup **biến mất**; phiên cô Lan: **không** popup nào.
 
 **Nghĩa vụ chưa xong, là cổng GO-LIVE chứ không phải cổng build:** thông báo quyền riêng tư cho phụ huynh (`danh-cho-nguoi/thong-bao-quyen-rieng-tu-check-in.html`, đang là BẢN NHÁP) và rà soát pháp lý theo Luật 91/2025 — thu thập dữ liệu nhạy cảm của trẻ theo điều kiện bắt buộc không còn là tự nguyện. Xem `DEBT.md`.
 

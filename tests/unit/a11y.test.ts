@@ -424,7 +424,24 @@ describe("tab bar: trạng thái không chỉ nói bằng màu", () => {
   // mục thứ tư, test đỏ dù luật không hề bị vi phạm. Một bài test đếm số đo sai thứ nó
   // định giữ: luật là "MỌI mục phải khai", không phải "có đúng ba mục".
   it("có mục điều hướng để kiểm — bộ quét không rỗng", () => {
-    expect(tags.length).toBeGreaterThanOrEqual(3);
+    // Mốc hạ từ 3 xuống 2 ngày 21/08/2026: nút tròn giữa thanh học sinh không còn là
+    // <Link> tới `/checkin` mà là <button> mở popup (ADR-036 bản popup), nên nó rời
+    // khỏi tầm quét của bộ đọc này — ĐÚNG, vì nó không dẫn tới trang nào để mà khai
+    // "đang ở đó". Luật không đổi: MỌI <Link> còn lại vẫn phải khai aria-current.
+    expect(tags.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("nút tròn giữa KHÔNG khai aria-current — nó không dẫn tới trang nào", () => {
+    // Chiều ngược của luật trên, và nó quan trọng ngang: khai `aria-current="page"` cho
+    // một nút mở hộp thoại là nói với trình đọc màn hình rằng người dùng đang đứng ở
+    // một trang không tồn tại. Nút đó khai `aria-haspopup="dialog"` — đúng việc nó làm.
+    // Nhận nút bằng ĐẶC TRƯNG của nó (`onClick={moCheckin}`) chứ không bằng khoảng cách
+    // tới chữ "Check-in": bản đầu dò 400 ký tự sau `<button` và đỏ vì thẻ dài hơn thế.
+    // Đo một khoảng cách trong mã nguồn là đo một thứ sẽ đổi.
+    const nut = tabBar.match(/<button\b[^>]*moCheckin[^>]*>/)?.[0] ?? "";
+    expect(nut, "không tìm thấy nút mở popup check-in trong thanh tab").not.toBe("");
+    expect(nut).toContain('aria-haspopup="dialog"');
+    expect(nut).not.toContain("aria-current");
   });
 
   it("MỌI mục khai aria-current, dù thanh có bao nhiêu mục", () => {

@@ -18,9 +18,9 @@ import type { MiniAppTile } from "@hub/core/contracts";
 let ready = false;
 
 const LUOI: MiniAppTile[] = [
-  { key: "checkin", label: "Check-in", icon: "mood", href: "/checkin", available: true },
+  { key: "diem-danh", label: "Điểm danh", icon: "fact_check", href: "/diem-danh", available: true },
   { key: "tuan-nay", label: "Tuần này", icon: "insights", href: "/tuan-nay", available: true },
-  { key: "bao-cao", label: "Báo cáo", icon: "description", href: "/bao-cao", available: true },
+  { key: "bao-cao", label: "Báo cáo", icon: "workspace_premium", href: "/bao-cao", available: true },
   { key: "sap-co", label: "Sắp có", icon: "hourglass", href: "/sap-co", available: false },
 ];
 
@@ -51,7 +51,7 @@ describe("ghim app dùng nhiều lên đầu lưới (ADR-034)", () => {
   it("chưa dùng gì thì lưới giữ NGUYÊN thứ tự khai báo — không xáo trộn vô cớ", async ({ skip }) => {
     if (!ready) return skip();
     expect(ten(await ghimAppDungNhieu(LUOI, DEV.student))).toEqual([
-      "checkin",
+      "diem-danh",
       "tuan-nay",
       "bao-cao",
       "sap-co",
@@ -61,10 +61,10 @@ describe("ghim app dùng nhiều lên đầu lưới (ADR-034)", () => {
   it("app dùng nhiều nhảy lên đầu, PHẦN CÒN LẠI GIỮ NGUYÊN thứ tự tương đối", async ({ skip }) => {
     if (!ready) return skip();
     await gieo(DEV.student, "bao-cao", 9);
-    // "bao-cao" lên đầu; checkin/tuan-nay/sap-co vẫn đúng thứ tự cũ của chúng.
+    // "bao-cao" lên đầu; ba ô còn lại vẫn đúng thứ tự cũ của chúng.
     expect(ten(await ghimAppDungNhieu(LUOI, DEV.student))).toEqual([
       "bao-cao",
-      "checkin",
+      "diem-danh",
       "tuan-nay",
       "sap-co",
     ]);
@@ -72,11 +72,11 @@ describe("ghim app dùng nhiều lên đầu lưới (ADR-034)", () => {
 
   it("hai app cùng vào hàng ghim thì xếp theo SỐ LƯỢT, không theo thứ tự khai báo", async ({ skip }) => {
     if (!ready) return skip();
-    await gieo(DEV.student, "checkin", 4);
+    await gieo(DEV.student, "diem-danh", 4);
     await gieo(DEV.student, "bao-cao", 11);
     expect(ten(await ghimAppDungNhieu(LUOI, DEV.student))).toEqual([
       "bao-cao",
-      "checkin",
+      "diem-danh",
       "tuan-nay",
       "sap-co",
     ]);
@@ -86,7 +86,7 @@ describe("ghim app dùng nhiều lên đầu lưới (ADR-034)", () => {
     if (!ready) return skip();
     await gieo(DEV.student, "sap-co", 99);
     expect(ten(await ghimAppDungNhieu(LUOI, DEV.student))).toEqual([
-      "checkin",
+      "diem-danh",
       "tuan-nay",
       "bao-cao",
       "sap-co",
@@ -97,7 +97,7 @@ describe("ghim app dùng nhiều lên đầu lưới (ADR-034)", () => {
     if (!ready) return skip();
     await gieo(DEV.gvcn, "bao-cao", 50);
     expect(ten(await ghimAppDungNhieu(LUOI, DEV.student))).toEqual([
-      "checkin",
+      "diem-danh",
       "tuan-nay",
       "bao-cao",
       "sap-co",
@@ -107,9 +107,9 @@ describe("ghim app dùng nhiều lên đầu lưới (ADR-034)", () => {
   it("app trong hàng ghim mà KHÔNG còn trong lưới (vừa bị thu hồi) thì bỏ qua, không sinh ô ma", async ({ skip }) => {
     if (!ready) return skip();
     await gieo(DEV.student, "app-da-go", 30);
-    await gieo(DEV.student, "checkin", 5);
+    await gieo(DEV.student, "diem-danh", 5);
     expect(ten(await ghimAppDungNhieu(LUOI, DEV.student))).toEqual([
-      "checkin",
+      "diem-danh",
       "tuan-nay",
       "bao-cao",
       "sap-co",
@@ -119,7 +119,7 @@ describe("ghim app dùng nhiều lên đầu lưới (ADR-034)", () => {
   it("người không tồn tại (không đọc được số) → trả lưới gốc, KHÔNG đổ trang chủ", async ({ skip }) => {
     if (!ready) return skip();
     expect(ten(await ghimAppDungNhieu(LUOI, "00000000-0000-0000-0000-0000000000ff"))).toEqual([
-      "checkin",
+      "diem-danh",
       "tuan-nay",
       "bao-cao",
       "sap-co",

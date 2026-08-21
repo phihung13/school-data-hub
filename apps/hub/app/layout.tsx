@@ -3,6 +3,11 @@ import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import { TrpcProvider } from "@/lib/trpc-provider";
 import { NavProgress } from "@/components/ui/nav-progress";
+import { CongCheckinProvider } from "@/components/cong-checkin";
+import { getCurrentSession } from "@/lib/session";
+import { resolveIdentity } from "@hub/core/auth-adapter";
+import { phaiDungOCheckin } from "@/server/checkin-gate";
+import { log, describeError } from "@/lib/logger";
 
 // Tự host qua next/font (build tải font về, phục vụ từ chính domain Hub) — KHÔNG dùng
 // <link> trỏ fonts.googleapis.com nữa. Lý do: tiện ích chặn quảng cáo/riêng tư của trình
@@ -36,7 +41,47 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * CỔNG CHECK-IN ĐỨNG Ở LAYOUT GỐC (ADR-036 bản 21/08/2026) — không ở `/home` nữa.
+ *
+ * Chủ đầu tư: *"phải hiện ra popup checkin, xung quanh mờ, ko thoát được, thì nó mới là
+ * khóa app"*. Khoá app nghĩa là MỌI trang, nên cổng phải đứng ở chỗ phủ mọi trang. Bản
+ * trước chỉ gác `/home`, và gõ thẳng `/tuan-nay` là đi vòng được.
+ *
+ * Ba điều cố ý giữ nguyên từ bản trước (lý do đầy đủ ở `server/checkin-gate.ts`):
+ * em chưa có phiếu đồng ý thì KHÔNG chặn · chỉ học sinh · lỗi CSDL thì cho qua.
+ *
+ * Chỉ hỏi cơ sở dữ liệu khi phiên là HỌC SINH: layout chạy trên mọi request của mọi
+ * trang, và một truy vấn thừa ở đây là truy vấn thừa trên đường nóng nhất của Hub.
+ */
+async function docCong() {
+  const session = await getCurrentSession();
+  if (!session) return null;
+  const laHocSinh = session.roles.includes("student");
+  let batBuoc = false;
+  if (laHocSinh) {
+    try {
+      batBuoc = await phaiDungOCheckin(session.authUid);
+    } catch (err) {
+      // Chặn một đứa trẻ khỏi CẢ APP vì một lỗi kết nối là phạt sai người — và ở layout
+      // gốc thì cái giá của việc phạt nhầm lớn hơn hẳn: nó khoá mọi trang cùng lúc.
+      log("error", "checkin.gate_read_failed", { authUid: session.authUid, ...describeError(err) });
+    }
+  }
+  // `resolveIdentity` chỉ để popup dựng khung (nhãn lớp) — và chỉ gọi khi CÓ việc để
+  // dựng, tức là khi popup thật sự có thể mở ra.
+  const identity = laHocSinh ? await resolveIdentity(session.authUid).catch(() => null) : null;
+  return {
+    batBuoc,
+    displayName: session.displayName,
+    email: identity?.email ?? "",
+    roles: session.roles,
+    classCode: identity?.className ?? null,
+  };
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cong = await docCong();
   return (
     <html lang="vi" className={beVietnamPro.variable}>
       <body>
@@ -60,7 +105,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             liệu nào, chỉ nghe cú bấm. Đứng ở layout gốc nên phủ MỌI trang: thêm màn mới
             không phải nhớ cắm lại, và đó là chủ ý (xem nav-progress.tsx). */}
         <NavProgress />
-        <TrpcProvider>{children}</TrpcProvider>
+        <TrpcProvider>
+          {/* Chưa đăng nhập (trang /login) thì không có cổng nào — và cũng không có
+              truy vấn nào. */}
+          {cong ? (
+            <CongCheckinProvider
+              batBuoc={cong.batBuoc}
+              displayName={cong.displayName}
+              email={cong.email}
+              roles={cong.roles}
+              classCode={cong.classCode}
+            >
+              {children}
+            </CongCheckinProvider>
+          ) : (
+            children
+          )}
+        </TrpcProvider>
       </body>
     </html>
   );

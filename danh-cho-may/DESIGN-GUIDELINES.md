@@ -63,7 +63,7 @@
 
 - **Hero cong**: header navy gradient + glow vàng; đáy là **vòm trắng** `height:32–44px; border-radius:100% 100% 0 0; margin-top:-32px`; thẻ đầu tiên **nổi đè lên vòm** (`margin-top` âm, `z-index:2`, KHÔNG đặt trong container `overflow:hidden`).
 - **Lưới mini app**: 4 cột (mobile & desktop card), nhãn 10–11px/700 dưới tile. Badge số góc trên phải tile (`#F0474D` đỏ khẩn, `#FFC629` vàng chờ xử lý, viền 2px nền trang).
-- **Tab bar mobile (chỉ ở Hub, vai trò học sinh)**: 5 mục, nút **Check-in tròn vàng nổi giữa** (56px, `pulseDot`). GV/PH: 4 mục, không nút giữa. **Mini app KHÔNG có tab bar Hub.**
+- **Tab bar mobile (chỉ ở Hub, vai trò học sinh)**: nút **Check-in tròn vàng nổi giữa** (56px, `pulseDot`) — từ 21/08/2026 nó là `<button>` **mở popup ngay tại chỗ**, KHÔNG phải `<Link>` dẫn sang một trang (ADR-036 bản popup; `/checkin` đã gỡ). Vì thế nó **không** khai `aria-current` — nó không dẫn tới trang nào để mà "đang ở đó" — mà khai `aria-haspopup="dialog"`. GV/PH: 4 mục, không nút giữa. **Mini app KHÔNG có tab bar Hub.**
 - **Shell mini app** (mobile + desktop): màn chuyển tiếp (icon nảy + 3 chấm) → app có header riêng theo màu chủ + **capsule ⋯│✕** (kiểu Zalo Mini App) luôn nổi để thoát về Hub; điều hướng riêng của app (tab pill nổi, nav ngang…).
 - **Desktop 2 cột**: nội dung chính `flex:1.6–1.7` + rail phải `flex:1` (thống kê, hoạt động gần đây).
 - **Đăng nhập**: 2 tab "Học sinh & Thầy cô" (2/3) ↔ "Phụ huynh" (1/3, giãn khi chọn). Nội bộ = nút **Google SSO** (logo G chuẩn SVG 4 màu) + chip `@vietanh.edu.vn`. PH = nút Zalo `#0068FF` mở link mời + 6 ô mã mời. **Không form mật khẩu, không câu giải thích.**
@@ -90,7 +90,7 @@
 
   **NHÃN CHUẨN — hai câu dưới đây là hợp đồng, tầng màn hình in ĐÚNG chữ này.** Lý do phải chốt ở đây chứ không để mỗi màn tự viết: nhãn nói ít hơn hoặc nhiều hơn sự thật đều là nói dối, và một màn viết lệch là cả lời hứa lệch. Viết cho trẻ 11 tuổi đọc — §8 cấm từ vựng vận hành (cờ / ngưỡng / quét / leo thang) trước mặt học sinh, nên hai câu này không được chứa chữ nào trong số đó.
 
-  1. **Nhãn ngắn, đặt ngay tại chỗ em nhập** (dưới bốn ô mặt cười ở `/checkin`, lưới check-in trang chủ, mọi ô nhập cảm xúc phát sinh sau này), kèm icon `lock` (đổi 21/08/2026 theo ADR-035 — bản cũ "Chỉ thầy cô tâm lý đọc" hết đúng):
+  1. **Nhãn ngắn, đặt ngay tại chỗ em nhập** (dưới bốn ô mặt cười trong **popup check-in**, lưới check-in trang chủ, mọi ô nhập cảm xúc phát sinh sau này), kèm icon `lock` (đổi 21/08/2026 theo ADR-035 — bản cũ "Chỉ thầy cô tâm lý đọc" hết đúng):
 
      > **Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc**
 
@@ -101,13 +101,21 @@
      > **{tên cô chủ nhiệm}** — xem điểm danh, đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
 
   Hai điều **vẫn cấm** in ra phía GVCN (điều thứ ba của bản 01/08 — "chiều của cảm xúc" — đã hết hiệu lực vì cô đọc được nhật ký rồi): **số ngày trong chi tiết cờ** (`negativeDays`, `negativeStreak` — cột `care.flags.detail` vẫn khoá với authenticated, migration `0049` không đảo theo ADR-035) và **mọi từ vựng vận hành** trong giao diện của em (§8). Chi tiết cờ vẫn cắt tại contract (`packages/core/contracts/care.ts`, `FlagSummary.detail`), không chỉ ẩn bằng CSS.
-- **Check-in cảm xúc CHẶN CỬA trang chủ** (ADR-036, 21/08/2026 — chủ đầu tư chọn "Chặn thật"). Học sinh đăng nhập lần đầu trong ngày bị đẩy về `/checkin`; xong một lần là thôi hỏi trong ngày. Bốn ràng buộc của cổng, không được bỏ bớt cái nào:
+- **Check-in cảm xúc KHOÁ APP bằng POPUP** (ADR-036, 21/08/2026 — chủ đầu tư chọn "Chặn thật", rồi bác bản chuyển trang: *"nếu lúc vào bắt checkin thì phải hiện ra popup checkin, xung quanh mờ, ko thoát được, thì nó mới là khóa app, chứ vô trang checkin làm gì"*).
+
+  Học sinh chưa khai tâm trạng hôm nay → **popup mở trên chính trang em đang đứng**, nền mờ, **không nút đóng, Escape không đóng, bấm ra ngoài không đóng**. Xong một lần là thôi hỏi trong ngày. Cổng dựng ở `app/layout.tsx` nên nó phủ **mọi trang** — bản đầu gác đúng `/home` và gõ thẳng `/tuan-nay` là đi vòng được.
+
+  **Trang `/checkin` đã GỠ.** Một trang riêng cho một việc mất bốn giây là một lần đổi trang thừa, và nó nói sai chuyện đang xảy ra: trang mới nghĩa là "em đang ở chỗ khác", trong khi sự thật là "app đang chờ em một việc". Bốn ràng buộc của cổng, không được bỏ bớt cái nào:
   1. **Em chưa có phiếu đồng ý của nhà thì KHÔNG chặn** — `0047` không cho ghi `mood` khi thiếu phiếu, nên chặn là nhốt em ngoài cửa bằng một điều kiện em không tự thoát được. Điều kiện `has_student_consent` nằm trong chính câu SQL của cổng.
   2. **Chỉ học sinh** — giáo viên, phụ huynh, quản trị không bao giờ bị hỏi tới.
   3. **Dòng cô ghi hộ không tính** — nhịp này là của em, không phải của sổ điểm danh.
   4. **Lỗi cơ sở dữ liệu không được biến thành cổng** — hỏng kết nối thì cho qua và ghi log, không phạt sai người.
 
-  Không có nút "bỏ qua" (và chưa từng có). Đường về nhà vẫn nằm ở menu trái + thanh tab như mọi trang khác. Cổng đứng ở `apps/hub/server/checkin-gate.ts`, gác đúng cửa chính `/home`; nó là LỚP NHỊP, không phải chốt chặn dữ liệu.
+  Không có nút "bỏ qua" (và chưa từng có). **Đường ra mọc ĐÚNG LÚC việc xong**: nút "Vào Hub" hiện sau khi em ghi, chứ không phải một dấu ✕ nằm sẵn từ đầu — một nút đóng không đóng được thì tệ hơn hẳn không có nút, vì nó mời người ta bấm rồi không phản hồi.
+
+  **Đổi tâm trạng lúc 3 giờ chiều**: nút tròn giữa thanh tab mở lại chính popup đó, và lần này CÓ đường ra. Một popup, hai chế độ — không phải hai màn.
+
+  Hàm cổng vẫn ở `apps/hub/server/checkin-gate.ts` (đo được, có bài kiểm riêng); ba trạng thái của popup ở `components/cong-checkin.tsx` (`trangThaiCong`, hàm thuần, 8 ca). Nó là LỚP NHỊP, không phải chốt chặn dữ liệu — người mở devtools xoá lớp phủ thì xoá được, và thứ họ giành được là quyền xem trang chủ của chính mình mà chưa khai tâm trạng.
 - Ghi chú tư vấn (Tâm lý cụm): GVCN & PH không xem được — luôn hiện badge `visibility_off`.
 - BGH/Điều hành: chỉ dữ liệu **tổng hợp theo lô**, ghi rõ "không tra cứu học sinh cá nhân".
 - Cờ chỉ ghi *loại tín hiệu*, không sao chép nội dung tâm sự.

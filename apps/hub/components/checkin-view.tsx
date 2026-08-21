@@ -342,6 +342,17 @@ export type CheckinViewProps = {
   email: string;
   roles: HubRole[];
   classCode?: string | null;
+  /**
+   * Đang nằm TRONG popup (ADR-036 bản 21/08/2026) chứ không phải một trang riêng.
+   *
+   * Khi bật: bỏ khung trang (menu trái, thanh tab, header màn) — vì popup đã có khung
+   * của chính nó, và một thanh tab bên trong một lớp phủ là hai bộ điều hướng chồng lên
+   * nhau. Ruột của bốn thể giữ NGUYÊN: cùng một dòng logic gửi, cùng hàng đợi ngoại
+   * tuyến, cùng lời nhắn "cần gặp thầy cô". Không chép lại gì cả.
+   */
+  trongPopup?: boolean;
+  /** Popup gọi để biết em đã ghi xong — lúc đó nó mới mọc đường ra. */
+  onGhiXong?: () => void;
 };
 
 /**
@@ -361,9 +372,14 @@ function CheckinShell({
   email,
   roles,
   classCode,
+  trongPopup,
   children,
 }: CheckinViewProps & { children: React.ReactNode }) {
   const subtitle = classLabel(classCode);
+  // Trong popup: KHÔNG khung trang. Popup tự có tiêu đề, nền mờ và bẫy focus của nó;
+  // dựng thêm menu trái + thanh tab bên trong là hai bộ điều hướng chồng nhau, và ở khổ
+  // 390px thì lớp phủ không còn chỗ cho nội dung thật.
+  if (trongPopup) return <>{children}</>;
   return (
     <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
       {/* Menu trái 240px chỉ có nghĩa từ md; dưới đó đường ra là thanh tab cuối trang. */}
@@ -407,7 +423,7 @@ function CheckinShell({
   );
 }
 
-export function CheckinView({ displayName, email, roles, classCode }: CheckinViewProps) {
+export function CheckinView({ displayName, email, roles, classCode, trongPopup, onGhiXong }: CheckinViewProps) {
   const utils = trpc.useUtils();
   const [state, setState] = useState<ViewState>("pick");
   const [wantsHelp, setWantsHelp] = useState(false);
@@ -431,7 +447,7 @@ export function CheckinView({ displayName, email, roles, classCode }: CheckinVie
    * quay về xoá trong im lặng.
    */
   const [failedCheckins, setFailedCheckins] = useState<FailedCheckin[]>([]);
-  const shellProps = { displayName, email, roles, classCode };
+  const shellProps = { displayName, email, roles, classCode, trongPopup };
   const todayStatus = trpc.checkin.getTodayStatus.useQuery();
   const submitMood = trpc.checkin.submitMood.useMutation();
   const submitRef = useRef(submitMood.mutateAsync);
@@ -452,6 +468,14 @@ export function CheckinView({ displayName, email, roles, classCode }: CheckinVie
   useEffect(() => {
     if (state === "success") successHeadingRef.current?.focus();
   }, [state]);
+
+  // Báo cho popup biết em đã ghi xong — ĐÓ là lúc đường ra mọc lên, không sớm hơn.
+  // Gọi ở effect chứ không trong hàm gửi: hàng đợi ngoại tuyến cũng đặt state thành
+  // "success" (em bấm khi mất mạng vẫn là đã ghi), và một lời gọi đặt trong hàm gửi sẽ
+  // bỏ sót đúng nhánh đó.
+  useEffect(() => {
+    if (state === "success") onGhiXong?.();
+  }, [state, onGhiXong]);
 
   // Gửi lại hàng đợi ngay khi có mạng — không cần em mở lại màn hình.
   //

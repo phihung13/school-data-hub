@@ -30,19 +30,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { HubRole } from "@hub/core/contracts";
 import { manChoTab } from "@/lib/man-hinh";
+import { useCongCheckin } from "./cong-checkin";
 import { UserMenu } from "./user-menu";
 
 /**
- * Ba đích của tab bar, khai ở một chỗ để tests/unit/nav-links.test.ts kiểm được là
- * mỗi đích có page.tsx thật — cùng luật với sidebar (gói "sidebar-dieu-huong"):
- * KHÔNG mục điều hướng nào được trỏ vào trang chưa tồn tại.
+ * Đích điều hướng của tab bar học sinh, khai ở một chỗ để tests/unit/nav-links.test.ts
+ * kiểm được là mỗi đích có page.tsx thật — cùng luật với sidebar: KHÔNG mục điều hướng
+ * nào được trỏ vào trang chưa tồn tại.
+ *
+ * Từ 21/08/2026 danh sách còn ĐÚNG MỘT đích. Nút tròn giữa không còn dẫn đi đâu cả —
+ * nó MỞ POPUP check-in ngay tại chỗ (ADR-036 bản popup), nên nó là `<button>` chứ không
+ * phải `<Link>`, và không có href để mà kiểm.
  */
-export const STUDENT_TABBAR_HREFS = ["/home", "/checkin"] as const;
-const [HOME_HREF, CHECKIN_HREF] = STUDENT_TABBAR_HREFS;
+export const STUDENT_TABBAR_HREFS = ["/home"] as const;
+const [HOME_HREF] = STUDENT_TABBAR_HREFS;
 
 export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps = {}) {
   const pathname = usePathname();
   const isHome = pathname === HOME_HREF;
+  const { moCheckin } = useCongCheckin();
 
   return (
     // aria-label trên <nav>: trang có thể có nhiều landmark điều hướng (menu trái +
@@ -64,9 +70,14 @@ export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps =
         <span className={`text-[9.5px] font-black ${isHome ? "text-navy" : "text-muted"}`}>Trang chủ</span>
       </Link>
 
-      <Link
-        href={CHECKIN_HREF}
-        aria-current={pathname === CHECKIN_HREF ? "page" : undefined}
+      {/* NÚT, KHÔNG PHẢI LINK (21/08/2026). Trước đây nó dẫn sang `/checkin` — một trang
+          riêng cho một việc mất bốn giây. Chủ đầu tư: *"vô trang checkin làm gì"*. Nay nó
+          mở popup ngay trên trang em đang đứng, nên em không mất chỗ mình đang xem.
+          KHÔNG `aria-current` nữa: nút này không dẫn tới trang nào để mà "đang ở đó". */}
+      <button
+        type="button"
+        onClick={moCheckin}
+        aria-haspopup="dialog"
         className="-mt-7 flex min-h-[44px] w-[70px] flex-col items-center justify-center gap-0.5"
       >
         <span
@@ -80,7 +91,7 @@ export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps =
             #8A5A00 là màu "chữ trên vàng" đã chốt ở DESIGN-GUIDELINES §3/§7, đạt 5,93:1.
             Vòng tròn vàng bên trên vẫn giữ nguyên — nó là hình khối, không phải chữ. */}
         <span className="text-[9.5px] font-black text-gold-textDark">Check-in</span>
-      </Link>
+      </button>
 
       {/* Ô thứ ba KHÔNG còn là <Link> tới /ho-so (02/08/2026). Trước đó thanh tab chỉ có
           ba ô mà một ô dành cho "Hồ sơ" — một trang em mở vài lần một học kỳ — trong khi

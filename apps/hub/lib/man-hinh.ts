@@ -121,28 +121,17 @@ export const MAN_HINH: ManHinh[] = [
   },
 
   // ── Học sinh ───────────────────────────────────────────────────────────────
-  {
-    key: "checkin",
-    href: "/checkin",
-    icon: "sentiment_satisfied",
-    nhan: "Check-in cảm xúc",
-    vai: ["student"],
-    luoi: { thuTu: 10 },
-    // Thanh tab: đây là ô GIỮA, nút tròn nổi — hành động chính mỗi sáng của em. Nhãn rút
-    // gọn vì ô rộng ~70px.
-    tab: { thuTu: 10, nhan: "Check-in" },
-    // KHÔNG có `menu`: menu trái đã có "Lịch điểm danh" (/diem-danh) là nơi XEM LẠI. Hai
-    // mục cùng miền mà khác việc thì phải khác nhãn, và trước 31/07/2026 cả hai cùng tên
-    // "Điểm danh" nên trên máy tính em thấy một nhãn ở hai chỗ dẫn đi hai nơi.
-  },
-  {
-    key: "week",
-    href: "/tuan-nay",
-    icon: "insights",
-    nhan: "Tuần này của mình",
-    vai: ["student"],
-    menu: { thuTu: 20 },
-  },
+  // MỤC "checkin" ĐÃ BỎ 21/08/2026 — không xoá dòng này, để lần sau không ai dựng lại.
+  //
+  // Nó từng có `luoi` (một ô trong lưới Mini App) và `tab` (nút tròn vàng giữa thanh
+  // tab), cả hai trỏ `/checkin`. Chủ đầu tư bác: *"bỏ cái trang check in thừa thãi đấy
+  // đi, chỉ cần 1 popup là được"*. Check-in nay là một POPUP mở trên chính trang em
+  // đang đứng (`components/cong-checkin.tsx`), nên nó không phải một MÀN và không có
+  // chỗ trong bản khai màn hình.
+  //
+  // Nút tròn giữa thanh tab VẪN CÒN — nhưng nó là `<button>` mở popup, không phải một
+  // mục điều hướng, nên nó nằm trong `tab-bar.tsx` chứ không ở đây.
+
   {
     key: "thi-dua",
     href: "/thi-dua",

@@ -4,7 +4,6 @@ import { resolveIdentity } from "@hub/core/auth-adapter";
 import { HomeView } from "@/components/home-view";
 import { buildMiniAppsWithEmbedded, ghimAppDungNhieu } from "@/server/mini-apps";
 import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
-import { phaiDungOCheckin } from "@/server/checkin-gate";
 import { docLichHomNay } from "@/server/lich";
 import { log, describeError } from "@/lib/logger";
 
@@ -35,19 +34,9 @@ export default async function HomePage() {
     }
   }
 
-  // CỔNG CHECK-IN CẢM XÚC (ADR-036, 21/08/2026) — học sinh đăng nhập lần đầu trong
-  // ngày dừng ở màn check-in trước khi vào trang chủ. Cùng khuôn với cổng điều khoản
-  // ngay trên: chỉ là LỚP NHỊP, không phải chốt chặn dữ liệu; ba điều cố ý (em chưa có
-  // phiếu đồng ý thì KHÔNG chặn · lỗi CSDL thì cho qua · chỉ gác cửa chính) ghi đủ ở
-  // đầu server/checkin-gate.ts — sửa cổng thì đọc đó trước.
-  if (session.roles.includes("student")) {
-    try {
-      if (await phaiDungOCheckin(session.authUid)) redirect("/checkin");
-    } catch (err) {
-      if (typeof (err as { digest?: unknown })?.digest === "string") throw err;
-      log("error", "checkin.gate_read_failed", { authUid: session.authUid, ...describeError(err) });
-    }
-  }
+  // CỔNG CHECK-IN không còn ở đây (21/08/2026). Nó chuyển lên `app/layout.tsx` dưới
+  // dạng POPUP khoá app — chủ đầu tư: *"vô trang checkin làm gì"*. Một cổng gác đúng
+  // `/home` thì gõ thẳng `/tuan-nay` là đi vòng được; ở layout gốc thì không.
 
   // Sidebar (Hub Desktop V2) hiện email — chỉ có qua resolveIdentity, không có
   // trong JWT phiên (session.ts chỉ mang sub/roles/displayName, cố tình gọn).

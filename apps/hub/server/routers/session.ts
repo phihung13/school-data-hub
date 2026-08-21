@@ -430,15 +430,16 @@ export const sessionRouter = router({
       // ── Học sinh ─────────────────────────────────────────────────────────
       // Giọng Glow & Grow (§8): không "chưa hoàn thành", không "thiếu", không nhắc nhở.
       // Từ vựng vận hành (cờ, ngưỡng, leo thang, GVCN) tuyệt đối không xuất hiện ở đây.
-      if (roles.has("student")) {
-        them(items, {
-          key: "student.checkin_today",
-          label: "Hôm nay chưa check-in",
-          count: await demChuaCheckin(client),
-          href: "/checkin",
-          tone: "normal",
-        });
-      }
+      // MỤC "Hôm nay chưa check-in" ĐÃ BỎ 21/08/2026 — giữ khối chú thích này để lần
+      // sau không ai dựng lại vì thấy chuông của học sinh trống.
+      //
+      // Từ ADR-036 bản popup, một em chưa khai tâm trạng thì **đang bị popup khoá app
+      // chặn ngay trước mặt**. Một dòng chuông nhắc lại đúng việc em đang không thể
+      // tránh khỏi là tiếng ồn, không phải lời nhắc.
+      //
+      // Còn với em nhà CHƯA ký phiếu đồng ý (0047 — không ghi được `mood`, nên cổng cố
+      // ý miễn cho em), dòng chuông ấy còn tệ hơn: nó chỉ tới một việc em KHÔNG LÀM
+      // ĐƯỢC. Một lời nhắc không có hành động phía sau là một lời hứa suông.
 
       // ── Phụ huynh ────────────────────────────────────────────────────────
       if (roles.has("guardian")) {

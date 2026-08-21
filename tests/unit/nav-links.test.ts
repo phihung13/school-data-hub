@@ -185,7 +185,8 @@ describe("bộ phân giải đường dẫn (tự kiểm chính nó)", () => {
 
 describe("bộ đọc hàng rào vai (tự kiểm chính nó)", () => {
   it("đọc đúng hàng rào của những trang đã biết", () => {
-    expect(rolesAllowedBy("/checkin")).toEqual(["student"]);
+    // `/checkin` đã gỡ (ADR-036 bản popup) — dùng một màn khác cùng khuôn hàng rào.
+    expect(rolesAllowedBy("/tuan-nay")).toEqual(["student"]);
     expect(rolesAllowedBy("/gvcn")).toEqual(["homeroom"]);
     // /bao-cao chặn hai vai bằng biến trung gian (isStudent/isGuardian) — cả hai đều
     // phải đọc ra, nếu không bài kiểm tile dưới đây sẽ báo oan phụ huynh.
@@ -412,8 +413,12 @@ describe("lưới mini app trang chủ", () => {
   it("phụ huynh không nhận tile nào trỏ /checkin (trang chỉ dành cho học sinh)", () => {
     // Lỗi thật đến 31/07/2026: phụ huynh dùng chung lưới của học sinh, tile ĐẦU TIÊN
     // trên trang chủ trỏ /checkin — bấm là bị đá ngược về /home, không lời giải thích.
-    expect(buildMiniApps(["guardian"]).map((t) => t.href)).not.toContain("/checkin");
-    expect(buildMiniApps(["student"]).map((t) => t.href)).toContain("/checkin");
+    // LẬT 21/08/2026: `/checkin` đã gỡ khỏi lưới cùng với chính trang đó (ADR-036 bản
+    // popup). Ô check-in trong lưới Mini App từng là đường vào thứ hai cho một việc mà
+    // nay popup tự mở ra. Giữ phép kiểm ở đây, đổi sang một tile CHỈ học sinh có, để
+    // câu "phụ huynh không nhận tile của học sinh" vẫn có mẫu số thật.
+    expect(buildMiniApps(["student"]).map((t) => t.href)).not.toContain("/checkin");
+    expect(buildMiniApps(["guardian"]).map((t) => t.href)).not.toContain("/tuan-nay");
   });
 
   it("tile của phụ huynh: đúng một việc làm được, phần chưa có thì mờ chứ không biến mất", () => {

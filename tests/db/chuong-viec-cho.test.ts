@@ -249,13 +249,24 @@ describe("mỗi vai thấy đúng phần của mình", () => {
     expect(dem(items, "admin.jobs_need_attention")).toBeGreaterThanOrEqual(1);
   });
 
-  it("học sinh: chưa check-in thì có đúng một việc, check-in xong thì hết việc", async ({
-    skip,
-  }) => {
+  it("học sinh: chuông RỖNG — kể cả khi chưa check-in (ADR-036 bản popup)", async ({ skip }) => {
     if (!ready) return skip();
+    // LẬT 21/08/2026. Ca cũ đòi đúng một việc `student.checkin_today` khi em chưa khai
+    // tâm trạng, và mất nó khi khai xong. Mục ấy đã BỎ, có chủ ý: từ ADR-036 bản popup,
+    // em chưa khai đang bị popup khoá app chặn ngay trước mặt — một dòng chuông nhắc lại
+    // đúng việc em không thể tránh khỏi là tiếng ồn, không phải lời nhắc. Với em nhà chưa
+    // ký phiếu đồng ý (0047) thì còn tệ hơn: nó chỉ tới một việc em KHÔNG LÀM ĐƯỢC.
+    //
+    // Không xoá ca này — LẬT, để chỗ đó vẫn có người canh: mảng phải RỖNG, không phải
+    // "một dòng đếm 0 việc", và không phải một mục nào khác lẻn vào thay chỗ.
+    await asSystem((c) =>
+      c.query(
+        "delete from attendance.checkins where student_id = $1 and occurred_on = current_date",
+        [HS_LAN],
+      ),
+    );
     const truoc = await goi(HS_LAN_AUTH);
-    expect(keysOf(truoc.items)).toEqual(["student.checkin_today"]);
-    expect(dem(truoc.items, "student.checkin_today")).toBe(1);
+    expect(keysOf(truoc.items)).toEqual([]);
 
     await asSystem((c) =>
       c.query(
@@ -267,7 +278,6 @@ describe("mỗi vai thấy đúng phần của mình", () => {
     );
     try {
       const sau = await goi(HS_LAN_AUTH);
-      // Mảng RỖNG, không phải một dòng "0 việc": mục đếm được 0 không được trả ra.
       expect(sau.items).toEqual([]);
     } finally {
       await asSystem((c) =>
