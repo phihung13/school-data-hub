@@ -6,26 +6,20 @@
 // trong hệ dữ liệu học sinh (cùng gốc với lỗi số 2 đã vá ở hub-sidebar.tsx).
 // Không biết lớp thì trả chuỗi rỗng để nơi gọi bỏ hẳn dòng đó, không đoán.
 
-/**
- * Nhãn `lock` in NGAY TẠI CHỖ em nhập cảm xúc — bốn ô mặt cười ở /checkin, lưới
- * check-in trên trang chủ, và mọi ô nhập cảm xúc phát sinh sau này.
- *
- * Đây là một HẰNG SỐ dùng chung chứ không phải chuỗi viết tay ở từng màn, và lý do rất
- * cụ thể: câu này đã đổi BA LẦN trong ngày 01/08/2026 ("Chỉ thầy cô chủ nhiệm thấy" →
- * "…chủ nhiệm và thầy cô tâm lý thấy" → câu hiện tại), mỗi lần vì phạm vi
- * `core.can_read_mood()` ở tầng dữ liệu đổi. Ba lần chép tay ra ba màn là ba cơ hội để
- * một màn quên sửa — và màn quên sửa sẽ là màn ít người mở nhất, tức là lời hứa sai
- * sống lâu nhất ở chỗ khó bắt nhất. Nhãn nói ít hơn hoặc nhiều hơn sự thật đều là nói
- * dối, và đây là lời hứa với một đứa trẻ về chính câu nó vừa viết ra.
- *
- * Nguồn chốt: `danh-cho-may/DESIGN-GUIDELINES.md` §9 (ADR-035, migration 0059 —
- * `core.can_read_mood()` = `is_me ∨ in_my_cluster ∨ is_homeroom_of`). ĐỔI QUYỀN THÌ ĐỔI CÂU NÀY TRONG
- * CÙNG MỘT LẦN, không hẹn lại.
- *
- * §8 cấm từ vựng vận hành trước mặt học sinh, nên câu này không có chữ "GVCN", "cờ",
- * "ngưỡng", "quét".
- */
-export const NHAN_AI_DOC_CAM_XUC = "Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc";
+// NHÃN "AI ĐỌC ĐƯỢC CẢM XÚC" ĐÃ GỠ 22/08/2026 — chủ đầu tư bỏ câu, ba màn cùng lượt.
+//
+// Câu cũ: "Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc", in kèm icon `lock` ngay dưới bốn
+// ô mặt cười ở popup check-in, ở trang chủ và ở /tuan-nay. Nó là DESIGN-GUIDELINES §9 và
+// ADR-035 hiện hình trên màn: lời hứa về phạm vi `core.can_read_mood()`, nói tại đúng chỗ
+// em vừa viết ra một câu về mình.
+//
+// GỠ CÂU KHÔNG GỠ LỜI HỨA. `core.can_read_mood()` không đổi một dòng — chính em, thầy cô
+// tâm lý cụm, và GVCN của chính em; không ai khác. Cái mất là chỗ em ĐỌC ĐƯỢC điều đó
+// trước khi bấm. Nợ #69 giữ việc này, vì Luật 91/2025 đòi báo trước tại điểm thu thập.
+//
+// Đừng chép tay câu này vào một màn lẻ. Muốn nói lại thì dựng lại HẰNG SỐ ở đây trước —
+// câu đã đổi ba lần trong ngày 01/08/2026 theo phạm vi quyền, và ba bản chép tay là ba
+// chỗ sẽ lệch.
 
 /** "6A2" → "Lớp 6A2". null/rỗng → "" (nơi gọi phải bỏ hẳn dòng, không thay bằng gì). */
 export function classLabel(classCode: string | null | undefined): string {

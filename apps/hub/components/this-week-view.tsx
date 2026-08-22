@@ -33,7 +33,6 @@ import { HubSidebar } from "./hub-sidebar";
 import { Mascot } from "./mascot";
 import { MainContent } from "./page-shell";
 import { StudentTabBar } from "./tab-bar";
-import { NHAN_AI_DOC_CAM_XUC } from "./ui/labels";
 import { ErrorState, LoadingState } from "./ui/query-state";
 
 const MOOD_ICON: Record<MoodValue, string> = {
@@ -252,22 +251,6 @@ export function ThisWeekView({
                     ) : (
                       <p className="mt-3 text-[12px] text-caption">Chưa có check-in nào tuần này.</p>
                     )}
-                    {/* Khối này VẼ RA cảm xúc cả tuần của em, nên nó là một "chỗ nhập/hiện
-                        cảm xúc" theo nghĩa của §9 và phải mang đúng nhãn đã chốt. Câu chốt
-                        ghép thẳng từ hằng số dùng chung (ui/labels.ts) thay vì chép tay:
-                        câu này đã sai một lần đúng theo kiểu đó — nó vẫn hứa "thầy cô chủ
-                        nhiệm xem" sau khi ADR-026/migration 0044 cắt hẳn quyền đọc của cô.
-
-                        CẮT 06/08/2026 (§1.5 "ít chữ — hình thể thay lời nói"): bỏ hai vế bọc
-                        quanh nhãn — "Cảm xúc là chuyện riêng của con." (nói lại đúng điều mà
-                        chính chữ "Chỉ … đọc" đã nói) và "để biết khi nào con cần giúp" (biện
-                        minh cho quyền đọc, em không cần đọc câu đó để làm gì cả). Còn lại là
-                        ĐÚNG hằng số §9 + icon `lock`, cùng hình dạng với hai chỗ in nhãn ở
-                        /checkin — ba màn nay nói một câu, trông cũng như nhau. */}
-                    <div className="mt-3 flex items-center gap-1">
-                      <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-                      <span className="text-[11.5px] text-caption">{NHAN_AI_DOC_CAM_XUC}</span>
-                    </div>
                   </div>
 
                   <Link

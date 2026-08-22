@@ -62,9 +62,17 @@
 ## 6. Mẫu bố cục (patterns)
 
 - **Hero cong**: header navy gradient + glow vàng; đáy là **vòm trắng** `height:32–44px; border-radius:100% 100% 0 0; margin-top:-32px`; thẻ đầu tiên **nổi đè lên vòm** (`margin-top` âm, `z-index:2`, KHÔNG đặt trong container `overflow:hidden`).
+- **LƯỚI LÀ CHỖ CỦA MINI APP, KHÔNG PHẢI CHỖ CỦA MỌI MÀN** (chốt 22/08/2026, chủ đầu tư: *"báo cáo và thi đua không phải là mini app. nó là trang trong menu thôi"*). Vào lưới trang chủ khi và chỉ khi thứ đó là **mini app thật**: có vòng đời riêng, có đội chủ quản, đăng ký ở `core.embedded_apps`, và **tắt được bằng một nút** ở `/quan-tri/mini-app`. Trang của chính Hub (Bảng thi đua, Báo cáo Trưởng thành, Lịch điểm danh…) là route Next — chúng ở **menu trái** và **thanh tab**, không ở lưới. Xếp sai chỗ là dạy người dùng một phân loại sai, và ngày đầu tiên ai đó đi tìm nút tắt "app Thi đua" là ngày phân loại sai ấy tốn thời gian thật.
+
+  Hệ quả đã đo và chấp nhận: **lưới của học sinh nay RỖNG** — em chưa được cấp mini app nào. Trạng thái rỗng đã có sẵn và nói đúng sự thật ("Tài khoản này chưa có mini app nào" + đường sang Hồ sơ), nên đây không phải màn cụt. Phụ huynh cũng không còn ô lưới bật được, nhưng vào Báo cáo bằng **thanh tab** (điện thoại) và **menu trái** (máy tính) — `tests/unit/nav-links.test.ts` canh cả hai cửa đó, vì nếu cả ba cùng đóng thì phụ huynh mở app lên và không tới được thứ duy nhất họ vào để xem.
+
+- **KHÔNG DỰNG Ô MỜ QUẢNG CÁO VIỆC CHƯA LÀM.** Hai ô "Học tập · GĐ2" và "Y tế · GĐ2" (`href: "#"`) đã gỡ 22/08/2026 khỏi cả lưới lẫn menu. Chúng hứa một thứ không ai đặt ngày, và chiếm đúng phần màn đắt nhất của một đứa trẻ mở app buổi sáng. Ngày dựng thật thì thêm lại bằng mục **có `href` thật**. Ô mờ chỉ còn đúng một chỗ được phép: việc mà **quyền đã có ở tầng dữ liệu nhưng màn hình chưa dựng** (`attendance-con` của phụ huynh) — ở đó "mờ" nói thật "chưa có", còn xoá hẳn khiến phụ huynh tưởng hệ thống không theo dõi việc đó.
+
 - **Lưới mini app**: 4 cột (mobile & desktop card), nhãn 10–11px/700 dưới tile. Badge số góc trên phải tile (`#F0474D` đỏ khẩn, `#FFC629` vàng chờ xử lý, viền 2px nền trang).
 - **Bố cục hai khổ: dùng gợi ý của trình duyệt cho lượt vẽ ĐẦU** (21/08/2026). Máy chủ không biết bề rộng màn nên `lib/viewport.ts` chọn dựng bản điện thoại — đúng thứ tự ưu tiên, nhưng cái giá là máy tính thấy bản điện thoại rồi mới đổi (chủ đầu tư đo: *"hiện 1s"*). Khi trình duyệt TỰ KHAI (`Sec-CH-UA-Mobile`, Chromium gửi mặc định) thì không còn gì để đoán: `lib/kho-man.ts` đọc header, trang truyền xuống, và lượt vẽ đầu ra đúng bố cục. Safari/Firefox không khai → rơi về đúng hành vi cũ, không xấu đi. Gợi ý chỉ nói "máy có phải điện thoại không", KHÔNG nói bề rộng cửa sổ — nên sau hydrate `useIsDesktop()` giành lại quyền quyết định.
 - **Tab bar mobile (chỉ ở Hub, vai trò học sinh)**: nút **Check-in tròn vàng nổi giữa** (56px, `pulseDot`) — từ 21/08/2026 nó là `<button>` **mở popup ngay tại chỗ**, KHÔNG phải `<Link>` dẫn sang một trang (ADR-036 bản popup; `/checkin` đã gỡ). Vì thế nó **không** khai `aria-current` — nó không dẫn tới trang nào để mà "đang ở đó" — mà khai `aria-haspopup="dialog"`. GV/PH: 4 mục, không nút giữa. **Mini app KHÔNG có tab bar Hub.**
+- **MỘT THANH CUỘN, KHÔNG HAI.** Khung chuẩn của mọi màn Hub: ngoài cùng `flex min-h-screen … md:h-screen md:min-h-0 md:overflow-hidden`, `MainContent` `md:overflow-hidden`, hộp nội dung `flex-1 … md:overflow-y-auto`. Chữ `md:` trên hộp nội dung là **bắt buộc**: ở khổ điện thoại trang tự cuộn theo thân trang, nên một hộp `overflow-y-auto` không tiền tố sẽ lồng thêm một vùng cuộn thứ hai bên trong một trang cũng cuộn được — hai thanh kéo cạnh nhau, và trang trông như chưa full màn. Chín màn theo đúng khuôn này; `thi-dua-view.tsx` từng là ngoại lệ và bị chủ đầu tư bắt 22/08/2026 (*"nó còn màn con nên thành ra có 2 thanh kéo lên xuống cạnh nhau trông rất xấu"*).
+
 - **Shell mini app** (mobile + desktop): màn chuyển tiếp (icon nảy + 3 chấm) → app có header riêng theo màu chủ + **capsule ⋯│✕** (kiểu Zalo Mini App) luôn nổi để thoát về Hub; điều hướng riêng của app (tab pill nổi, nav ngang…).
 - **Desktop 2 cột**: nội dung chính `flex:1.6–1.7` + rail phải `flex:1` (thống kê, hoạt động gần đây).
 - **Đăng nhập**: 2 tab "Học sinh & Thầy cô" (2/3) ↔ "Phụ huynh" (1/3, giãn khi chọn). Nội bộ = nút **Google SSO** (logo G chuẩn SVG 4 màu) + chip `@vietanh.edu.vn`. PH = nút Zalo `#0068FF` mở link mời + 6 ô mã mời. **Không form mật khẩu, không câu giải thích.**
@@ -82,7 +90,7 @@
 
 - **Hai chế độ ngôn ngữ** (bất di bất dịch): HS/PH chỉ thấy giọng **Glow & Grow** ("tỏa sáng", "đang lớn lên"); từ vựng vận hành **cờ / ngưỡng / leo thang / định mức** CHỈ xuất hiện trong Buồng lái, Tâm lý, Điều hành.
 - Học sinh xưng "con/mình", thân thiện; người lớn gọn, nghiệp vụ.
-- Trạng thái nghiệp vụ chuẩn: **gửi muộn ≠ vắng** (vàng, "chờ xác nhận") · **"lớp ổn" ≠ thiếu dữ liệu** (kèm giờ quét, khung dashed xanh + mascot) · offline: "Offline vẫn lưu — tự gửi sau." (icon `cloud_off`, không hộp thoại).
+- Trạng thái nghiệp vụ chuẩn: **gửi muộn ≠ vắng** (vàng, "chờ xác nhận") · **"lớp ổn" ≠ thiếu dữ liệu** (kèm giờ quét, khung dashed xanh + mascot) · offline: **hành vi** giữ nguyên (cất vào hàng đợi, tự gửi lại, không hộp thoại) nhưng **câu "Offline vẫn lưu — tự gửi sau." + icon `cloud_off` đã gỡ khỏi popup check-in và trang chủ 22/08/2026** theo lệnh chủ đầu tư. Nó vẫn được nói ở chỗ nó là TIN MỚI — màn check-in khi lượt bấm thật sự vào hàng đợi. Nói trước khi chưa có chuyện gì là chiếm một dòng để trấn an về một việc chưa xảy ra.
 - Nhắc quan trọng đi qua **Zalo OA**, app không đòi push.
 
 ## 9. Riêng tư & phân quyền
@@ -91,9 +99,13 @@
 
   **NHÃN CHUẨN — hai câu dưới đây là hợp đồng, tầng màn hình in ĐÚNG chữ này.** Lý do phải chốt ở đây chứ không để mỗi màn tự viết: nhãn nói ít hơn hoặc nhiều hơn sự thật đều là nói dối, và một màn viết lệch là cả lời hứa lệch. Viết cho trẻ 11 tuổi đọc — §8 cấm từ vựng vận hành (cờ / ngưỡng / quét / leo thang) trước mặt học sinh, nên hai câu này không được chứa chữ nào trong số đó.
 
-  1. **Nhãn ngắn, đặt ngay tại chỗ em nhập** (dưới bốn ô mặt cười trong **popup check-in**, lưới check-in trang chủ, mọi ô nhập cảm xúc phát sinh sau này), kèm icon `lock` (đổi 21/08/2026 theo ADR-035 — bản cũ "Chỉ thầy cô tâm lý đọc" hết đúng):
+  1. ~~**Nhãn ngắn, đặt ngay tại chỗ em nhập**~~ — **ĐÃ GỠ 22/08/2026** theo lệnh chủ đầu tư, khỏi cả ba màn từng in nó (popup check-in · trang chủ · /tuan-nay). Hằng số `NHAN_AI_DOC_CAM_XUC` trong `ui/labels.ts` đã xoá; `tests/unit/giong-noi.test.ts` lật thành bài canh CHIỀU NGƯỢC LẠI (không màn nào được chép tay lại câu đó).
 
-     > **Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc**
+     Câu cũ, giữ lại đây để không ai chép tay: *"Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc"*.
+
+     **GỠ CÂU KHÔNG GỠ LỜI HỨA.** `core.can_read_mood()` không đổi một dòng — chính em ∨ thầy cô tâm lý cụm ∨ GVCN của chính em, không ai khác (migration 0059, ADR-035). Cái mất là chỗ em ĐỌC ĐƯỢC điều đó ngay trước khi bấm. Luật 91/2025 đòi báo trước tại điểm thu thập, nên phần nghĩa vụ ấy chuyển sang **nợ #69** chứ không biến mất.
+
+     Ngày muốn nói lại: dựng lại HẰNG SỐ ở `ui/labels.ts` trước, đừng chép tay vào một màn lẻ — câu này đã đổi ba lần trong ngày 01/08/2026 theo phạm vi quyền, và ba bản chép tay là ba chỗ sẽ lệch.
 
   2. **Câu dài, trong thẻ "Ai thấy gì của mình?"** (`profile-view.tsx`) — dòng giáo viên chủ nhiệm gộp lại được từ 21/08/2026, vì sự thật đã gộp lại:
 

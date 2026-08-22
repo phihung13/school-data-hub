@@ -198,8 +198,13 @@ function LogoutBox({ className = "" }: { className?: string }) {
  * riêng tư, trong khi cô đọc được. Trấn an sai chỗ chính là kiểu nói dối mà §9 cấm,
  * và ở màn này nó sai theo hướng nguy hiểm nhất cho em.
  *
- * Nếu có lần đổi thứ tư: sửa DESIGN-GUIDELINES §9 trước (nhãn là hợp đồng), rồi sửa
- * đây + NHAN_AI_DOC_CAM_XUC trong labels.ts CÙNG một commit với migration.
+ * Nếu có lần đổi thứ tư: sửa DESIGN-GUIDELINES §9 trước (câu này là hợp đồng), rồi sửa
+ * đây CÙNG một commit với migration.
+ *
+ * Hằng số `NHAN_AI_DOC_CAM_XUC` từng đứng cạnh câu này ở `ui/labels.ts` — nhãn ngắn in
+ * dưới bốn ô mặt cười — nhưng ĐÃ XOÁ 22/08/2026 (chủ đầu tư bỏ câu ở cả ba màn; nợ #70
+ * giữ phần nghĩa vụ báo trước theo Luật 91/2025). Thẻ NÀY thì Ở LẠI: nó là câu dài trong
+ * hồ sơ, người dùng tự mở ra đọc, không phải một dòng chen vào lúc em đang bấm.
  */
 function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
   const teacher = teacherLabel(teacherName);

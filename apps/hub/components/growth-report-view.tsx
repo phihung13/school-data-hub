@@ -432,21 +432,6 @@ function DesktopReport({
               </div>
             </div>
             )}
-            {/* RÚT NGẮN 06/08/2026 (§1.5). Câu cũ 105 ký tự, và nửa đầu của nó ("chỉ nói về
-                điều con làm được và điều con đang tập") chỉ mô tả lại hai khối Glow/Grow mà
-                phụ huynh vừa đọc xong ngay bên trái. Nửa sau là thứ họ KHÔNG đọc được ở đâu
-                khác — cái báo cáo này cố ý không làm — nên nó ở lại, dưới dạng hai chip. */}
-            <div className="flex flex-wrap items-center gap-2 rounded-[20px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-[18px]">
-              <span aria-hidden="true" className="msr flex-none text-[19px] text-gold-textDark">verified_user</span>
-              <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11.5px] font-black text-gold-textDark">
-                <span aria-hidden="true" className="msr text-[14px]">block</span>
-                Không xếp hạng
-              </span>
-              <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11.5px] font-black text-gold-textDark">
-                <span aria-hidden="true" className="msr text-[14px]">block</span>
-                Không so sánh với bạn
-              </span>
-            </div>
           </div>
         </div>
       </div>

@@ -148,7 +148,13 @@ export const MAN_HINH: ManHinh[] = [
     // Bảng thi đua công khai TRONG TRƯỜNG (ADR-037), và "trong trường" là một danh sách
     // vai cụ thể, không phải "ai đăng nhập được".
     vai: ["student", "teacher", "homeroom", "counselor", "principal", "board", "admin"],
-    luoi: { thuTu: 25, nhan: "Thi đua" },
+    // KHÔNG có `luoi` (bỏ 22/08/2026, chủ đầu tư: *"báo cáo và thi đua không phải là
+    // mini app. nó là trang trong menu thôi"*). Lưới trang chủ là chỗ của MINI APP —
+    // những thứ có vòng đời riêng, có đội chủ quản, bật/tắt được ở `/quan-tri/mini-app`.
+    // Hai màn này là trang của chính Hub, dựng bằng route Next, không đăng ký ở
+    // `core.embedded_apps`, không tắt được bằng một nút. Xếp chúng vào lưới là dạy người
+    // dùng một phân loại sai — và ngày đầu tiên ai đó đi tìm nút tắt "app Thi đua" là ngày
+    // phân loại sai ấy tốn thời gian thật. Chúng ở lại MENU trái, đúng chỗ.
     menu: { thuTu: 25 },
   },
   {
@@ -165,7 +171,13 @@ export const MAN_HINH: ManHinh[] = [
     icon: "workspace_premium",
     nhan: "Báo cáo Trưởng thành",
     vai: ["student", "guardian"],
-    luoi: { thuTu: 20, nhan: "Báo cáo" },
+    // KHÔNG có `luoi` (bỏ 22/08/2026, chủ đầu tư: *"báo cáo và thi đua không phải là
+    // mini app. nó là trang trong menu thôi"*). Lưới trang chủ là chỗ của MINI APP —
+    // những thứ có vòng đời riêng, có đội chủ quản, bật/tắt được ở `/quan-tri/mini-app`.
+    // Hai màn này là trang của chính Hub, dựng bằng route Next, không đăng ký ở
+    // `core.embedded_apps`, không tắt được bằng một nút. Xếp chúng vào lưới là dạy người
+    // dùng một phân loại sai — và ngày đầu tiên ai đó đi tìm nút tắt "app Thi đua" là ngày
+    // phân loại sai ấy tốn thời gian thật. Chúng ở lại MENU trái, đúng chỗ.
     menu: { thuTu: 40 },
     // Chỉ phụ huynh — xem lý lẽ ở `BeMat.vai`.
     tab: { thuTu: 20, vai: ["guardian"], nhan: "Báo cáo" },
@@ -301,27 +313,15 @@ export const MAN_HINH: ManHinh[] = [
     // vài tháng một lần — đặt nó cạnh Check-in là sai nhịp.
   },
 
-  // ── Chưa dựng — mục mờ, theo đúng vai sẽ dùng ──────────────────────────────
-  {
-    key: "study",
-    href: "#",
-    icon: "menu_book",
-    nhan: "Học tập",
-    vai: ["student"],
-    sapCo: "GĐ2",
-    luoi: { thuTu: 70, nhan: "Học tập · GĐ2" },
-    menu: { thuTu: 70 },
-  },
-  {
-    key: "health",
-    href: "#",
-    icon: "favorite",
-    nhan: "Y tế",
-    vai: ["student", "guardian"],
-    sapCo: "GĐ2",
-    luoi: { thuTu: 80, nhan: "Y tế · GĐ2" },
-    menu: { thuTu: 80 },
-  },
+  // HAI MỤC MỜ "Học tập · GĐ2" và "Y tế · GĐ2" ĐÃ GỠ 22/08/2026 — không dựng lại.
+  //
+  // Cả hai trỏ `href: "#"`, tức là hai ô bấm vào không đi đâu cả, có mặt trên lưới trang
+  // chủ VÀ trong menu trái. Chúng quảng cáo một lời hứa mà không ai đặt ngày, và chúng
+  // chiếm đúng phần màn đắt nhất của một đứa trẻ mở app buổi sáng. Chủ đầu tư bỏ cùng
+  // lượt với Thi đua/Báo cáo khỏi lưới.
+  //
+  // Ngày dựng thật thì thêm lại bằng một mục CÓ `href` thật — đừng thêm lại mục mờ.
+  // Trường `sapCo` vẫn còn (mục "Điểm danh của con · sắp" dùng), nên không cần đụng kiểu.
 ];
 
 // ---------------------------------------------------------------------------

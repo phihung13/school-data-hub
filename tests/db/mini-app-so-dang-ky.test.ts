@@ -158,11 +158,31 @@ describe("lưới tile trang chủ đọc từ sổ, và lọc đúng vai", () =
     expect(tiles.map((t) => t.href)).toContain(`/embed/${APP_BAT}`);
   });
 
-  it("học sinh KHÔNG thấy tile đó — mẫu số là chính lưới của em, không phải một mảng rỗng", async ({ skip }) => {
+  it("học sinh KHÔNG thấy tile đó — và mẫu số chứng minh phép gọi CÓ chạy", async ({ skip }) => {
     if (!ready) return skip();
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MẪU SỐ ĐỔI 22/08/2026, VÌ LƯỚI CỦA HỌC SINH NAY RỖNG THẬT
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Bản cũ chống một cái bẫy có thật: `not.toContain` trên mảng rỗng thì LUÔN xanh, kể
+    // cả khi phép gọi hỏng hoàn toàn. Nó chống bằng cách đòi lưới của học sinh không rỗng.
+    //
+    // Hôm nay lưới ấy rỗng — và rỗng ĐÚNG: Thi đua và Báo cáo đã ra khỏi lưới (chúng là
+    // trang trong menu, không phải mini app), hai ô "GĐ2" đã gỡ, và học sinh chưa được
+    // cấp mini app nào. Giữ mẫu số cũ là bắt bài test đòi một thứ vừa bị bỏ đi.
+    //
+    // Mẫu số mới đo ĐÚNG cái nó cần đo — rằng phép gọi có chạy và app có tồn tại — bằng
+    // cách gọi CÙNG hàm, CÙNG app, khác mỗi vai. Chủ nhiệm thấy; học sinh không. Nếu phép
+    // gọi hỏng thì vế chủ nhiệm đỏ, nên vế học sinh không còn xanh-vì-rỗng được nữa.
+    const cuaCo = await buildMiniAppsWithEmbedded(["homeroom"]);
+    expect(cuaCo.map((t) => t.href), "phép gọi hỏng — mẫu số không còn nghĩa").toContain(
+      `/embed/${APP_BAT}`,
+    );
+
     const tiles = await buildMiniAppsWithEmbedded(["student"]);
-    expect(tiles.length, "lưới của học sinh phải có tile riêng của em").toBeGreaterThan(0);
     expect(tiles.map((t) => t.href)).not.toContain(`/embed/${APP_BAT}`);
+    // Và ghim luôn điều vừa quyết: lưới của học sinh RỖNG. Ngày ai đó cấp mini app đầu
+    // tiên cho học sinh, dòng này đỏ và buộc người đó đọc cả khối lý lẽ ở trên.
+    expect(tiles, "học sinh vừa có tile — đọc khối lý lẽ ở trên rồi hãy sửa").toEqual([]);
   });
 
   it("app đang TẮT không hiện tile cho bất kỳ vai nào", async ({ skip }) => {

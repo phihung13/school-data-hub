@@ -201,45 +201,6 @@ export function AttendanceView({
                   )}
                 </div>
               </div>
-              <div className="min-w-0 flex-[1_1_300px] rounded-[22px] border-[1.5px] border-[#CFE4FB] bg-[#F0F7FF] p-5 md:p-[22px]">
-                <h2 className="flex items-center gap-2 text-[15px] font-black text-[#1D4E8F]">
-                  <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">rule</span>
-                  Điểm danh tính thế nào?
-                </h2>
-                {/* Số "1" trắng trên #00D97A chỉ 1,87:1 — chính chú thích của khối DayMark
-                    ở cuối file này đã đo ra con số đó và ghi "KHÔNG dùng lại", rồi hàng chữ
-                    ngay đây vẫn dùng. Nay lấy đúng màu file này đã chọn cho dấu tick:
-                    #003D24 = 6,62:1 trên #00D97A. (05/08/2026) */}
-                {/* RÚT NGẮN cả bốn dòng 06/08/2026 (§1.5 "caption tối đa 1 dòng"). Khối này
-                    là BẢNG LUẬT, nên cái phải ở lại là mệnh đề luật — nhất là hai vế "không
-                    phải vắng" của QĐ-3 (gửi muộn ≠ vắng, chưa điểm danh ≠ vắng), giữ nguyên
-                    chữ. Cái bị cắt là phần trấn an và dặn dò bám theo sau mỗi luật. */}
-                {/* Bỏ "không cần làm gì thêm" — "tự tính" đã nói đúng chừng đó. */}
-                <RuleRow n={1} bg="bg-[#00D97A]" color="text-[#003D24]">
-                  <b>Check-in trước 8:00</b> → tự tính là đã điểm danh.
-                </RuleRow>
-                {/* Nền #FFB01F → gold #FFC629: #6B4A00 trên #FFB01F là 4,41:1, hụt mốc 4,5:1
-                    của chữ; trên #FFC629 thành 5,13:1. Đổi nền (không đổi chữ) vì #FFC629 là
-                    token vàng chuẩn của app, còn #FFB01F là mã viết tay. (05/08/2026) */}
-                <RuleRow n={2} bg="bg-gold" color="text-gold-text">
-                  <b>Gửi sau 8:00</b> → chờ cô xác nhận. <b>Không phải</b> vắng.
-                </RuleRow>
-                {/* Bỏ "giờ ghi là giờ con chạm" — kể cơ chế bên trong máy. Câu còn lại dùng
-                    đúng lời hứa offline chuẩn của §8 ("Offline vẫn lưu — tự gửi sau"), câu mà
-                    /checkin và trang chủ cũng in. */}
-                <RuleRow n={3} bg="bg-[#5B6B80]" color="text-white">
-                  <b>Mất mạng</b> → vẫn lưu, tự gửi sau.
-                </RuleRow>
-                {/* Dòng thứ tư thêm 01/08/2026 cùng với `dayCaptionText`. Không thêm nó thì
-                    khối "Điểm danh tính thế nào?" chỉ kể ba đường có kết quả, và ô "chưa
-                    điểm danh" trong lưới tuần trở thành thứ duy nhất trên trang không được
-                    giải thích — đúng chỗ em sẽ tự đoán ra tin xấu về mình. */}
-                {/* Bỏ "— con hỏi thầy cô nếu thấy lạ nhé": lời dặn dò, và nó còn đẩy việc
-                    của trường sang cho em. Vế QĐ-3 ("không phải vắng") giữ nguyên chữ. */}
-                <RuleRow n={4} bg="bg-[#B9C4D4]" color="text-[#33507C]">
-                  <b>Ô để trống</b> → chưa ai điểm danh. <b>Không phải</b> vắng.
-                </RuleRow>
-              </div>
             </div>
           </div>
         )}

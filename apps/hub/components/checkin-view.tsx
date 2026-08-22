@@ -118,7 +118,7 @@ import { MoodTile } from "./mood-tile";
 import { Mascot } from "./mascot";
 import { MainContent } from "./page-shell";
 import { StudentTabBar } from "./tab-bar";
-import { NHAN_AI_DOC_CAM_XUC, classLabel } from "./ui/labels";
+import { classLabel } from "./ui/labels";
 import { LoadingState, MutationError } from "./ui/query-state";
 
 type ViewState = "pick" | "success";
@@ -853,10 +853,6 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
             {/* Nhãn chuẩn DESIGN-GUIDELINES §9 (ADR-026). Không viết tay một câu khác ở đây:
                 hai chỗ in nhãn trong cùng file mà lệch nhau một chữ là hai lời hứa khác nhau
                 về cùng một ô nhập. */}
-            <div className="mt-2 flex items-center gap-1">
-              <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-              <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
-            </div>
 
             {/* Nợ #31 — màn "hôm nay ghi rồi" cũng phải nói ra lần bấm CŨ đã hỏng. Đây là
                 màn em thấy nhiều nhất; giấu dấu vết ở đây là giấu ở đúng chỗ đông người. */}
@@ -922,10 +918,6 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
             </div>
           </div>
         )}
-        <div className={`flex items-center justify-center gap-1 ${trongPopup ? "" : "mt-1.5"}`}>
-          <span aria-hidden className="msr text-[13px] text-caption">lock</span>
-          <span className="text-[12px] text-muted2">{NHAN_AI_DOC_CAM_XUC}</span>
-        </div>
 
         {/* Đang đổi: nói rõ cái sắp bị thay là gì, và cho đường quay lại giữ nguyên. */}
         {wantsChange && (
@@ -1029,11 +1021,6 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
           <span aria-hidden className="msr text-[18px] text-gold-textDark">waving_hand</span>
           {wantsHelp ? "Đã chọn — em cần gặp thầy cô" : "Mình cần gặp thầy cô"}
         </button>
-
-        <div className="mt-3 flex items-center justify-center gap-1.5">
-          <span aria-hidden className="msr text-[14px] text-caption2">cloud_off</span>
-          <span className="text-[10.5px] text-caption2">Offline vẫn lưu — tự gửi sau.</span>
-        </div>
       </div>
     </CheckinShell>
   );

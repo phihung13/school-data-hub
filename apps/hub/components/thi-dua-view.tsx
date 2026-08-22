@@ -80,51 +80,23 @@ export function ThiDuaView({
         <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-4 py-3 md:px-7 md:py-3.5">
           <div className="min-w-0 flex-1">
             <h1 className="text-[16px] font-black text-ink">Bảng thi đua</h1>
-            {/* ĐỘ TƯƠI đứng ngay dưới tiêu đề, không giấu trong một góc: xem quyết
-                định 4 ở đầu file. Ba trạng thái, ba câu khác nhau — và câu thứ ba
-                (chưa tính lần nào) tuyệt đối không được trông như "chưa ai có điểm". */}
-            <div className="text-[11.5px] text-caption">
-              {bang.isPending
-                ? "…"
-                : d?.tinhLuc
-                  ? `Điểm tính tới ${docMoc(d.tinhLuc)} · 30 ngày gần đây`
-                  : "Chưa tính điểm lần nào — bảng dưới đây chưa phải kết quả thật"}
-            </div>
+            {/* ĐỘ TƯƠI đứng ngay dưới tiêu đề, không giấu trong một góc. Ca "chưa tính
+                lần nào" nay KHÔNG in gì (chủ đầu tư 22/08/2026 bỏ câu cảnh báo) — dòng
+                này biến mất thay vì nói một câu khác. */}
+            {bang.data?.tinhLuc && (
+              <div className="text-[11.5px] text-caption">
+                {`Điểm tính tới ${docMoc(bang.data.tinhLuc)} · 30 ngày gần đây`}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-7 md:py-6">
+        <div className="flex-1 px-4 py-4 md:overflow-y-auto md:px-7 md:py-6">
           {bang.isPending && <LoadingState label="Đang xem bảng thi đua…" />}
           {bang.error && <ErrorState error={bang.error} onRetry={() => void bang.refetch()} />}
 
           {d && (
             <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
-              {/* ── Điểm ở đâu ra ─────────────────────────────────────────────
-                  Đứng TRƯỚC bảng, không phải chú thích cuối trang. Một đứa trẻ nhìn
-                  thấy mình xếp thứ 40 sẽ hỏi "vì sao" ngay lập tức, và câu trả lời
-                  phải có mặt ở đó — nếu không em sẽ tự nghĩ ra một câu trả lời. */}
-              <div className="rounded-[18px] border border-[#E4E9F0] bg-white p-4">
-                <div className="flex items-center gap-2">
-                  <span aria-hidden className="msr text-[19px] text-[#2C7BF2]">info</span>
-                  <span className="text-[13px] font-black text-navy">Điểm ở đâu ra?</span>
-                </div>
-                <ul className="mt-2 flex flex-col gap-1 pl-1 text-[12.5px] text-cardtitle2">
-                  {d.luat.map((l) => (
-                    <li key={l.maLuat} className="flex items-center gap-2">
-                      <span aria-hidden className="msr text-[15px] text-[#00A05F]">check_circle</span>
-                      {l.nhan}
-                    </li>
-                  ))}
-                </ul>
-                {/* Lời hứa của trường, in ra chỗ nó có nghĩa. Nó là ranh giới chủ đầu
-                    tư tự vạch 21/08/2026, và một lời hứa chỉ nằm trong tài liệu thì
-                    không ai kiểm được. */}
-                <p className="mt-2.5 flex items-start gap-1.5 text-[12px] text-muted2">
-                  <span aria-hidden className="msr flex-none text-[15px] text-caption">lock</span>
-                  Tâm trạng con ghi mỗi ngày <b>không bao giờ</b> được tính vào điểm thi đua.
-                </p>
-              </div>
-
               {/* ── Xếp hạng cá nhân ───────────────────────────────────────── */}
               <section className="rounded-[18px] border border-[#E4E9F0] bg-white p-4">
                 <h2 className="text-[14px] font-black text-navy">Cá nhân</h2>

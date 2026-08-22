@@ -106,7 +106,7 @@ import { MainContent } from "./page-shell";
 import { ChuongViecCho, useViecCho, type ViecChoQuery } from "./chuong-viec-cho";
 import { CotPhaiNguoiLon, coRailNguoiLon } from "./cot-phai-nguoi-lon";
 import { OTimMiniApp, useLocMiniApp, type LuoiDaLoc } from "./tim-mini-app";
-import { NHAN_AI_DOC_CAM_XUC, personName } from "./ui/labels";
+import { personName } from "./ui/labels";
 import { MutationError, SkeletonBlock } from "./ui/query-state";
 
 /**
@@ -582,10 +582,6 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
           Thử lại
         </button>
       )}
-      <div className="flex items-center justify-center gap-1.5">
-        <span aria-hidden="true" className="msr text-[14px] text-caption2">cloud_off</span>
-        <span className="text-[10.5px] text-caption2">Offline vẫn lưu — tự gửi sau.</span>
-      </div>
     </div>
   );
 }

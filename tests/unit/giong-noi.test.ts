@@ -17,11 +17,10 @@
 // Phần cuối file khoá phần "dọn dẹp" của cùng gói: dựng MỘT nhánh theo khổ màn thay vì
 // dựng cả hai rồi ẩn bằng CSS, và hâm sẵn buồng lái cho GVCN.
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatWeekLabel } from "@/lib/week-label";
-import { NHAN_AI_DOC_CAM_XUC } from "@/components/ui/labels";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 const hubDir = join(repoRoot, "apps", "hub");
@@ -158,8 +157,10 @@ const NHAN_DA_CHET = [
   "Chỉ thầy cô chủ nhiệm và thầy cô tâm lý thấy",
 ];
 
-/** Các màn thực sự IN nhãn này (ô nhập cảm xúc hoặc khối hiện lại cảm xúc của em). */
-const MAN_IN_NHAN = ["checkin-view.tsx", "home-view.tsx", "this-week-view.tsx"];
+/**
+ * Các màn từng IN nhãn "ai đọc được cảm xúc". Nay KHÔNG màn nào in — xem khối lật ở dưới.
+ */
+const MAN_TUNG_IN_NHAN = ["checkin-view.tsx", "home-view.tsx", "this-week-view.tsx"];
 
 describe("nhãn riêng tư của ô cảm xúc: một câu, một nguồn", () => {
   it.each(CHILD_FACING_SCREENS)("%s không còn câu nhãn nào đã hết đúng", (file) => {
@@ -169,25 +170,33 @@ describe("nhãn riêng tư của ô cảm xúc: một câu, một nguồn", () =
     }
   });
 
-  it.each(MAN_IN_NHAN)("%s in nhãn từ hằng số dùng chung, không chép tay chuỗi", (file) => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LẬT 22/08/2026 — trước hôm nay ba assertion ở đây ĐÒI ba màn phải in nhãn.
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Chủ đầu tư bỏ câu "Chỉ thầy cô tâm lý và thầy cô chủ nhiệm đọc" khỏi cả ba màn. Bài
+  // test cũ đòi ĐIỀU NGƯỢC LẠI, nên nó phải lật — nhưng lật thành assertion khác, không
+  // xoá. Ba lý do nó vẫn đáng tồn tại sau khi lật:
+  //
+  //   1. Câu này đã đổi BA LẦN trong ngày 01/08/2026 theo phạm vi `core.can_read_mood()`.
+  //      Ai đó chép tay nó trở lại một màn lẻ là dựng lại đúng cái bẫy cũ, chỉ khác chỗ.
+  //   2. `NHAN_DA_CHET` ở trên canh hai câu SAI. Không có khối này thì không ai canh câu
+  //      ĐÚNG — và một câu đúng chép tay sẽ hết đúng vào ngày quyền đọc đổi lần sau.
+  //   3. Gỡ câu KHÔNG gỡ lời hứa: `core.can_read_mood()` vẫn nguyên (chính em ∨ tâm lý
+  //      cụm ∨ GVCN của chính em). Nợ #69 giữ phần nghĩa vụ báo trước theo Luật 91/2025.
+  it.each(MAN_TUNG_IN_NHAN)("%s KHÔNG chép tay câu nhãn đã gỡ", (file) => {
     const src = readComponent(file);
-    expect(src, `${file} không dùng NHAN_AI_DOC_CAM_XUC`).toContain("NHAN_AI_DOC_CAM_XUC");
-    // Chép tay đúng câu hiện tại cũng không được: lần đổi sau nó sẽ là chỗ bị bỏ quên.
-    expect(src, `${file} chép tay chuỗi nhãn thay vì dùng hằng số`).not.toContain(
-      `"${NHAN_AI_DOC_CAM_XUC}"`,
+    expect(src, `${file} chép tay lại câu nhãn — dựng hằng số ở ui/labels.ts trước`).not.toContain(
+      "thầy cô tâm lý và thầy cô chủ nhiệm đọc",
     );
   });
 
-  it("hằng số khớp ĐÚNG câu chốt ở DESIGN-GUIDELINES §9", () => {
-    // Tài liệu là nơi hai agent màn hình cùng đọc để in một câu giống nhau. Nếu mã và
-    // tài liệu trôi khỏi nhau thì mỗi bên đúng theo bên mình, và không ai đỏ.
-    const guideline = readFileSync(join(repoRoot, "danh-cho-may", "DESIGN-GUIDELINES.md"), "utf8");
-    expect(guideline).toContain(`**${NHAN_AI_DOC_CAM_XUC}**`);
-  });
-
-  it("nhãn không chứa từ vựng vận hành (§8) — nó in trước mặt trẻ 11 tuổi", () => {
-    for (const word of ["GVCN", "cờ", "ngưỡng", "leo thang", "quét", "định mức"]) {
-      expect(NHAN_AI_DOC_CAM_XUC.toLowerCase()).not.toContain(word.toLowerCase());
+  it("hằng số NHAN_AI_DOC_CAM_XUC đã gỡ khỏi ui/labels.ts, và không màn nào còn gọi", () => {
+    const labels = readFileSync(join(componentsDir, "ui", "labels.ts"), "utf8");
+    expect(labels).not.toContain("export const NHAN_AI_DOC_CAM_XUC");
+    for (const file of MAN_TUNG_IN_NHAN) {
+      expect(readComponent(file), `${file} còn gọi hằng số đã gỡ`).not.toContain(
+        "NHAN_AI_DOC_CAM_XUC",
+      );
     }
   });
 
@@ -378,5 +387,61 @@ describe("hai bố cục — dựng một nhánh, không dựng hai rồi ẩn",
     // router.prefetch ở trên không giúp được gì.
     const src = stripComments(readFileSync(join(hubDir, "next.config.mjs"), "utf8"));
     expect(src).toMatch(/staleTimes:\s*\{[^}]*dynamic:\s*\d+/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MỘT THANH CUỘN, KHÔNG HAI
+// ---------------------------------------------------------------------------
+// Chủ đầu tư mở /thi-dua ngày 22/08/2026: *"trang bảng thi đua code ui chưa full màn
+// giống bên khác, nó còn màn con nên thành ra có 2 thanh kéo lên xuống cạnh nhau trông
+// rất xấu"*.
+//
+// Nguyên nhân đọc được bằng mắt khi xếp mười màn cạnh nhau: chín màn viết hộp nội dung
+// là `flex-1 … md:overflow-y-auto`, một màn viết `flex-1 overflow-y-auto …` — thiếu đúng
+// hai chữ `md:`.
+//
+// Vì sao thiếu hai chữ đó là hai thanh cuộn: khung ngoài của mọi màn Hub chỉ khoá cuộn
+// TỪ `md:` TRỞ LÊN (`md:h-screen md:overflow-hidden`). Ở khổ điện thoại nó là
+// `min-h-screen` — trang tự cuộn theo thân trang. Một hộp `overflow-y-auto` không tiền
+// tố khi đó lồng thêm một vùng cuộn THỨ HAI bên trong một trang vốn đã cuộn được.
+//
+// Bài này quét CẢ THƯ MỤC chứ không đóng đinh vào `thi-dua-view.tsx`: lỗi này là lỗi
+// nhìn-không-ra, và màn tiếp theo mắc nó sẽ là màn không ai nghĩ tới.
+describe("khung màn: hộp nội dung chỉ được cuộn từ md: trở lên", () => {
+  /** Màn dựng nhánh máy tính RIÊNG (`DesktopReport`, khối rail của /home) — ở đó khung
+   *  ngoài đã là `h-screen overflow-hidden` không điều kiện, nên `overflow-y-auto` trần
+   *  là ĐÚNG. Miễn theo tên file, kèm lý do, chứ không nới luật cho cả kho. */
+  const MIEN = new Set(["growth-report-view.tsx", "home-view.tsx", "hub-sidebar.tsx"]);
+
+  /** Mọi .tsx dưới components/, KỂ CẢ thư mục con (gvcn/, dieu-hanh/, gv-bo-mon/…) —
+   *  bản đầu chỉ quét tầng một và bỏ sót hai màn shell, nên mẫu số ra 7 thay vì 9. */
+  function moiMan(thuMuc = componentsDir, tien = ""): { ten: string; src: string }[] {
+    const ra: { ten: string; src: string }[] = [];
+    for (const e of readdirSync(thuMuc, { withFileTypes: true })) {
+      if (e.isDirectory()) ra.push(...moiMan(join(thuMuc, e.name), `${tien}${e.name}/`));
+      else if (e.name.endsWith(".tsx"))
+        ra.push({ ten: `${tien}${e.name}`, src: readFileSync(join(thuMuc, e.name), "utf8") });
+    }
+    return ra;
+  }
+
+  it("không màn nào lồng vùng cuộn thứ hai ở khổ điện thoại", () => {
+    const pham: string[] = [];
+    for (const { ten, src } of moiMan()) {
+      if (MIEN.has(ten.split("/").pop()!)) continue;
+      // `flex-1` + `overflow-y-auto` KHÔNG có `md:` ngay trước nó, trên cùng một className.
+      for (const m of src.matchAll(/className="([^"]*\bflex-1\b[^"]*)"/g)) {
+        const cls = m[1];
+        if (/(^|\s)overflow-y-auto(\s|$)/.test(cls)) pham.push(`${ten}: ${cls}`);
+      }
+    }
+    expect(pham, "thiếu `md:` — xem khối lý lẽ ngay trên bài test này").toEqual([]);
+  });
+
+  it("và mẫu số có thật: ít nhất chín màn theo đúng khuôn `md:overflow-y-auto`", () => {
+    // Không có vế này thì bài trên xanh cả khi regex hỏng hoặc thư mục đọc ra rỗng.
+    const theo = moiMan().filter((m) => m.src.includes("md:overflow-y-auto"));
+    expect(theo.length, `mới đếm được ${theo.length}`).toBeGreaterThanOrEqual(9);
   });
 });

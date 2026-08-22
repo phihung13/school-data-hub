@@ -391,9 +391,22 @@ describe("lưới mini app trang chủ", () => {
   });
 
   it("tile mờ (available=false) không dẫn đi đâu", () => {
-    const soon = buildMiniApps(["student"]).filter((t) => !t.available);
-    expect(soon.length).toBeGreaterThan(0);
+    // MẪU SỐ ĐỔI TỪ "student" SANG "guardian" — 22/08/2026.
+    //
+    // Học sinh KHÔNG còn tile mờ nào: hai ô "Học tập · GĐ2" và "Y tế · GĐ2" đã gỡ khỏi
+    // bản khai (chủ đầu tư bỏ cùng lượt với Thi đua/Báo cáo khỏi lưới). Giữ nguyên mẫu số
+    // cũ thì bài này đỏ vì một mảng rỗng, và "rỗng" ở đây KHÔNG phải lỗi — nó là điều
+    // vừa được quyết.
+    //
+    // Nhưng luật thì chưa chết: `attendance-con` của phụ huynh vẫn mờ (quyền đọc có ở
+    // tầng RLS, màn hình chưa dựng). Chừng nào còn MỘT ô mờ trong kho thì luật "ô mờ
+    // không dẫn đi đâu" còn phải được canh — bỏ bài này là mở đường cho một ô mờ trỏ vào
+    // trang chưa tồn tại, và người bấm nhận 404 thay vì biết "chưa có".
+    const soon = buildMiniApps(["guardian"]).filter((t) => !t.available);
+    expect(soon.length, "không còn ô mờ nào trong kho — nếu đúng vậy thì xoá bài này").toBeGreaterThan(0);
     expect(soon.every((t) => t.href === "#")).toBe(true);
+    // Và ghim điều vừa quyết, để lần sau ai thêm lại ô mờ cho học sinh phải đọc dòng này.
+    expect(buildMiniApps(["student"]).filter((t) => !t.available)).toEqual([]);
   });
 
   it("tài khoản chưa có vai nào không nhận tile nào", () => {
@@ -423,7 +436,21 @@ describe("lưới mini app trang chủ", () => {
 
   it("tile của phụ huynh: đúng một việc làm được, phần chưa có thì mờ chứ không biến mất", () => {
     const tiles = buildMiniApps(["guardian"]);
-    expect(tiles.filter((t) => t.available).map((t) => t.href)).toEqual(["/bao-cao"]);
+    // LẬT 22/08/2026: `/bao-cao` KHÔNG còn trong lưới (chủ đầu tư: *"báo cáo và thi đua
+    // không phải là mini app. nó là trang trong menu thôi"*). Phụ huynh nay không có ô
+    // lưới nào bật được.
+    //
+    // Điều PHẢI kiểm kèm theo, và nó mới là điều quan trọng: gỡ khỏi lưới KHÔNG được
+    // làm phụ huynh mất đường vào báo cáo. Ở điện thoại họ đi bằng THANH TAB, ở máy tính
+    // bằng MENU TRÁI — bài dưới đây kiểm cả hai, vì nếu cả ba cửa cùng đóng thì phụ
+    // huynh mở app lên và không tới được thứ duy nhất họ vào để xem.
+    expect(tiles.filter((t) => t.available).map((t) => t.href)).toEqual([]);
+    expect(resolveTabs(["guardian"]).map((m) => m.href), "phụ huynh mất Báo cáo ở thanh tab").toContain(
+      "/bao-cao",
+    );
+    expect(resolveNav(["guardian"]).items.map((m: NavItem) => m.href), "phụ huynh mất Báo cáo ở menu trái").toContain(
+      "/bao-cao",
+    );
     // Điểm danh của con: quyền đọc đã có ở tầng RLS nhưng chưa có màn hình. Mờ = nói
     // thật "chưa có"; xoá hẳn thì phụ huynh tưởng hệ thống không theo dõi việc đó.
     // Mã khoá đổi 02/08/2026: `attendance` từng được dùng cho BA màn khác nhau tuỳ vai
