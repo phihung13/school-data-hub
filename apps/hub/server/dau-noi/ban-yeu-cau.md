@@ -217,17 +217,22 @@ Mọi loại sự kiện bạn gửi đều **vào kho và đọc được**. Nh
 
 Nếu app của bạn cần dữ liệu trở thành nghiệp vụ thật, **ghi rõ trong phiếu** ở khoá `webhook.cacLoaiSuKien` và nói với nhà trường — đó là một việc của kỹ sư Hub, không phải một ô tích trên màn hình.
 
-### 4.6 Chuỗi bí mật — MỘT chuỗi dùng chung cho mọi app
+### 4.6 Chuỗi bí mật — MỘT chuỗi dùng chung, và đây là nó
 
-Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các app**. Bạn không có chuỗi riêng, và không cần xin cấp riêng.
+```
+vietanh2026
+```
 
-**Ba điều đi kèm, đọc kỹ:**
+Không phải xin, không phải chờ ai gửi. **Mọi app dùng đúng chuỗi này**, cho cả webhook (mục 4) lẫn đăng nhập (mục 5 — nó chính là `client_secret` của bạn).
 
-1. **Chuỗi để ở máy chủ của bạn, trong biến môi trường.** Không bao giờ trong mã chạy phía trình duyệt, không trong biến `NEXT_PUBLIC_*`/`VITE_*`, không trong file cấu hình đẩy lên kho mã. Vì nó dùng chung, lộ chuỗi của bạn là lộ chuỗi của **mọi app khác**.
-2. **Nhà trường đổi chuỗi lúc nào cũng được, và khi đó MỌI app phải đổi theo cùng lúc.** Hãy để nó là một biến môi trường đọc lúc chạy — đừng ghi cứng vào mã, đừng nhúng vào bản build. Đổi chuỗi phải là sửa một dòng cấu hình rồi khởi động lại, không phải một lần phát hành mới.
-3. **App không có phần hậu trường riêng thì KHÔNG được cấp chuỗi.** App dựng bằng Base44, Lovable, v0, Bolt… chỉ có giao diện, không có chỗ kín để cất — nhét chuỗi vào đó thì ai mở trang cũng nhặt được. App loại đó ghi dữ liệu dưới danh nghĩa chính người đang dùng, qua đường ở mục 3.2.
+Đây là quyết định của nhà trường, chọn có chủ ý: đổi lấy việc **bỏ hẳn một vòng chờ** giữa lúc bạn viết xong mã và lúc bạn thử được.
 
-> Nếu app của bạn có lý do thật sự cần một chuỗi **riêng** — ví dụ nó chạy trên hạ tầng của một nhà cung cấp khác, hoặc nhà trường cần thu hồi riêng nó mà không đụng app khác — thì **nói rõ khi gửi phiếu**. Nhà trường cấp riêng được, và khi đó app bạn **chỉ** dùng chuỗi riêng đó; chuỗi chung sẽ không còn mở cửa cho bạn nữa.
+**Hai điều đi kèm, vẫn phải làm đúng:**
+
+1. **Để ở máy chủ của bạn, trong biến môi trường.** Không bao giờ trong mã chạy phía trình duyệt, không trong `NEXT_PUBLIC_*`/`VITE_*`, không trong bản build gửi xuống máy người dùng. Chuỗi này dùng chung, nên để lộ nó là để lộ cửa của **mọi app khác**, không riêng app bạn.
+2. **Nhà trường đổi chuỗi lúc nào cũng được, và khi đó MỌI app phải đổi cùng lúc.** Đọc lúc chạy, đừng ghi cứng vào mã — đổi chuỗi phải là sửa một dòng cấu hình rồi khởi động lại, không phải một lần phát hành mới.
+
+> **App không có phần hậu trường riêng thì đừng dùng chuỗi này.** App dựng bằng Base44, Lovable, v0, Bolt… chỉ có giao diện, không có chỗ kín để cất — nhét chuỗi vào đó thì ai mở trang cũng nhặt được, và họ nhặt được cửa của cả hệ. App loại đó ghi dữ liệu dưới danh nghĩa chính người đang dùng, qua đường ở mục 3.2.
 
 ---
 
@@ -269,7 +274,7 @@ Ba khối dưới đây là **mã chạy được**, không phải mô tả. Tha
 ```
 HUB      = {{HUB_URL}}
 MA_APP   = mã app bạn khai trong phiếu
-BI_MAT   = chuỗi nhà trường gửi riêng cho bạn (chỉ để ở máy chủ)
+BI_MAT   = vietanh2026        (chuỗi chung của trường — chỉ để ở máy chủ)
 ```
 
 ### 6.1 Cho Hub nhúng — một dòng, theo khung bạn dùng
@@ -458,9 +463,9 @@ Ba trường `hub_*` đi kèm scope `hub_profile`, và **nhà trường cấp s�
 
 ## 8. NHỮNG CÂU BẠN SẮP HỎI — trả lời sẵn
 
-**Chuỗi bí mật lấy ở đâu?** Nhà trường gửi riêng cho bạn qua kênh an toàn, sau khi phiếu được dán. Nó **không** nằm trong tài liệu này, và bạn **không** khai nó trong phiếu.
+**Chuỗi bí mật lấy ở đâu?** Ở ngay mục 4.6 — `vietanh2026`, dùng chung cho mọi app, cho cả webhook lẫn đăng nhập. Không phải xin, không phải chờ. Bạn vẫn **không** khai nó trong phiếu.
 
-**Chưa được đăng ký thì thử kiểu gì?** Gửi phiếu trước, nhà trường dán và cấp chuỗi, rồi bạn thử. Trước đó thử được hai thứ không cần Hub: header `frame-ancestors` (bằng `curl -I`) và phần sinh PKCE.
+**Chưa được đăng ký thì thử kiểu gì?** Chuỗi bí mật bạn đã có sẵn (mục 4.6), nên viết xong là chạy thử được ngay phần của mình: header `frame-ancestors` (bằng `curl -I`) và phần sinh PKCE. Còn hai việc phải chờ nhà trường dán phiếu mới thử được — Hub chưa biết `maApp` của bạn thì webhook trả `401` và đăng nhập trả `invalid_client`.
 
 **`maApp` tự đặt hay nhà trường đặt?** Bạn đặt, trong phiếu. **Không đổi được về sau** — nó đi thẳng vào địa chỉ và mọi lời gọi.
 
@@ -587,10 +592,9 @@ App thực đơn căn tin — **vẫn đủ cả ba việc**, vì mọi app ở 
 ## 11. Chuyện gì xảy ra sau khi bạn gửi JSON
 
 1. Quản trị **dán** phiếu của bạn vào màn quản trị Hub. App được khai — **đang TẮT, chưa cấp cho vai nào**.
-2. Người vận hành đặt chuỗi bí mật lên máy chủ Hub và gửi giá trị cho bạn qua kênh an toàn.
-3. Quản trị cấp vai và bật app.
-4. Bạn nhận **bản đấu nối** in ra từ chính dòng hồ sơ của mình — địa chỉ, `client_id`, `redirect_uri`, endpoint webhook, tất cả giá trị thật. Dùng bản đó, đừng gõ lại từ tài liệu này.
-5. Sau **6 tháng**, nhà trường rà lại. Không rà thì thu hồi quyền.
+2. Quản trị cấp vai và bật app. **Không có bước trao chuỗi bí mật** — chuỗi chung đã nằm sẵn ở mục 4.6, bạn dùng được từ trước khi gửi phiếu.
+3. Bạn nhận **bản đấu nối** in ra từ chính dòng hồ sơ của mình — địa chỉ, `client_id`, `redirect_uri`, endpoint webhook, tất cả giá trị thật. Dùng bản đó, đừng gõ lại từ tài liệu này.
+4. Sau **6 tháng**, nhà trường rà lại. Không rà thì thu hồi quyền.
 
 Nhà trường có thể **tắt app trong mười giây, bất cứ lúc nào**, và khi tắt thì **cả ba đường** (nhúng, webhook, đăng nhập) đều dừng cùng lúc. Hãy thiết kế để app chịu được điều đó mà không mất dữ liệu của chính nó.
 

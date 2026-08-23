@@ -288,7 +288,9 @@ function XemTruoc({ phieu, khaiBao }: { phieu: PhieuDauNoi; khaiBao: CreateMiniA
         {/* Không còn hàng "biến cần đặt": từ `0058` mọi app dùng chuỗi chung của trường cho
             cả webhook lẫn đăng nhập, nên dán phiếu xong KHÔNG còn bước nào chạm máy chủ. */}
         <Hang nhan="Chuỗi bí mật">
-          <span className="font-semibold text-successText">Chuỗi chung của trường — không phải đặt gì</span>
+          <span className="font-semibold text-successText">
+            Chuỗi chung của trường — không phải đặt gì, cũng không phải gửi gì cho đội làm app
+          </span>
         </Hang>
       </div>
 
