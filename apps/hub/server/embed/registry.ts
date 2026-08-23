@@ -47,6 +47,17 @@ export interface EmbedAppConfig {
     /** URL nạp vào iframe — trang riêng của app dành cho ngữ cảnh nhúng, không phải trang chủ thường. */
     iframeUrl: string;
     /**
+     * Scope Hub được phép xin HỘ app trong luồng nhúng.
+     *
+     * Đọc từ hồ sơ chứ KHÔNG ghi cứng (sửa 23/08/2026): bản trước ghi cứng
+     * `"openid profile"` trong `embed-frame.tsx`, nên app khai `hub_profile` vẫn KHÔNG
+     * nhận được `hub_role`/`hub_school`/`hub_classes` — và nó hỏng IM LẶNG, vì
+     * oidc-provider chỉ lặng lẽ bỏ scope không được phép. Đội làm app sẽ đọc tài liệu
+     * thấy có `hub_role`, không thấy nó trong token, rồi đi hỏi. Đúng vòng hỏi-đáp mà
+     * đợt này đi xoá.
+     */
+    ssoScopes: string[];
+    /**
      * Logo thật, tự host trong /public — không trỏ thẳng domain app ngoài (độc lập với app
      * còn sống hay không).
      *

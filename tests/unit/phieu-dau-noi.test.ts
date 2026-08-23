@@ -47,7 +47,9 @@ describe("phiếu đấu nối → khai báo app", () => {
     expect(kb.origin).toBe("https://the-luc.truongvietanh.com");
     expect(kb.allowedEventTypes).toEqual(["ket_qua_the_luc"]);
     expect(kb.ssoEnabled).toBe(true);
-    expect(kb.ssoScopes).toEqual(["openid", "profile"]);
+    // `hub_profile` PHẢI có: không có nó thì app không biết ai đang xem là học sinh hay
+    // giáo viên, và đội làm app sẽ phải hỏi lại nhà trường — đúng vòng hỏi-đáp đợt này đi xoá.
+    expect(kb.ssoScopes).toEqual(["openid", "profile", "hub_profile"]);
 
   });
 
@@ -108,7 +110,9 @@ describe("phiếu đấu nối → khai báo app", () => {
     expect(kb.origin, "origin phải cắt ra từ urlIframe, không khai tay").toBe(
       "https://the-luc.truongvietanh.com",
     );
-    expect(kb.ssoScopes).toEqual(["openid", "profile"]);
+    // `hub_profile` PHẢI có: không có nó thì app không biết ai đang xem là học sinh hay
+    // giáo viên, và đội làm app sẽ phải hỏi lại nhà trường — đúng vòng hỏi-đáp đợt này đi xoá.
+    expect(kb.ssoScopes).toEqual(["openid", "profile", "hub_profile"]);
   });
 });
 

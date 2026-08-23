@@ -256,7 +256,7 @@ export type UpdateMiniAppInput = z.infer<typeof UpdateMiniAppInput>;
  *   · `origin`  — luôn là phần `scheme://host` của `urlIframe` (ràng buộc cũ đã bắt hai
  *     thứ đó phải khớp nhau). Bắt khai cả hai là bắt khai một thứ hai lần, và tạo ra một
  *     kiểu sai — khai lệch nhau — mà nay không tồn tại nữa.
- *   · `scopes`  — mọi app nội bộ dùng `openid profile`. Không app nào chọn khác.
+ *   · `scopes`  — mọi app nội bộ dùng `openid profile hub_profile`. Không app nào chọn khác.
  *
  * `.strict()` giữ nguyên: khai thừa là lỗi có tên, không phải một trường bị bỏ qua im lặng.
  */
@@ -338,7 +338,11 @@ export function phieuThanhKhaiBao(phieu: PhieuDauNoi, ngayRaLai: string): Create
     ssoEnabled: true,
     ssoRedirectUris: phieu.redirectUris,
     ssoBackchannelLogoutUri: phieu.urlDangXuat ?? null,
-    ssoScopes: ["openid", "profile"],
+    // `hub_profile` CÓ trong danh sách mặc định, và đó là một quyết định, không phải sót:
+    // không có nó thì app chỉ nhận `sub` + `name`, tức KHÔNG BIẾT người đang xem là học
+    // sinh hay giáo viên. Mọi app nội bộ đều cần biết điều đó ít nhất một lần. Để app tự
+    // xin thêm scope là dựng lại đúng vòng hỏi-đáp mà đợt này đi xoá.
+    ssoScopes: ["openid", "profile", "hub_profile"],
   };
 }
 

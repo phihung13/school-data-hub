@@ -88,7 +88,12 @@ export function EmbedFrame({
         const authUrl = new URL("/oidc/auth", window.location.origin);
         authUrl.searchParams.set("client_id", clientId);
         authUrl.searchParams.set("response_type", "code");
-        authUrl.searchParams.set("scope", "openid profile");
+        // ĐỌC TỪ HỒ SƠ, KHÔNG GHI CỨNG (sửa 23/08/2026). Bản trước ghi cứng
+        // "openid profile", nên app khai `hub_profile` vẫn không nhận được
+        // `hub_role`/`hub_school`/`hub_classes` — và hỏng IM LẶNG, vì oidc-provider chỉ
+        // lặng lẽ bỏ scope không được phép chứ không báo lỗi. Bản yêu cầu gửi đội làm app
+        // (mục 7.1) hứa có ba claim đó; ghi cứng ở đây là biến lời hứa ấy thành lời nói dối.
+        authUrl.searchParams.set("scope", embed.ssoScopes.join(" "));
         authUrl.searchParams.set("redirect_uri", `${window.location.origin}/embed/relay`);
         authUrl.searchParams.set("code_challenge", codeChallenge);
         authUrl.searchParams.set("code_challenge_method", "S256");

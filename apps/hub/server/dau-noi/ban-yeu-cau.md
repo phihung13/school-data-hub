@@ -11,9 +11,9 @@ Bạn (đội phát triển, hoặc AI được giao) sắp nối một ứng d�
 **Cách làm việc — theo đúng thứ tự này:**
 
 1. Đọc **trọn** tài liệu này. Không lướt.
-2. Viết mã theo mục 3–5.
-3. Chạy **hết** phần tự kiểm ở mục 6. Tự chạy thật, không suy luận là "chắc chạy được".
-4. Trả về **ĐÚNG MỘT KHỐI JSON** theo mục 7.
+2. Viết mã theo mục 3–5 — **bộ mã mẫu chép-dán ở mục 6**.
+3. Chạy **hết** phần tự kiểm ở mục 9. Tự chạy thật, không suy luận là "chắc chạy được".
+4. Trả về **ĐÚNG MỘT KHỐI JSON** theo mục 10.
 
 **Về bước 4 — đây là yêu cầu cứng:**
 
@@ -90,19 +90,36 @@ Và **tuyệt đối không** gửi `X-Frame-Options: DENY` hoặc `SAMEORIGIN`.
 Hub **không** đặt token vào query string. Luồng bắt buộc:
 
 1. Hub nạp iframe của bạn bằng **URL trần** (không tham số).
-2. App của bạn, khi đã sẵn sàng, gửi lên khung cha:
+2. App tự sinh cặp PKCE, rồi gửi lên khung cha — **kèm `codeChallenge`**:
    ```js
-   window.parent.postMessage({ type: "embed:ready" }, "{{HUB_URL}}");
+   window.parent.postMessage({ type: "embed:ready", codeChallenge }, "{{HUB_URL}}");
    ```
    `targetOrigin` phải là chuỗi địa chỉ Hub ở trên. **Không dùng `"*"`.**
-3. Hub gửi lại mã cho bạn bằng `postMessage`.
+
+   > **`codeChallenge` là bắt buộc.** Gửi `embed:ready` trống thì Hub coi là lỗi và khung đứng im, không có thông báo nào. Đây là chỗ hay hỏng nhất ở bước này.
+
+   > **Nhắc lại mỗi ~700ms** cho tới khi Hub đáp, tối đa ~20 lần. Có một khoảng đua: iframe của bạn có thể sẵn sàng trước khi Hub gắn xong bộ nghe, và lượt `embed:ready` đầu tiên rơi vào khoảng trống đó.
+
+3. Hub gửi mã về, đúng hình dạng này:
+   ```js
+   { type: "embed:token", code: "<authorization_code>" }
+   ```
 4. App **bắt buộc kiểm `event.origin`** trước khi xử lý bất kỳ thông điệp nào:
    ```js
    window.addEventListener("message", (e) => {
      if (e.origin !== "{{HUB_URL}}") return;   // BẮT BUỘC. Thiếu dòng này là lỗ hổng đánh cắp token.
-     // …xử lý
+     if (e.data?.type !== "embed:token") return;
+     // …đổi e.data.code lấy token, xem mục 6
    });
    ```
+5. Hỏng ở phía bạn thì báo ngược lên, đừng im:
+   ```js
+   window.parent.postMessage({ type: "embed:error", reason: "pkce_unavailable" }, "{{HUB_URL}}");
+   ```
+
+**Không gửi `embed:resize`** — Hub cố tình bỏ qua từ 29/07/2026. Khung nhúng có kích thước cố định; nội dung dài thì iframe tự cuộn, không cần JS.
+
+**Quá 10 giây không có `embed:ready`** thì Hub hiện màn báo lỗi. Người dùng vẫn thoát được, nhưng app của bạn coi như hỏng.
 
 **Nếu app không gửi `embed:ready` trong 10 giây**, Hub hiện màn báo lỗi. Người dùng vẫn thoát được, nhưng app của bạn coi như hỏng.
 
@@ -191,7 +208,7 @@ sha256(ma-app + ma-em + ngay + loai-su-kien)
 | `202` | Đã nhận, **chưa** vào kho, đang nằm hàng đợi lỗi chờ người xử | **KHÔNG gửi lại.** Gửi lại không sửa được gì |
 | `400` | Thân request sai khuôn | Sửa mã |
 | `401` | Sai mã app hoặc sai chuỗi bí mật | Hỏi nhà trường |
-| `403` | `event_type` này chưa được khai trong hồ sơ | Khai vào phiếu (mục 7) rồi xin duyệt |
+| `403` | `event_type` này chưa được khai trong hồ sơ | Khai vào phiếu (mục 10) rồi xin duyệt |
 | `503` | Hub tạm trục trặc | Thử lại sau, có giãn cách tăng dần |
 
 ### 4.5 Điều Hub KHÔNG hứa, nói trước để không ai hiểu nhầm
@@ -245,7 +262,221 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 
 ---
 
-## 6. TỰ KIỂM — chạy hết trước khi trả JSON
+## 6. BỘ MÃ MẪU — chép, thay ba hằng số, xong
+
+Ba khối dưới đây là **mã chạy được**, không phải mô tả. Thay đúng ba thứ:
+
+```
+HUB      = {{HUB_URL}}
+MA_APP   = mã app bạn khai trong phiếu
+BI_MAT   = chuỗi nhà trường gửi riêng cho bạn (chỉ để ở máy chủ)
+```
+
+### 6.1 Cho Hub nhúng — một dòng, theo khung bạn dùng
+
+```js
+// Next.js — next.config.js
+async headers() {
+  return [{ source: "/:path*", headers: [
+    { key: "Content-Security-Policy", value: "frame-ancestors {{HUB_URL}}" },
+  ]}];
+}
+```
+```js
+// Express
+app.use((_, res, next) => {
+  res.setHeader("Content-Security-Policy", "frame-ancestors {{HUB_URL}}");
+  res.removeHeader("X-Frame-Options");   // nhiều middleware bảo mật tự thêm — phải gỡ
+  next();
+});
+```
+```nginx
+# Nginx
+add_header Content-Security-Policy "frame-ancestors {{HUB_URL}}" always;
+proxy_hide_header X-Frame-Options;
+```
+
+Đo lại, đừng tin cấu hình: `curl -I <url-embed-cua-ban>`.
+
+### 6.2 Bắt tay lấy danh tính — chạy trong trình duyệt
+
+```js
+const HUB = "{{HUB_URL}}";
+
+// PKCE: verifier ở lại máy người dùng, Hub không bao giờ thấy nó.
+function b64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function taoPkce() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return { verifier, challenge: b64url(digest) };
+}
+
+export async function xinDanhTinh() {
+  const { verifier, challenge } = await taoPkce();
+
+  const code = await new Promise((resolve, reject) => {
+    let nhac;
+    function nghe(e) {
+      if (e.origin !== HUB) return;                 // BẮT BUỘC — thiếu là lỗ hổng
+      if (e.data?.type !== "embed:token") return;
+      clearInterval(nhac);
+      window.removeEventListener("message", nghe);
+      resolve(e.data.code);
+    }
+    window.addEventListener("message", nghe);
+
+    // NHẮC LẠI: Hub có thể chưa gắn bộ nghe lúc iframe của bạn sẵn sàng.
+    const gui = () => window.parent.postMessage({ type: "embed:ready", codeChallenge: challenge }, HUB);
+    gui();
+    let lan = 0;
+    nhac = setInterval(() => {
+      if (++lan >= 20) {                            // ~14 giây rồi bỏ cuộc
+        clearInterval(nhac);
+        window.removeEventListener("message", nghe);
+        window.parent.postMessage({ type: "embed:error", reason: "no_token" }, HUB);
+        reject(new Error("Hub không trả mã"));
+      } else gui();
+    }, 700);
+  });
+
+  // Đổi mã ở MÁY CHỦ CỦA BẠN, không đổi ở đây: bước đó cần chuỗi bí mật.
+  const r = await fetch("/api/hub/doi-ma", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ code, verifier }),
+  });
+  return r.json();     // { sub, name, hub_role, hub_school, hub_classes }
+}
+```
+
+### 6.3 Đổi mã lấy token — chạy ở MÁY CHỦ của bạn
+
+> **Vì sao không đổi thẳng trong trình duyệt:** bước này cần `BI_MAT`, và chuỗi bí mật đặt vào mã trình duyệt là ai mở DevTools cũng đọc được. Trình duyệt chỉ chuyển `code` + `verifier` về máy chủ của bạn; cả hai đều dùng một lần.
+
+```js
+// POST /api/hub/doi-ma   { code, verifier }
+const HUB = "{{HUB_URL}}";
+
+export async function doiMa(code, verifier) {
+  const r = await fetch(`${HUB}/oidc/token`, {
+    method: "POST",
+    headers: {
+      // client_secret_basic — Hub CHỈ nhận cách này.
+      authorization: "Basic " + Buffer.from(`${process.env.MA_APP}:${process.env.BI_MAT}`).toString("base64"),
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      code_verifier: verifier,
+      // ĐÂY LÀ CHỖ HAY SAI NHẤT: khi chạy TRONG KHUNG, redirect_uri là trang cầu nối
+      // CỦA HUB, không phải callback của bạn. Sai chỗ này thì Hub trả invalid_grant
+      // và câu lỗi không hề nhắc tới redirect_uri.
+      redirect_uri: `${HUB}/embed/relay`,
+    }),
+  });
+  if (!r.ok) throw new Error(`đổi mã hỏng: ${r.status}`);
+  const { id_token } = await r.json();
+  // Kiểm chữ ký id_token bằng JWKS ở bản khai — dùng thư viện OIDC, đừng tự giải.
+  return id_token;
+}
+```
+
+### 6.4 Bắn dữ liệu về Hub — chạy ở MÁY CHỦ của bạn
+
+```js
+import { createHash } from "node:crypto";
+
+// external_id TÍNH TỪ NỘI DUNG, không phải UUID mới mỗi lần — xem mục 4.3.
+const maSuKien = (...phan) => createHash("sha256").update(phan.join("|")).digest("hex").slice(0, 32);
+
+export async function banVeHub(eventType, actorUserId, payload, ...khoa) {
+  const r = await fetch(`{{HUB_URL}}/api/embed/webhook`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-embed-app": process.env.MA_APP,
+      "x-embed-secret": process.env.BI_MAT,
+    },
+    body: JSON.stringify({
+      external_id: maSuKien(eventType, ...khoa),
+      event_type: eventType,
+      actor_user_id: actorUserId,
+      payload,
+    }),
+  });
+  if (r.status === 202 || r.status === 200) return;   // nhận rồi — ĐỪNG gửi lại
+  if (r.status === 503) throw new Error("hub_ban");    // thử lại, giãn cách tăng dần
+  throw new Error(`hub từ chối ${r.status}`);          // 400/401/403 — sửa mã hoặc hỏi trường
+}
+```
+
+---
+
+## 7. DỮ KIỆN BẠN CẦN — không phải hỏi ai
+
+### 7.1 Trong `id_token` có gì
+
+| Trường | Kiểu | Nội dung |
+|---|---|---|
+| `sub` | chuỗi | Mã người dùng **trong Hub**. Ổn định, dùng làm khoá. Lưu kèm `iss` — xem mục 5.2 |
+| `name` | chuỗi | Tên hiển thị |
+| `hub_role` | chuỗi | Đúng **một** trong: `student` · `parent` · `teacher` · `staff` |
+| `hub_school` | chuỗi hoặc `null` | Mã cơ sở |
+| `hub_classes` | mảng chuỗi | Mã các lớp của người này. Học sinh: lớp đang học. Giáo viên: lớp đang dạy/chủ nhiệm |
+
+Ba trường `hub_*` đi kèm scope `hub_profile`, và **nhà trường cấp sẵn cho mọi app** — bạn không khai `scopes`, không phải xin. Nếu bạn nhận được token mà thiếu ba trường đó thì đấy là lỗi cấu hình phía nhà trường, **báo lại ngay** chứ đừng viết mã đoán vai.
+
+**`hub_role` chỉ có bốn giá trị.** Hub gộp `counselor`/`principal`/`board`/`admin` thành `staff` — app không cần phân biệt sâu hơn, và ngày nhà trường thêm một vai mới thì app của bạn không gãy.
+
+### 7.2 Mã trả về của webhook
+
+| Mã | Nghĩa | Bạn làm gì |
+|---|---|---|
+| `202` / `200` | Đã nhận | **Không** gửi lại |
+| `already_promoted` | Đã nhận từ trước, cùng `external_id` | Không làm gì. Đây là dấu hiệu ĐÚNG |
+| `400` | Thân request sai khuôn | Sửa mã |
+| `401` | Sai mã app hoặc sai chuỗi bí mật | Hỏi nhà trường |
+| `403` | `event_type` chưa khai trong phiếu | Xin nhà trường khai thêm |
+| `503` | Hub tạm trục trặc | Thử lại, giãn cách tăng dần |
+
+### 7.3 Những con số
+
+| | |
+|---|---|
+| Hạn `embed:ready` | **10 giây**, kể từ lúc iframe nạp xong |
+| Nhịp nhắc lại `embed:ready` | ~**700ms**, tối đa ~20 lần |
+| Access token sống | **15 phút** |
+| Hub khoá tài khoản ⇒ app mất quyền | trong **≤15 phút** |
+| Nhà trường tắt app | **hiệu lực ngay lượt request kế tiếp** |
+| Nhịp rà lại hồ sơ app | **6 tháng** |
+
+---
+
+## 8. NHỮNG CÂU BẠN SẮP HỎI — trả lời sẵn
+
+**Chuỗi bí mật lấy ở đâu?** Nhà trường gửi riêng cho bạn qua kênh an toàn, sau khi phiếu được dán. Nó **không** nằm trong tài liệu này, và bạn **không** khai nó trong phiếu.
+
+**Chưa được đăng ký thì thử kiểu gì?** Gửi phiếu trước, nhà trường dán và cấp chuỗi, rồi bạn thử. Trước đó thử được hai thứ không cần Hub: header `frame-ancestors` (bằng `curl -I`) và phần sinh PKCE.
+
+**`maApp` tự đặt hay nhà trường đặt?** Bạn đặt, trong phiếu. **Không đổi được về sau** — nó đi thẳng vào địa chỉ và mọi lời gọi.
+
+**App tôi có tài khoản riêng rồi thì sao?** Bỏ đi. Không app nào ở đây có hệ tài khoản riêng — mọi người vào bằng tài khoản Hub. Ghép dữ liệu cũ theo `sub`.
+
+**Không có `event_type` nào phù hợp thì sao?** Bạn tự đặt tên và khai vào `cacLoaiSuKien`. Hub nhận mọi loại đã khai; loại chưa khai bị trả `403`.
+
+**Gửi trùng thì sao?** Không sao — đó là thiết kế. Cùng `external_id` thì lần hai trả `already_promoted` và kho vẫn chỉ có một bản ghi. Nên khi không chắc đã gửi hay chưa, **cứ gửi lại**.
+
+**Người dùng thoát Hub thì tôi biết bằng cách nào?** Hub `POST` vào `urlDangXuat` của bạn kèm `logout_token`. Kiểm chữ ký bằng JWKS rồi đóng phiên.
+
+**Vẫn không rõ chỗ nào?** Hỏi nhà trường **một lần, gộp hết câu hỏi**, kèm đoạn mã bạn đang vướng. Đừng đoán rồi gửi phiếu — phiếu sai thì phải làm lại từ đầu.
+
+---
+
+## 9. TỰ KIỂM — chạy hết trước khi trả JSON
 
 Đánh dấu từng dòng. **Chưa chạy thật thì không được đánh dấu.**
 
@@ -283,9 +514,9 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 
 ---
 
-## 7. TRẢ VỀ — ĐÚNG MỘT KHỐI JSON, KHÔNG CHỮ NÀO KHÁC
+## 10. TRẢ VỀ — ĐÚNG MỘT KHỐI JSON, KHÔNG CHỮ NÀO KHÁC
 
-### 7.1 Khuôn — chép nguyên, thay giá trị
+### 10.1 Khuôn — chép nguyên, thay giá trị
 
 ```json
 {
@@ -304,7 +535,7 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 
 **Phẳng, không lồng nhau, không khoá nào để `null`.** Mọi app ở đây đều nhúng, đều bắn dữ liệu về, đều đăng nhập bằng tài khoản Hub — nên không có nhánh nào để bật/tắt.
 
-### 7.2 Từng khoá
+### 10.2 Từng khoá
 
 | Khoá | Bắt buộc | Luật |
 |---|---|---|
@@ -321,7 +552,7 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 
 **Không khai `scopes`** — mọi app nội bộ dùng `openid profile`, Hub tự đặt.
 
-### 7.3 BỐN THỨ BẠN KHÔNG ĐƯỢC KHAI
+### 10.3 BỐN THỨ BẠN KHÔNG ĐƯỢC KHAI
 
 Khai vào là phiếu bị từ chối, kèm câu nói rõ vì sao:
 
@@ -332,7 +563,7 @@ Khai vào là phiếu bị từ chối, kèm câu nói rõ vì sao:
 | `reviewDueOn` / `ngayRaLai` | **Ngày rà lại** — nhà trường đặt, mặc định 6 tháng |
 | `webhookSecretEnv` / `ssoClientSecretEnv` / `secret` | **Tên biến chứa chuỗi bí mật**, và cả giá trị của nó. Mọi app dùng chuỗi chung của trường; giá trị không bao giờ đi qua đường này — nhà trường gửi riêng cho bạn |
 
-### 7.4 Ví dụ hoàn chỉnh
+### 10.4 Ví dụ hoàn chỉnh
 
 App thực đơn căn tin — **vẫn đủ cả ba việc**, vì mọi app ở đây đều vậy:
 
@@ -353,7 +584,7 @@ App thực đơn căn tin — **vẫn đủ cả ba việc**, vì mọi app ở 
 
 ---
 
-## 8. Chuyện gì xảy ra sau khi bạn gửi JSON
+## 11. Chuyện gì xảy ra sau khi bạn gửi JSON
 
 1. Quản trị **dán** phiếu của bạn vào màn quản trị Hub. App được khai — **đang TẮT, chưa cấp cho vai nào**.
 2. Người vận hành đặt chuỗi bí mật lên máy chủ Hub và gửi giá trị cho bạn qua kênh an toàn.

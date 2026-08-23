@@ -49,6 +49,7 @@ interface Dong {
   origin: string | null;
   iframe_url: string | null;
   icon_image_url: string | null;
+  sso_scopes: string[];
   intro: string | null;
 }
 
@@ -131,6 +132,7 @@ function doiHang(r: Dong): EmbedAppConfig {
             origin: r.origin,
             iframeUrl: r.iframe_url,
             iconImageUrl: r.icon_image_url ?? undefined,
+            ssoScopes: r.sso_scopes,
             intro: r.intro ?? undefined,
           }
         : undefined,
@@ -153,7 +155,7 @@ export async function napApps(): Promise<EmbedAppConfig[]> {
   const rows = await withSystemContext(async (client) => {
     const { rows } = await client.query<Dong>(
       `select app_id, display_name, basket, allowed_roles, allowed_event_types,
-              origin, iframe_url, icon_image_url, intro
+              origin, iframe_url, icon_image_url, intro, sso_scopes
          from core.embedded_apps
         where enabled
         order by display_name`,
