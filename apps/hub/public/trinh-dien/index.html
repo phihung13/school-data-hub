@@ -410,7 +410,15 @@ button{font-family:inherit;cursor:pointer}
 
 /* CONCEPT */
 #s-login{background:#04102A}
-.cin-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:url(#vsharp) brightness(1.18) saturate(1.08)}
+/* BỘ LỌC LÀM NÉT #vsharp ĐÃ BỎ 23/08/2026.
+   Nó là một phép nhân chập 3×3 (feConvolveMatrix) chạy trên TỪNG KHUNG HÌNH của một
+   video toàn màn — thứ đắt nhất có thể đặt lên video trong trình duyệt, và là nguyên
+   nhân chính của lag mà chủ đầu tư báo.
+   Độ nét nay lấy từ chỗ khác, không mất gì: nguồn 4K xuống thang 1920×1080 bằng
+   lanczos — tức làm nét MỘT LẦN lúc mã hoá, thay vì 24 lần mỗi giây lúc chạy.
+   brightness/saturate GIỮ LẠI: chúng là một lượt tô GPU, gần như miễn phí, và là màu
+   do người thiết kế chọn. */
+.cin-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(1.18) saturate(1.08)}
 .cin-shade{position:absolute;inset:0;background:radial-gradient(620px 470px at 104% 106%,rgba(4,13,32,.88),rgba(4,13,32,.45) 46%,transparent 74%),radial-gradient(640px 460px at -6% -8%,rgba(4,13,32,.66),rgba(4,13,32,.32) 42%,transparent 78%),radial-gradient(700px 520px at -6% 108%,rgba(4,13,32,.64),rgba(4,13,32,.3) 42%,transparent 78%),linear-gradient(270deg,rgba(4,13,32,.88) 0%,rgba(4,13,32,.5) 9%,rgba(4,13,32,0) 20%),linear-gradient(292deg,rgba(4,13,32,.84) 0%,rgba(4,13,32,.68) 30%,rgba(4,13,32,.34) 52%,rgba(4,13,32,0) 68%)}
 .cin-brand{position:absolute;left:40px;top:26px;z-index:8;display:flex;align-items:center;gap:12px}
 .cin-brand .logo{display:flex;width:46px;height:46px;align-items:center;justify-content:center;border-radius:13px;background:#fff;box-shadow:0 10px 26px rgba(2,10,30,.5)}
@@ -987,7 +995,6 @@ button{font-family:inherit;cursor:pointer}
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="vsharp"><feConvolveMatrix order="3" kernelMatrix="0 -0.35 0 -0.35 2.4 -0.35 0 -0.35 0" preserveAlpha="true"/></filter></svg>
 <div id="root">
 <div id="flash"></div>
 <div id="blackout"></div>
@@ -995,7 +1002,7 @@ button{font-family:inherit;cursor:pointer}
 <!-- ===================== LOGIN ===================== -->
 <section id="s-login" class="scene on">
   <canvas id="fx3d" aria-hidden="true" style="display:none"></canvas>
-  <video class="cin-bg" src="/trinh-dien/uploads/Armored_lion_mascot_running_loop_202608220946.mp4" loop muted loop playsinline autoplay></video>
+  <video class="cin-bg" src="/trinh-dien/uploads/su-tu-chay.mp4" loop muted loop playsinline autoplay></video>
   <div class="cin-shade" aria-hidden="true"></div>
   <div class="cin-brand"><span class="logo"><img src="/logo.webp" alt="" /></span><span class="tt"><span class="t1">Major OS</span><span class="t2">TRƯỜNG VIỆT ANH</span></span></div>
   <span id="hud-clock" style="display:none"></span>

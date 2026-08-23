@@ -1,73 +1,92 @@
 # Trang trình diễn Hub — đọc trước khi sửa
 
-`home-6-show-light.html` là **bản trình diễn**, không phải mã ứng dụng. Mở thẳng bằng
-trình duyệt (nháy đúp), không cần máy chủ nào.
+Trang trình diễn 4 màn: **đăng nhập → video intro → intro sư tử → trang chủ**. Có nút bỏ
+qua ở mọi màn, nên trình bày trước đám đông không bao giờ bị kẹt.
 
-Bốn màn nối nhau: **đăng nhập → video intro → intro sư tử → trang chủ**. Có nút bỏ qua ở
-mọi màn, nên trình bày trước đám đông không bao giờ bị kẹt.
+**Chỉ có MỘT bản**, ở `apps/hub/public/trinh-dien/index.html`. Xem bằng cách bật công tắc
+(phần cuối tài liệu này) rồi mở `hub.truongvietanh.com`. Thư mục này giữ đúng tài liệu bạn
+đang đọc — không giữ bản sao nào của trang, vì hai bản sao là hai chỗ sẽ lệch nhau.
 
 ## Nó đến từ đâu
 
 Dự án Claude Design **"School data hub app"**
 (`ad81b74b-ed81-4b0e-9cc0-d15a249a0c96`), file `home-6-show-light.html`.
 
-Lấy từ **bản xuất .zip**, không phải bản đọc qua công cụ đồng bộ — đo ra hai bản lệch
-nhau 5 dòng: bản qua công cụ mang thêm `data-comment-anchor="…"`, là dấu neo bình luận
-của trình soạn thảo, không thuộc thiết kế. Lần sau đồng bộ thì **cũng lấy từ .zip**, hoặc
-nhớ bóc các thuộc tính đó ra.
+Lấy từ **bản xuất .zip**, không phải bản đọc qua công cụ đồng bộ — đo ra hai bản lệch nhau
+5 dòng: bản qua công cụ mang thêm `data-comment-anchor="…"`, là dấu neo bình luận của
+trình soạn thảo, không thuộc thiết kế. Lần sau đồng bộ thì **cũng lấy từ .zip**.
 
-Sửa duy nhất khi đưa vào kho: `apps/hub/public/…` → `../../apps/hub/public/…`, đúng 4 chỗ.
-Trang dùng chung logo, mascot và phông icon với app thật — **không có bản sao nào**, nên
-đổi logo trong app là trang này đổi theo.
+Trang dùng chung logo, mascot và phông icon với app thật (`/logo.webp`,
+`/mascot-sheet.webp`, `/fonts/…`) — **không có bản sao nào**, nên đổi logo trong app là
+trang này đổi theo.
 
-## Hai video — MỘT bản duy nhất, và đã được dời `moov` lên đầu
+## Video — vì sao lag, và đã sửa thế nào
 
-Nằm ở `apps/hub/public/trinh-dien/uploads/`. **Chỉ một bản**: cả trang chạy trên máy chủ
-lẫn bản mở-bằng-tay ở thư mục này đều trỏ vào đó. Bản đầu 23/08/2026 tôi để hai bản sao
-(54 MB) — đã gỡ; hai bản sao là hai chỗ sẽ lệch nhau, và ở đây là 27 MB cho mỗi lần lệch.
+Chủ đầu tư báo lag 23/08/2026. Đo ra **hai nguyên nhân**, và cái lớn hơn không phải video.
 
-### `moov` đã dời lên đầu — nếu không thì buổi trình bày là màn đen
+### 1. Bộ lọc làm nét chạy trên từng khung hình (nguyên nhân chính)
 
-Đo bản gốc: `moov` nằm ở **100,0%** và **99,9%** vị trí file. `moov` là bảng mục lục;
-trình duyệt không phát được khung hình nào cho tới khi đọc được nó — nghĩa là phải tải
-trọn **27 MB** trước khi có hình. Trên localhost không ai thấy. Trên wifi trường qua
-tunnel thì đó là màn đen giữa buổi trình bày.
+`.cin-bg` mang `filter: url(#vsharp)` — một **phép nhân chập 3×3** trên một video toàn
+màn, **24 lần mỗi giây**. Đây là thứ đắt nhất có thể đặt lên video trong trình duyệt.
 
-Đã chạy `node tools/mp4-faststart.mjs` (không có ffmpeg trên máy, nên viết thẳng — dời
-`moov` lên trước `mdat`, **không mã hoá lại**, không giảm chất lượng). Đo lại qua HTTP:
-`moov` về sau **148 KB** và **81 KB**.
+**Đã bỏ.** Độ nét không mất: nó chuyển sang chỗ rẻ hơn nhiều — nguồn 4K xuống thang
+1920×1080 bằng lanczos, tức **làm nét một lần lúc mã hoá** thay vì 24 lần mỗi giây lúc
+chạy. `brightness`/`saturate` giữ lại: một lượt tô GPU, gần như miễn phí, và là màu người
+thiết kế chọn.
 
-Kiểm trước khi đổi file, vì đây là thao tác trên nhị phân:
+### 2. Bitrate quá cao, và một bẫy ngược đời về 4K
 
-| Phép kiểm | Kết quả |
-|---|---|
-| `mdat` giống hệt từng byte | có |
-| Ô offset `stco`/`co64` trỏ đúng byte cũ | **864/864**, sai 0 |
-| `moov` nằm trước `mdat` | có |
-| Kích thước file không đổi | có |
+Chủ đầu tư đưa bản 4K để "nét hơn". Nhưng **thả thẳng 4K vào là lag NẶNG hơn**: 3840×2160
+là **4× số điểm ảnh mỗi khung** so với 1080, trong khi màn hình chỉ hiển thị tối đa ~1920
+chiều ngang. Nên bản 4K dùng làm **nguồn**, không dùng làm thứ đem chiếu.
 
-Ô offset là chỗ chết người: chúng giữ **vị trí tuyệt đối trong file** của từng chunk. Dời
-`moov` mà quên cộng bù thì file vẫn "hợp lệ", vẫn mở được, nhưng **phát ra rác** — hỏng
-kiểu im lặng.
+| | cũ | nay | |
+|---|---|---|---|
+| Nền đăng nhập | 10,07 MB · 10,6 Mbps | **4,01 MB · 4,2 Mbps** | từ nguồn 4K, SSIM 0,983 |
+| Video intro | 17,10 MB · 14,3 Mbps | **7,52 MB · 6,3 Mbps** | SSIM 0,975 |
+| **Cộng** | **27,2 MB** | **11,5 MB** | giảm 58% |
 
-**Video mới xuất từ dự án thiết kế cũng phải chạy qua công cụ đó**, vì bản xuất mặc định
-luôn để `moov` ở cuối.
+SSIM đo bằng ffmpeg so với bản gốc; trên 0,97 là mắt thường không phân biệt được.
 
-## Vì sao 27 MB nằm trong kho
+### fps giữ nguyên 24 — cố ý
 
-`intro-software.mp4` (17 MB) và `Armored_lion_mascot_running_loop_…mp4` (10 MB). Chúng
-**không lấy được** qua công cụ đồng bộ: giới hạn 256 KiB mỗi file, và bản
-tải về cụt ở đúng mốc đó (không có `moov` atom, tức không phải file mp4 hợp lệ).
+Chủ đầu tư đề nghị giảm fps. Đo ra **cả ba video vốn đã là 24 fps**, nên đó không phải
+chỗ đang tốn. Hạ thấp hơn nữa (18, 15) chỉ làm chuyển động giật, mà không lấy lại được
+bao nhiêu — cái tốn nằm ở bộ lọc và ở bitrate, cả hai đã sửa.
 
-Kho `.git` từ 31 MB lên khoảng 58 MB, **vĩnh viễn** — git giữ mọi blob kể cả sau khi xoá.
-Chấp nhận vì trang trình diễn thiếu video là một buổi trình bày hỏng, và 58 MB vẫn nhỏ.
+### Lệnh đã dùng, để lần sau làm lại được
 
-**Nếu về sau video được xuất lại nhiều lần** (dự án thiết kế đang có 3 biến thể intro sư
-tử), mỗi lần thêm ~17 MB nữa. Tới lúc đó thì chuyển sang `git-lfs` — kho hiện chưa có
-`.gitattributes`, chưa bật lfs.
+```
+# Nền đăng nhập: 4K -> 1080 sắc nét, BỎ TIẾNG (video này vốn muted)
+ffmpeg -i <4k>.mp4 -vf "scale=1920:1080:flags=lanczos" -r 24 \
+  -c:v libx264 -profile:v high -preset slow -crf 26 -maxrate 4M -bufsize 8M \
+  -pix_fmt yuv420p -g 48 -an -movflags +faststart su-tu-chay.mp4
+
+# Video intro: giữ 1080 và tiếng, hạ bitrate
+ffmpeg -i <goc>.mp4 -c:v libx264 -profile:v high -preset slow -crf 25 \
+  -maxrate 6M -bufsize 12M -pix_fmt yuv420p -g 48 \
+  -c:a aac -b:a 128k -movflags +faststart intro-software.mp4
+```
+
+`-movflags +faststart` là **bắt buộc**. Bản xuất từ dự án thiết kế luôn để `moov` (bảng
+mục lục) ở CUỐI file — đo được: 100,0% và 99,9%. Trình duyệt không phát được khung hình
+nào cho tới khi đọc được nó, tức phải tải trọn file trước khi có hình. Trên localhost
+không ai thấy; trên wifi trường thì đó là màn đen. Nay `moov` ở **byte 36**.
+
+ffmpeg không có trong PATH nhưng **đã cài sẵn** trên máy này:
+`%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg_*\ffmpeg-*\bin\ffmpeg.exe`.
+
+Nếu chỉ cần dời `moov` mà **không** mã hoá lại, dùng `node tools/mp4-faststart.mjs <file>`
+— công cụ tự viết cho ca không có ffmpeg, có tự kiểm mọi ô offset trước khi ghi.
+
+### 11,5 MB video nằm trong kho
+
+Chấp nhận có chủ ý: trang trình diễn thiếu video là một buổi trình bày hỏng. Kho `.git`
+đã ngậm cả bản 27 MB cũ ở lịch sử — gỡ không thu nhỏ lại được, nhưng đã chặn nó lớn thêm.
+Nếu về sau video được xuất lại nhiều lần thì chuyển sang `git-lfs`.
 
 Trang **vẫn chạy khi thiếu video**: `startShow()` kiểm `introVideo.error` rồi nhảy thẳng
-vào trang chủ. Thiếu video là mất phần nhìn, không phải treo.
+vào trang chủ.
 
 ## Hai điều đã biết, cố ý chưa sửa
 
@@ -82,7 +101,7 @@ Chưa sửa vì tự host three.js là thêm ~1,2 MB và sửa vào file thiết
 
 **2. `#hv-clock` — JS gọi một phần tử không tồn tại.** Có sẵn trong bản thiết kế gốc.
 Vô hại: lời gọi được bọc `if(ck)`, nên chỉ là một `setInterval` chạy không mỗi giây. Giữ
-nguyên để bản trong kho khớp từng ký tự với bản thiết kế, trừ 4 đường dẫn đã nói ở trên.
+nguyên: bản trong kho khớp bản thiết kế, trừ ba chỗ đã sửa có chủ ý (đường dẫn tài nguyên, tên video, và bộ lọc làm nét đã bỏ).
 
 ## Nội dung KHÁC với app đang chạy
 
