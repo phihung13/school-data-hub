@@ -132,3 +132,61 @@ describe("trang trình diễn — mọi lớp phủ màn đều được ép kí
     expect(bg![1]).toContain("object-fit:cover");
   });
 });
+
+// ---------------------------------------------------------------------------
+// VIDEO INTRO — vừa màn, và chạy trước khi lộ diện
+// ---------------------------------------------------------------------------
+// Chủ đầu tư 23/08/2026: *"vẫn hơi khựng, cho nó bắt đầu dần đi trước khi cái nền đen tắt
+// đi thì mượt hơn, ngoài ra tôi thấy video intro vẫn hơi to về chiều cao"*.
+//
+// Đọc mã ra hai nguyên nhân riêng, và cả hai đều dễ mất khi đồng bộ lại từ Claude Design:
+//
+//   1. Thẻ `#intro-video` mang `transform: scale(1.06)`, chỉ thu về `scale(1)` SAU khi sự
+//      kiện `playing` bắn. Buffer chậm thì nó ngồi ở 6% quá khổ suốt thời gian chờ — đúng
+//      cái "hơi to về chiều cao". Đã bỏ hẳn transform; hiệu ứng lộ diện còn lại `opacity`.
+//
+//   2. `startShow()` là chỗ DUY NHẤT gọi `play()`, mà nó chạy ở t=900ms trong
+//      `showFromPanel()` — đúng lúc khối đen sắp tan. Tải và giải mã đều bắt đầu từ đó.
+//      Đã thêm `chayTruoc()` gọi ngay tại `go-dark` (t=0): video chạy câm suốt 900ms màn
+//      còn đen, rồi `startShow()` tua về 0 (miễn phí, vùng đó đã đệm) và mở tiếng.
+describe("video intro — vừa màn và chạy trước khi lộ diện", () => {
+  const TRANG = readFileSync(
+    join(fileURLToPath(new URL("../../", import.meta.url)), "apps/hub/public/trinh-dien/index.html"),
+    "utf8",
+  );
+
+  it("KHÔNG có transform trên thẻ video — mọi transform đều làm nó lệch khỏi màn", () => {
+    const the = TRANG.match(/<video id="intro-video"[^>]*>/);
+    expect(the, "không tìm thấy thẻ #intro-video").not.toBeNull();
+    // Bất kỳ transform nào cũng thu/phóng video khỏi đúng kích thước màn, và nó nằm im ở
+    // trạng thái sai suốt thời gian chờ buffer. Cấm cả họ, không chỉ cấm `scale(1.06)`.
+    expect(the![0], "thẻ video mang transform — sẽ lệch khỏi màn khi buffer chậm").not.toMatch(
+      /transform\s*:/,
+    );
+    // Và JS cũng không được đặt lại.
+    expect(TRANG, "JS đặt transform cho video intro").not.toContain("introVideo.style.transform");
+  });
+
+  it("video chạy TRƯỚC, ngay lúc màn bắt đầu đen — không đợi tới lúc lộ diện", () => {
+    expect(TRANG, "thiếu hàm chạy trước").toContain("function chayTruoc()");
+    const i = TRANG.indexOf("function showFromPanel()");
+    const than = TRANG.slice(i, TRANG.indexOf("\n}", i));
+    const goDark = than.indexOf('classList.add("go-dark")');
+    const goi = than.indexOf("chayTruoc();");
+    expect(goDark, "không thấy go-dark").toBeGreaterThan(-1);
+    expect(goi, "showFromPanel không gọi chayTruoc").toBeGreaterThan(-1);
+    // Phải gọi Ở PHA ĐẦU, không phải trong setTimeout của pha sau — cả 900ms màn đen mới
+    // là thứ đang mua được. Gọi muộn hơn thì mua được ít hơn, và bài này không thấy.
+    expect(goi - goDark, "gọi quá xa go-dark — có thể đã rơi vào pha sau").toBeLessThan(200);
+  });
+
+  it("chạy trước phải CÂM, và startShow phải tua về đầu", () => {
+    const i = TRANG.indexOf("function chayTruoc()");
+    const than = TRANG.slice(i, TRANG.indexOf("\n}", i));
+    expect(than, "chạy trước mà không câm — người xem nghe tiếng lúc màn còn đen").toContain(
+      "introVideo.muted = true",
+    );
+    // Không tua về đầu thì người xem mất ~0,9 giây đầu của đoạn intro.
+    expect(TRANG).toMatch(/currentTime > 0\.0\d.*currentTime = 0/s);
+  });
+});

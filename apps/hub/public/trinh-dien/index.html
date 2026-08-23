@@ -1021,7 +1021,7 @@ button{font-family:inherit;cursor:pointer}
 
 <!-- ===================== VIDEO INTRO ===================== -->
 <section id="s-video" class="scene" style="background:#04102A;transition-duration:450ms">
-  <video id="intro-video" src="/trinh-dien/uploads/intro-software.mp4" preload="auto" playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#04102A;opacity:0;transform:scale(1.06);transition:opacity 420ms ease,transform 1100ms cubic-bezier(.2,.8,.2,1)"></video>
+  <video id="intro-video" src="/trinh-dien/uploads/intro-software.mp4" preload="auto" playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#04102A;opacity:0;transition:opacity 420ms ease"></video>
   <div id="video-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#C7D8F0;font-size:13px;font-weight:800;letter-spacing:.18em;pointer-events:none">ĐANG TẢI INTRO…</div>
   <button class="skip" id="btn-skip-video">Vào trang chủ<span class="msr">arrow_forward</span></button>
 </section>
@@ -1256,13 +1256,35 @@ function warmVideo() {
   }).catch(() => { warmed = false; });
 }
 warmVideo();
+/**
+ * Cho video intro chạy CÂM ngay khi màn bắt đầu đen, 900ms trước lúc nó lộ diện.
+ *
+ * Vì sao cần: `startShow()` là chỗ duy nhất gọi `play()`, mà nó chạy ở t=900ms — đúng
+ * lúc khối đen sắp tan. Tải và giải mã đều bắt đầu từ đó, nên khung đầu tiên luôn đến
+ * muộn và người xem thấy khựng.
+ *
+ * 900ms màn đen là thời gian CHO KHÔNG: không ai nhìn thấy gì trong đó. Chạy câm trong
+ * khoảng ấy làm ấm cả bộ đệm mạng lẫn bộ giải mã, và không tốn một khung hình nào của
+ * nội dung — vì `startShow()` tua về 0. Tua trong vùng đã đệm là thao tác miễn phí,
+ * không tải lại byte nào.
+ */
+function chayTruoc() {
+  if (!introVideo || introVideo.error) return;
+  introVideo.muted = true;
+  try { introVideo.currentTime = 0; } catch (e) {}
+  introVideo.play().catch(() => {});
+}
+
 function startShow() {
   ac();
   if (introVideo && !introVideo.error) {
     introVideo.muted = false;
-    introVideo.style.opacity = "0"; introVideo.style.transform = "scale(1.06)";
+    introVideo.style.opacity = "0";
     setScene("#s-video");
-    if (introVideo.currentTime > 0.25) { try { introVideo.currentTime = 0; } catch (e) {} }
+    // Tua về đầu: sau `chayTruoc()` thì currentTime luôn ~0,9s. Miễn phí vì vùng đó
+    // đã nằm trong bộ đệm — không tải lại byte nào, và người xem vẫn được xem trọn
+    // đoạn intro từ khung đầu.
+    if (introVideo.currentTime > 0.05) { try { introVideo.currentTime = 0; } catch (e) {} }
     introVideo.play().catch(() => {
       introVideo.muted = true;
       introVideo.play().catch(() => { flash(0.9, 420); toHome(true); });
@@ -1272,7 +1294,7 @@ function startShow() {
 if (introVideo) {
   const hideLoad = () => {
     const l = $("#video-loading"); if (l) l.style.display = "none";
-    introVideo.style.opacity = "1"; introVideo.style.transform = "scale(1)";
+    introVideo.style.opacity = "1";
   };
   introVideo.addEventListener("playing", hideLoad);
   introVideo.addEventListener("waiting", () => { const l = $("#video-loading"); if (l) l.style.display = "flex"; });
@@ -1285,6 +1307,9 @@ function showFromPanel() {
   const panel = document.querySelector(".cin-main");
   if (lg.classList.contains("go-dark")) return;
   lg.classList.add("go-dark"); // pha 1: khung hoá đen tại chỗ
+
+  // CHẠY TRƯỚC, NGAY KHI MÀN BẮT ĐẦU ĐEN — xem khối lý lẽ ở `chayTruoc()`.
+  chayTruoc();
   setTimeout(() => { // pha 2: khối đen phóng to trùm màn hình
     const r = panel.getBoundingClientRect();
     panel.style.transition = "none";

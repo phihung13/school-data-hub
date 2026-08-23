@@ -123,6 +123,35 @@ vì chênh độ nét. Tin số mà không nhìn thì đã đi sửa nhầm ch�
 
 SSIM bản intro mới so nguồn 4K xuống thang: **0,972**.
 
+### Video intro: chạy trước khi lộ diện, và bỏ phóng to 6%
+
+Chủ đầu tư báo lần hai: *"vẫn hơi khựng… ngoài ra tôi thấy video intro vẫn hơi to về chiều
+cao"*. Đọc mã ra **hai nguyên nhân riêng**, không cái nào là cái kia.
+
+**Chiều cao.** Thẻ `#intro-video` mang `transform: scale(1.06)` và chỉ thu về `scale(1)`
+**sau khi** sự kiện `playing` bắn. Buffer chậm thì nó ngồi ở 6% quá khổ suốt thời gian
+chờ. Đã bỏ hẳn transform — video khớp đúng màn từ khung đầu; hiệu ứng lộ diện còn lại
+`opacity`.
+
+**Khựng.** Đọc `showFromPanel()` ra dòng thời gian:
+
+| | |
+|---|---|
+| t = 0 | `go-dark` — khung hoá đen |
+| t = 280ms | `zoom-out` — khối đen phóng to trùm màn |
+| **t = 900ms** | **`startShow()` — chỗ DUY NHẤT gọi `play()`** |
+
+Video mới bắt đầu tải và giải mã ở t=900ms, đúng lúc khối đen sắp tan. Nên khung đầu luôn
+đến muộn.
+
+Nay `chayTruoc()` gọi ngay tại `go-dark` (t=0): video chạy **câm** suốt 900ms màn còn đen —
+thời gian cho không, không ai nhìn thấy gì — làm ấm cả bộ đệm mạng lẫn bộ giải mã. Tới
+`startShow()` thì tua về 0 và mở tiếng. **Tua trong vùng đã đệm là miễn phí**, không tải
+lại byte nào, nên người xem vẫn được xem trọn đoạn intro từ khung đầu.
+
+Ba bài canh trong `tests/unit/trinh-dien.test.ts`, đã thử ngược cả ba: dựng lại transform ·
+bỏ lời gọi chạy trước · chạy trước mà không câm.
+
 ### fps giữ nguyên 24 — cố ý
 
 Chủ đầu tư đề nghị giảm fps. Đo ra **cả ba video vốn đã là 24 fps**, nên đó không phải chỗ
