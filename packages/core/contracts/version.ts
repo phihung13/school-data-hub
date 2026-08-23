@@ -22,7 +22,7 @@ import { z } from "zod";
  * lẫn `tsc` của package lõi, mỗi nơi một luật về import JSON; thay vào đó
  * `tools/contracts-lint.mjs` kiểm hai giá trị bằng nhau và CI chặn merge khi lệch.
  */
-export const CONTRACTS_VERSION = "0.3.0";
+export const CONTRACTS_VERSION = "0.4.0";
 
 /**
  * Phiên bản contract cũ nhất mà server còn phục vụ. Tăng số này = chủ động cắt các client
@@ -91,8 +91,11 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 // tăng version → fail (expand–contract, `03-api.md` luật 6).
 // <contracts-surface>
 // {
-//   "version": "0.3.0",
+//   "version": "0.4.0",
 //   "schemas": {
+//     "originTuUrl": [
+//       "#function#"
+//     ],
 //     "phieuThanhKhaiBao": [
 //       "#function#"
 //     ],
@@ -159,9 +162,10 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "moTaMotCau",
 //       "roDuLieu",
 //       "doiChiuTrachNhiem",
-//       "nhung",
-//       "webhook",
-//       "sso"
+//       "urlIframe",
+//       "cacLoaiSuKien",
+//       "redirectUris",
+//       "urlDangXuat"
 //     ],
 //     "MiniAppId": [
 //       "#expr#z .string() .regex(/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/, \"Mã app chỉ gồm chữ thường, số và dấu gạch ngang\")"
@@ -186,18 +190,6 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "apps",
 //       "soAppCanRaLai",
 //       "hubUrl"
-//     ],
-//     "PhieuNhung": [
-//       "origin",
-//       "urlIframe"
-//     ],
-//     "PhieuWebhook": [
-//       "cacLoaiSuKien"
-//     ],
-//     "PhieuSso": [
-//       "redirectUris",
-//       "backchannelLogoutUri",
-//       "scopes"
 //     ],
 //     "KHOA_NHA_TRUONG_QUYET": [
 //       "allowedRoles",
@@ -952,7 +944,7 @@ export function isContractsVersionSupported(clientVersion: string | null | undef
 //       "#type#"
 //     ],
 //     "CONTRACTS_VERSION": [
-//       "#expr#\"0.3.0\""
+//       "#expr#\"0.4.0\""
 //     ],
 //     "MIN_SUPPORTED_CONTRACTS_VERSION": [
 //       "#expr#\"0.1.0\""

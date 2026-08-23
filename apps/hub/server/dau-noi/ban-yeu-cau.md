@@ -21,11 +21,15 @@ Bạn (đội phát triển, hoặc AI được giao) sắp nối một ứng d�
 >
 > Người nhận sẽ **dán thẳng** nội dung đó vào một ô trên màn quản trị của Hub. Bất kỳ chữ nào ngoài JSON sẽ làm bước dán thất bại, và người nhận không phải là kỹ sư để đi cắt bớt hộ bạn.
 
-Nếu bạn **không hoàn thành được** một phần nào đó: vẫn trả về JSON, nhưng **bỏ hẳn** nhánh tương ứng (`nhung` hoặc `sso` để `null`). Đừng khai một nhánh chưa chạy được — khai rồi mà không chạy là dạng hỏng tệ nhất ở đây: nó im lặng, và người phát hiện ra là một cô giáo đang cần dùng.
+**Mọi app ở đây có CÙNG MỘT hình dạng, và phải làm đủ cả ba việc:**
 
-**Nhánh `webhook`** — mặc định là **bắt buộc**: mọi app sinh ra dữ liệu đều phải đổ về (mục 4). Có **đúng một ngoại lệ**, và mục 4 định nghĩa nó: app **thuần hiển thị nội dung chung**, không sinh ra bản ghi nào của riêng nó (thực đơn, bảng tin, trang giới thiệu). App đó để `"webhook": null` — hợp lệ, xem ví dụ ở mục 7.5.
+| | |
+|---|---|
+| **Nhúng** (mục 3) | Hub hiện app của bạn trong khung của nó |
+| **Gửi dữ liệu về** (mục 4) | App bắn sự kiện của mình về một cửa duy nhất |
+| **Đăng nhập bằng tài khoản Hub** (mục 5) | Không app nào có hệ tài khoản riêng |
 
-Nếu app bạn **có** sinh ra bản ghi (ai làm gì, lúc nào, kết quả ra sao) mà chưa kịp làm webhook: **báo lại nhà trường**, đừng lặng lẽ để `null`. Để `null` cho một app có dữ liệu là khai sai, và cái sai đó im lặng.
+Không có nhánh nào để bỏ, không khoá nào để `null`. Chưa làm kịp phần nào thì **báo lại nhà trường** — đừng gửi phiếu thiếu, và đừng khai một phần chưa chạy. Khai rồi mà không chạy là dạng hỏng tệ nhất ở đây: nó im lặng, và người phát hiện ra là một cô giáo đang cần dùng.
 
 ---
 
@@ -43,11 +47,11 @@ Có **ba đường** nối vào Hub. App của bạn dùng một, hai, hoặc c�
 
 | Đường | Để làm gì | Khai trong phiếu |
 |---|---|---|
-| **Nhúng** | App hiện lên trong khung của Hub | `nhung` |
-| **Webhook** | App đẩy dữ liệu về kho của Hub | `webhook` — **bắt buộc**, xem mục 4 |
-| **SSO** | Người dùng vào app bằng tài khoản Hub, không gõ lại mật khẩu | `sso` |
+| **Nhúng** | App hiện lên trong khung của Hub | `urlIframe` |
+| **Webhook** | App đẩy dữ liệu về kho của Hub | `cacLoaiSuKien` |
+| **SSO** | Người dùng vào app bằng tài khoản Hub, không gõ lại mật khẩu | `redirectUris` |
 
-Nhánh `nhung` và `sso` không dùng thì để `null`. **`webhook` thì khác** — mọi app đều phải đổ dữ liệu về, xem mục 4.
+**Cả ba đều bắt buộc.** Không đường nào bỏ được — xem bảng ở phần đầu.
 
 ---
 
@@ -67,7 +71,7 @@ Nhánh `nhung` và `sso` không dùng thì để `null`. **`webhook` thì khác*
 
 ---
 
-## 3. Nếu app có NHÚNG — yêu cầu bắt buộc
+## 3. NHÚNG — bắt buộc với mọi app
 
 ### 3.1 Cho phép Hub nhúng
 
@@ -110,13 +114,13 @@ Hub **không** đặt token vào query string. Luồng bắt buộc:
 
 ---
 
-## 4. GỬI DỮ LIỆU VỀ HUB — mặc định là BẮT BUỘC
+## 4. GỬI DỮ LIỆU VỀ HUB — bắt buộc với mọi app
 
 > **Luật của nhà trường:** *mọi app cắm vào Hub đều phải đổ dữ liệu của mình về.* Đây không phải một tuỳ chọn để cân nhắc — nó là lý do Hub tồn tại.
 >
 > Dữ liệu về một đứa trẻ hôm nay nằm rải trong những app không nói chuyện với nhau. Nhà trường chỉ nhìn thấy vài mảnh, và thường nhìn thấy muộn. App của bạn giữ một mảnh; **mảnh đó phải về được một chỗ** thì thầy cô mới ghép được bức tranh.
 >
-> **Ngoại lệ duy nhất, và phải nói rõ khi gửi phiếu:** app thuần hiển thị nội dung chung, không sinh ra dữ liệu nào của riêng nó (bảng tin, trang giới thiệu). Nếu app bạn *có* sinh ra bất kỳ bản ghi nào — ai làm gì, lúc nào, kết quả ra sao — thì nó không thuộc ngoại lệ này.
+> **Không có ngoại lệ nào** (chốt 23/08/2026). Kể cả app thực đơn: ai mở, mở lúc nào, xem tuần nào — đó đã là dữ liệu, và nó phải về một chỗ.
 >
 > **Rổ Xanh vẫn phải gửi.** Rổ dữ liệu quyết định bạn có được **gắn tên em** hay không, KHÔNG quyết định bạn có phải gửi hay không. App rổ Xanh gửi dữ liệu không gắn tên ai — thực đơn tuần, học liệu đã soạn, lịch câu lạc bộ — và nó vẫn phải gửi.
 
@@ -210,7 +214,7 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 
 ---
 
-## 5. Nếu app dùng ĐĂNG NHẬP BẰNG TÀI KHOẢN HUB (SSO) — yêu cầu bắt buộc
+## 5. ĐĂNG NHẬP BẰNG TÀI KHOẢN HUB (SSO) — bắt buộc với mọi app
 
 ### 5.1 Thông số
 
@@ -253,7 +257,7 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 - [ ] Không gọi trực tiếp bất kỳ API AI nào với dữ liệu học sinh chưa được làm sạch.
 - [ ] App không hiện bất kỳ mã nội bộ, tên bảng, hay trạng thái job nào ra màn hình.
 
-**Nếu có nhúng**
+**Nhúng**
 
 - [ ] `curl -I` cho thấy `frame-ancestors` có địa chỉ Hub, và **không có** `X-Frame-Options`.
 - [ ] App gửi `embed:ready` với `targetOrigin` là địa chỉ Hub, **không phải `"*"`**.
@@ -261,14 +265,14 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 - [ ] App không vẽ header/nút quay lại/menu riêng.
 - [ ] App không phá khung, không mở tab mới.
 
-**Nếu có webhook**
+**Gửi dữ liệu về**
 
 - [ ] `external_id` tính từ nội dung, **lặp lại được**.
 - [ ] Gửi cùng một request **hai lần** → lần hai trả `already_promoted`. Đã chạy thật.
 - [ ] Nhận `202` thì **không** gửi lại.
 - [ ] Chuỗi bí mật chỉ nằm ở biến môi trường phía máy chủ.
 
-**Nếu có SSO**
+**Đăng nhập**
 
 - [ ] Dùng thư viện OIDC chuẩn, không tự viết luồng OAuth.
 - [ ] PKCE `S256` bật.
@@ -281,7 +285,7 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 
 ## 7. TRẢ VỀ — ĐÚNG MỘT KHỐI JSON, KHÔNG CHỮ NÀO KHÁC
 
-### 7.1 Khuôn
+### 7.1 Khuôn — chép nguyên, thay giá trị
 
 ```json
 {
@@ -291,20 +295,14 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
   "moTaMotCau": "Một câu nói app này làm gì",
   "roDuLieu": "xanh",
   "doiChiuTrachNhiem": "Tên đội + email liên hệ",
-  "nhung": {
-    "origin": "https://ten-mien-cua-ban",
-    "urlIframe": "https://ten-mien-cua-ban/duong-dan"
-  },
-  "webhook": {
-    "cacLoaiSuKien": ["ten_loai_1", "ten_loai_2"]
-  },
-  "sso": {
-    "redirectUris": ["https://ten-mien-cua-ban/callback"],
-    "backchannelLogoutUri": "https://ten-mien-cua-ban/backchannel-logout",
-    "scopes": ["openid", "profile"]
-  }
+  "urlIframe": "https://ten-mien-cua-ban/duong-dan",
+  "cacLoaiSuKien": ["ten_loai_1", "ten_loai_2"],
+  "redirectUris": ["https://ten-mien-cua-ban/callback"],
+  "urlDangXuat": "https://ten-mien-cua-ban/backchannel-logout"
 }
 ```
+
+**Phẳng, không lồng nhau, không khoá nào để `null`.** Mọi app ở đây đều nhúng, đều bắn dữ liệu về, đều đăng nhập bằng tài khoản Hub — nên không có nhánh nào để bật/tắt.
 
 ### 7.2 Từng khoá
 
@@ -316,62 +314,27 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 | `moTaMotCau` | — | ≤200 ký tự. Hiện lúc chờ app nạp. Bỏ trống thì chỉ hiện tên |
 | `roDuLieu` | ✔ | `"xanh"` hoặc `"vang"`. Xem mục 2 |
 | `doiChiuTrachNhiem` | ✔ | ≥2 ký tự. Tên đội + cách liên lạc |
-| `nhung` | — | `null` nếu app không có giao diện nhúng |
-| `nhung.origin` | ✔ nếu có `nhung` | Dạng `https://ten-mien` — **không đường dẫn, không dấu `/` cuối** |
-| `nhung.urlIframe` | ✔ nếu có `nhung` | `https`, **phải nằm trong `origin`** ở trên |
-| `webhook` | **✔ bắt buộc** | Chỉ được `null` cho app thuần hiển thị nội dung chung, không sinh ra bản ghi nào — và phải nói rõ lý do khi gửi phiếu. Xem mục 4 |
-| `webhook.cacLoaiSuKien` | ✔ nếu có `webhook` | Mảng tên loại sự kiện, chữ thường và gạch dưới. **Không dùng `"*"`** trừ khi rổ Xanh và có lý do đã được duyệt |
-| `sso` | — | `null` nếu app không đăng nhập bằng tài khoản Hub |
-| `sso.redirectUris` | ✔ nếu có `sso` | Mảng ≥1. `https`, **không dấu `#`**. Khớp chính xác chuỗi |
-| `sso.backchannelLogoutUri` | — | `https`, hoặc `null`. Khai rồi thì **phải** kiểm chữ ký (mục 5.2) |
-| `sso.scopes` | ✔ nếu có `sso` | Tập con của `["openid","profile","hub_profile","offline_access"]`, **bắt buộc có `"openid"`**. Xin đúng phần cần — xin thừa sẽ bị cắt |
+| `urlIframe` | ✔ | `https`, không `#`, không `?`. Trang Hub sẽ nhúng. **Không khai `origin` riêng** — Hub tự cắt phần tên miền ra từ đây |
+| `cacLoaiSuKien` | ✔ | Ít nhất một loại. Đây là danh sách `event_type` app được phép gửi; loại chưa khai bị Hub trả `403` |
+| `redirectUris` | ✔ | Ít nhất một. Khớp **chính xác từng ký tự** với thứ app gửi lên — thừa một dấu `/` là không đăng nhập được |
+| `urlDangXuat` | — | Hub gọi vào đây khi người dùng thoát khỏi Hub. Bỏ trống thì app không biết để đóng phiên |
 
-**`scopes` — chọn ít nhất có thể:**
-
-| scope | Cho bạn biết gì | Khi nào xin |
-|---|---|---|
-| `openid` | Mã người dùng (`sub`) | Luôn luôn |
-| `profile` | Tên hiển thị | Khi cần hiện tên |
-| `hub_profile` | Vai trò, cơ sở, lớp | **Chỉ khi** app thật sự phân quyền theo vai |
-| `offline_access` | Giữ phiên dài, tự gia hạn | **Chỉ khi** app cần chạy nền, không có người ngồi trước máy |
+**Không khai `scopes`** — mọi app nội bộ dùng `openid profile`, Hub tự đặt.
 
 ### 7.3 BỐN THỨ BẠN KHÔNG ĐƯỢC KHAI
 
-Nhà trường quyết, không phải bạn. Có mặt trong JSON là **phiếu bị từ chối**:
+Khai vào là phiếu bị từ chối, kèm câu nói rõ vì sao:
 
-| Không khai | Vì sao |
+| Khoá | Vì sao không phải của bạn |
 |---|---|
-| Vai nào được mở app | Ai được dùng app là quyết định của nhà trường, không phải của đội làm app |
-| App bật hay tắt | App khai xong **luôn TẮT**, tới khi có người có thẩm quyền bật |
-| Ngày rà lại | Nhà trường đặt, mặc định 6 tháng |
-| Tên biến chứa chuỗi bí mật | Hub tự sinh theo mã app. Bạn nhận **giá trị** từ người vận hành, không đặt tên biến |
+| `allowedRoles` / `vai` | **Vai nào được mở app** — nhà trường cấp trên màn hình sau khi dán |
+| `enabled` | **App bật hay tắt** — app dán vào luôn TẮT cho tới khi có người có thẩm quyền bật |
+| `reviewDueOn` / `ngayRaLai` | **Ngày rà lại** — nhà trường đặt, mặc định 6 tháng |
+| `webhookSecretEnv` / `ssoClientSecretEnv` / `secret` | **Tên biến chứa chuỗi bí mật**, và cả giá trị của nó. Mọi app dùng chuỗi chung của trường; giá trị không bao giờ đi qua đường này — nhà trường gửi riêng cho bạn |
 
-### 7.4 Ví dụ một phiếu hoàn chỉnh
+### 7.4 Ví dụ hoàn chỉnh
 
-```json
-{
-  "phienBan": 1,
-  "maApp": "the-luc",
-  "tenHienThi": "Thể lực",
-  "moTaMotCau": "Ghi kết quả kiểm tra thể lực và theo dõi tiến bộ theo học kỳ.",
-  "roDuLieu": "vang",
-  "doiChiuTrachNhiem": "Đội Thể chất — theluc@truongvietanh.com",
-  "nhung": {
-    "origin": "https://the-luc.truongvietanh.com",
-    "urlIframe": "https://the-luc.truongvietanh.com/embed"
-  },
-  "webhook": {
-    "cacLoaiSuKien": ["ket_qua_the_luc", "diem_danh_clb"]
-  },
-  "sso": {
-    "redirectUris": ["https://the-luc.truongvietanh.com/api/auth/callback"],
-    "backchannelLogoutUri": "https://the-luc.truongvietanh.com/api/auth/backchannel-logout",
-    "scopes": ["openid", "profile", "hub_profile"]
-  }
-}
-```
-
-### 7.5 App chỉ có giao diện, không có webhook, không có đăng nhập
+App thực đơn căn tin — **vẫn đủ cả ba việc**, vì mọi app ở đây đều vậy:
 
 ```json
 {
@@ -381,12 +344,10 @@ Nhà trường quyết, không phải bạn. Có mặt trong JSON là **phiếu 
   "moTaMotCau": "Thực đơn căn tin theo tuần, cập nhật mỗi thứ Hai.",
   "roDuLieu": "xanh",
   "doiChiuTrachNhiem": "Đội Căn tin — cantin@truongvietanh.com",
-  "nhung": {
-    "origin": "https://thuc-don.truongvietanh.com",
-    "urlIframe": "https://thuc-don.truongvietanh.com/tuan-nay"
-  },
-  "webhook": null,
-  "sso": null
+  "urlIframe": "https://thuc-don.truongvietanh.com/tuan-nay",
+  "cacLoaiSuKien": ["cap_nhat_thuc_don", "xem_thuc_don"],
+  "redirectUris": ["https://thuc-don.truongvietanh.com/api/auth/callback"],
+  "urlDangXuat": "https://thuc-don.truongvietanh.com/api/auth/backchannel-logout"
 }
 ```
 

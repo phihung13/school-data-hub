@@ -250,8 +250,6 @@ function Hang({ nhan, children, nhanManh }: { nhan: string; children: React.Reac
 }
 
 function XemTruoc({ phieu, khaiBao }: { phieu: PhieuDauNoi; khaiBao: CreateMiniAppInput }) {
-  const coScopeVai = phieu.sso?.scopes.includes("hub_profile") ?? false;
-
   return (
     <section className="rounded-2xl border border-line bg-surface-alt p-3">
       {/* <h3>: khối con của <h2> tiêu đề hộp thoại. */}
@@ -266,28 +264,24 @@ function XemTruoc({ phieu, khaiBao }: { phieu: PhieuDauNoi; khaiBao: CreateMiniA
           {NHAN_RO[phieu.roDuLieu] ?? phieu.roDuLieu}
         </Hang>
         <Hang nhan="Chịu trách nhiệm">{phieu.doiChiuTrachNhiem}</Hang>
+        {/* BA HÀNG NÀY KHÔNG CÒN CA "Không" (23/08/2026). Mọi app nội bộ đều nhúng, đều
+            bắn dữ liệu về, đều đăng nhập bằng tài khoản Hub — nên khuôn phiếu bắt buộc cả
+            ba, và ở đây không còn nhánh nào để vẽ. Một hàng ghi "Không" là một hàng nói về
+            một trạng thái không dựng được nữa. */}
         <Hang nhan="Nhúng">
-          {phieu.nhung ? <span className="font-mono text-[11.5px]">{phieu.nhung.urlIframe}</span> : "Không"}
+          <span className="font-mono text-[11.5px]">{phieu.urlIframe}</span>
         </Hang>
         <Hang nhan="Gửi dữ liệu về">
-          {phieu.webhook ? (
-            <span className="font-mono text-[11.5px]">{phieu.webhook.cacLoaiSuKien.join(", ")}</span>
-          ) : (
-            "Không"
-          )}
+          <span className="font-mono text-[11.5px]">{phieu.cacLoaiSuKien.join(", ")}</span>
         </Hang>
-        <Hang nhan="Đăng nhập Hub" nhanManh={coScopeVai}>
-          {phieu.sso ? (
-            <>
-              <span className="font-mono text-[11.5px]">{phieu.sso.scopes.join(" ")}</span>
-              {coScopeVai && (
-                <span className="ml-1.5 rounded-full bg-surface-warnSoft px-2 py-0.5 text-[10.5px] font-black text-gold-textDark">
-                  Đọc được vai · cơ sở · lớp
-                </span>
-              )}
-            </>
+        <Hang nhan="Đăng nhập Hub">
+          <span className="font-mono text-[11.5px]">{khaiBao.ssoScopes.join(" ")}</span>
+        </Hang>
+        <Hang nhan="Đăng xuất từ Hub">
+          {phieu.urlDangXuat ? (
+            <span className="font-mono text-[11.5px]">{phieu.urlDangXuat}</span>
           ) : (
-            "Không"
+            <span className="text-muted2">Chưa khai — Hub không báo được cho app khi em thoát</span>
           )}
         </Hang>
         <Hang nhan="Ngày rà lại">{khaiBao.reviewDueOn}</Hang>

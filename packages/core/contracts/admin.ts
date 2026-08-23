@@ -234,45 +234,31 @@ export type UpdateMiniAppInput = z.infer<typeof UpdateMiniAppInput>;
 // đọc bản tiếng Việt đó). Một khuôn tiếng Anh cạnh một tài liệu tiếng Việt là thêm một lớp
 // dịch, và mỗi lớp dịch là một chỗ dịch sai.
 
-/** Ba nhánh của một app: nhúng, webhook, SSO. Nhánh nào không dùng thì `null`. */
-export const PhieuNhung = z
-  .object({
-    origin: MiniAppOrigin,
-    urlIframe: z.string().url().startsWith("https://", "URL iframe phải bắt đầu bằng https://"),
-  })
-  .strict()
-  // Chép đúng ràng buộc `embedded_apps_iframe_thuoc_origin` của bảng. Kiểm ở đây để đội làm
-  // app nhận một câu tiếng Việt thay vì mã lỗi 23514 của Postgres sau khi quản trị đã dán.
-  .refine((v) => v.urlIframe === v.origin || v.urlIframe.startsWith(`${v.origin}/`), {
-    message: "urlIframe phải nằm trong origin đã khai — lệch miền thì trình duyệt chặn và khung nhúng trắng",
-    path: ["urlIframe"],
-  });
-
-export const PhieuWebhook = z
-  .object({
-    cacLoaiSuKien: z
-      .array(z.string().trim().min(1))
-      .min(1, "Khai webhook thì phải khai ít nhất một loại sự kiện — mảng rỗng nghĩa là Hub từ chối mọi lời gọi"),
-  })
-  .strict();
-
-export const PhieuSso = z
-  .object({
-    redirectUris: z.array(MiniAppRedirectUri).min(1, "Khai SSO thì phải có ít nhất một redirect_uri"),
-    backchannelLogoutUri: MiniAppRedirectUri.nullish(),
-    scopes: z
-      .array(MiniAppScope)
-      .min(1)
-      .refine((s) => s.includes("openid"), {
-        message: 'Thiếu scope "openid" — không có nó thì đây là OAuth2 trần, không có id_token',
-      }),
-  })
-  .strict();
-
 /**
- * Phiếu đội làm app gửi về. `.strict()` ở MỌI cấp — xem khối chú thích trên.
+ * Phiếu đội làm app gửi về — PHẲNG, KHÔNG NHÁNH, KHÔNG `null`.
  *
- * Không có `enabled`: app dán vào luôn TẮT, cùng lý do `CreateMiniAppInput` không có nó.
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ĐƠN GIẢN HOÁ 23/08/2026 — vì mọi app ở đây giống hệt nhau về hình dạng
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Chủ đầu tư chốt: *"tất cả các app, đều là app nội bộ, tất cả dùng sso, ko ai được hệ
+ * riêng, trang nào cũng bắn dữ liệu về hết, kể cả thực đơn"*.
+ *
+ * Bản trước có ba nhánh `nhung` / `webhook` / `sso`, mỗi nhánh `nullish()`, vì nó được
+ * viết cho một thế giới có app chỉ-nhúng, app chỉ-webhook, app chỉ-SSO. Thế giới đó không
+ * tồn tại ở đây. Ba nhánh tuỳ chọn nghĩa là **tám tổ hợp**, trong đó bảy tổ hợp không app
+ * nào dùng — nhưng người đọc phiếu vẫn phải cân nhắc cả tám, và người viết phiếu vẫn có
+ * bảy cách khai sai.
+ *
+ * Nay: một hình dạng duy nhất, mọi trường bắt buộc trừ hai trường trang trí. Không tổ hợp
+ * nào để cân nhắc, không nhánh nào để bỏ quên.
+ *
+ * HAI TRƯỜNG ĐÃ BỎ HẲN, vì Hub tự suy ra được:
+ *   · `origin`  — luôn là phần `scheme://host` của `urlIframe` (ràng buộc cũ đã bắt hai
+ *     thứ đó phải khớp nhau). Bắt khai cả hai là bắt khai một thứ hai lần, và tạo ra một
+ *     kiểu sai — khai lệch nhau — mà nay không tồn tại nữa.
+ *   · `scopes`  — mọi app nội bộ dùng `openid profile`. Không app nào chọn khác.
+ *
+ * `.strict()` giữ nguyên: khai thừa là lỗi có tên, không phải một trường bị bỏ qua im lặng.
  */
 export const PhieuDauNoi = z
   .object({
@@ -284,12 +270,35 @@ export const PhieuDauNoi = z
     moTaMotCau: z.string().trim().max(200).nullish(),
     roDuLieu: MiniAppBasket,
     doiChiuTrachNhiem: z.string().trim().min(2).max(120),
-    nhung: PhieuNhung.nullish(),
-    webhook: PhieuWebhook.nullish(),
-    sso: PhieuSso.nullish(),
+
+    /** Trang Hub nhúng vào khung. `origin` suy ra từ đây, không khai riêng. */
+    urlIframe: z
+      .string()
+      .regex(
+        /^https:\/\/[a-z0-9.-]+(:\d{1,5})?(\/[^#?]*)?$/,
+        "urlIframe phải dạng https://ten-mien/duong-dan — không dấu # và không tham số ?",
+      ),
+
+    /** Mọi app đều bắn dữ liệu về. Mảng rỗng = Hub từ chối mọi lời gọi, nên cấm rỗng. */
+    cacLoaiSuKien: z
+      .array(z.string().trim().min(1))
+      .min(1, "Phải khai ít nhất một loại sự kiện — mọi app đều đổ dữ liệu về Hub"),
+
+    /** Mọi app đều đăng nhập bằng tài khoản Hub. Không app nào có hệ tài khoản riêng. */
+    redirectUris: z.array(MiniAppRedirectUri).min(1, "Phải có ít nhất một redirect_uri — mọi app đều dùng SSO"),
+
+    /** Nơi Hub gọi vào khi người dùng thoát khỏi Hub. Chưa làm kịp thì bỏ trống. */
+    urlDangXuat: MiniAppRedirectUri.nullish(),
   })
   .strict();
 export type PhieuDauNoi = z.infer<typeof PhieuDauNoi>;
+
+/** `https://a.b/c/d` → `https://a.b`. Dùng cho `origin`, thứ đã thôi bắt khai tay. */
+export function originTuUrl(url: string): string {
+  const m = /^(https:\/\/[a-z0-9.-]+(?::\d{1,5})?)/.exec(url);
+  // Regex của `urlIframe` đã bảo đảm khớp; nhánh này chỉ để kiểu trả về không có `undefined`.
+  return m?.[1] ?? url;
+}
 
 /** Bốn khoá bị từ chối có tên — dùng để dựng câu lỗi nói rõ VÌ SAO, không chỉ "khoá lạ". */
 export const KHOA_NHA_TRUONG_QUYET: Record<string, string> = {
@@ -320,15 +329,16 @@ export function phieuThanhKhaiBao(phieu: PhieuDauNoi, ngayRaLai: string): Create
     owner: phieu.doiChiuTrachNhiem,
     reviewDueOn: ngayRaLai,
     allowedRoles: [],
-    allowedEventTypes: phieu.webhook?.cacLoaiSuKien ?? [],
-    origin: phieu.nhung?.origin ?? null,
-    iframeUrl: phieu.nhung?.urlIframe ?? null,
+    allowedEventTypes: phieu.cacLoaiSuKien,
+    origin: originTuUrl(phieu.urlIframe),
+    iframeUrl: phieu.urlIframe,
     iconImageUrl: null,
     intro: phieu.moTaMotCau ?? null,
-    ssoEnabled: !!phieu.sso,
-    ssoRedirectUris: phieu.sso?.redirectUris ?? [],
-    ssoBackchannelLogoutUri: phieu.sso?.backchannelLogoutUri ?? null,
-    ssoScopes: phieu.sso?.scopes ?? ["openid", "profile"],
+    // Luôn bật: không app nội bộ nào có hệ tài khoản riêng (chốt 23/08/2026).
+    ssoEnabled: true,
+    ssoRedirectUris: phieu.redirectUris,
+    ssoBackchannelLogoutUri: phieu.urlDangXuat ?? null,
+    ssoScopes: ["openid", "profile"],
   };
 }
 

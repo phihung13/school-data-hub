@@ -43,6 +43,48 @@ Sau khi sửa contract, chạy `node tools/contracts-lint.mjs --update` để c�
   trước, không đổi kiểu) bắt đầu mang SỐ THẬT cho GVCN thay vì `null` cố định — client
   nào lỡ coi `null` là hằng số thì đọc lại ghi chú tại field.
 
+## [0.4.0] — 23/08/2026
+
+**Phiên bản tăng vì có mục `Removed`.** Và đây là ca mà luật expand–contract **không áp
+dụng được**, nên phải nói rõ vì sao thay vì lách:
+
+`PhieuDauNoi` KHÔNG phải hợp đồng với một client đang chạy. Nó là khuôn của một khối JSON
+mà **con người dán tay** vào màn quản trị, đúng một lần cho mỗi app, rồi thôi. Không PWA
+nào cache nó, không app phụ huynh nào đọc nó, không có "client cũ" để chuyển dần — thứ duy
+nhất tồn tại ở dạng cũ là những đoạn JSON đội làm app đang soạn dở, và họ đọc bản yêu cầu
+mới (đã cập nhật cùng commit) chứ không đọc khuôn cũ.
+
+Ba schema bị gỡ đều chỉ được `PhieuDauNoi` dùng, không nơi nào khác import.
+
+### Removed
+
+- **`PhieuDauNoi.nhung`, `PhieuDauNoi.webhook`, `PhieuDauNoi.sso`** và ba schema con
+  `PhieuNhung` / `PhieuWebhook` / `PhieuSso`. Ba nhánh tuỳ chọn (`nullish`) sinh ra **tám
+  tổ hợp**, trong đó bảy tổ hợp không app nào dùng. Chủ đầu tư chốt 23/08/2026: *"tất cả
+  các app, đều là app nội bộ, tất cả dùng sso, ko ai được hệ riêng, trang nào cũng bắn dữ
+  liệu về hết, kể cả thực đơn"*. Một hình dạng duy nhất thì không cần nhánh nào.
+- **`PhieuNhung.origin`** — bỏ hẳn, không thay bằng gì. Nó luôn là phần `scheme://host`
+  của `urlIframe` (ràng buộc cũ đã bắt hai thứ khớp nhau), nên bắt khai cả hai là bắt khai
+  một thứ hai lần và tạo ra một kiểu sai — khai lệch nhau — mà nay không dựng được nữa.
+- **`PhieuSso.scopes`** — mọi app nội bộ dùng `openid profile`; Hub tự đặt. App khai
+  `scopes` nay bị `.strict()` từ chối kèm câu nói rõ vì sao.
+
+### Added
+
+- **`PhieuDauNoi.urlIframe`, `.cacLoaiSuKien`, `.redirectUris`** — ba trường **bắt buộc**,
+  phẳng, thay đúng ba nhánh đã gỡ. Thiếu một trong ba là phiếu không qua.
+- **`PhieuDauNoi.urlDangXuat`** — thay `PhieuSso.backchannelLogoutUri`. Trường tuỳ chọn
+  DUY NHẤT còn lại của phiếu.
+- **`originTuUrl(url)`** — hàm thuần cắt `https://a.b/c` thành `https://a.b`. Một chỗ tính,
+  dùng cho `origin` mà phiếu đã thôi bắt khai.
+
+### Changed
+
+- **`phieuThanhKhaiBao`** nay luôn đặt `ssoEnabled: true` và `ssoScopes: ["openid",
+  "profile"]`. Không còn nhánh nào để hỏi.
+
+---
+
 ## [0.3.0] — 08/08/2026
 
 **Phiên bản tăng vì có mục `Removed`.** Luật của kho (03-api.md luật 6) đòi expand–contract:

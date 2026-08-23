@@ -30,13 +30,10 @@ const PHIEU_DU = {
   moTaMotCau: "Ghi kết quả kiểm tra thể lực.",
   roDuLieu: "vang",
   doiChiuTrachNhiem: "Đội Thể chất — theluc@truongvietanh.com",
-  nhung: { origin: "https://the-luc.truongvietanh.com", urlIframe: "https://the-luc.truongvietanh.com/embed" },
-  webhook: { cacLoaiSuKien: ["ket_qua_the_luc"] },
-  sso: {
-    redirectUris: ["https://the-luc.truongvietanh.com/api/auth/callback"],
-    backchannelLogoutUri: "https://the-luc.truongvietanh.com/api/auth/backchannel-logout",
-    scopes: ["openid", "profile", "hub_profile"],
-  },
+  urlIframe: "https://the-luc.truongvietanh.com/embed",
+  cacLoaiSuKien: ["ket_qua_the_luc"],
+  redirectUris: ["https://the-luc.truongvietanh.com/api/auth/callback"],
+  urlDangXuat: "https://the-luc.truongvietanh.com/api/auth/backchannel-logout",
 };
 
 describe("phiếu đấu nối → khai báo app", () => {
@@ -50,7 +47,7 @@ describe("phiếu đấu nối → khai báo app", () => {
     expect(kb.origin).toBe("https://the-luc.truongvietanh.com");
     expect(kb.allowedEventTypes).toEqual(["ket_qua_the_luc"]);
     expect(kb.ssoEnabled).toBe(true);
-    expect(kb.ssoScopes).toEqual(["openid", "profile", "hub_profile"]);
+    expect(kb.ssoScopes).toEqual(["openid", "profile"]);
 
   });
 
@@ -64,7 +61,7 @@ describe("phiếu đấu nối → khai báo app", () => {
     //
     // `0058` gỡ hẳn hai trường khỏi hợp đồng, nên bài này khẳng định bằng chính KHOÁ CỦA
     // ĐỐI TƯỢNG: một trường secret quay lại là bài đỏ, dù nó mang tên gì.
-    for (const phieu of [PHIEU_DU, { ...PHIEU_DU, webhook: { cacLoaiSuKien: ["a", "b"] } }]) {
+    for (const phieu of [PHIEU_DU, { ...PHIEU_DU, cacLoaiSuKien: ["a", "b"] }]) {
       const kb = phieuThanhKhaiBao(PhieuDauNoi.parse(phieu), "2027-02-07") as Record<string, unknown>;
       const traiPhep = Object.keys(kb).filter((k) => /secret/i.test(k));
       expect(traiPhep, "khai báo sinh ra một trường secret — khái niệm khoá riêng đã bị gỡ ở 0058").toEqual([]);
@@ -82,20 +79,36 @@ describe("phiếu đấu nối → khai báo app", () => {
     expect(kb.allowedRoles).toEqual([]);
   });
 
-  it("phiếu chỉ có nhúng thì KHÔNG bật SSO và không nhận loại sự kiện nào", () => {
-    const phieu = PhieuDauNoi.parse({
-      phienBan: 1,
-      maApp: "thuc-don-tuan",
-      tenHienThi: "Thực đơn tuần",
-      roDuLieu: "xanh",
-      doiChiuTrachNhiem: "Đội Căn tin",
-      nhung: { origin: "https://td.truongvietanh.com", urlIframe: "https://td.truongvietanh.com/tuan-nay" },
-      webhook: null,
-      sso: null,
-    });
-    const kb = phieuThanhKhaiBao(phieu, "2027-02-07");
-    expect(kb.ssoEnabled).toBe(false);
-    expect(kb.allowedEventTypes).toEqual([]);
+  it("KHÔNG dựng được phiếu thiếu nhánh — ba việc là bắt buộc với mọi app", () => {
+    // ═══════════════════════════════════════════════════════════════════════
+    // LẬT 23/08/2026 — bài này trước đây đo ca "app chỉ có nhúng"
+    // ═══════════════════════════════════════════════════════════════════════
+    // Chủ đầu tư chốt: *"tất cả các app, đều là app nội bộ, tất cả dùng sso, ko ai được hệ
+    // riêng, trang nào cũng bắn dữ liệu về hết, kể cả thực đơn"*. Ca "chỉ có nhúng" nay
+    // không tồn tại, nên bài cũ đo một trạng thái đã bị bỏ đi.
+    //
+    // Lật thành đo CHIỀU NGƯỢC LẠI, và nó vẫn đáng canh: ngày ai đó nới khuôn cho một
+    // nhánh thành tuỳ chọn "cho nhanh", ba dòng dưới đây đỏ và buộc người đó đọc lý do.
+    const thieu = (bo: string) => {
+      const p: Record<string, unknown> = { ...PHIEU_DU };
+      delete p[bo];
+      return PhieuDauNoi.safeParse(p).success;
+    };
+    expect(thieu("urlIframe"), "thiếu nhúng mà vẫn qua").toBe(false);
+    expect(thieu("cacLoaiSuKien"), "thiếu webhook mà vẫn qua").toBe(false);
+    expect(thieu("redirectUris"), "thiếu SSO mà vẫn qua").toBe(false);
+    // `urlDangXuat` là thứ DUY NHẤT bỏ được — chưa dựng kịp thì Hub không báo được cho
+    // app lúc em thoát, nhưng ba đường chính vẫn chạy.
+    expect(thieu("urlDangXuat"), "urlDangXuat phải bỏ được").toBe(true);
+  });
+
+  it("ánh xạ: SSO luôn bật, origin tự cắt từ urlIframe, scope do Hub đặt", () => {
+    const kb = phieuThanhKhaiBao(PhieuDauNoi.parse(PHIEU_DU), "2027-02-07");
+    expect(kb.ssoEnabled).toBe(true);
+    expect(kb.origin, "origin phải cắt ra từ urlIframe, không khai tay").toBe(
+      "https://the-luc.truongvietanh.com",
+    );
+    expect(kb.ssoScopes).toEqual(["openid", "profile"]);
   });
 });
 
@@ -119,24 +132,30 @@ describe("phiếu TỪ CHỐI những gì nhà trường quyết", () => {
   }
 
   it("khối sso cũng đóng — không nhét thêm khoá lạ vào nhánh con được", () => {
-    const kq = PhieuDauNoi.safeParse({ ...PHIEU_DU, sso: { ...PHIEU_DU.sso, clientSecret: "bimat" } });
+    const kq = PhieuDauNoi.safeParse({ ...PHIEU_DU, clientSecret: "bimat" });
     expect(kq.success).toBe(false);
   });
 });
 
 describe("phiếu chặn đúng những ca hỏng câm", () => {
-  it("urlIframe lệch khỏi origin → từ chối (nếu không: CSP chặn, khung trắng, không ai hiểu vì sao)", () => {
-    const kq = PhieuDauNoi.safeParse({
-      ...PHIEU_DU,
-      nhung: { origin: "https://a.truongvietanh.com", urlIframe: "https://b.truongvietanh.com/e" },
-    });
-    expect(kq.success).toBe(false);
+  it("urlIframe KHÔNG còn lệch khỏi origin được — origin nay tự cắt ra từ chính nó", () => {
+    // Ca "khai lệch nhau" đã bị xoá khỏi thực tế 23/08/2026 bằng cách bỏ hẳn trường
+    // `origin`: một thứ chỉ khai một lần thì không tự mâu thuẫn với chính nó được.
+    // Bài cũ đo phép kiểm chéo giữa hai trường; nay đo rằng phép cắt ra ĐÚNG.
+    for (const [url, mong] of [
+      ["https://a.truongvietanh.com/e", "https://a.truongvietanh.com"],
+      ["https://b.truongvietanh.com:8443/x/y", "https://b.truongvietanh.com:8443"],
+      ["https://c.truongvietanh.com", "https://c.truongvietanh.com"],
+    ] as const) {
+      const kb = phieuThanhKhaiBao(PhieuDauNoi.parse({ ...PHIEU_DU, urlIframe: url }), "2027-02-07");
+      expect(kb.origin, url).toBe(mong);
+    }
   });
 
   it("redirect_uri http:// → từ chối (authorization_code đi qua đường không mã hoá)", () => {
     const kq = PhieuDauNoi.safeParse({
       ...PHIEU_DU,
-      sso: { ...PHIEU_DU.sso, redirectUris: ["http://the-luc.truongvietanh.com/cb"] },
+      redirectUris: ["http://the-luc.truongvietanh.com/cb"],
     });
     expect(kq.success).toBe(false);
   });
@@ -144,18 +163,19 @@ describe("phiếu chặn đúng những ca hỏng câm", () => {
   it("redirect_uri mang dấu # → từ chối (OIDC Core 3.1.2.1)", () => {
     const kq = PhieuDauNoi.safeParse({
       ...PHIEU_DU,
-      sso: { ...PHIEU_DU.sso, redirectUris: ["https://the-luc.truongvietanh.com/cb#x"] },
+      redirectUris: ["https://the-luc.truongvietanh.com/cb#x"],
     });
     expect(kq.success).toBe(false);
   });
 
-  it('thiếu scope "openid" → từ chối (không có id_token thì đây là OAuth2 trần)', () => {
-    const kq = PhieuDauNoi.safeParse({ ...PHIEU_DU, sso: { ...PHIEU_DU.sso, scopes: ["profile"] } });
-    expect(kq.success).toBe(false);
+  it("khai `scopes` → từ chối: Hub đặt, app không chọn (mọi app nội bộ dùng openid profile)", () => {
+    // Bài cũ đo 'thiếu scope openid'. Nay app KHÔNG khai scope nữa, nên ca đó không dựng
+    // được — thay bằng ca thật sự có thể xảy ra: đội làm app chép khuôn cũ ở đâu đó về.
+    expect(PhieuDauNoi.safeParse({ ...PHIEU_DU, scopes: ["profile"] }).success).toBe(false);
   });
 
   it("khai webhook mà không loại sự kiện nào → từ chối (Hub sẽ từ chối mọi lời gọi)", () => {
-    const kq = PhieuDauNoi.safeParse({ ...PHIEU_DU, webhook: { cacLoaiSuKien: [] } });
+    const kq = PhieuDauNoi.safeParse({ ...PHIEU_DU, cacLoaiSuKien: [] });
     expect(kq.success).toBe(false);
   });
 
@@ -213,7 +233,10 @@ describe("bản yêu cầu gửi ra ngoài và khuôn thật KHÔNG được tr�
       }
     }
     expect(hong).toEqual([]);
-    expect(soPhieu, "bản yêu cầu phải có ít nhất 3 ví dụ phiếu (khuôn + 2 ví dụ đầy đủ)").toBeGreaterThanOrEqual(3);
+        // HAI, không phải ba (23/08/2026): ví dụ thứ ba trước đây là "app chỉ có giao diện,
+    // webhook null" — một hình dạng nay không dựng được. Khuôn + một ví dụ đã điền là đủ,
+    // vì mọi app cùng một hình dạng thì ví dụ thứ hai không dạy thêm điều gì.
+    expect(soPhieu, "bản yêu cầu phải có khuôn + ít nhất một ví dụ đã điền").toBeGreaterThanOrEqual(2);
   });
 
   it("tài liệu nói ĐÚNG bốn khoá mà phiếu sẽ từ chối", () => {
