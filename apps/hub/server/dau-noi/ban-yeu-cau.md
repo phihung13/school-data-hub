@@ -11,9 +11,9 @@ Bạn (đội phát triển, hoặc AI được giao) sắp nối một ứng d�
 **Cách làm việc — theo đúng thứ tự này:**
 
 1. Đọc **trọn** tài liệu này. Không lướt.
-2. Viết mã theo mục 3–6.
-3. Chạy **hết** phần tự kiểm ở mục 7 và bộ kiểm thử ở mục 8. Tự chạy thật, không suy luận là "chắc chạy được".
-4. Trả về **ĐÚNG MỘT KHỐI JSON** theo mục 9.
+2. Viết mã theo mục 3–5.
+3. Chạy **hết** phần tự kiểm ở mục 6. Tự chạy thật, không suy luận là "chắc chạy được".
+4. Trả về **ĐÚNG MỘT KHỐI JSON** theo mục 7.
 
 **Về bước 4 — đây là yêu cầu cứng:**
 
@@ -23,7 +23,9 @@ Bạn (đội phát triển, hoặc AI được giao) sắp nối một ứng d�
 
 Nếu bạn **không hoàn thành được** một phần nào đó: vẫn trả về JSON, nhưng **bỏ hẳn** nhánh tương ứng (`nhung` hoặc `sso` để `null`). Đừng khai một nhánh chưa chạy được — khai rồi mà không chạy là dạng hỏng tệ nhất ở đây: nó im lặng, và người phát hiện ra là một cô giáo đang cần dùng.
 
-**Nhánh `webhook` thì không bỏ được** — mọi app phải đổ dữ liệu về (mục 4). Chưa làm kịp thì **báo lại nhà trường**, đừng lặng lẽ để `null`.
+**Nhánh `webhook`** — mặc định là **bắt buộc**: mọi app sinh ra dữ liệu đều phải đổ về (mục 4). Có **đúng một ngoại lệ**, và mục 4 định nghĩa nó: app **thuần hiển thị nội dung chung**, không sinh ra bản ghi nào của riêng nó (thực đơn, bảng tin, trang giới thiệu). App đó để `"webhook": null` — hợp lệ, xem ví dụ ở mục 7.5.
+
+Nếu app bạn **có** sinh ra bản ghi (ai làm gì, lúc nào, kết quả ra sao) mà chưa kịp làm webhook: **báo lại nhà trường**, đừng lặng lẽ để `null`. Để `null` cho một app có dữ liệu là khai sai, và cái sai đó im lặng.
 
 ---
 
@@ -185,7 +187,7 @@ sha256(ma-app + ma-em + ngay + loai-su-kien)
 | `202` | Đã nhận, **chưa** vào kho, đang nằm hàng đợi lỗi chờ người xử | **KHÔNG gửi lại.** Gửi lại không sửa được gì |
 | `400` | Thân request sai khuôn | Sửa mã |
 | `401` | Sai mã app hoặc sai chuỗi bí mật | Hỏi nhà trường |
-| `403` | `event_type` này chưa được khai trong hồ sơ | Khai vào phiếu (mục 9) rồi xin duyệt |
+| `403` | `event_type` này chưa được khai trong hồ sơ | Khai vào phiếu (mục 7) rồi xin duyệt |
 | `503` | Hub tạm trục trặc | Thử lại sau, có giãn cách tăng dần |
 
 ### 4.5 Điều Hub KHÔNG hứa, nói trước để không ai hiểu nhầm
@@ -239,64 +241,7 @@ Nhà trường cấp **một chuỗi duy nhất, dùng chung cho tất cả các
 
 ---
 
-## 6. YÊU CẦU GIAO DIỆN — app của bạn chạy trong khung của Hub, không phải một mình
-
-Người dùng thật ở đây: **học sinh cấp 1–2, phụ huynh, giáo viên**, phần lớn dùng **điện thoại**, nhiều người dùng mạng trường. Đây không phải phần "làm cho đẹp"; app không đạt các mục dưới đây sẽ bị trả lại.
-
-### 6.1 Điện thoại trước, và đo được
-
-- Chạy đúng từ **375px** chiều ngang. **Không tràn ngang** — không bao giờ có thanh cuộn ngang trên toàn trang. Bảng, biểu đồ, khối mã dài phải tự cuộn **bên trong khung của nó**.
-- **Mọi thứ bấm được đều ≥ 44×44px.** Nút, ô tích, liên kết, nút đóng. Đây là con số cứng, không phải gợi ý.
-- **Tương phản chữ ≥ 4,5:1** trên nền thật của nó. Chữ xám nhạt trên nền xám nhạt bị trả lại.
-- **Màu không bao giờ là tín hiệu duy nhất.** Trạng thái phải đọc được thành chữ — người mù màu và người nghe bằng trình đọc màn hình đều phải hiểu.
-
-### 6.2 Chữ trên màn — ít chữ, và không có chữ thừa
-
-Đây là yêu cầu của chủ đầu tư, nói nguyên văn: *"ngôn ngữ phải được thể hiện qua thiết kế chứ không phải chữ viết"*.
-
-**CẤM:**
-
-- Chữ quảng cáo, chữ chào mừng, khẩu hiệu.
-- Chữ giải thích cách dùng giao diện ("Bấm vào đây để…", "Bạn có thể…"). Nếu phải giải thích thì thiết kế sai.
-- Chữ trấn an dài dòng ("Đừng lo, dữ liệu của bạn an toàn…").
-- **Thông tin nội tình hệ thống**: tên job nền, trạng thái cron, "đang đồng bộ", mã lỗi kỹ thuật, tên bảng dữ liệu, mã nội bộ. Người dùng không cần biết và không nên biết.
-
-**BẮT BUỘC:**
-
-- Tiếng Việt, có dấu, đúng chính tả.
-- Nhãn của một hành động nói đúng việc nó làm ("Gửi báo cáo", không phải "Xác nhận").
-- **Hai giọng, không trộn:** màn cho học sinh và phụ huynh dùng giọng khích lệ, gần gũi; màn cho giáo viên và ban giám hiệu dùng giọng nghiệp vụ, gọn. Không bao giờ in chữ nghiệp vụ ("cờ", "định mức", "leo thang") lên màn hình một đứa lớp 6 đọc.
-- Mọi hành động có **phản hồi thấy được** — bấm xong phải biết là đã xong hay đã hỏng.
-
-### 6.3 Ba trạng thái không được quên
-
-Mỗi màn có dữ liệu phải xử lý đủ:
-
-| Trạng thái | Yêu cầu |
-|---|---|
-| **Đang tải** | Có dấu hiệu đang tải. Không màn trắng im lặng |
-| **Rỗng** | Nói rõ "chưa có gì" và **chỉ đường làm gì tiếp**. Một bảng trống không nhãn đọc thành "hỏng" |
-| **Lỗi** | Nói bằng tiếng Việt người thường hiểu, **kèm một đường ra** (nút thử lại). Không in mã lỗi kỹ thuật lên màn |
-
-### 6.4 Nút không dùng được thì ẨN, đừng làm mờ
-
-Một nút xám mà bấm không được là một câu đố. Nếu người dùng hiện tại không được làm việc đó, **đừng vẽ nút đó ra**.
-
-### 6.5 Đủ vòng đời, không nửa vời
-
-Nếu app cho **tạo** một thứ thì phải cho **xem, sửa, xoá** thứ đó. Một màn chỉ tạo được mà không sửa được là một màn chưa xong. Với danh sách: có tìm kiếm/lọc nếu danh sách vượt một màn, và **chọn hàng loạt** nếu người dùng thật sự sẽ thao tác trên nhiều dòng.
-
-### 6.6 Nghĩ ở quy mô thật
-
-Màn hình của bạn phải còn đọc được với **10 dòng, 100 dòng, 10.000 dòng**. Một bảng đổ hết 10.000 dòng ra trình duyệt là một màn hình đã hỏng ở trường thứ hai.
-
-### 6.7 Không phụ thuộc mạng ngoài
-
-Mạng trường có lọc nội dung. **Tự host phông chữ, icon và thư viện** — đừng nạp từ CDN ngoài. Một icon không tải được thành một ô trống, không báo lỗi, và không ai biết.
-
----
-
-## 7. TỰ KIỂM — chạy hết trước khi trả JSON
+## 6. TỰ KIỂM — chạy hết trước khi trả JSON
 
 Đánh dấu từng dòng. **Chưa chạy thật thì không được đánh dấu.**
 
@@ -332,43 +277,11 @@ Mạng trường có lọc nội dung. **Tự host phông chữ, icon và thư v
 - [ ] Lưu định danh theo `(issuer, subject)`.
 - [ ] Nếu có `backchannelLogoutUri`: đã kiểm chữ ký `logout_token` bằng JWKS.
 
-**Giao diện**
-
-- [ ] Đã mở ở **375px** và không có thanh cuộn ngang.
-- [ ] Đã đo: mọi thứ bấm được ≥ 44×44px.
-- [ ] Đã đo tương phản chữ ≥ 4,5:1.
-- [ ] Có đủ ba trạng thái: đang tải / rỗng / lỗi — **mỗi trạng thái có một đường ra**.
-- [ ] Không còn chữ giải thích, chữ quảng cáo, chữ trấn an.
-- [ ] Không nút nào bị làm mờ thay vì ẩn.
-- [ ] Phông chữ và icon tự host.
-
 ---
 
-## 8. KIỂM THỬ BẮT BUỘC — chạy thật, ghi lại kết quả
+## 7. TRẢ VỀ — ĐÚNG MỘT KHỐI JSON, KHÔNG CHỮ NÀO KHÁC
 
-| # | Phép thử | Cách làm | Đạt khi |
-|---|---|---|---|
-| 1 | Nhúng được | `curl -I <url-embed>` | Có `frame-ancestors` Hub, không có `X-Frame-Options` |
-| 2 | Bắt tay khung | Mở app trong Hub | App hiện ra trong ≤10 giây, không màn trắng |
-| 3 | Thông điệp giả mạo | Gửi `postMessage` từ một origin **lạ** | App **bỏ qua**, không xử lý, không lỗi |
-| 4 | Gửi trùng | Bắn cùng một webhook **hai lần** | Lần hai `already_promoted`, kho chỉ có **một** bản ghi |
-| 5 | Thiếu `external_id` | Bắn webhook không có trường đó | Bị từ chối `400` |
-| 6 | Sai chuỗi bí mật | Bắn webhook với secret sai | `401` |
-| 7 | Loại sự kiện lạ | Bắn `event_type` chưa khai | `403` |
-| 8 | Đăng nhập | Đăng nhập qua Hub bằng ba vai khác nhau | Cả ba vào được, app đọc đúng `sub` |
-| 9 | Đăng nhập lần hai | Cùng người, đăng nhập lại | **Không** sinh tài khoản thứ hai trong app |
-| 10 | Mất quyền giữa chừng | Nhà trường khoá tài khoản, app xin token mới | App xử lý êm, không màn trắng, không vòng lặp |
-| 11 | Đăng xuất từ Hub | Thoát khỏi Hub | App nhận `logout_token`, kiểm chữ ký, đóng phiên |
-| 12 | Điện thoại | Mở ở 375px, xoay ngang, xoay dọc | Không tràn ngang ở cả hai chiều |
-| 13 | Bàn phím | Dùng **chỉ bàn phím**, Tab qua toàn màn | Mọi thứ bấm được đều tới được, và **thấy được** đang ở đâu |
-| 14 | Rỗng | Xoá hết dữ liệu rồi mở màn | Có chữ nói "chưa có gì" + một đường ra |
-| 15 | Mạng hỏng | Ngắt mạng giữa một thao tác | Có thông báo tiếng Việt + nút thử lại |
-
----
-
-## 9. TRẢ VỀ — ĐÚNG MỘT KHỐI JSON, KHÔNG CHỮ NÀO KHÁC
-
-### 9.1 Khuôn
+### 7.1 Khuôn
 
 ```json
 {
@@ -393,7 +306,7 @@ Mạng trường có lọc nội dung. **Tự host phông chữ, icon và thư v
 }
 ```
 
-### 9.2 Từng khoá
+### 7.2 Từng khoá
 
 | Khoá | Bắt buộc | Luật |
 |---|---|---|
@@ -422,7 +335,7 @@ Mạng trường có lọc nội dung. **Tự host phông chữ, icon và thư v
 | `hub_profile` | Vai trò, cơ sở, lớp | **Chỉ khi** app thật sự phân quyền theo vai |
 | `offline_access` | Giữ phiên dài, tự gia hạn | **Chỉ khi** app cần chạy nền, không có người ngồi trước máy |
 
-### 9.3 BỐN THỨ BẠN KHÔNG ĐƯỢC KHAI
+### 7.3 BỐN THỨ BẠN KHÔNG ĐƯỢC KHAI
 
 Nhà trường quyết, không phải bạn. Có mặt trong JSON là **phiếu bị từ chối**:
 
@@ -433,7 +346,7 @@ Nhà trường quyết, không phải bạn. Có mặt trong JSON là **phiếu 
 | Ngày rà lại | Nhà trường đặt, mặc định 6 tháng |
 | Tên biến chứa chuỗi bí mật | Hub tự sinh theo mã app. Bạn nhận **giá trị** từ người vận hành, không đặt tên biến |
 
-### 9.4 Ví dụ một phiếu hoàn chỉnh
+### 7.4 Ví dụ một phiếu hoàn chỉnh
 
 ```json
 {
@@ -458,7 +371,7 @@ Nhà trường quyết, không phải bạn. Có mặt trong JSON là **phiếu 
 }
 ```
 
-### 9.5 App chỉ có giao diện, không có webhook, không có đăng nhập
+### 7.5 App chỉ có giao diện, không có webhook, không có đăng nhập
 
 ```json
 {
@@ -479,7 +392,7 @@ Nhà trường quyết, không phải bạn. Có mặt trong JSON là **phiếu 
 
 ---
 
-## 10. Chuyện gì xảy ra sau khi bạn gửi JSON
+## 8. Chuyện gì xảy ra sau khi bạn gửi JSON
 
 1. Quản trị **dán** phiếu của bạn vào màn quản trị Hub. App được khai — **đang TẮT, chưa cấp cho vai nào**.
 2. Người vận hành đặt chuỗi bí mật lên máy chủ Hub và gửi giá trị cho bạn qua kênh an toàn.
