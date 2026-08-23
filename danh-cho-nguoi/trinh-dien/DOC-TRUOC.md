@@ -42,7 +42,7 @@ một lượt tô GPU, gần như miễn phí, và là màu người thiết k�
 | | trước | nay | qua tunnel |
 |---|---|---|---|
 | Nền đăng nhập | 10,07 MB · 10,6 Mbps | **1,55 MB · 1,6 Mbps** | 4,43s → **1,68s** |
-| Video intro | 17,10 MB · 14,3 Mbps | **3,44 MB · 2,9 Mbps** | → 4,3s (tải sẵn từ màn đăng nhập) |
+| Video intro | 17,10 MB · 14,3 Mbps | **3,44 MB · 2,9 Mbps** | → 4,9s (tải sẵn từ màn đăng nhập) |
 | Ảnh nền tĩnh | *(không có)* | **0,05 MB** | **0,31s** |
 
 **Ảnh nền tĩnh (`poster`) mới là thứ chữa triệu chứng "video chưa chạy".** Trước đây
@@ -104,6 +104,24 @@ bốn màn căn theo `#root` đã co và lộ viền trống quanh mép. `zoom` 
 Vì sao không viết lại CSS cho co giãn: đây là **file thiết kế**, đồng bộ lại từ Claude
 Design là ghi đè. Sửa hàng chục cỡ pixel là tạo một bản rẽ nhánh sẽ mất ở lần đồng bộ sau.
 Một khối script thêm vào cuối thì sống sót được.
+
+### Cả hai video đều dựng từ NGUỒN 4K
+
+| Đang dùng | Nguồn |
+|---|---|
+| `su-tu-chay.mp4` (nền đăng nhập) | `Armored_lion_mascot_running_loop_202608220945.mp4` — 3840×2160, 24 MB |
+| `intro-software.mp4` | `Armored_lion_software_intro_anim…_202608221018.mp4` — 3840×2160, 34 MB |
+
+Cả hai đều **xuống thang bằng lanczos**, không chiếu 4K trực tiếp: 3840×2160 là 4× số điểm
+ảnh mỗi khung, trong khi màn hình chỉ hiển thị tối đa ~1920 chiều ngang. Dùng 4K làm nguồn
+cho ảnh nét hơn bản 1080 xuất sẵn, mà chi phí giải mã không tăng.
+
+Kiểm mỗi lần đổi video, và đây là phép kiểm đã cứu một lần: **trích một khung từ bản cũ và
+bản mới rồi NHÌN**, đừng chỉ tin SSIM. Lần đổi video nền, SSIM giữa hai bản chỉ 0,934 —
+trông như hai bản cắt khác nhau. Nhìn ảnh thì thấy cùng khung hình y hệt, con số thấp chỉ
+vì chênh độ nét. Tin số mà không nhìn thì đã đi sửa nhầm chỗ.
+
+SSIM bản intro mới so nguồn 4K xuống thang: **0,972**.
 
 ### fps giữ nguyên 24 — cố ý
 
