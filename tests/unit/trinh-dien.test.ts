@@ -190,3 +190,68 @@ describe("video intro — vừa màn và chạy trước khi lộ diện", () =>
     expect(TRANG).toMatch(/currentTime > 0\.0\d.*currentTime = 0/s);
   });
 });
+
+// ---------------------------------------------------------------------------
+// AV1 TRƯỚC, H.264 SAU — và cái bẫy làm mất hẳn đường lui
+// ---------------------------------------------------------------------------
+// Chủ đầu tư 23/08/2026: *"video intro hơi mờ, có phải bạn giảm chất lượng ko"* — có, và
+// đo được: VMAF của bản H.264 2,9 Mbps chỉ **89,5**, đúng mức mắt bắt đầu thấy mờ. SSIM
+// 0,972 mà tôi tin trước đó đo cấu trúc, không đo độ nét.
+//
+// Rồi: *"có cách nào giảm dung lượng nhưng chất lượng giữ nguyên"* — có, đổi codec.
+// Cùng nguồn 4K, cùng 1080p24, đo bằng VMAF so nguồn xuống thang:
+//
+//     H.264  3,44 MB  →  89,5      (đang chạy, mờ)
+//     AV1    2,51 MB  →  94,9      nhỏ hơn VÀ nét hơn
+//     AV1    3,58 MB  →  97,7      ← chọn: cùng cỡ, chất lượng nhảy 8 điểm
+//     AV1    5,16 MB  →  99,1
+//     H.264 10,32 MB  →  99,5      H.264 cần GẤP BA để bằng AV1
+//
+// BÀI NÀY CANH ĐƯỜNG LUI, không canh chất lượng. Hai cách làm mất nó, cả hai đều im lặng:
+//
+//   1. Thẻ `<video>` mang `src=` trực tiếp. Thuộc tính đó ÁT hết mọi `<source>` bên trong,
+//      nên bản AV1 không bao giờ được dùng — hoặc tệ hơn, nếu `src` trỏ bản AV1 thì máy
+//      không đọc được AV1 sẽ chết hẳn thay vì rơi xuống H.264.
+//   2. Hai `<source>` cùng ghi `type="video/mp4"` trơn. Trình duyệt không có cách nào biết
+//      cái đầu là AV1, nó nhận cái đầu rồi chết ở đó. Chuỗi codec RFC 6381 phải khai chính
+//      xác — `av01.0.08M.08`, lấy từ ffprobe: Main profile, level 8, tier Main, 8 bit.
+describe("trang trình diễn — AV1 trước, H.264 làm đường lui", () => {
+  const TRANG = readFileSync(
+    join(fileURLToPath(new URL("../../", import.meta.url)), "apps/hub/public/trinh-dien/index.html"),
+    "utf8",
+  );
+
+  it("KHÔNG thẻ <video> nào mang `src=` — nó át hết <source> bên trong", () => {
+    expect(TRANG, "còn <video src=…>, bản AV1 sẽ không bao giờ được dùng").not.toMatch(
+      /<video[^>]*\ssrc=/,
+    );
+  });
+
+  it("mỗi video có ĐÚNG hai nguồn: AV1 trước, H.264 sau", () => {
+    for (const the of ['<video class="cin-bg"', '<video id="intro-video"']) {
+      const i = TRANG.indexOf(the);
+      expect(i, `không thấy ${the}`).toBeGreaterThan(-1);
+      const khoi = TRANG.slice(i, TRANG.indexOf("</video>", i));
+      // Thuộc tính dùng nháy đơn bọc ngoài, nháy kép bên trong — bắt cả hai kiểu.
+      // Thuộc tính dùng nháy ĐƠN bọc ngoài, nháy KÉP bên trong:
+      //     type='video/mp4; codecs="av01.0.08M.08"'
+      // Bản đầu của regex này dừng ở dấu nháy kép đầu tiên nên chỉ lấy được nửa chuỗi.
+      const src = [...khoi.matchAll(/<source src="([^"]+)"[^>]*type=('[^']*'|"[^"]*")/g)].map(
+        (m) => [m[1], m[2].slice(1, -1)] as const,
+      );
+      expect(src.length, `${the} không có đúng 2 nguồn`).toBe(2);
+      expect(src[0][1], "nguồn đầu phải khai codec AV1").toContain("av01.0.08M.08");
+      expect(src[1][1].trim(), "nguồn hai phải là mp4 trơn (H.264)").toBe("video/mp4");
+      expect(src[0][0], "nguồn đầu phải là file av1").toMatch(/av1\.mp4$/);
+    }
+  });
+
+  it("hai nguồn KHÔNG được cùng một kiểu — trùng kiểu là mất đường lui", () => {
+    // Nếu cả hai cùng `video/mp4` trơn thì trình duyệt nhận cái đầu rồi chết ở đó.
+    const kieu = [...TRANG.matchAll(/<source[^>]*type=('[^']*'|"[^"]*")/g)].map((m) =>
+      m[1].slice(1, -1).trim(),
+    );
+    expect(kieu.length).toBe(4);
+    expect(new Set(kieu).size, "bốn nguồn chỉ có một kiểu — không phân biệt được").toBe(2);
+  });
+});

@@ -152,6 +152,57 @@ lại byte nào, nên người xem vẫn được xem trọn đoạn intro từ 
 Ba bài canh trong `tests/unit/trinh-dien.test.ts`, đã thử ngược cả ba: dựng lại transform ·
 bỏ lời gọi chạy trước · chạy trước mà không câm.
 
+### AV1 — cùng dung lượng, chất lượng hơn hẳn
+
+Chủ đầu tư 23/08/2026: *"video intro hơi mờ, có phải bạn giảm chất lượng ko"*. **Có** — và
+đo được: bản H.264 2,9 Mbps chỉ đạt **VMAF 89,5**, đúng mức mắt bắt đầu thấy mờ.
+
+Bài học: **SSIM 0,972 mà tôi tin trước đó đo CẤU TRÚC, không đo độ nét.** VMAF sát cảm nhận
+mắt hơn nhiều, và nó nói ngay ra vấn đề. Từ nay đo video bằng VMAF.
+
+Rồi: *"có cách nào giảm dung lượng nhưng chất lượng giữ nguyên"*. Có — **đổi codec**. Cùng
+nguồn 4K, cùng 1080p24, đo VMAF so nguồn xuống thang:
+
+| Bản | Dung lượng | VMAF |
+|---|---|---|
+| H.264 (đang chạy, mờ) | 3,44 MB | 89,5 |
+| AV1 | 2,51 MB | 94,9 |
+| **AV1 — đã chọn** | **3,58 MB** | **97,7** |
+| AV1 | 5,16 MB | 99,1 |
+| H.264 chất lượng tương đương | 10,32 MB | 99,5 |
+
+**H.264 cần gấp ba dung lượng để bằng AV1.** Chọn AV1 ở 3,58 MB: gần đúng cỡ cũ, chất lượng
+nhảy 8 điểm VMAF. Video nền cũng đổi: 92,6 → **97,5** với thêm 0,2 MB.
+
+### Đường lui H.264 — và hai cách làm mất nó, cả hai đều im lặng
+
+Mỗi video có hai `<source>`: AV1 trước, H.264 sau. Chrome/Edge/Firefox đọc AV1; máy nào
+không đọc được thì rơi xuống H.264.
+
+**Cách mất thứ nhất:** thẻ `<video>` mang `src=` trực tiếp. Thuộc tính đó **át hết** mọi
+`<source>` bên trong — bản AV1 không bao giờ được dùng, hoặc tệ hơn, nếu `src` trỏ bản AV1
+thì máy không đọc được AV1 chết hẳn thay vì rơi xuống.
+
+**Cách mất thứ hai:** hai `<source>` cùng ghi `type="video/mp4"` trơn. Trình duyệt không có
+cách nào biết cái đầu là AV1 — nó nhận cái đầu rồi chết ở đó. Chuỗi codec RFC 6381 phải
+khai **chính xác**: `av01.0.08M.08` (Main profile, level 8, tier Main, 8 bit — lấy bằng
+`ffprobe`, không đoán).
+
+Ba bài canh trong `tests/unit/trinh-dien.test.ts`, đã thử ngược cả hai cách mất trên.
+
+### Lệnh AV1
+
+```
+# Video intro
+ffmpeg -i <4k>.mp4 -vf "scale=1920:1080:flags=lanczos" -r 24   -c:v libsvtav1 -preset 4 -crf 38 -g 48 -pix_fmt yuv420p   -c:a libopus -b:a 96k -movflags +faststart intro-av1.mp4
+
+# Video nền (bỏ tiếng, 720p vì nằm sau lớp phủ tối)
+ffmpeg -i <4k>.mp4 -vf "scale=1280:720:flags=lanczos" -r 24   -c:v libsvtav1 -preset 4 -crf 38 -g 48 -pix_fmt yuv420p -an   -movflags +faststart su-tu-av1.mp4
+
+# Đo chất lượng — DÙNG VMAF, đừng dùng SSIM
+ffmpeg -i <ban-nen>.mp4 -i <4k>.mp4   -lavfi "[1:v]scale=1920:1080:flags=lanczos,setpts=PTS-STARTPTS[r];          [0:v]setpts=PTS-STARTPTS[d];[d][r]libvmaf" -f null -
+```
+
 ### fps giữ nguyên 24 — cố ý
 
 Chủ đầu tư đề nghị giảm fps. Đo ra **cả ba video vốn đã là 24 fps**, nên đó không phải chỗ
