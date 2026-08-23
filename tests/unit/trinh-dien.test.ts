@@ -14,6 +14,9 @@
 //      `.html`, KHÔNG loại `.mp4`. Nghĩa là chính trang trình diễn cũng chạy qua
 //      middleware. Thiếu nhánh `/trinh-dien` là nó tự viết lại về chính nó, vòng vô tận.
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { chieuTrinhDien, CUA_VAO_TRINH_DIEN } from "@/lib/trinh-dien";
 
 const T = (bat: boolean, pathname: string, that: string | null = null) =>
@@ -70,5 +73,62 @@ describe("công tắc trình diễn", () => {
 
   it("ba cửa vào là ĐÚNG BA — thêm cửa thứ tư phải là một quyết định, không phải một lần gõ", () => {
     expect([...CUA_VAO_TRINH_DIEN].sort()).toEqual(["/", "/home", "/login"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TRANG TRÌNH DIỄN PHẢI PHỦ TRỌN MÀN
+// ---------------------------------------------------------------------------
+// Chủ đầu tư hỏi 23/08/2026: *"bạn đã cho chiều cao video bằng chiều cao màn chưa"*.
+//
+// Đọc chuỗi thừa kế trong CSS thì câu hỏi đó rút gọn được:
+//
+//     html      zoom: k                      ← thêm 23/08 để trang vừa màn nhỏ
+//      └ .scene position:fixed; inset:0
+//         └ .cin-bg position:absolute; inset:0; width:100%; height:100%; object-fit:cover
+//
+// `.cin-bg` bằng đúng `.scene`, và `object-fit:cover` luôn phủ kín hộp cả hai chiều. Nên
+// "video có cao bằng màn không" = "`.scene` có bằng đúng màn không".
+//
+// Trước khi có `zoom` thì chắc chắn. SAU khi có, nó phụ thuộc vào việc trình duyệt giải
+// nghĩa `position:fixed` trong hệ toạ độ đã thu nhỏ hay chưa — hai cách hiểu, hai kết quả,
+// và cách hiểu sai để lộ viền trống ở mép phải và mép dưới.
+//
+// Nên script không dựa vào cách hiểu nào: nó ĐẶT THẲNG kích thước bằng số cho mọi phần tử
+// phủ trọn màn. Bài test này canh đúng một điều — DANH SÁCH ĐÓ KHÔNG ĐƯỢC SÓT. Thêm một
+// phần tử `fixed; inset:0` mới mà quên khai vào script thì nó hụt mép, và hụt lặng lẽ.
+describe("trang trình diễn — mọi lớp phủ màn đều được ép kích thước", () => {
+  const TRANG = readFileSync(
+    join(fileURLToPath(new URL("../../", import.meta.url)), "apps/hub/public/trinh-dien/index.html"),
+    "utf8",
+  );
+
+  /** Selector có `position:fixed` VÀ `inset:0` — tức khai ý định phủ trọn màn. */
+  function phuTronMan(): string[] {
+    const ra = new Set<string>();
+    for (const m of TRANG.matchAll(/([#.][A-Za-z0-9_-]+)\{([^}]*)\}/g)) {
+      if (m[2].includes("position:fixed") && m[2].includes("inset:0")) ra.add(m[1]);
+    }
+    return [...ra].sort();
+  }
+
+  it("script ép kích thước ĐÚNG danh sách phần tử phủ màn — không sót, không thừa", () => {
+    const khai = TRANG.match(/var PHU_MAN = "([^"]+)"/);
+    expect(khai, "không tìm thấy danh sách trong script").not.toBeNull();
+    expect(khai![1].split(",").sort()).toEqual(phuTronMan());
+  });
+
+  it("có ít nhất `.scene` trong danh sách — nó là thứ quyết định chiều cao video", () => {
+    // Mẫu số: nếu regex hỏng hoặc file đọc ra rỗng thì bài trên xanh vì hai mảng cùng rỗng.
+    expect(phuTronMan()).toContain(".scene");
+    expect(phuTronMan().length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("video nền vẫn `inset:0` + `cover` — bỏ một trong hai là video hết phủ kín", () => {
+    const bg = TRANG.match(/\.cin-bg\{([^}]*)\}/);
+    expect(bg, "không tìm thấy .cin-bg").not.toBeNull();
+    expect(bg![1]).toContain("inset:0");
+    expect(bg![1]).toContain("height:100%");
+    expect(bg![1]).toContain("object-fit:cover");
   });
 });

@@ -65,6 +65,37 @@ do cắt khác.)*
 
 Đã thêm một khối `<script>` cuối trang đặt `zoom` theo `min(rộng/1600, cao/900, 1)`.
 
+### Và ép kích thước sáu lớp phủ màn bằng SỐ
+
+Phần này thêm sau khi chủ đầu tư hỏi *"bạn đã cho chiều cao video bằng chiều cao màn
+chưa"* — câu hỏi chạm đúng chỗ khối `zoom` vừa làm hỏng mà chưa ai kiểm.
+
+Đọc chuỗi thừa kế trong CSS thì câu hỏi rút gọn được:
+
+```
+html          zoom: k
+ └ .scene     position:fixed; inset:0
+    └ .cin-bg position:absolute; inset:0; height:100%; object-fit:cover
+```
+
+`.cin-bg` bằng đúng `.scene`, và `object-fit:cover` luôn phủ kín hộp cả hai chiều — nên
+*"video có cao bằng màn"* chính là *"`.scene` có bằng đúng màn"*.
+
+**Trước** khi có `zoom`: chắc chắn, vì `fixed; inset:0` là viewport.
+**Sau** khi có: phụ thuộc vào việc trình duyệt giải nghĩa `position:fixed` trong hệ toạ độ
+đã thu nhỏ hay chưa. Hai cách hiểu cho hai kết quả, và cách hiểu sai để lộ viền trống ở
+mép phải và mép dưới — tức video **không** cao bằng màn.
+
+Nên script không dựa vào cách hiểu nào cả: nó đặt thẳng `innerWidth/k` và `innerHeight/k`
+cho sáu phần tử phủ màn (`.scene`, `#gl`, `#flash`, `#vignette`, `#modal`, `#blackout`).
+Nhân với hệ số thu `k` ra đúng số điểm ảnh thật của màn hình.
+
+Danh sách sáu phần tử đó **đối chiếu bằng cách đọc CSS**, không gõ tay — quét mọi selector
+có `position:fixed` kèm `inset:0`.
+
+`tests/unit/trinh-dien.test.ts` canh danh sách đó khớp CSS. **Thêm một phần tử
+`fixed; inset:0` mới mà quên khai vào script thì nó hụt mép, và hụt lặng lẽ.**
+
 Vì sao `zoom` chứ không `transform: scale()`: `.scene` là `position:fixed; inset:0`. Đặt
 `transform` lên tổ tiên của phần tử `fixed` sẽ biến tổ tiên thành khung tham chiếu mới,
 bốn màn căn theo `#root` đã co và lộ viền trống quanh mép. `zoom` co cả hệ toạ độ nên

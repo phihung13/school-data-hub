@@ -1517,30 +1517,63 @@ function step(now){
 requestAnimationFrame(step);
 })();</script>
 <script>
-/* THU VỪA MÀN HÌNH — thêm 23/08/2026, sau khi chủ đầu tư báo "nó còn scale lên to nữa".
+/* THU VỪA MÀN HÌNH — 23/08/2026.
  *
- * Đo ra nguyên nhân: trang này có ĐÚNG 0 media query. Mọi thứ là pixel cứng — tiêu đề
+ * VÌ SAO CẦN: trang này có ĐÚNG 0 media query. Mọi kích thước là pixel cứng — tiêu đề
  * 72px, panel `right:64px bottom:110px max-width:560px`, logo `left:40px top:26px` —
- * dựng cho một màn hình rộng khoảng 1600×900. Mở trên màn nhỏ hơn thì mọi thứ vẫn giữ
- * nguyên số pixel đó, nên chiếm phần màn lớn hơn nhiều: đó chính là cảm giác "to".
+ * dựng cho màn rộng ~1600×900. Mở trên màn nhỏ hơn thì mọi thứ giữ nguyên số pixel đó
+ * nên chiếm phần màn lớn hơn nhiều. Đó là cảm giác "scale lên to".
  *
- * VÌ SAO `zoom` CHỨ KHÔNG `transform: scale()`:
- * `.scene` là `position:fixed; inset:0`. Đặt `transform` lên tổ tiên của một phần tử
- * `fixed` sẽ biến tổ tiên đó thành khung tham chiếu mới — bốn màn sẽ căn theo `#root` đã
- * bị co, để lộ viền trống quanh mép. `zoom` co cả hệ toạ độ nên `fixed` vẫn bám viewport.
+ * VÌ SAO `zoom` CHỨ KHÔNG `transform: scale()`: sáu phần tử ở đây là `position:fixed`
+ * (`.scene`, `#gl`, `#flash`, `#vignette`, `#modal`, `#blackout`). Đặt `transform` lên
+ * tổ tiên của một phần tử `fixed` biến tổ tiên đó thành khung tham chiếu mới, nên cả sáu
+ * sẽ căn theo `#root` đã co và lộ viền trống quanh mép.
  *
- * VÌ SAO KHÔNG VIẾT LẠI CSS CHO CO GIÃN: đây là file THIẾT KẾ, đồng bộ lại từ dự án
- * Claude Design là ghi đè. Sửa hàng chục cỡ pixel ở đây là tạo một bản rẽ nhánh sẽ mất
- * trong lần đồng bộ sau. Một dòng `zoom` thì sống sót được vì nó là phần THÊM VÀO.
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * VÀ ĐÂY LÀ PHẦN QUAN TRỌNG: KHÔNG ĐỂ CHIỀU CAO VIDEO PHỤ THUỘC VÀO SUY ĐOÁN
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * Chuỗi thừa kế của video nền, đọc từ CSS:
  *
- * Lấy min của hai chiều để không tràn theo chiều nào; chặn trên ở 1 để màn to hơn thiết
- * kế thì giữ nguyên, không phóng lên (phóng lên là làm mờ).
+ *     html      zoom: k
+ *      └ .scene position:fixed; inset:0
+ *         └ .cin-bg position:absolute; inset:0; width:100%; height:100%; object-fit:cover
+ *
+ * `.cin-bg` bằng đúng `.scene`, và `cover` luôn phủ kín hộp. Nên câu hỏi "video có cao
+ * bằng màn không" rút lại thành "`.scene` có bằng đúng màn không".
+ *
+ * Trước khi có `zoom`, câu trả lời chắc chắn: `fixed; inset:0` = viewport. SAU khi có
+ * `zoom`, nó phụ thuộc vào việc trình duyệt giải nghĩa `fixed` trong hệ toạ độ nào —
+ * đã thu nhỏ hay chưa. Hai cách hiểu cho hai kết quả khác nhau, và cách hiểu sai để lộ
+ * viền trống ở mép phải và mép dưới, tức video KHÔNG cao bằng màn.
+ *
+ * Nên không dựa vào cách hiểu nào cả: đặt thẳng kích thước bằng số. `innerWidth/k` CSS px
+ * nhân với hệ số thu `k` cho ra đúng `innerWidth` điểm ảnh thật — đúng bằng màn hình,
+ * bất kể trình duyệt nghĩ gì về `fixed`.
+ *
+ * Chặn trên ở 1: màn to hơn bản thiết kế thì giữ nguyên, không phóng lên (phóng lên là
+ * làm mờ chữ và ảnh).
  */
 (function () {
   var RONG = 1600, CAO = 900;
+  /* Sáu phần tử phủ trọn màn. Giữ đúng danh sách này — thêm một phần tử `fixed; inset:0`
+     mới mà quên thêm vào đây là nó hụt mép, và hụt lặng lẽ. */
+  var PHU_MAN = ".scene,#gl,#flash,#vignette,#modal,#blackout";
   function vua() {
     var k = Math.min(innerWidth / RONG, innerHeight / CAO, 1);
-    document.documentElement.style.zoom = k < 0.999 ? k : "";
+    var el = document.documentElement;
+    if (k > 0.999) {
+      el.style.zoom = "";
+      document.querySelectorAll(PHU_MAN).forEach(function (n) {
+        n.style.width = n.style.height = "";
+      });
+      return;
+    }
+    el.style.zoom = k;
+    var w = innerWidth / k + "px", h = innerHeight / k + "px";
+    document.querySelectorAll(PHU_MAN).forEach(function (n) {
+      n.style.width = w;
+      n.style.height = h;
+    });
   }
   vua();
   addEventListener("resize", vua);
