@@ -65,3 +65,54 @@ Không phải lỗi — nhưng ai mang đi trình bày cần biết mình đang 
 
 Muốn trang trình diễn khớp app thật thì sửa ở **dự án Claude Design trước**, rồi đồng bộ
 lại về đây — đừng sửa thẳng file này, vì lần đồng bộ sau sẽ ghi đè.
+
+---
+
+# Công tắc trình diễn — bật/tắt thế nào
+
+Từ 23/08/2026 trang này chạy được **ngay trên `hub.truongvietanh.com`**, không cần mở file.
+
+## Bật
+
+Trong `apps/hub/.env.local`:
+
+```
+HUB_TRINH_DIEN=1
+```
+
+rồi **khởi động lại máy chủ**. Đo được 23/08/2026: đổi `.env.local` mà không khởi động
+lại thì cờ **không có tác dụng** — Next chỉ đọc biến môi trường lúc khởi động. Đây là
+hành vi của Next, không phải lỗi của công tắc, nhưng nó làm người ta tưởng công tắc hỏng.
+
+## Tắt
+
+Đổi thành `HUB_TRINH_DIEN=0` (hoặc xoá dòng đó) rồi khởi động lại. **App trở lại y
+nguyên** — không dòng nào của app bị sửa, bị xoá hay bị bọc điều kiện, nên không có gì
+để hoàn tác.
+
+## Bật thì che gì
+
+| Đường | Khi cờ BẬT |
+|---|---|
+| `/` · `/login` · `/home` | **trang trình diễn** |
+| `/tuan-nay` · `/diem-danh` · `/bao-cao` · `/thi-dua` · `/ho-so` · `/quan-tri/*` | app thật, y như cũ |
+| `/` · `/login` · `/home` **kèm `?that=1`** | app thật — cửa sau |
+
+Cố ý chỉ che **ba cửa vào**: giữa buổi trình bày ai hỏi *"cho xem thử màn điểm danh"* thì
+mở được ngay, không phải đi tắt cờ rồi khởi động lại máy chủ trước mặt mọi người.
+
+**Nhớ một địa chỉ duy nhất:** `hub.truongvietanh.com/home?that=1` là app thật.
+
+## Thanh địa chỉ vẫn sạch
+
+Dùng `rewrite`, không `redirect` — người xem thấy `hub.truongvietanh.com/`, không thấy
+`/trinh-dien/index.html` lộ ra giữa buổi trình bày.
+
+## Dọn hẳn sau khi trình diễn xong
+
+Xoá dòng `HUB_TRINH_DIEN` là đủ để app bình thường trở lại. Muốn dọn sạch dấu vết thì gỡ
+thêm ba thứ, cả ba đều tách rời khỏi app:
+
+- `apps/hub/public/trinh-dien/` (trang + 27 MB video)
+- `apps/hub/lib/trinh-dien.ts` và `tests/unit/trinh-dien.test.ts`
+- khối `dangTrinhDien()` ở đầu `apps/hub/middleware.ts`

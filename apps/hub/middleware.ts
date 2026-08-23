@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { chieuTrinhDien } from "./lib/trinh-dien";
 // Import THẲNG file session.ts, không qua "@hub/core/auth-adapter" như mọi nơi khác:
 // index.ts của adapter kéo theo dev-provider → db/client → `pg`, mà Edge runtime của
 // middleware không có `net`/`tls` để chạy `pg`. session.ts chỉ phụ thuộc `jose` + một
@@ -122,9 +123,67 @@ async function originCuaApp(req: NextRequest, appId: string): Promise<string | n
   return manifestDem.theo.get(appId) ?? null;
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CÔNG TẮC TRÌNH DIỄN — `HUB_TRINH_DIEN=1`
+// ═══════════════════════════════════════════════════════════════════════════════
+// Chủ đầu tư, 23/08/2026: *"tôi muốn giữ nguyên code hiện tại, chỉ tắt nó đi, và đưa
+// giao diện login -> intro -> home mới vào để trình diễn"*.
+//
+// Nên đây là một CÔNG TẮC, không phải một lần thay thế. Không dòng nào của app bị sửa,
+// bị xoá, hay bị bọc điều kiện. Tắt biến môi trường là mọi thứ trở lại y nguyên — không
+// cần hoàn tác commit nào.
+//
+// BA ĐIỀU LÀM NÊN "TẠM":
+//
+//   1. `rewrite` chứ không `redirect`. Thanh địa chỉ vẫn là `hub.truongvietanh.com/`,
+//      người xem không thấy một đường dẫn `/trinh-dien/...` lộ ra giữa buổi trình bày.
+//   2. CHỈ ba cửa vào (`/`, `/login`, `/home`). Mọi trang khác đi thẳng vào app thật —
+//      nên nếu ai hỏi "cho xem thử màn điểm danh" thì vẫn mở được, không phải tắt cờ.
+//   3. `?that=1` mở cửa sau vào app thật ngay tại ba cửa đó. Nhớ được, không cần cookie,
+//      không cần khởi động lại.
+//
+// HAI CÁI BẪY ĐÃ TRÁNH, cả hai đều làm trang trắng giữa buổi trình bày:
+//
+//   · VÒNG LẶP VÔ TẬN. `matcher` ở cuối file chỉ loại trừ file có đuôi png/jpg/css/js…
+//     — KHÔNG loại `.html` và KHÔNG loại `.mp4`. Nghĩa là chính trang trình diễn và hai
+//     video của nó cũng chạy qua middleware. Thiếu nhánh `startsWith("/trinh-dien")` là
+//     `/trinh-dien/index.html` bị rewrite về chính nó, mãi mãi.
+//   · CHẶN SỚM, TRƯỚC LỚP GIA HẠN PHIÊN. Khối này đứng trên cùng và `return` ngay, nên
+//     lượt trình diễn không gọi `/api/auth/refresh`, không đụng cookie phiên, không cần
+//     cơ sở dữ liệu. Máy chủ rớt kết nối Postgres thì buổi trình diễn vẫn chạy.
+//
+// Sau cuối tuần: xoá `HUB_TRINH_DIEN` khỏi `.env.local` là xong. Muốn dọn hẳn thì gỡ
+// khối này + `apps/hub/public/trinh-dien/`, không còn dấu vết nào khác.
+
+
+/**
+ * ĐỌC TRONG HÀM, KHÔNG PHẢI Ở TẦM MODULE — đo ra 23/08/2026, và nó là chỗ duy nhất của
+ * gói này từng hỏng.
+ *
+ * Bản đầu viết `const TRINH_DIEN = process.env… ` ở ngoài. Hằng số tầm module chỉ chạy
+ * MỘT lần lúc middleware được nạp, nên đổi `.env.local` xong máy chủ vẫn trả trang trình
+ * diễn. Đo thật: đặt `HUB_TRINH_DIEN=0`, đợi 8 giây, ba cửa vẫn ra trình diễn cả ba.
+ *
+ * Cái công tắc mà không tắt được thì không phải công tắc — và nó hỏng đúng lúc buổi trình
+ * bày xong, khi người ta cần app thật trở lại ngay.
+ */
+function dangTrinhDien(): boolean {
+  return (process.env.HUB_TRINH_DIEN ?? "").trim() === "1";
+}
+
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   let res = NextResponse.next();
+
+  // Công tắc trình diễn — xem khối lý lẽ ngay trên. Đứng TRƯỚC mọi thứ khác.
+  if (chieuTrinhDien({
+    bat: dangTrinhDien(),
+    pathname,
+    that: req.nextUrl.searchParams.get("that"),
+  })) {
+    return NextResponse.rewrite(new URL("/trinh-dien/index.html", req.url));
+  }
 
   if (shouldTryRenew(pathname)) {
     const token = req.cookies.get(SESSION_COOKIE.name)?.value;
