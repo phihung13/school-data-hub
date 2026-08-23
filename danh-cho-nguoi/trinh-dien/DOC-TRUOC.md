@@ -20,73 +20,91 @@ Trang dùng chung logo, mascot và phông icon với app thật (`/logo.webp`,
 `/mascot-sheet.webp`, `/fonts/…`) — **không có bản sao nào**, nên đổi logo trong app là
 trang này đổi theo.
 
-## Video — vì sao lag, và đã sửa thế nào
+## Ba triệu chứng chậm/lag — ba nguyên nhân riêng
 
-Chủ đầu tư báo lag 23/08/2026. Đo ra **hai nguyên nhân**, và cái lớn hơn không phải video.
+Chủ đầu tư 23/08/2026: *"nó load chậm thế, thậm chí video còn chưa chạy, mà nó còn scale
+lên to nữa"*. Đo ra ba nguyên nhân khác nhau, không cái nào là cái kia.
 
-### 1. Bộ lọc làm nét chạy trên từng khung hình (nguyên nhân chính)
+### 1. Bộ lọc làm nét chạy trên từng khung hình
 
-`.cin-bg` mang `filter: url(#vsharp)` — một **phép nhân chập 3×3** trên một video toàn
-màn, **24 lần mỗi giây**. Đây là thứ đắt nhất có thể đặt lên video trong trình duyệt.
+`.cin-bg` mang `filter: url(#vsharp)` — một **phép nhân chập 3×3** trên video toàn màn,
+**24 lần mỗi giây**. Thứ đắt nhất có thể đặt lên video trong trình duyệt. **Đã bỏ.**
 
-**Đã bỏ.** Độ nét không mất: nó chuyển sang chỗ rẻ hơn nhiều — nguồn 4K xuống thang
-1920×1080 bằng lanczos, tức **làm nét một lần lúc mã hoá** thay vì 24 lần mỗi giây lúc
-chạy. `brightness`/`saturate` giữ lại: một lượt tô GPU, gần như miễn phí, và là màu người
-thiết kế chọn.
+Độ nét không mất, chỉ chuyển chỗ: nguồn 4K xuống thang bằng lanczos, tức làm nét **một
+lần lúc mã hoá** thay vì 24 lần mỗi giây lúc chạy. `brightness`/`saturate` giữ lại —
+một lượt tô GPU, gần như miễn phí, và là màu người thiết kế chọn.
 
-### 2. Bitrate quá cao, và một bẫy ngược đời về 4K
+### 2. Video nặng hơn đường truyền
 
-Chủ đầu tư đưa bản 4K để "nét hơn". Nhưng **thả thẳng 4K vào là lag NẶNG hơn**: 3840×2160
-là **4× số điểm ảnh mỗi khung** so với 1080, trong khi màn hình chỉ hiển thị tối đa ~1920
-chiều ngang. Nên bản 4K dùng làm **nguồn**, không dùng làm thứ đem chiếu.
+Đo băng thông thật qua tunnel: **~7,6 Mbps**. Video cũ 10,6 và 14,3 Mbps — nặng gấp đôi
+đường truyền, nên không bao giờ chạy mượt được, và 4,4 giây đầu là màn tối.
 
-| | cũ | nay | |
+| | trước | nay | qua tunnel |
 |---|---|---|---|
-| Nền đăng nhập | 10,07 MB · 10,6 Mbps | **4,01 MB · 4,2 Mbps** | từ nguồn 4K, SSIM 0,983 |
-| Video intro | 17,10 MB · 14,3 Mbps | **7,52 MB · 6,3 Mbps** | SSIM 0,975 |
-| **Cộng** | **27,2 MB** | **11,5 MB** | giảm 58% |
+| Nền đăng nhập | 10,07 MB · 10,6 Mbps | **1,55 MB · 1,6 Mbps** | 4,43s → **1,68s** |
+| Video intro | 17,10 MB · 14,3 Mbps | **3,44 MB · 2,9 Mbps** | → 4,3s (tải sẵn từ màn đăng nhập) |
+| Ảnh nền tĩnh | *(không có)* | **0,05 MB** | **0,31s** |
 
-SSIM đo bằng ffmpeg so với bản gốc; trên 0,97 là mắt thường không phân biệt được.
+**Ảnh nền tĩnh (`poster`) mới là thứ chữa triệu chứng "video chưa chạy".** Trước đây
+1,7 giây đầu là màn trống vì video chưa có dữ liệu. Nay poster về sau 0,31 giây, hiện
+ngay khung hình đầu; video thay vào khi tải đủ, người xem không thấy khoảng trống nào.
+
+Nền hạ xuống **1280×720** — nó nằm sau một lớp phủ tối, không ai soi chi tiết, mà nửa số
+điểm ảnh thì nhẹ hẳn. Intro giữ 1080 vì đó là khoảnh khắc chính.
+
+### 3. "Scale lên to" — trang có ĐÚNG 0 media query
+
+Mọi kích thước là pixel cứng: tiêu đề `72px`, panel `right:64px bottom:110px
+max-width:560px`, logo `left:40px top:26px`. Dựng cho màn rộng ~1600×900. Mở trên màn nhỏ
+hơn thì mọi thứ giữ nguyên số pixel đó, nên chiếm phần màn lớn hơn nhiều — đó là cảm giác
+"to", không phải video bị phóng.
+
+*(Đã kiểm riêng chuyện video: trích khung từ bản 4K và bản 1080 cũ rồi so — **cùng khung
+hình y hệt**, bản 4K chỉ nét hơn. SSIM 0,934 giữa hai bản là do chênh độ nét, không phải
+do cắt khác.)*
+
+Đã thêm một khối `<script>` cuối trang đặt `zoom` theo `min(rộng/1600, cao/900, 1)`.
+
+Vì sao `zoom` chứ không `transform: scale()`: `.scene` là `position:fixed; inset:0`. Đặt
+`transform` lên tổ tiên của phần tử `fixed` sẽ biến tổ tiên thành khung tham chiếu mới,
+bốn màn căn theo `#root` đã co và lộ viền trống quanh mép. `zoom` co cả hệ toạ độ nên
+`fixed` vẫn bám viewport.
+
+Vì sao không viết lại CSS cho co giãn: đây là **file thiết kế**, đồng bộ lại từ Claude
+Design là ghi đè. Sửa hàng chục cỡ pixel là tạo một bản rẽ nhánh sẽ mất ở lần đồng bộ sau.
+Một khối script thêm vào cuối thì sống sót được.
 
 ### fps giữ nguyên 24 — cố ý
 
-Chủ đầu tư đề nghị giảm fps. Đo ra **cả ba video vốn đã là 24 fps**, nên đó không phải
-chỗ đang tốn. Hạ thấp hơn nữa (18, 15) chỉ làm chuyển động giật, mà không lấy lại được
-bao nhiêu — cái tốn nằm ở bộ lọc và ở bitrate, cả hai đã sửa.
+Chủ đầu tư đề nghị giảm fps. Đo ra **cả ba video vốn đã là 24 fps**, nên đó không phải chỗ
+đang tốn. Hạ xuống 18 hay 15 chỉ làm chuyển động giật.
 
 ### Lệnh đã dùng, để lần sau làm lại được
 
 ```
-# Nền đăng nhập: 4K -> 1080 sắc nét, BỎ TIẾNG (video này vốn muted)
-ffmpeg -i <4k>.mp4 -vf "scale=1920:1080:flags=lanczos" -r 24 \
-  -c:v libx264 -profile:v high -preset slow -crf 26 -maxrate 4M -bufsize 8M \
-  -pix_fmt yuv420p -g 48 -an -movflags +faststart su-tu-chay.mp4
+# Nền đăng nhập: 4K -> 720p, BỎ TIẾNG (vốn muted), trần bitrate 1,6 Mbps
+ffmpeg -i <4k>.mp4 -vf "scale=1280:720:flags=lanczos" -r 24   -c:v libx264 -profile:v high -preset veryslow -crf 28 -maxrate 1600k -bufsize 3200k   -pix_fmt yuv420p -g 48 -an -movflags +faststart su-tu-chay.mp4
 
-# Video intro: giữ 1080 và tiếng, hạ bitrate
-ffmpeg -i <goc>.mp4 -c:v libx264 -profile:v high -preset slow -crf 25 \
-  -maxrate 6M -bufsize 12M -pix_fmt yuv420p -g 48 \
-  -c:a aac -b:a 128k -movflags +faststart intro-software.mp4
+# Ảnh nền tĩnh — thứ chữa "video chưa chạy"
+ffmpeg -i <4k>.mp4 -frames:v 1 -vf "scale=1280:720:flags=lanczos" -q:v 72 su-tu-poster.webp
+
+# Intro: giữ 1080 và tiếng
+ffmpeg -i <goc>.mp4 -c:v libx264 -profile:v high -preset veryslow -crf 28   -maxrate 2600k -bufsize 5200k -pix_fmt yuv420p -g 48   -c:a aac -b:a 96k -movflags +faststart intro-software.mp4
 ```
 
-`-movflags +faststart` là **bắt buộc**. Bản xuất từ dự án thiết kế luôn để `moov` (bảng
-mục lục) ở CUỐI file — đo được: 100,0% và 99,9%. Trình duyệt không phát được khung hình
-nào cho tới khi đọc được nó, tức phải tải trọn file trước khi có hình. Trên localhost
-không ai thấy; trên wifi trường thì đó là màn đen. Nay `moov` ở **byte 36**.
+`-movflags +faststart` **bắt buộc**. Bản xuất từ dự án thiết kế luôn để `moov` (bảng mục
+lục) ở CUỐI file — đo được 100,0% và 99,9%. Trình duyệt không phát được khung hình nào cho
+tới khi đọc được nó, tức phải tải trọn file trước khi có hình.
 
-ffmpeg không có trong PATH nhưng **đã cài sẵn** trên máy này:
-`%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg_*\ffmpeg-*\bin\ffmpeg.exe`.
+ffmpeg không có trong PATH nhưng **đã cài sẵn**:
+`%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg_*fmpeg-*infmpeg.exe`
 
-Nếu chỉ cần dời `moov` mà **không** mã hoá lại, dùng `node tools/mp4-faststart.mjs <file>`
-— công cụ tự viết cho ca không có ffmpeg, có tự kiểm mọi ô offset trước khi ghi.
+Chỉ cần dời `moov` mà **không** mã hoá lại: `node tools/mp4-faststart.mjs <file>`.
 
-### 11,5 MB video nằm trong kho
+### 5 MB video nằm trong kho
 
-Chấp nhận có chủ ý: trang trình diễn thiếu video là một buổi trình bày hỏng. Kho `.git`
-đã ngậm cả bản 27 MB cũ ở lịch sử — gỡ không thu nhỏ lại được, nhưng đã chặn nó lớn thêm.
-Nếu về sau video được xuất lại nhiều lần thì chuyển sang `git-lfs`.
-
-Trang **vẫn chạy khi thiếu video**: `startShow()` kiểm `introVideo.error` rồi nhảy thẳng
-vào trang chủ.
+Kho `.git` đã ngậm các bản cũ ở lịch sử — gỡ không thu nhỏ lại được, nhưng đã chặn lớn
+thêm. Nếu video còn xuất lại nhiều lần thì chuyển sang `git-lfs`.
 
 ## Hai điều đã biết, cố ý chưa sửa
 

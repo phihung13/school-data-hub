@@ -1002,7 +1002,7 @@ button{font-family:inherit;cursor:pointer}
 <!-- ===================== LOGIN ===================== -->
 <section id="s-login" class="scene on">
   <canvas id="fx3d" aria-hidden="true" style="display:none"></canvas>
-  <video class="cin-bg" src="/trinh-dien/uploads/su-tu-chay.mp4" loop muted loop playsinline autoplay></video>
+  <video class="cin-bg" src="/trinh-dien/uploads/su-tu-chay.mp4" poster="/trinh-dien/uploads/su-tu-poster.webp" preload="auto" loop muted playsinline autoplay></video>
   <div class="cin-shade" aria-hidden="true"></div>
   <div class="cin-brand"><span class="logo"><img src="/logo.webp" alt="" /></span><span class="tt"><span class="t1">Major OS</span><span class="t2">TRƯỜNG VIỆT ANH</span></span></div>
   <span id="hud-clock" style="display:none"></span>
@@ -1516,5 +1516,35 @@ function step(now){
 }
 requestAnimationFrame(step);
 })();</script>
+<script>
+/* THU VỪA MÀN HÌNH — thêm 23/08/2026, sau khi chủ đầu tư báo "nó còn scale lên to nữa".
+ *
+ * Đo ra nguyên nhân: trang này có ĐÚNG 0 media query. Mọi thứ là pixel cứng — tiêu đề
+ * 72px, panel `right:64px bottom:110px max-width:560px`, logo `left:40px top:26px` —
+ * dựng cho một màn hình rộng khoảng 1600×900. Mở trên màn nhỏ hơn thì mọi thứ vẫn giữ
+ * nguyên số pixel đó, nên chiếm phần màn lớn hơn nhiều: đó chính là cảm giác "to".
+ *
+ * VÌ SAO `zoom` CHỨ KHÔNG `transform: scale()`:
+ * `.scene` là `position:fixed; inset:0`. Đặt `transform` lên tổ tiên của một phần tử
+ * `fixed` sẽ biến tổ tiên đó thành khung tham chiếu mới — bốn màn sẽ căn theo `#root` đã
+ * bị co, để lộ viền trống quanh mép. `zoom` co cả hệ toạ độ nên `fixed` vẫn bám viewport.
+ *
+ * VÌ SAO KHÔNG VIẾT LẠI CSS CHO CO GIÃN: đây là file THIẾT KẾ, đồng bộ lại từ dự án
+ * Claude Design là ghi đè. Sửa hàng chục cỡ pixel ở đây là tạo một bản rẽ nhánh sẽ mất
+ * trong lần đồng bộ sau. Một dòng `zoom` thì sống sót được vì nó là phần THÊM VÀO.
+ *
+ * Lấy min của hai chiều để không tràn theo chiều nào; chặn trên ở 1 để màn to hơn thiết
+ * kế thì giữ nguyên, không phóng lên (phóng lên là làm mờ).
+ */
+(function () {
+  var RONG = 1600, CAO = 900;
+  function vua() {
+    var k = Math.min(innerWidth / RONG, innerHeight / CAO, 1);
+    document.documentElement.style.zoom = k < 0.999 ? k : "";
+  }
+  vua();
+  addEventListener("resize", vua);
+})();
+</script>
 </body>
 </html>
