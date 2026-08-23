@@ -20,10 +20,43 @@ Sửa duy nhất khi đưa vào kho: `apps/hub/public/…` → `../../apps/hub/p
 Trang dùng chung logo, mascot và phông icon với app thật — **không có bản sao nào**, nên
 đổi logo trong app là trang này đổi theo.
 
-## Hai video 27 MB — vì sao chúng nằm trong kho
+## Hai video — MỘT bản duy nhất, và đã được dời `moov` lên đầu
 
-`uploads/intro-software.mp4` (17 MB) và `uploads/Armored_lion_mascot_running_loop_…mp4`
-(10 MB). Chúng **không lấy được** qua công cụ đồng bộ: giới hạn 256 KiB mỗi file, và bản
+Nằm ở `apps/hub/public/trinh-dien/uploads/`. **Chỉ một bản**: cả trang chạy trên máy chủ
+lẫn bản mở-bằng-tay ở thư mục này đều trỏ vào đó. Bản đầu 23/08/2026 tôi để hai bản sao
+(54 MB) — đã gỡ; hai bản sao là hai chỗ sẽ lệch nhau, và ở đây là 27 MB cho mỗi lần lệch.
+
+### `moov` đã dời lên đầu — nếu không thì buổi trình bày là màn đen
+
+Đo bản gốc: `moov` nằm ở **100,0%** và **99,9%** vị trí file. `moov` là bảng mục lục;
+trình duyệt không phát được khung hình nào cho tới khi đọc được nó — nghĩa là phải tải
+trọn **27 MB** trước khi có hình. Trên localhost không ai thấy. Trên wifi trường qua
+tunnel thì đó là màn đen giữa buổi trình bày.
+
+Đã chạy `node tools/mp4-faststart.mjs` (không có ffmpeg trên máy, nên viết thẳng — dời
+`moov` lên trước `mdat`, **không mã hoá lại**, không giảm chất lượng). Đo lại qua HTTP:
+`moov` về sau **148 KB** và **81 KB**.
+
+Kiểm trước khi đổi file, vì đây là thao tác trên nhị phân:
+
+| Phép kiểm | Kết quả |
+|---|---|
+| `mdat` giống hệt từng byte | có |
+| Ô offset `stco`/`co64` trỏ đúng byte cũ | **864/864**, sai 0 |
+| `moov` nằm trước `mdat` | có |
+| Kích thước file không đổi | có |
+
+Ô offset là chỗ chết người: chúng giữ **vị trí tuyệt đối trong file** của từng chunk. Dời
+`moov` mà quên cộng bù thì file vẫn "hợp lệ", vẫn mở được, nhưng **phát ra rác** — hỏng
+kiểu im lặng.
+
+**Video mới xuất từ dự án thiết kế cũng phải chạy qua công cụ đó**, vì bản xuất mặc định
+luôn để `moov` ở cuối.
+
+## Vì sao 27 MB nằm trong kho
+
+`intro-software.mp4` (17 MB) và `Armored_lion_mascot_running_loop_…mp4` (10 MB). Chúng
+**không lấy được** qua công cụ đồng bộ: giới hạn 256 KiB mỗi file, và bản
 tải về cụt ở đúng mốc đó (không có `moov` atom, tức không phải file mp4 hợp lệ).
 
 Kho `.git` từ 31 MB lên khoảng 58 MB, **vĩnh viễn** — git giữ mọi blob kể cả sau khi xoá.
