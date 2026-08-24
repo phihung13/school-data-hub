@@ -97,6 +97,7 @@ import { useIsDesktop } from "@/lib/viewport";
 import type { GetLichHomNayOutput, HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/core/contracts";
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { MiniAppTile } from "./mini-app-tile";
+import { MOOD_STYLE } from "./mood-tile";
 import { LichHomNay } from "./lich-hom-nay";
 import { useCongCheckin } from "./cong-checkin";
 import { HubTabBar } from "./tab-bar";
@@ -353,6 +354,7 @@ function LuoiMiniApp({
   laQuanTri,
   rongCaMan,
   oTimTrongThe,
+  sang = false,
 }: {
   loc: LuoiDaLoc;
   /** Số app THẬT của tài khoản — không phải số sau khi lọc. */
@@ -362,7 +364,16 @@ function LuoiMiniApp({
   rongCaMan: boolean;
   /** Khổ điện thoại đặt ô tìm trong thẻ này; khổ máy tính đặt nó ở hero. */
   oTimTrongThe: boolean;
+  /**
+   * Thẻ chứa là thẻ TRẮNG của skin HUD (24/08/2026)? Token chữ của app nay là bảng tối
+   * (text-ink #EAF2FF…) — đặt nguyên xi vào thẻ trắng là chữ trắng trên nền trắng. Khổ
+   * máy tính truyền true; khổ điện thoại giữ nền tối, không truyền gì.
+   */
+  sang?: boolean;
 }) {
+  const mau = sang
+    ? { chu: "text-[#0A2A5E]", phu: "text-[#33507C]", nut: "bg-[#E8F1FC] text-[#1E5FB8]" }
+    : { chu: "text-ink", phu: "text-caption", nut: "bg-surface-alt text-link" };
   return (
     <>
       {oTimTrongThe && loc.hienOTim && (
@@ -381,14 +392,14 @@ function LuoiMiniApp({
 
       {loc.locKhongRa && (
         <div role="status" aria-live="polite" className="flex flex-col items-start gap-2 py-4">
-          <span className="flex items-center gap-2 text-[12.5px] font-extrabold text-ink">
-            <span aria-hidden="true" className="msr text-[19px] text-caption">search_off</span>
+          <span className={`flex items-center gap-2 text-[12.5px] font-extrabold ${mau.chu}`}>
+            <span aria-hidden="true" className={`msr text-[19px] ${mau.phu}`}>search_off</span>
             Không app nào khớp từ khoá
           </span>
           <button
             type="button"
             onClick={() => loc.datTuKhoa("")}
-            className="flex min-h-[44px] items-center rounded-xl bg-surface-alt px-4 text-[12.5px] font-extrabold text-link"
+            className={`flex min-h-[44px] items-center rounded-xl px-4 text-[12.5px] font-extrabold ${mau.nut}`}
           >
             Xoá từ khoá
           </button>
@@ -397,8 +408,8 @@ function LuoiMiniApp({
 
       {tongApp === 0 && (
         <div role="status" aria-live="polite" className="flex flex-col items-start gap-2 py-4">
-          <span className="flex items-center gap-2 text-[12.5px] font-extrabold text-ink">
-            <span aria-hidden="true" className="msr text-[19px] text-caption">space_dashboard</span>
+          <span className={`flex items-center gap-2 text-[12.5px] font-extrabold ${mau.chu}`}>
+            <span aria-hidden="true" className={`msr text-[19px] ${mau.phu}`}>space_dashboard</span>
             Tài khoản này chưa có mini app nào
           </span>
           {laQuanTri && (
@@ -407,7 +418,7 @@ function LuoiMiniApp({
             // phải một việc chờ họ làm — nên không có nút nào giả vờ ngược lại.
             <Link
               href="/quan-tri/mini-app"
-              className="flex min-h-[44px] items-center rounded-xl bg-surface-alt px-4 text-[12.5px] font-extrabold text-link"
+              className={`flex min-h-[44px] items-center rounded-xl px-4 text-[12.5px] font-extrabold ${mau.nut}`}
             >
               Mở sổ đăng ký Mini App
             </Link>
@@ -418,7 +429,7 @@ function LuoiMiniApp({
             // đăng nhập lại là trang không đi tiếp được (điều 21).
             <Link
               href="/ho-so"
-              className="flex min-h-[44px] items-center rounded-xl bg-surface-alt px-4 text-[12.5px] font-extrabold text-link"
+              className={`flex min-h-[44px] items-center rounded-xl px-4 text-[12.5px] font-extrabold ${mau.nut}`}
             >
               Hồ sơ và trợ giúp
             </Link>
@@ -604,132 +615,121 @@ function DesktopHome({ data }: { data: HomeData }) {
       soMuc: data.viecCho.data?.items.length ?? 0,
     },
   });
-  // Popup check-in tự mở ĐÃ GỠ: cổng ở `app/layout.tsx` làm đúng việc đó, và làm ở
-  // mọi trang chứ không riêng đây. Xem khối lý lẽ ở chỗ `CheckinModal` cũ đứng.
 
+  // SKIN "SCI-FI HUD" (24/08/2026) — chủ đầu tư: "trang home bây giờ không phải theme
+  // đen, mà là cái theme tôi đã gửi". Toàn bộ lớp hv-*/s-home nằm ở globals.css, chép
+  // từ TRẠNG THÁI CASCADE CUỐI của bản thiết kế (xem khối chú thích ở đó): trang trắng,
+  // đầu trang "command strip" navy, chip số liệu tối, thẻ trắng vát góc, check-in vàng
+  // kem. NỘI DUNG và luật dữ liệu theo vai giữ nguyên — chỉ da đổi:
+  //   · lịch hôm nay + cột phải người lớn vẫn đứng trong rail (thẻ token tối của chúng
+  //     đứng được trên nền trắng vì chính bản vẽ cũng trộn thẻ tối/sáng);
+  //   · lưới mini app vẫn là sổ đăng ký thật (KHÔNG có tile "GĐ2" bịa như bản vẽ —
+  //     lệnh gỡ tile giả trước đây vẫn đứng);
+  //   · ba trạng thái loading/error/ready của từng con số giữ nguyên luật "không suy
+  //     số 0 từ im lặng".
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto pb-[26px]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light px-7 pb-[74px] pt-4">
-          <div
-            aria-hidden
-            className="absolute -right-[50px] -top-[100px] h-[320px] w-[320px] rounded-full"
-            style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.45), rgba(255,198,41,.04) 72%)" }}
-          />
-          {/* Ô tìm kiếm giả và chuông thông báo bị gỡ 31/07/2026 vì cả hai là <div>/<span>
-              trần. Bản 06/08/2026 dựng lại bằng <input> và <button> thật, và mỗi cái phải
-              nêu được nguồn dữ liệu của mình — xem khối A–C ở đầu file. */}
-          <div className="relative mt-3 flex flex-wrap items-end gap-6">
-            <div className="min-w-0 flex-1 basis-[300px]">
-              {/* Cùng lý lẽ với bản mobile: đây là <h1> của trang. Hai nhánh khổ màn loại
-                  trừ nhau nên KHÔNG có hai <h1> cùng nằm trong một DOM. */}
-              <h1 className="text-[40px] font-black leading-[1.1] text-white">
-                <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
-              </h1>
-              <div className="mt-2 text-[14px] font-semibold text-[#C7D8F0]">{data.today}</div>
-            </div>
-            {data.isStudent && (
-              <div className="flex flex-none basis-[420px] flex-col gap-2">
-                <div className="flex gap-2.5">
-                  <HeroStat
-                    label="đã đến trường"
-                    // Đã tải xong mà chưa check-in thì "—" là SỰ THẬT (chưa có giờ nào),
-                    // khác hẳn "—" của nhánh lỗi bên dưới.
-                    value={<StatValue state={data.todayState} value={data.checkedInAt ?? "—"} width="w-14" />}
-                  />
-                  <HeroStat
-                    label="ngày tuần này"
-                    gold
-                    value={
-                      <StatValue
-                        state={data.weekState}
-                        value={`${data.checkinDaysThisWeek ?? 0}/5`}
-                        width="w-12"
-                      />
-                    }
-                  />
-                  <HeroStat
-                    label="chuỗi check-in"
-                    value={<StatValue state={data.todayState} value={String(data.streakDays ?? 0)} width="w-8" />}
-                  />
-                </div>
-                {(data.todayState === "error" || data.weekState === "error") && (
-                  <button
-                    type="button"
-                    onClick={data.retryStats}
-                    // text-gold trên đầu SÁNG của hero (#1E5FB8) chỉ 3,95:1 — chữ trắng ở
-                    // cùng chỗ đo 6,21:1. Gạch chân giữ nguyên: nút này nằm giữa nền màu,
-                    // không được nhận ra chỉ nhờ màu.
-                    className="self-end text-[11px] font-bold text-white underline underline-offset-2"
-                  >
-                    Chưa tải được số liệu — thử lại
-                  </button>
-                )}
-              </div>
-            )}
-            {khoi.khoiNguoiLon && (
-              // `self-start`: hàng này căn `items-end` cho ba thẻ số của học sinh, còn cụm
-              // này thuộc về MÉP TRÊN hero — chỗ mắt đã quen tìm cái chuông.
-              <div className="flex flex-none items-center gap-3 self-start">
-                {loc.hienOTim && (
-                  <div className="w-[248px]">
-                    <OTimMiniApp tuKhoa={loc.tuKhoa} datTuKhoa={loc.datTuKhoa} nen="hero" />
-                  </div>
-                )}
-                <ChuongViecCho work={data.viecCho} />
-              </div>
-            )}
+    <div className="s-home flex min-w-0 flex-1 flex-col overflow-hidden">
+      <UfoBay />
+      <div className="fx-scan" aria-hidden />
+      <div className="flex-1 overflow-y-auto px-7 pb-[26px] pt-[18px]">
+        <header className="hv-head">
+          <div className="hv-hello min-w-0">
+            {/* Cùng lý lẽ với bản mobile: đây là <h1> của trang. Hai nhánh khổ màn loại
+                trừ nhau nên KHÔNG có hai <h1> cùng nằm trong một DOM. */}
+            <h1>
+              <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
+            </h1>
+            <div className="hv-date">{data.today}</div>
           </div>
-        </div>
+          {data.isStudent && (
+            <div className="flex min-w-0 flex-col items-end gap-2">
+              <div className="hv-stats">
+                <HvStat
+                  icon="check_circle"
+                  mauIcon="#35E0FF"
+                  label="đã đến trường"
+                  // Đã tải xong mà chưa check-in thì "—" là SỰ THẬT (chưa có giờ nào),
+                  // khác hẳn "—" của nhánh lỗi.
+                  value={<StatValue state={data.todayState} value={data.checkedInAt ?? "—"} width="w-14" />}
+                />
+                <HvStat
+                  icon="event_available"
+                  mauIcon="#FFC629"
+                  label="ngày tuần này"
+                  value={<StatValue state={data.weekState} value={`${data.checkinDaysThisWeek ?? 0}/5`} width="w-12" />}
+                />
+                <HvStat
+                  icon="military_tech"
+                  mauIcon="#35E0FF"
+                  label="chuỗi check-in"
+                  value={<StatValue state={data.todayState} value={String(data.streakDays ?? 0)} width="w-8" />}
+                />
+              </div>
+              {(data.todayState === "error" || data.weekState === "error") && (
+                <button
+                  type="button"
+                  onClick={data.retryStats}
+                  className="text-[11px] font-bold text-white underline underline-offset-2"
+                >
+                  Chưa tải được số liệu — thử lại
+                </button>
+              )}
+            </div>
+          )}
+          {khoi.khoiNguoiLon && (
+            <div className="flex flex-none items-center gap-3 self-start">
+              {loc.hienOTim && (
+                <div className="w-[248px]">
+                  <OTimMiniApp tuKhoa={loc.tuKhoa} datTuKhoa={loc.datTuKhoa} nen="hero" />
+                </div>
+              )}
+              <ChuongViecCho work={data.viecCho} />
+            </div>
+          )}
+        </header>
 
-        {/*
-          `relative z-[2]` KHÔNG phải trang trí — thiếu nó thì hero navy vẽ ĐÈ LÊN thẻ đầu tiên.
-          Lý do: hero ở trên là `relative` (phần tử có định vị), còn khối này chỉ có margin âm.
-          CSS vẽ mọi phần tử có định vị lên trên phần tử không định vị, bất kể thứ tự trong DOM.
-
-          Chỉ vai NGƯỜI LỚN nhìn thấy lỗi (bắt gặp thật 31/07/2026, ảnh chụp của Cô Hạnh: chữ
-          "Mini App" bị cắt ngang bởi nền navy): với học sinh, thẻ đầu tiên là thẻ check-in vốn
-          đã mang sẵn `relative` nên tự thoát; người lớn không có thẻ đó nên thẻ Mini App lĩnh trọn.
-          Bản mobile (dòng ~211) từ đầu đã có `relative z-[2]` — chỉ bản desktop bị sót.
-          DESIGN-GUIDELINES §6 cũng đã dặn đúng điều này cho mẫu "hero cong".
-        */}
-        {/* TỈ LỆ HAI CỘT VỀ ĐÚNG SPEC (DESIGN.md mục Layout: nội dung `flex 1.6–1.7`, rail
-            `flex 1`). Hai cột đang là 3:1 — đo ở 1440px cho ra nội dung 928px / rail 408px,
-            tức rail hẹp hơn dải đã duyệt gần 100px. Nay 1,65:1 ra 859/505. Sửa cho CẢ HAI
-            nhánh vai vì đây là luật của bố cục, không phải lựa chọn theo vai. */}
-        <div className="relative z-[2] mt-[-34px] flex flex-wrap items-start gap-5 px-7">
-          <div className="flex min-w-0 flex-[1.65_1_520px] flex-col gap-[18px]">
+        <div className="hv-grid">
+          <div className="hv-l">
             {khoi.theCheckin && <CheckinCardDesktop data={data} />}
 
-            {/* BÓNG THẺ VỀ ĐÚNG SPEC (DESIGN.md "Thẻ": `0 3px 12–14px rgba(10,42,94,.06)`).
-                Năm thẻ của bản desktop đang chồng ba lớp bóng, lớp giữa tới .18 và lớp cuối
-                toả 80px — đậm gấp ba spec, và đậm đều ở mọi thẻ nên không thẻ nào còn nổi
-                hơn thẻ nào. Một lớp mỏng là thứ đã được duyệt; sửa cả năm chỗ cùng lúc để
-                không còn thẻ nào nói khác thẻ bên cạnh. */}
-            <div className="rounded-[22px] border border-cardline bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-              <div className="mb-2 flex items-baseline justify-between">
-                <h2 className="text-[18px] font-black text-cardtitle">Mini App</h2>
-                <span className="text-[11.5px] font-extrabold text-gold-text">Giai đoạn 1 · {data.miniApps.length} app</span>
+            <div className="hv-card">
+              <div className="hv-ct">
+                <h2 className="hv-tt">Mini App</h2>
+                <span className="hv-kick">GIAI ĐOẠN 1 · {data.miniApps.length} APP</span>
               </div>
-              {/* `oTimTrongThe` = false: ở khổ này ô tìm đứng trên hero cạnh chuông. */}
-              <LuoiMiniApp
-                loc={loc}
-                tongApp={data.miniApps.length}
-                laQuanTri={data.roles.includes("admin")}
-                rongCaMan={rongCaMan}
-                oTimTrongThe={false}
-              />
+              <div className="mt-1.5">
+                {/* `sang`: thẻ này nền TRẮNG — các thể rỗng của lưới phải đổi sang chữ
+                    tối, xem chú thích ở LuoiMiniApp. */}
+                <LuoiMiniApp
+                  loc={loc}
+                  tongApp={data.miniApps.length}
+                  laQuanTri={data.roles.includes("admin")}
+                  rongCaMan={rongCaMan}
+                  oTimTrongThe={false}
+                  sang
+                />
+              </div>
             </div>
 
-            {data.isStudent && <GrowthBanner />}
+            {data.isStudent && (
+              // hv-bn thay GrowthBanner ở khổ này — cùng đích /bao-cao, cùng lời.
+              <Link href="/bao-cao" className="hv-bn">
+                <i className="bn-circuit" aria-hidden="true" />
+                <span className="hv-bi">
+                  <span aria-hidden="true" className="msr">military_tech</span>
+                </span>
+                <span className="hv-btx">
+                  <b>Báo cáo Trưởng thành</b>
+                  <span>Xem tuần này mình lớn lên thế nào →</span>
+                </span>
+                <span className="hv-bai">
+                  <span aria-hidden="true" className="msr">arrow_forward</span>
+                </span>
+              </Link>
+            )}
           </div>
 
-          {/* RAIL. `-translate-y-1.5` của hai thẻ học sinh là kiểu dáng cũ của riêng chúng;
-              khối người lớn không dùng, nên nó nằm ở chính hai thẻ đó chứ không ở cột. */}
-          <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-[18px]">
-            {/* Khổ máy tính: lịch vào RAIL phải, nơi mắt đi sau nội dung chính — khác
-                khổ điện thoại (lịch lên trên) vì ở đây không có màn hình gập. */}
-            <LichHomNay ban_dau={data.lichBanDau} />
+          <div className="hv-r">
             {data.isStudent && (
               <ThisWeekCard
                 state={data.weekState}
@@ -739,6 +739,10 @@ function DesktopHome({ data }: { data: HomeData }) {
               />
             )}
             {data.isStudent && data.checkedInToday && data.checkedInAt && <TodayCard checkedInAt={data.checkedInAt} />}
+            {/* Lịch đứng SAU hai thẻ của bản vẽ trong rail này (bản vẽ không có lịch;
+                nội dung thật thì phải ở lại — ADR-034 chỉ ép "lịch trước lưới" cho khổ
+                điện thoại vì màn hình gập, khổ này không có ràng buộc đó). */}
+            <LichHomNay ban_dau={data.lichBanDau} />
             {khoi.khoiNguoiLon && <CotPhaiNguoiLon roles={data.roles} />}
           </div>
         </div>
@@ -747,67 +751,80 @@ function DesktopHome({ data }: { data: HomeData }) {
   );
 }
 
-// Ba thẻ số liệu nằm ở ĐẦU SÁNG của hero (#1E5FB8), không phải đầu navy. Nền cũ
-// `bg-card/[.15]` làm sáng chỗ đó thêm một lần nữa, nên nhãn #C7D8F0 chỉ còn 3,12:1 và
-// số vàng 2,88:1 — cả hai dưới 4,5:1, và đây là ba con số nói về việc đi học của em.
-// Nền nay là navy pha 70% ĐÈ LÊN nền sáng (kết quả ≈ #103A79): nhãn lên 7,62:1, số vàng
-// 7,02:1, số trắng 11,03:1. Thẻ vẫn "nổi trên hero" cho mắt, chỉ là nổi bằng tối hơn
-// thay vì sáng hơn.
-function HeroStat({ value, label, gold }: { value: React.ReactNode; label: string; gold?: boolean }) {
+// Chip số liệu trên "command strip" — .hv-stat của bản vẽ: nền #0B1E44, vát góc 8px,
+// viền lam bằng drop-shadow. Màu icon là màu CỦA BẢN VẼ (khối !important cuối: ô 1 & 3
+// lam #35E0FF, ô 2 vàng #FFC629); số trắng mono trên nền tối đo 15,9:1.
+function HvStat({ icon, mauIcon, value, label }: { icon: string; mauIcon: string; value: React.ReactNode; label: string }) {
   return (
-    <div className="flex-1 rounded-2xl border border-cardline/[.16] bg-navy/70 px-2.5 py-[15px] text-center">
-      <div className={`text-2xl font-black ${gold ? "text-gold" : "text-white"}`}>{value}</div>
-      <div className="mt-[3px] text-[10.5px] font-bold text-[#C7D8F0]">{label}</div>
+    <div className="hv-stat">
+      <span aria-hidden="true" className="msr hv-si" style={{ color: mauIcon }}>{icon}</span>
+      <span className="hv-st">
+        <b>{value}</b>
+        <i>{label}</i>
+      </span>
     </div>
   );
 }
-
-// `MOOD_STYLE` và `MOOD_ORDER` đã gỡ cùng `CheckinModal` (21/08/2026): chúng là bảng
-// màu và thứ tự của LƯỚI CẢM XÚC RIÊNG mà popup cũ tự dựng. Bảng màu thật của bốn ô
-// nằm ở `components/mood-tile.tsx` — một chỗ, và nay là chỗ duy nhất.
 
 function CheckinCardDesktop({ data }: { data: HomeData }) {
   const { moCheckin, dangKhoa } = useCongCheckin();
   // Cùng luật với thẻ bản điện thoại: KHÔNG hỏi lần thứ hai khi popup đang hỏi.
   if (dangKhoa) return null;
+  // Bốn ô cảm xúc của bản vẽ KHÔNG tự gửi tâm trạng — chúng (và nút CTA) cùng mở popup
+  // cổng ADR-036, nơi duy nhất được ghi check-in. Bảng màu lấy từ MOOD_STYLE của
+  // mood-tile.tsx — một nguồn, không chép hex lần hai. Thứ tự 4→1 (Vui trước) là thứ
+  // tự của bản vẽ và của chính popup.
+  const cacO: MoodValue[] = [4, 3, 2, 1];
   return (
-    <div className="relative -translate-y-1.5 rounded-[22px] border border-cardline bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-      <div className="flex items-center justify-between">
-        <h2 className="text-[19px] font-black text-cardtitle">Check-in cảm xúc</h2>
-        <span className="rounded-full bg-[#3A2E08] px-[11px] py-[5px] text-[10.5px] font-black text-gold-textDark">TRƯỚC 8:00</span>
+    <div className="hv-card hv-check">
+      <i className="card-sweep" aria-hidden="true" />
+      <div className="hv-ct">
+        <h2 className="hv-tt">Check-in cảm xúc</h2>
+        <span className="hv-badge">TRƯỚC 8:00</span>
       </div>
-      <div className="mt-3.5 flex flex-wrap items-center gap-3.5">
-        <Mascot pose="wave" width={52} />
-        <div className="min-w-0 flex-1 basis-[240px] text-[14.5px] font-semibold text-[#A9C4E8]">
-          {data.todayState === "loading"
-            ? "Đang xem hôm nay con đã check-in chưa…"
-            : data.todayState === "error"
-              ? "Chưa xem được hôm nay con đã check-in chưa."
-              : data.checkedInToday
-                ? `Đã check-in lúc ${data.checkedInAt} — cảm ơn con!`
-                : "Hôm nay con thấy thế nào?"}
-        </div>
-        {/* Chỉ mời check-in khi BIẾT CHẮC là chưa check-in — xem ghi chú 2 đầu file. */}
-        {data.todayState === "ready" && data.checkedInToday === false && (
-          <button
-            type="button"
-            onClick={moCheckin}
-            aria-haspopup="dialog"
-            className="flex-none rounded-[14px] bg-gradient-to-br from-navy to-navy-light px-5 py-3 text-[13.5px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)]"
-          >
+      <div className="hv-q">
+        {data.todayState === "loading"
+          ? "Đang xem hôm nay con đã check-in chưa…"
+          : data.todayState === "error"
+            ? "Chưa xem được hôm nay con đã check-in chưa."
+            : data.checkedInToday
+              ? "Hôm nay của con đã được ghi lại."
+              : "Hôm nay con thấy thế nào?"}
+      </div>
+      {/* Chỉ mời check-in khi BIẾT CHẮC là chưa check-in — xem ghi chú 2 đầu file. */}
+      {data.todayState === "ready" && data.checkedInToday === false && (
+        <>
+          <div className="hv-moods">
+            {cacO.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={moCheckin}
+                aria-haspopup="dialog"
+                title={MOOD_LABEL[m]}
+                className={`hv-m bg-gradient-to-br ${MOOD_STYLE[m].gradient} ${MOOD_STYLE[m].text}`}
+              >
+                <span aria-hidden="true" className="msr">{MOOD_STYLE[m].icon}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={moCheckin} aria-haspopup="dialog" className="hv-cta">
             Check-in ngay
+            <span aria-hidden="true" className="msr">arrow_forward</span>
           </button>
-        )}
-        {data.todayState === "error" && (
-          <button
-            type="button"
-            onClick={data.retryStats}
-            className="flex-none rounded-[14px] border-[1.5px] border-[#1E3A6B] px-5 py-3 text-[13px] font-extrabold text-[#35E0FF]"
-          >
-            Thử lại
-          </button>
-        )}
-      </div>
+        </>
+      )}
+      {data.todayState === "ready" && data.checkedInToday === true && (
+        <div className="hv-done">
+          <span aria-hidden="true" className="msr" style={{ color: "#00A85E" }}>check_circle</span>
+          Đã check-in lúc {data.checkedInAt} — cảm ơn con!
+        </div>
+      )}
+      {data.todayState === "error" && (
+        <button type="button" onClick={data.retryStats} className="hv-cta">
+          Thử lại
+        </button>
+      )}
     </div>
   );
 }
@@ -847,38 +864,30 @@ function ThisWeekCard({
   onRetry: () => void;
 }) {
   return (
-    <div className="-translate-y-1.5 rounded-[20px] border border-cardline bg-card p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[16px] font-black text-cardtitle">Tuần này của mình</h2>
-        <span className="text-[10.5px] text-caption">{new Date().toLocaleDateString("vi-VN")}</span>
+    <div className="hv-card">
+      <div className="hv-ct">
+        <h2 className="hv-tt">Tuần này của mình</h2>
+        <span className="hv-kick">{new Date().toLocaleDateString("vi-VN")}</span>
       </div>
       {/* Hai thanh RỖNG khi query hỏng là lời nói dối tệ nhất trên trang này: nó bảo
           đứa trẻ rằng tuần này em chưa đi học buổi nào. Hỏng thì không vẽ thanh. */}
       {state === "error" ? (
         <div className="mt-3 flex flex-col items-start gap-1.5">
-          <p className="text-[12px] font-semibold text-[#93A9C8]">Chưa tải được số liệu tuần này (—).</p>
-          <button type="button" onClick={onRetry} className="text-[12px] font-black text-[#35E0FF] underline underline-offset-2">
+          <p className="text-[12px] font-semibold text-[#33507C]">Chưa tải được số liệu tuần này (—).</p>
+          <button type="button" onClick={onRetry} className="text-[12px] font-black text-[#1E5FB8] underline underline-offset-2">
             Thử lại
           </button>
         </div>
       ) : (
         <>
-          {/* `valueColor` KHÁC `iconColor` và đó là chủ ý, không phải quên đồng bộ: con số
-              "2/5" là CHỮ (mốc 4,5:1) còn icon là hình (mốc 3:1). Đo 05/08/2026 trên nền
-              trắng: #4EE39B chỉ 3,39:1 và #2C7BF2 chỉ 4,02:1 — đủ cho icon, thiếu cho chữ.
-              Số đổi sang successText (6,79:1) và domain-attendanceDark (8,59:1); icon và
-              thanh tiến trình giữ nguyên màu miền để mắt vẫn đọc ra "đi học" và "tâm trạng". */}
-          <ProgressRow loading={state === "loading"} icon="event_available" iconColor="text-[#4EE39B]" label="Đi học" value={checkinDays ?? 0} max={5} barFrom="#00D97A" barTo="#4EE39B" valueColor="text-successText" />
-          <ProgressRow loading={state === "loading"} icon="sentiment_satisfied" iconColor="text-[#2C7BF2]" label="Tâm trạng vui" value={happyDays ?? 0} max={5} barFrom="#4E9BFF" barTo="#2C7BF2" valueColor="text-domain-attendanceDark" />
+          {/* Màu SỐ theo bản vẽ (khối !important cuối: hàng 1 #00A85E, hàng 2 #2C7BF2 —
+              đè lên màu inline của icon). Chữ 13,5px đậm 900 = chữ lớn theo WCAG, mốc
+              3:1: #00A85E đo 3,07:1 và #2C7BF2 đo 4,02:1 trên nền trắng — đạt. */}
+          <HvWkRow loading={state === "loading"} icon="event_available" mau="#00A85E" label="Đi học" value={checkinDays ?? 0} max={5} nen="linear-gradient(90deg,#00D97A,#00A85E)" />
+          <HvWkRow loading={state === "loading"} icon="sentiment_satisfied" mau="#2C7BF2" label="Tâm trạng vui" value={happyDays ?? 0} max={5} nen="linear-gradient(90deg,#4E9BFF,#2C7BF2)" />
         </>
       )}
-      <Link
-        href="/bao-cao"
-        // min-h-[44px] (§11): đo thật ở 1280px ngày 02/08/2026 ra 290×41 — thiếu 3px.
-        // `py-[11px]` cộng chữ 12,5px chỉ ra 41px, và 1280px không đồng nghĩa với "có
-        // chuột": máy tính bảng và laptop cảm ứng cũng nằm ở khổ đó.
-        className="mt-4 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-[#0E1E3C] py-[11px] text-[12.5px] font-extrabold text-[#35E0FF]"
-      >
+      <Link href="/bao-cao" className="hv-link">
         Xem Báo cáo Trưởng thành
         <span aria-hidden="true" className="msr text-[17px]">arrow_forward</span>
       </Link>
@@ -886,58 +895,55 @@ function ThisWeekCard({
   );
 }
 
-function ProgressRow({
+// Một hàng .hv-wk của bản vẽ: icon · nhãn + thanh có vạch chia 5 · con số mono.
+function HvWkRow({
   icon,
-  iconColor,
+  mau,
   label,
   value,
   max,
-  barFrom,
-  barTo,
-  valueColor,
+  nen,
   loading,
 }: {
   icon: string;
-  iconColor: string;
+  mau: string;
   label: string;
   value: number;
   max: number;
-  barFrom: string;
-  barTo: string;
-  valueColor: string;
+  nen: string;
   loading?: boolean;
 }) {
   const pct = Math.min(100, Math.round((value / max) * 100));
   return (
-    <div className="mt-3 flex items-center gap-[11px]">
-      <span aria-hidden="true" className={`msr text-[19px] ${iconColor}`}>{icon}</span>
-      <div className="flex-1">
-        <div className="mb-1 text-[11.5px] font-bold text-[#93A9C8]">{label}</div>
-        <div className={`h-2 rounded-[4px] bg-[#EEF1F6] ${loading ? "animate-pulse" : ""}`}>
-          {!loading && (
-            <div className="h-2 rounded-[4px]" style={{ width: `${pct}%`, background: `linear-gradient(90deg,${barFrom},${barTo})` }} />
-          )}
+    <div className="hv-wk">
+      <span aria-hidden="true" className="msr hv-wi" style={{ color: mau }}>{icon}</span>
+      <div className="hv-wm">
+        <div className="hv-wl">{label}</div>
+        <div className={`hv-bar ${loading ? "animate-pulse" : ""}`}>
+          {!loading && <span className="hv-fill" style={{ width: `${pct}%`, background: nen }} />}
+          <i className="hv-seg" />
         </div>
       </div>
-      <span className={`text-[12px] font-black ${valueColor}`}>{loading ? "…" : `${value}/${max}`}</span>
+      <b className="hv-wn" style={{ color: mau }}>{loading ? "…" : `${value}/${max}`}</b>
     </div>
   );
 }
 
 function TodayCard({ checkedInAt }: { checkedInAt: string }) {
   return (
-    <div className="-translate-y-1.5 rounded-[20px] border border-cardline bg-card p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-      <h2 className="text-[16px] font-black text-cardtitle">Hôm nay</h2>
-      <div className="mt-[15px] flex items-center gap-3">
-        <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#0C2E22]">
-          <span aria-hidden="true" className="msr text-[19px] text-[#4EE39B]">event_available</span>
+    <div className="hv-card hv-radar">
+      <div className="hv-ct">
+        <h2 className="hv-tt">Hôm nay</h2>
+        <span className="hv-chk">
+          <span aria-hidden="true" className="msr">check_circle</span>
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[12.5px] font-extrabold text-cardtitle">Đã đến trường {checkedInAt}</div>
-          {/* #9AA5B5 (2,49:1) → token caption2 (#8298B8, 5,03:1). Dòng này giải thích VÌ SAO
-              có mốc giờ ở trên — nó là nội dung, không phải chữ trang trí. (01/08/2026) */}
-          <div className="mt-px text-[10.5px] text-caption2">điểm danh tự động</div>
-        </div>
+      </div>
+      <div className="hv-line">Đã đến trường {checkedInAt} — điểm danh tự động khi con vào cổng trường.</div>
+      <div className="radar" aria-hidden="true">
+        <i className="rd-ring" />
+        <i className="rd-ring r2" />
+        <i className="rd-beam" />
+        <i className="rd-dot" />
       </div>
     </div>
   );
@@ -969,6 +975,47 @@ function StreakCard({ streakDays }: { streakDays: number }) {
           mang dữ liệu nào — con số ngay trên nó đã là toàn bộ nội dung của thẻ. */}
       <div className="flex-1">
         <div className="text-[12.5px] font-extrabold text-cardtitle">Chuỗi check-in: {streakDays} ngày</div>
+      </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// UFO của bản vẽ — trang trí thuần: SVG chép nguyên, đường bay là MỘT keyframe CSS
+// (ufoPath, globals.css) thay cho vòng JS đuổi chuột của bản trình diễn. aria-hidden
+// + pointer-events-none (.ufo-track): nó không được chặn một cú bấm hay một lời đọc
+// màn hình nào; prefers-reduced-motion giấu cả track (media query trong globals.css).
+// ---------------------------------------------------------------------------
+function UfoBay() {
+  return (
+    <div className="ufo-track" aria-hidden="true">
+      <div className="ufo-fly">
+        <div className="ufo-bob">
+          <svg width="140" height="100" viewBox="0 0 140 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="uDome" cx=".38" cy=".26" r=".95"><stop offset="0" stopColor="#F2FDFF" /><stop offset=".35" stopColor="#8FDCFF" /><stop offset=".72" stopColor="#2E9BD6" /><stop offset="1" stopColor="#155C9C" /></radialGradient>
+              <radialGradient id="uBody" cx=".4" cy=".18" r="1.05"><stop offset="0" stopColor="#6D9EE0" /><stop offset=".42" stopColor="#1E5FB8" /><stop offset=".78" stopColor="#0A2A5E" /><stop offset="1" stopColor="#051534" /></radialGradient>
+              <linearGradient id="uHull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#0E3C7E" /><stop offset="1" stopColor="#03102A" /></linearGradient>
+              <linearGradient id="uBeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#FFC629" stopOpacity=".55" /><stop offset="1" stopColor="#FFC629" stopOpacity="0" /></linearGradient>
+              <radialGradient id="uGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stopColor="#FFEDB3" /><stop offset="1" stopColor="#FFC629" stopOpacity="0" /></radialGradient>
+            </defs>
+            <path className="ufo-beam" d="M54 52 L86 52 L104 96 L36 96 Z" fill="url(#uBeam)" />
+            <ellipse cx="70" cy="57" rx="30" ry="7.5" fill="url(#uHull)" />
+            <ellipse cx="70" cy="44" rx="54" ry="15" fill="url(#uBody)" />
+            <path d="M16 44 Q70 29 124 44 Q70 38.5 16 44 Z" fill="#A5DCFF" opacity=".55" />
+            <path d="M18 47.5 Q70 61 122 47.5 Q70 55 18 47.5 Z" fill="#020B1C" opacity=".42" />
+            <ellipse cx="70" cy="27" rx="21" ry="15.5" fill="url(#uDome)" />
+            <ellipse cx="62" cy="19.5" rx="7.5" ry="4.5" fill="#fff" opacity=".85" transform="rotate(-18 62 19.5)" />
+            <g>
+              <circle cx="28" cy="47" r="6" fill="url(#uGlow)" /><circle cx="28" cy="47" r="2.6" fill="#FFC629" />
+              <circle cx="49" cy="52" r="6" fill="url(#uGlow)" /><circle cx="49" cy="52" r="2.6" fill="#FFD98A" />
+              <circle cx="70" cy="54" r="6" fill="url(#uGlow)" /><circle cx="70" cy="54" r="2.6" fill="#FFC629" />
+              <circle cx="91" cy="52" r="6" fill="url(#uGlow)" /><circle cx="91" cy="52" r="2.6" fill="#FFD98A" />
+              <circle cx="112" cy="47" r="6" fill="url(#uGlow)" /><circle cx="112" cy="47" r="2.6" fill="#FFC629" />
+            </g>
+          </svg>
+        </div>
       </div>
     </div>
   );

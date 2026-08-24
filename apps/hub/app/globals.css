@@ -255,3 +255,202 @@ textarea::placeholder {
   0%, 100% { opacity: .45; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.15); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TRANG CHỦ "SCI-FI HUD" (24/08/2026) — chép từ TRẠNG THÁI CASCADE CUỐI của bản
+   thiết kế public/trinh-dien/index.html, mục #s-home.
+
+   Bài học từ màn đăng nhập vẫn còn nguyên: file thiết kế khai cùng một selector
+   NHIỀU LẦN (TECH HOME SKIN → SCI-FI HUD → SHOWTIME → LIGHT OVERRIDE → FIERCE →
+   SQUARE-OFF → FINAL), giá trị THẮNG là giá trị đứng CUỐI — và bản cuối là nền
+   TRẮNG (#s-home{background:#FFFFFF !important}) với thẻ trắng viền #8FB6E4,
+   sidebar/đầu trang navy đậm, thẻ check-in vàng kem. Đây là lý do trang chủ KHÔNG
+   dùng token nền tối của app: chủ đầu tư 24/08 — "trang home bây giờ không phải
+   theme đen, mà là cái theme tôi đã gửi". Mỗi selector dưới đây xuất hiện ĐÚNG MỘT
+   lần, mang giá trị cuối đã gộp — người sửa sau không phải tự gộp cascade lại.
+
+   Lưu ý ::after của .s-home: bản thiết kế có `background-image: url(svg) !important`
+   ở đời SCI-FI HUD; đời FIERCE khai lại background-image KHÔNG !important nên THUA
+   theo luật cascade — mạch vi ĐỨNG LẠI, không phải lưới gắt hơn. Đã kiểm bằng tay.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.s-home { position: relative; background: #FFFFFF; }
+.s-home::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(53,224,255,.14) 1.2px, transparent 1.2px),
+    linear-gradient(rgba(53,224,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53,224,255,.05) 1px, transparent 1px);
+  background-size: 110px 110px, 36px 36px, 36px 36px;
+}
+.s-home::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%238A6A00' stroke-opacity='.13' stroke-width='1.6'><path d='M20 20h60v40h50'/><path d='M20 90v70h45'/><path d='M130 60v50h70'/><path d='M65 160h70v40'/><path d='M170 130v60'/><path d='M100 20v25'/><path d='M200 40h-40'/><path d='M40 200v-30'/></g><g fill='%238A6A00' fill-opacity='.2'><circle cx='20' cy='20' r='3.4'/><circle cx='130' cy='60' r='3.4'/><circle cx='65' cy='160' r='3.4'/><circle cx='200' cy='110' r='3.4'/><circle cx='170' cy='190' r='3.4'/><circle cx='100' cy='45' r='3.4'/><circle cx='160' cy='40' r='3.4'/><circle cx='40' cy='170' r='3.4'/><circle cx='135' cy='200' r='3.4'/><circle cx='20' cy='90' r='3.4'/></g><g fill='none' stroke='%238A6A00' stroke-opacity='.16' stroke-width='1.6'><rect x='92' y='92' width='36' height='36' rx='3'/><path d='M92 101h-12M92 110h-12M92 119h-12M128 101h12M128 110h12M128 119h12M101 92v-12M110 92v-12M119 92v-12M101 128v12M110 128v12M119 128v12'/></g></svg>");
+  background-size: 220px 220px;
+}
+/* Nội dung phải nổi TRÊN hai lớp trang trí ::before/::after (chúng phủ inset:0). */
+.s-home > * { position: relative; z-index: 1; }
+.fx-scan {
+  position: absolute; left: 0; right: 0; top: 0; height: 120px; pointer-events: none; z-index: 2;
+  background: linear-gradient(180deg, transparent, rgba(30,95,184,.045) 45%, rgba(255,255,255,.5) 50%, rgba(30,95,184,.045) 55%, transparent);
+  animation: scanY 8s linear infinite;
+}
+
+/* ── Đầu trang "command strip" ── */
+.hv-head {
+  position: relative; display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; margin-bottom: 14px; flex-wrap: wrap; padding: 14px 20px;
+  background: linear-gradient(92deg, #0A1A3E 0%, #0E2A5E 74%, #123A7E 100%);
+  border: 1px solid rgba(53,224,255,.4);
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  box-shadow: 0 16px 40px rgba(10,30,70,.25);
+  filter: drop-shadow(1.5px 0 0 rgba(53,224,255,.55)) drop-shadow(-1.5px 0 0 rgba(53,224,255,.55)) drop-shadow(0 1.5px 0 rgba(53,224,255,.55)) drop-shadow(0 -1.5px 0 rgba(53,224,255,.55)) drop-shadow(0 20px 16px rgba(10,42,94,.28));
+  animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) .05s backwards;
+}
+.hv-head::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, #35E0FF, transparent 60%); }
+.hv-hello h1 { margin: 8px 0 0; font-size: 29px; font-weight: 900; letter-spacing: -.015em; white-space: nowrap; color: #fff; text-shadow: 0 4px 26px rgba(53,224,255,.3); }
+.hv-date { margin-top: 5px; font-size: 12.5px; font-weight: 700; text-transform: capitalize; color: #9CC7FF; }
+.hv-stats { display: flex; gap: 8px; flex: none; flex-wrap: wrap; animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) .12s backwards; }
+.hv-stat {
+  display: flex; align-items: center; gap: 10px; padding: 10px 15px; border: 0; border-radius: 0;
+  background: #0B1E44; box-shadow: inset 0 0 18px rgba(53,224,255,.06);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  filter: drop-shadow(1px 0 0 rgba(53,224,255,.5)) drop-shadow(-1px 0 0 rgba(53,224,255,.5)) drop-shadow(0 1px 0 rgba(53,224,255,.5)) drop-shadow(0 -1px 0 rgba(53,224,255,.5)) drop-shadow(0 6px 0 rgba(4,13,32,.32)) drop-shadow(0 12px 10px rgba(4,13,32,.32));
+}
+.hv-si { font-size: 21px; }
+.hv-st { display: flex; flex-direction: column; gap: 1px; }
+.hv-st b { font-size: 17px; font-weight: 800; line-height: 1.05; color: #fff; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.hv-st i { font-style: normal; font-size: 9px; font-weight: 700; white-space: nowrap; color: #7E97C4; }
+
+/* ── Lưới hai cột + thẻ ── */
+.hv-grid { display: grid; grid-template-columns: 7fr 5fr; gap: 13px; align-items: start; }
+.hv-l, .hv-r { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+.hv-card {
+  position: relative; overflow: hidden; padding: 17px 20px; border: 0; border-radius: 0;
+  background: rgba(255,255,255,.95); box-shadow: none;
+  clip-path: polygon(0 0, 36% 0, calc(36% + 8px) 7px, calc(64% - 8px) 7px, 64% 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  filter: drop-shadow(1.5px 0 0 #8FB6E4) drop-shadow(-1.5px 0 0 #8FB6E4) drop-shadow(0 1.5px 0 #8FB6E4) drop-shadow(0 -1.5px 0 #8FB6E4) drop-shadow(0 9px 0 rgba(10,42,94,.28)) drop-shadow(0 22px 18px rgba(10,42,94,.32));
+  animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) backwards;
+}
+.hv-card::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: linear-gradient(90deg, transparent, rgba(14,159,216,.5), transparent); }
+.hv-card::after { content: ""; position: absolute; left: 0; top: 0; width: 14px; height: 14px; border-top: 3px solid #F5A300; border-left: 3px solid #F5A300; pointer-events: none; }
+.hv-l > *:nth-child(1) { animation-delay: .14s; }
+.hv-l > *:nth-child(2) { animation-delay: .22s; }
+.hv-l > *:nth-child(3) { animation-delay: .3s; }
+.hv-r > *:nth-child(1) { animation-delay: .18s; }
+.hv-r > *:nth-child(2) { animation-delay: .26s; }
+.hv-r > *:nth-child(3) { animation-delay: .34s; }
+.card-sweep { position: absolute; top: 0; bottom: 0; width: 52%; pointer-events: none; background: linear-gradient(105deg, transparent, rgba(255,255,255,.5), transparent); animation: cardSweep 5.5s ease-in-out infinite; }
+.hv-ct { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: static; }
+.hv-ct::after { content: ""; position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; border-bottom: 3px solid rgba(14,159,216,.75); border-right: 3px solid rgba(14,159,216,.75); pointer-events: none; }
+.hv-tt { display: flex; align-items: center; gap: 8px; font-size: 15.5px; font-weight: 900; color: #0A2A5E; white-space: nowrap; }
+.hv-kick { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; font-weight: 800; letter-spacing: .12em; color: #4A78C2; }
+
+/* ── Thẻ check-in vàng kem ── */
+.hv-check { background: linear-gradient(135deg, #FFF9E8 0%, #FFEFC2 58%, #FFE49A 100%); filter: drop-shadow(1.5px 0 0 #E8C15A) drop-shadow(-1.5px 0 0 #E8C15A) drop-shadow(0 1.5px 0 #E8C15A) drop-shadow(0 -1.5px 0 #E8C15A) drop-shadow(0 9px 0 rgba(160,105,10,.32)) drop-shadow(0 22px 18px rgba(180,120,20,.35)); }
+.hv-check::before { background: linear-gradient(90deg, transparent, rgba(245,163,0,.75), transparent); }
+.hv-check::after { border-color: #B77E00; }
+.hv-check .hv-tt, .hv-check .hv-q { color: #5A3E00; }
+.hv-badge { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: .1em; padding: 4px 9px; white-space: nowrap; border-radius: 0; color: #8A5A00; border: 1.5px solid #D9A400; background: rgba(255,255,255,.6); }
+.hv-q { margin-top: 13px; font-size: 16px; font-weight: 800; color: #1D3B6E; }
+.hv-moods { display: grid; gap: 10px; margin-top: 14px; grid-template-columns: repeat(4, 1fr); }
+.hv-m {
+  display: flex; width: 100%; flex-direction: column; gap: 6px; padding: 13px 6px; align-items: center; justify-content: center;
+  border: 0; border-radius: 0; color: #fff; font-family: inherit; cursor: pointer;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  filter: drop-shadow(0 8px 14px rgba(4,13,32,.28));
+  animation: moodBob 3s ease-in-out infinite; transition: transform .16s cubic-bezier(.34,1.56,.64,1);
+}
+.hv-m:nth-child(2) { animation-delay: .4s; }
+.hv-m:nth-child(4) { animation-delay: 1.2s; }
+/* Khác nút của panel đăng nhập (giật vì rời khỏi con trỏ ở mép): ô này PHÓNG TO tại chỗ
+   nên con trỏ vẫn nằm trong nó — không có vòng lặp hover-rời-hover. */
+.hv-m:hover { animation-play-state: paused; transform: translateY(-4px) scale(1.12); }
+.hv-m .msr { font-size: 24px; }
+.hv-m::after { content: attr(title); font-size: 10.5px; font-weight: 800; letter-spacing: .01em; }
+.hv-cta {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+  margin-top: 14px; border: 0; padding: 13px 26px; font-size: 14px; font-weight: 900; font-family: inherit; cursor: pointer;
+  background: linear-gradient(100deg, #FFC629, #F5A300); color: #0A1226; border-radius: 0; transition: transform .16s;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  filter: drop-shadow(1.5px 0 0 #B77E00) drop-shadow(-1.5px 0 0 #B77E00) drop-shadow(0 1.5px 0 #B77E00) drop-shadow(0 -1.5px 0 #B77E00) drop-shadow(0 14px 12px rgba(245,163,0,.38));
+}
+.hv-cta:hover { transform: translateY(-2px); }
+.hv-cta .msr { color: #0A1226; font-size: 17px; }
+.hv-done { display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 13px; font-weight: 800; padding: 11px 14px; color: #00693C; border: 1.5px solid #A9E4C6; border-radius: 0; background: #EDFBF4; }
+
+/* ── Banner "Báo cáo Trưởng thành" ── */
+.hv-bn {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 13px; border: 0;
+  padding: 15px 18px 15px 30px; font-family: inherit; cursor: pointer; text-align: left; border-radius: 0;
+  background: linear-gradient(100deg, #FFC629, #F5A300); transition: transform .16s;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  filter: drop-shadow(1.5px 0 0 #B77E00) drop-shadow(-1.5px 0 0 #B77E00) drop-shadow(0 1.5px 0 #B77E00) drop-shadow(0 -1.5px 0 #B77E00) drop-shadow(0 9px 0 rgba(160,105,10,.38)) drop-shadow(0 22px 18px rgba(245,163,0,.5));
+  animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) backwards;
+}
+.hv-bn:hover { transform: translateY(-2px); }
+.hv-bn::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: repeating-linear-gradient(45deg, #0A1226 0 7px, #FFC629 7px 14px); opacity: .85; }
+.bn-circuit { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(138,90,0,.22) 1.5px, transparent 1.5px), linear-gradient(90deg, rgba(138,90,0,.22) 1.5px, transparent 1.5px); background-size: 24px 24px; mask-image: linear-gradient(90deg, transparent 46%, #000 82%); -webkit-mask-image: linear-gradient(90deg, transparent 46%, #000 82%); }
+.hv-bi { display: flex; width: 42px; height: 42px; flex: none; align-items: center; justify-content: center; border-radius: 0; background: #0A1226; color: #FFC629; clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); }
+.hv-bi .msr { font-size: 23px; }
+.hv-btx { display: flex; flex-direction: column; gap: 2px; flex: 1; position: relative; }
+.hv-btx b { font-size: 14.5px; font-weight: 900; color: #0A1226; }
+.hv-btx span { font-size: 11.5px; font-weight: 700; color: #6B4A00; }
+.hv-bai { position: relative; flex: none; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 800; padding: 8px 11px; border-radius: 0; background: #0A1226; color: #FFC629; box-shadow: 0 0 18px rgba(10,18,38,.4); display: flex; align-items: center; justify-content: center; }
+.hv-bai .msr { font-size: 18px; }
+
+/* ── Thẻ "Tuần này của mình" ── */
+.hv-wk { display: flex; align-items: center; gap: 12px; margin-top: 13px; }
+.hv-wi { font-size: 20px; }
+.hv-wm { flex: 1; min-width: 0; }
+.hv-wl { font-size: 11.5px; font-weight: 800; margin-bottom: 6px; color: #33507C; }
+.hv-bar { position: relative; height: 9px; overflow: hidden; border-radius: 0; background: #E1EAF5; }
+.hv-fill { position: relative; display: block; height: 100%; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.hv-fill::after { content: ""; position: absolute; top: 0; bottom: 0; width: 36%; background: linear-gradient(105deg, transparent, rgba(255,255,255,.4), transparent); animation: barShimmer 2.6s ease-in-out infinite; }
+.hv-seg { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 3px), #fff calc(20% - 3px) 20%); }
+.hv-wn { font-size: 13.5px; font-weight: 900; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.hv-link {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 15px;
+  padding: 11px; min-height: 44px; font-size: 12.5px; font-weight: 800; font-family: inherit; cursor: pointer;
+  border: 0; border-radius: 0; background: #fff; color: #1E5FB8;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  filter: drop-shadow(1px 0 0 #B7D2F0) drop-shadow(-1px 0 0 #B7D2F0) drop-shadow(0 1px 0 #B7D2F0) drop-shadow(0 -1px 0 #B7D2F0) drop-shadow(0 10px 10px rgba(30,80,160,.18));
+}
+.hv-link:hover { color: #0A2A5E; }
+
+/* ── Thẻ "Hôm nay" + radar ── */
+.hv-line { margin-top: 12px; font-size: 13.5px; font-weight: 700; color: #33507C; }
+.hv-chk { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 0; background: #E0F4FC; color: #0E9FD8; }
+.hv-chk .msr { font-size: 18px; }
+.hv-radar { padding-bottom: 12px; }
+.radar { position: absolute; right: 14px; bottom: 10px; width: 74px; height: 74px; pointer-events: none; opacity: .9; }
+.rd-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(14,159,216,.45); }
+.rd-ring.r2 { inset: 16px; border-color: rgba(14,159,216,.28); }
+.rd-beam { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, rgba(14,159,216,.4), transparent 70deg, transparent 360deg); animation: rdSpin 3.2s linear infinite; }
+.rd-dot { position: absolute; left: 20%; top: 32%; width: 5px; height: 5px; border-radius: 99px; background: #00D97A; box-shadow: 0 0 10px #00D97A; animation: glowPulse 2s ease-in-out infinite; }
+
+/* ── UFO bay ngang trời. Bản thiết kế lái nó bằng JS đuổi chuột; ở đây một đường bay
+      CSS là đủ vui mà không thêm vòng lặp JS nào cho trang mọi người mở mỗi sáng ── */
+.ufo-track { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 6; }
+.ufo-fly { position: absolute; left: -160px; top: 0; will-change: transform; filter: drop-shadow(0 12px 16px rgba(10,42,94,.3)); animation: ufoPath 26s linear infinite; }
+.ufo-bob { animation: ufoBob 2.7s ease-in-out infinite alternate; }
+.ufo-beam { animation: ufoBeam 1.9s ease-in-out infinite; }
+
+@keyframes scanY { 0% { transform: translateY(-40vh); } 100% { transform: translateY(130vh); } }
+@keyframes fadeUp { 0% { opacity: 0; transform: translateY(18px); } 100% { opacity: 1; transform: none; } }
+@keyframes cardSweep { 0%, 55% { transform: translateX(-130%); } 100% { transform: translateX(260%); } }
+@keyframes moodBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes barShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } }
+@keyframes rdSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes ufoBob { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
+@keyframes ufoBeam { 0%, 100% { opacity: .3; } 50% { opacity: .8; } }
+@keyframes ufoPath {
+  0% { transform: translate(0, 12vh) scale(.8); }
+  45% { transform: translate(58vw, 4vh) scale(.9); }
+  100% { transform: translate(calc(100vw + 320px), 10vh) scale(.85); }
+}
+
+/* GIẢM CHUYỂN ĐỘNG: mọi trang trí động của trang chủ đứng yên hoặc biến mất — cùng luật
+   đã giữ ở intro và nền sao. Thẻ vẫn hiện (fadeUp tắt), dữ liệu không mất gì. */
+@media (prefers-reduced-motion: reduce) {
+  .fx-scan, .ufo-track { display: none; }
+  .hv-head, .hv-stats, .hv-card, .hv-bn, .hv-m, .card-sweep, .hv-fill::after, .rd-beam, .rd-dot { animation: none; }
+}

@@ -39,6 +39,10 @@ const FILES = [
 ].filter((p) => !p.includes(".next"));
 
 /** Mã hex của nền sáng cũ — không được quay lại bất kỳ đâu trong mã nguồn. */
+/* 24/08/2026: /home nay là trang SÁNG theo lệnh trực tiếp ("cái theme tôi đã gửi" —
+   skin .s-home/.hv-* trong globals.css, nền #FFFFFF). Guard này KHÔNG mâu thuẫn: nó chỉ
+   cấm các hex của giao diện sáng CŨ quay lại, không cấm màu sáng mà chủ đầu tư đặt hàng.
+   Xem tests/unit/home-khop-thiet-ke.test.ts. */
 const NEN_SANG_CU = ["#F1F4F8", "#F5F8FC", "#E4E9F0", "#EAEFF6", "#F7F9FC", "#F5F7FA", "#FCFDFE"];
 
 describe("giao diện tối — không nền sáng nào sót lại", () => {

@@ -4,7 +4,7 @@
 import type { MoodValue } from "@hub/core/contracts";
 import { MOOD_LABEL } from "@hub/core/contracts";
 
-const MOOD_STYLE: Record<MoodValue, { gradient: string; icon: string; text: string; shadow: string }> = {
+export const MOOD_STYLE: Record<MoodValue, { gradient: string; icon: string; text: string; shadow: string }> = {
   4: { gradient: "from-mood-happy to-mood-happyDark", icon: "sentiment_very_satisfied", text: "text-white", shadow: "shadow-[0_8px_18px_rgba(0,168,94,.32)]" },
   3: { gradient: "from-mood-normal to-mood-normalDark", icon: "sentiment_neutral", text: "text-white", shadow: "shadow-[0_8px_18px_rgba(44,123,242,.32)]" },
   2: { gradient: "from-mood-tired to-mood-tiredDark", icon: "sentiment_dissatisfied", text: "text-gold-text", shadow: "shadow-[0_8px_18px_rgba(245,163,0,.32)]" },
