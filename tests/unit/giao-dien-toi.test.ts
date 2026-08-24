@@ -245,3 +245,37 @@ describe("intro không bắt người dùng đợi", () => {
     expect(INTRO3).toMatch(/removeEventListener\("playing"/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// VIDEO NỀN PHẢI LÀ BẢN VÒNG-LẶP-LIỀN-MẠCH 7 GIÂY
+// ---------------------------------------------------------------------------
+// Chủ đầu tư 24/08/2026: *"lúc hết video quay lại đang bị khựng"*. Đo ra: mối nối cũ
+// (khung cuối → khung đầu) có PSNR 13,8 trong khi hai khung kề bình thường là 17,0 — cú
+// nhảy lớn hơn hẳn nhịp thường, mắt bắt được. Sửa TRONG FILE bằng crossfade giây cuối
+// vào giây đầu (thân = giây 1–8, đầu = giây 0–1, xfade 1s): bản ra dài 7s và mối nối đo
+// được 18,1 — MƯỢT HƠN một bước hình bình thường. Không một dòng JS nào.
+//
+// Bài này canh THỜI LƯỢNG đọc từ mvhd: ai xuất lại video 8 giây từ nguồn (quên bước
+// crossfade) là cú khựng quay lại, và không test giá trị nào khác thấy được.
+describe("video nền — vòng lặp liền mạch", () => {
+  function thoiLuong(p: string): number {
+    const b = readFileSync(join(goc, p));
+    const i = b.indexOf(Buffer.from("mvhd"));
+    expect(i, `${p}: không thấy mvhd`).toBeGreaterThan(-1);
+    const ver = b[i + 4];
+    // mvhd v0: timescale ở +12 (4 byte), duration ở +16 (4 byte); v1: +20 (4), +24 (8).
+    const ts = ver === 1 ? b.readUInt32BE(i + 24) : b.readUInt32BE(i + 16);
+    const du = ver === 1 ? Number(b.readBigUInt64BE(i + 28)) : b.readUInt32BE(i + 20);
+    return du / ts;
+  }
+  it("cả AV1 lẫn H.264 dự phòng đều ~7s — bản đã crossfade, không phải nguồn 8s", () => {
+    for (const f of [
+      "apps/hub/public/trinh-dien/uploads/su-tu-av1.mp4",
+      "apps/hub/public/trinh-dien/uploads/su-tu-chay.mp4",
+    ]) {
+      const d = thoiLuong(f);
+      expect(d, `${f}: ${d.toFixed(2)}s — nguồn 8s chưa qua crossfade?`).toBeGreaterThan(6.7);
+      expect(d, `${f}: ${d.toFixed(2)}s`).toBeLessThan(7.3);
+    }
+  });
+});
