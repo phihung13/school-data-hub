@@ -239,3 +239,19 @@ textarea::placeholder {
 .mascot-run { background-position: 33.333% 100%; }
 .mascot-think { background-position: 66.667% 100%; }
 .mascot-laptop { background-position: 100% 100%; }
+
+/* ── Màn đăng nhập điện ảnh (24/08/2026) — ba keyframes chép từ bản thiết kế ──────────
+   `panelFloat` gốc animate `translateY(-50%)↔calc(-50% - 7px)` vì thiết kế neo panel bằng
+   `top:50%`; bản thi hành căn giữa bằng flexbox nên biên độ giữ nguyên (7px) mà mốc là 0. */
+@keyframes panelFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes panelSheen {
+  0%, 55% { background-position: 120% 0; }
+  100% { background-position: -60% 0; }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: .45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
