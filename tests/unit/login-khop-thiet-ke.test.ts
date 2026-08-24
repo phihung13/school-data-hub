@@ -173,17 +173,24 @@ describe("màn đăng nhập khớp TRẠNG THÁI CUỐI của bản thiết k�
     expect(iCta).toBeLessThan(iDev);
   });
 
-  it("video nền mang ĐÚNG bộ lọc và ĐỦ năm lớp phủ của thiết kế", () => {
-    expect(gon(LOGIN)).toContain(gon(giaTriCuoi(".cin-bg", "filter")!));
-    const bg = giaTriCuoi(".cin-shade", "background")!;
-    const lop = bg.split(/\),\s*(?=radial-gradient|linear-gradient)/);
-    expect(lop.length, "bản thiết kế đổi số lớp phủ").toBe(5);
-    const thi = gon(LOGIN);
-    for (const l of lop) {
-      const moc = /at\s+([-\d%.\s]+?)\s*,/.exec(l)?.[1] ?? /(\d+deg)/.exec(l)?.[1];
-      expect(moc, `không rút được mốc từ: ${l.slice(0, 60)}`).toBeTruthy();
-      expect(thi, `lớp phủ thiếu: ${l.slice(0, 70)}`).toContain(gon(moc!));
-    }
+  it("video nền: giữ bộ lọc thiết kế, nhưng bố cục theo LỆNH CHỦ ĐẦU TƯ — cao bằng trang, neo trái, tan phải vào đen", () => {
+    // ═══════════════════════════════════════════════════════════════════════
+    // GHI ĐÈ THIẾT KẾ, CÓ LỆNH — 24/08/2026: "cho video bằng chiều cao với web đi,
+    // chiều rộng có thiếu bên phải cũng được, xong rồi cho màu đen đè lên".
+    // ═══════════════════════════════════════════════════════════════════════
+    // Thiết kế dùng `object-fit:cover` tràn viền + lớp phủ 5 tầng `.cin-shade`. Chủ đầu
+    // tư đổi: video giữ nguyên tỉ lệ cao bằng trang (sư tử không bị cắt), phần phải là
+    // nền đen, mép video TAN DẦN vào đen. Bài này canh trạng thái ĐÃ DUYỆT đó — quay về
+    // tràn-viền hay dựng lại 5 tầng đều là làm trái một lệnh trực tiếp.
+    expect(gon(LOGIN), "mất bộ lọc sáng/bão hoà của thiết kế").toContain(
+      gon(giaTriCuoi(".cin-bg", "filter")!),
+    );
+    expect(LOGIN, "video phải giữ tỉ lệ, cao bằng trang, neo trái").toContain("h-full w-auto max-w-none");
+    expect(LOGIN, "khung bọc phải có nền đen cho phần hụt bên phải").toMatch(
+      /aria-hidden className="pointer-events-none absolute inset-0 bg-\[#04102A\]"/,
+    );
+    expect(LOGIN, "mép video phải tan vào đen, không cắt cứng").toContain("#04102A_92%");
+    expect(LOGIN, "lớp phủ 5 tầng đã bị lệnh chủ đầu tư thay").not.toContain("104%_106%");
   });
 
   it("kicker: chấm vàng thở theo glowPulse của thiết kế, không phải animate-pulse", () => {

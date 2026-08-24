@@ -271,11 +271,20 @@ export function LoginForm({
     // flexbox thay vì absolute để khi các bảng phụ (mã mời, mở khoá) bung ra làm panel
     // cao hơn màn, trang còn cuộn được.
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#04102A] p-4 md:h-screen md:justify-end md:p-0 md:pr-[104px]">
-      {/* NỀN VIDEO — `.cin-bg` + `.cin-shade`, ở MỌI khổ màn. Dùng lại file đã tối ưu
-          cho bản trình diễn; `aria-hidden` + `pointer-events-none`: trang trí thuần. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
+      {/* NỀN VIDEO — lệnh chủ đầu tư 24/08/2026: "cho video bằng chiều cao với web đi,
+          chiều rộng có thiếu bên phải cũng được, xong rồi cho màu đen đè lên".
+
+          Ghi đè hai thứ của bản thiết kế, có chủ ý:
+            · `object-fit:cover` tràn viền → video CAO BẰNG TRANG, giữ nguyên tỉ lệ, neo
+              TRÁI (`w-auto max-w-none`); màn rộng hơn 16:9 thì phần phải là nền đen của
+              chính khung bọc — sư tử không bao giờ bị cắt.
+            · lớp phủ 5 tầng `.cin-shade` → MỘT dải tan phải: mép video tan dần vào nền
+              đen thay vì một đường cắt cứng, và vùng panel đứng luôn tối ổn định bất kể
+              khung hình nào đang chiếu.
+          `aria-hidden` + `pointer-events-none`: trang trí thuần. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#04102A]">
         <video
-          className="h-full w-full object-cover [filter:brightness(1.18)_saturate(1.08)]"
+          className="h-full w-auto max-w-none object-cover [filter:brightness(1.18)_saturate(1.08)]"
           poster="/trinh-dien/uploads/su-tu-poster.webp"
           preload="auto"
           loop
@@ -286,8 +295,9 @@ export function LoginForm({
           <source src="/trinh-dien/uploads/su-tu-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />
           <source src="/trinh-dien/uploads/su-tu-chay.mp4" type="video/mp4" />
         </video>
-        {/* `.cin-shade` — NĂM lớp gradient chép nguyên: tối bốn góc, chừa sáng giữa. */}
-        <div className="absolute inset-0 bg-[radial-gradient(620px_470px_at_104%_106%,rgba(4,13,32,.88),rgba(4,13,32,.45)_46%,transparent_74%),radial-gradient(640px_460px_at_-6%_-8%,rgba(4,13,32,.66),rgba(4,13,32,.32)_42%,transparent_78%),radial-gradient(700px_520px_at_-6%_108%,rgba(4,13,32,.64),rgba(4,13,32,.3)_42%,transparent_78%),linear-gradient(270deg,rgba(4,13,32,.88)_0%,rgba(4,13,32,.5)_9%,rgba(4,13,32,0)_20%),linear-gradient(292deg,rgba(4,13,32,.84)_0%,rgba(4,13,32,.68)_30%,rgba(4,13,32,.34)_52%,rgba(4,13,32,0)_68%)]" />
+        {/* Màn voan nhẹ toàn khung + DẢI TAN PHẢI về đúng màu nền đen — mép video không
+            thành một đường cắt cứng, vùng panel luôn tối ổn định. */}
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,16,42,.2)_0%,rgba(4,16,42,.25)_45%,rgba(4,16,42,.82)_72%,#04102A_92%)]" />
       </div>
 
       {/* DẤU THƯƠNG HIỆU — `.cin-brand`, góc trái trên. aria-hidden: tên đã có trong h1. */}
