@@ -59,7 +59,7 @@ export function OperationsShell({
           <HubSidebar roles={roles} active={active} fullName={displayName} email={email} />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
           {/* 44px (§11) — trước 01/08/2026 là h-9 w-9 = đúng 36px. Đây là lối ra duy
               nhất của màn Điều hành trên điện thoại; nay có thêm chữ đứng cạnh mũi tên
               vì `aria-label` không nói gì với người NHÌN THẤY nút. */}
@@ -121,7 +121,7 @@ export function OperationsShell({
 /** Thẻ trắng chuẩn của Hub — cùng hình dạng với Card của GvcnShell. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
+    <div className={`hv-card-toi p-4 md:p-5 ${className}`}>
       {children}
     </div>
   );

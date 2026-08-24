@@ -60,7 +60,7 @@ export function AttendanceView({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="attendance" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col s-home md:overflow-hidden">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
         <div className="hv-thanh flex flex-none items-center gap-3 px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
           <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-[#2C7BF2] to-[#0A4FBF]">
             <span aria-hidden="true" className="msr text-[19px] text-white">fact_check</span>

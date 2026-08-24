@@ -144,7 +144,7 @@ export function HelpRequestView({
           gradient="from-gold to-gold-dark"
         />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
         {/* Tiêu đề màn, dành cho tai — không đổi một pixel nào trên màn.
             Vì sao sr-only chứ không phải đổi thẻ của dòng chữ đang hiện: chữ "Mình cần
             gặp thầy cô" được vẽ ở HAI chỗ khác nhau tuỳ khổ màn (MiniAppHeader ở điện
@@ -152,7 +152,7 @@ export function HelpRequestView({
             cả hai là để hai <h1> trong cùng một DOM — mỗi lần đọc lại phải đoán cái nào
             là thật. Một cái duy nhất, luôn có mặt, luôn đúng. */}
         <h1 className="sr-only">Mình cần gặp thầy cô</h1>
-        <div className="hidden flex-none items-center gap-3 border-b border-[#16294B] bg-card px-7 py-3.5 md:flex">
+        <div className="hidden flex-none items-center gap-3 hv-thanh px-7 py-3.5 md:flex">
             {/* VÙNG CHẠM 44px mà KHÔNG phóng to phần nhìn thấy — cùng mẫu mini-app-header.tsx
                 đã dựng: `min-h-[44px] px-1` nằm trên chính phần tử bấm được, vòng tròn 36×36
                 và nền hover vẫn nguyên kích thước cũ vì chúng nằm ở lớp trong. Nút này 36×36

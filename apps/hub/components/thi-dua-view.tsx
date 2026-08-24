@@ -76,7 +76,7 @@ export function ThiDuaView({
         <HubSidebar roles={roles} active="thi-dua" fullName={displayName} email={email} classCode={classCode} />
       </div>
 
-      <MainContent className="flex min-w-0 flex-1 flex-col s-home md:overflow-hidden">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
         <div className="hv-thanh flex flex-none items-center gap-3.5 px-4 py-3 md:px-7 md:py-3.5">
           <div className="min-w-0 flex-1">
             <h1 className="text-[16px] font-black text-ink">Bảng thi đua</h1>

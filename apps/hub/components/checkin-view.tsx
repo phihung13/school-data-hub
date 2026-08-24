@@ -419,8 +419,8 @@ function CheckinShell({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="checkin" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-card md:overflow-hidden md:bg-pagebgDesktop">
-        <div className="flex flex-none items-center gap-3 border-b border-[#16294B] bg-card px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-card s-home-md md:overflow-hidden">
+        <div className="flex flex-none items-center gap-3 hv-thanh px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
           <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-domain-attendance to-domain-attendanceDark">
             <span aria-hidden="true" className="msr text-[19px] text-white">sentiment_satisfied</span>
           </span>

@@ -468,6 +468,27 @@ textarea::placeholder {
 }
 .hv-card-toi::after { content: ""; position: absolute; left: 0; top: 0; width: 14px; height: 14px; border-top: 3px solid #F5A300; border-left: 3px solid #F5A300; pointer-events: none; }
 
+/* ── .s-home-md: đúng cảnh HUD nhưng CHỈ từ 768px — cho các màn MỘT CÂY dùng chung
+      điện thoại/máy tính (buồng lái, điều hành, tâm lý, hồ sơ, check-in…). Điện thoại
+      giữ nền tối token (chữ sáng ngoài thẻ vẫn đọc được); máy tính nhận nền trắng vi
+      mạch. Giá trị nhân bản bằng máy từ .s-home ở trên — sửa .s-home là sửa cả hai. ── */
+@media (min-width: 768px) {
+  .s-home-md { position: relative; background: #FFFFFF; }
+  .s-home-md::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(53,224,255,.14) 1.2px, transparent 1.2px),
+    linear-gradient(rgba(53,224,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53,224,255,.05) 1px, transparent 1px);
+  background-size: 110px 110px, 36px 36px, 36px 36px;
+}
+  .s-home-md::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%238A6A00' stroke-opacity='.13' stroke-width='1.6'><path d='M20 20h60v40h50'/><path d='M20 90v70h45'/><path d='M130 60v50h70'/><path d='M65 160h70v40'/><path d='M170 130v60'/><path d='M100 20v25'/><path d='M200 40h-40'/><path d='M40 200v-30'/></g><g fill='%238A6A00' fill-opacity='.2'><circle cx='20' cy='20' r='3.4'/><circle cx='130' cy='60' r='3.4'/><circle cx='65' cy='160' r='3.4'/><circle cx='200' cy='110' r='3.4'/><circle cx='170' cy='190' r='3.4'/><circle cx='100' cy='45' r='3.4'/><circle cx='160' cy='40' r='3.4'/><circle cx='40' cy='170' r='3.4'/><circle cx='135' cy='200' r='3.4'/><circle cx='20' cy='90' r='3.4'/></g><g fill='none' stroke='%238A6A00' stroke-opacity='.16' stroke-width='1.6'><rect x='92' y='92' width='36' height='36' rx='3'/><path d='M92 101h-12M92 110h-12M92 119h-12M128 101h12M128 110h12M128 119h12M101 92v-12M110 92v-12M119 92v-12M101 128v12M110 128v12M119 128v12'/></g></svg>");
+  background-size: 220px 220px;
+}
+  .s-home-md > * { position: relative; z-index: 1; }
+}
+
 /* GIẢM CHUYỂN ĐỘNG: mọi trang trí động của trang chủ đứng yên hoặc biến mất — cùng luật
    đã giữ ở intro và nền sao. Thẻ vẫn hiện (fadeUp tắt), dữ liệu không mất gì. */
 @media (prefers-reduced-motion: reduce) {

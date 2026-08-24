@@ -474,7 +474,7 @@ export function GvcnDashboard({
     <StaffVoice>
       <div className="flex min-h-screen w-full flex-col md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
         {sidebar}
-        <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
           {/* LANDMARK <main id="noi-dung"> — thêm 02/08/2026 (gói "audit-giao-dien-chay-tron").
               Đo bằng HTTP thật, phiên Cô Vân: HTML của /gvcn chứa chuỗi "skip-link" hai
               lần (đường tắt "Bỏ qua menu, tới nội dung chính" in ở app/layout.tsx) và
@@ -746,7 +746,7 @@ export function GvcnDashboard({
               Câu đó KHÔNG biến mất khỏi sản phẩm: nó vẫn đứng ở đúng chỗ người ta thật sự
               đi tìm cảm xúc của một em — `gvcn/student-detail-view.tsx`, ngay dưới lịch
               điểm danh. Nói một lần ở đúng chỗ, thay vì nói mọi lúc ở chỗ không liên quan. */}
-          <div className="rounded-[20px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+          <div className="hv-card-toi p-5">
             <h2 className="text-[15px] font-black text-cardtitle">Hành động gần đây</h2>
             <div className="mt-3.5 flex flex-col gap-3">
               {d.recentActions.length === 0 && (

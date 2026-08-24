@@ -546,7 +546,7 @@ function StudentProfile({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg md:overflow-hidden md:bg-pagebgDesktop">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
         <ScreenHeader>
           <h1 className={H1_CLASS}>Hồ sơ của mình</h1>
         </ScreenHeader>
@@ -631,7 +631,7 @@ function StaffProfile({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="profile" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg md:overflow-hidden md:bg-pagebgDesktop">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
         <ScreenHeader>
           <h1 className={H1_CLASS}>Hồ sơ của tôi</h1>
         </ScreenHeader>

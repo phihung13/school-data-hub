@@ -97,8 +97,8 @@ export function ThisWeekView({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="week" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-          <div className="flex flex-none items-center gap-3.5 border-b border-[#16294B] bg-card px-4 py-3 md:px-7 md:py-3.5">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
+          <div className="flex flex-none items-center gap-3.5 hv-thanh px-4 py-3 md:px-7 md:py-3.5">
             <div className="min-w-0 flex-1">
               <h1 className="text-[16px] font-black text-ink">Tuần này của mình</h1>
               {/* "…" chỉ được phép khi ĐANG tải thật; hỏng thì nói là hỏng. */}

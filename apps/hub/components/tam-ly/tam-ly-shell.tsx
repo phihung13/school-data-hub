@@ -34,7 +34,7 @@ export function TamLyShell({
   return (
     // §8 hai giọng: người đọc là cán bộ tâm lý cụm, không phải học sinh.
     <StaffVoice>
-      <div className="flex min-h-screen w-full flex-col bg-pagebgDesktop">
+      <div className="flex min-h-screen w-full flex-col bg-pagebg s-home-md">
         <MiniAppHeader
           title={title}
           subtitle={subtitle}
@@ -65,7 +65,7 @@ export function TamLyShell({
 /** Thẻ trắng chuẩn của Hub — cùng hình dạng với `Card` của khung GVCN, không tự chế kiểu mới. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
+    <div className={`hv-card-toi p-4 md:p-5 ${className}`}>
       {children}
     </div>
   );

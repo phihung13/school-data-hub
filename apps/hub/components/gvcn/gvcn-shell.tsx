@@ -93,7 +93,7 @@ export function GvcnShell({
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col bg-pagebg s-home-md md:overflow-hidden">
           {/* Thanh trên của điện thoại nay CHỈ còn đường ra, không còn tiêu đề — xem lý
               do ở khối <h1> bên dưới. Nút mọc thêm chữ "Buồng lái" đứng cạnh mũi tên:
               nút chỉ có icon buộc người dùng phải đoán, và `aria-label` chỉ cứu được
@@ -170,7 +170,7 @@ export function GvcnShell({
 /** Thẻ trắng chuẩn của Hub (DESIGN.md §Components) — bo 20px, bóng nhẹ, không viền màu. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
+    <div className={`hv-card-toi p-4 md:p-5 ${className}`}>
       {children}
     </div>
   );
