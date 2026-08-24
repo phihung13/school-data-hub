@@ -202,7 +202,7 @@ export function LoginForm({
     <div className="flex min-h-screen w-full flex-col md:block">
       <MobileHeroBand />
 
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-pagebg md:h-screen md:justify-end md:px-[54px] md:py-11">
+      <div className="relative flex min-h-screen flex-1 overflow-hidden bg-[#04102A] md:h-screen">
         <div className="hidden md:block">
           {/* NỀN VIDEO thay nền parallax sáu lớp ảnh (đổi 24/08/2026 cùng lượt chuyển
             giao diện tối). Dùng lại đúng file đã tối ưu cho bản trình diễn — AV1 1,55 MB,
@@ -213,7 +213,7 @@ export function LoginForm({
 
             `aria-hidden` + `pointer-events-none`: đây là TRANG TRÍ. Trình đọc màn hình đi
             thẳng tới ô đăng nhập, không phải lội qua nó. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
           <video
             className="h-full w-full object-cover"
             poster="/trinh-dien/uploads/su-tu-poster.webp"
@@ -228,7 +228,7 @@ export function LoginForm({
           </video>
           {/* Lớp phủ: video là nền, không phải nội dung. Thiếu nó thì chữ trên thẻ phải
               cạnh tranh với sư tử đang chạy, và tương phản đo được sẽ đổi theo từng khung. */}
-          <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(4,16,42,.62)_0%,rgba(4,16,42,.86)_52%,rgba(4,16,42,.96)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(620px_470px_at_104%_106%,rgba(4,13,32,.92),rgba(4,13,32,.5)_46%,transparent_74%),radial-gradient(640px_460px_at_-6%_-8%,rgba(4,13,32,.72),transparent_66%),linear-gradient(180deg,rgba(4,13,32,.35),rgba(4,13,32,.78))]" />
         </div>
         </div>
 
@@ -244,20 +244,32 @@ export function LoginForm({
             nhìn thấy, trong khi backdrop-filter buộc trình duyệt tách một lớp composite và
             vẽ lại nó theo TỪNG KHUNG HÌNH của vòng parallax 60fps ngay bên dưới. Chi phí
             có thật, hiệu ứng thì không — nền `md:bg-card` giữ nguyên phần nhìn thấy được. */}
-        <MainContent className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 focus:outline-none md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#1E3A6B] md:bg-card md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)]">
-          <div>
-            {/* #FFD98A chỉ đạt 3,22:1 trên thẻ trắng — dưới chuẩn 4,5:1. Mã đầu tiên thử
-                thay (#FFD98A) đo lại chỉ được 4,17:1, nên chốt #FFD98A = 4,96:1 trên trắng:
-                cùng sắc vàng-nâu của bộ nhận diện, đủ biên để không tụt lại ở lần sửa sau. */}
-            <div className="hidden text-[12.5px] font-extrabold uppercase tracking-[.14em] text-[#FFD98A] md:block">
-              Chào mừng trở lại
+        {/* DẤU THƯƠNG HIỆU góc trái trên — `.cin-brand` của bản trình diễn.
+            `aria-hidden`: tên trường đã có trong <h1> ngay bên dưới; đọc hai lần là thừa. */}
+        <div aria-hidden className="absolute left-6 top-5 z-[8] flex items-center gap-3 md:left-10 md:top-[26px]">
+          <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-white shadow-[0_10px_26px_rgba(2,10,30,.45)]">
+            <img src="/logo.webp?v=ddafa976" alt="" className="h-[34px] w-[34px] rounded-lg object-cover" />
+          </span>
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[16px] font-black text-white">Viet Anh</span>
+            <span className="text-[9px] font-extrabold tracking-[.22em] text-[#FFE3A6]">SCHOOL HUB</span>
+          </span>
+        </div>
+
+        <MainContent className="relative z-[8] ml-auto flex w-full flex-col items-stretch gap-4 px-6 pb-24 pt-28 focus:outline-none md:mb-[110px] md:mr-16 md:mt-auto md:w-[460px] md:items-end md:gap-[18px] md:px-0 md:pb-0 md:pt-0 md:text-right">
+          <div className="flex flex-col gap-3 md:items-end">
+            {/* Nhãn nhỏ chữ đơn cách — `.cin-kicker`. Chấm vàng có nhịp thở để màn mở đầu
+                không đứng chết, nhưng nó là TRANG TRÍ nên `aria-hidden`. */}
+            <div className="inline-flex items-center gap-[9px] font-mono text-[11px] font-extrabold tracking-[.24em] text-gold">
+              <span aria-hidden className="h-2 w-2 rounded-full bg-gold shadow-[0_0_14px_#FFC629] motion-safe:animate-pulse" />
+              HỆ THỐNG TRƯỜNG VIỆT ANH
             </div>
-            <h1 className="text-[24px] font-black leading-[1.15] tracking-[-.015em] text-ink md:mt-[7px] md:text-[31px] md:text-[#FFFFFF]">
-              Viet Anh{" "}
-              <span className="relative inline-block">
-                School Hub
-                <span aria-hidden className="absolute inset-x-0 bottom-[2px] -z-10 h-[9px] rounded-full bg-gold opacity-55" />
-              </span>
+            {/* 72px ở khổ máy tính, 40px ở điện thoại — bản trình diễn chỉ vẽ khổ máy tính,
+                nên khổ nhỏ là quyết định của tôi: giữ tỉ lệ, không để chữ tràn hai dòng rưỡi. */}
+            <h1 className="text-[40px] font-black leading-[1.02] tracking-[-.025em] text-white [text-shadow:0_10px_60px_rgba(2,8,22,.7)] md:text-[68px]">
+              Viet Anh
+              <br />
+              <em className="not-italic text-gold">School Hub</em>
             </h1>
           </div>
 
@@ -287,15 +299,15 @@ export function LoginForm({
           {gate === "open" && <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />}
 
           <div className="flex items-center gap-2.5">
-            <span className="h-px flex-1 bg-[#0E2244]" />
-            <span className="text-[11px] font-extrabold text-[#93A9C8]">hoặc</span>
-            <span className="h-px flex-1 bg-[#0E2244]" />
+            <span className="h-px flex-1 bg-white/20" />
+            <span className="text-[11px] font-extrabold text-white/70">hoặc</span>
+            <span className="h-px flex-1 bg-white/20" />
           </div>
 
           <button
             type="button"
             onClick={() => setGuardianOpen((v) => !v)}
-            className="flex h-[52px] items-center justify-center gap-2.5 rounded-[15px] bg-[#0068FF] text-[14.5px] font-black text-white shadow-[0_8px_20px_rgba(0,104,255,.26)] transition-transform hover:-translate-y-0.5 active:scale-[.985]"
+            className="flex h-[58px] items-center justify-center gap-2.5 rounded-[16px] border-[1.5px] border-white/35 bg-white/10 px-6 text-[14.5px] font-black text-white backdrop-blur-md transition-transform hover:-translate-y-0.5 active:scale-[.985]"
           >
             {/* aria-hidden: nếu không, nút này đọc thành "chat_bubble Dành cho phụ huynh". */}
             <span className="msr text-[19px]" aria-hidden>
@@ -437,7 +449,7 @@ function StaffPanel({
         <label htmlFor="tk-thu" className="sr-only">
           Chọn tài khoản thử
         </label>
-        <div className="flex items-center gap-2.5 rounded-[15px] border-[1.6px] border-[#1E3A6B] bg-card px-3.5 shadow-[0_6px_16px_rgba(38,39,93,.10)]">
+        <div className="flex w-full items-center gap-2.5 rounded-[16px] border-[1.5px] border-white/25 bg-white/10 px-3.5 backdrop-blur-md md:w-[400px]">
           <GoogleMark />
           <select
             id="tk-thu"
@@ -461,7 +473,7 @@ function StaffPanel({
           type="button"
           disabled={loading || !chon}
           onClick={() => onPick(chon)}
-          className="flex min-h-[48px] items-center justify-center rounded-[15px] bg-gradient-to-br from-navy to-navy-light text-[14px] font-black text-white shadow-[0_7px_16px_rgba(10,42,94,.28)] transition-[transform,box-shadow] hover:-translate-y-0.5 disabled:opacity-50"
+          className="flex h-[58px] w-full items-center justify-center gap-3 rounded-[16px] bg-white text-[15px] font-black text-[#1B1C3A] shadow-[0_14px_34px_rgba(2,10,30,.45)] transition-transform hover:-translate-y-0.5 disabled:opacity-50 md:w-[400px]"
         >
           {loading ? "Đang vào…" : "Vào Hub"}
         </button>

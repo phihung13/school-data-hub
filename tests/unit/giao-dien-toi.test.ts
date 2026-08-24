@@ -42,11 +42,35 @@ const FILES = [
 const NEN_SANG_CU = ["#F1F4F8", "#F5F8FC", "#E4E9F0", "#EAEFF6", "#F7F9FC", "#F5F7FA", "#FCFDFE"];
 
 describe("giao diện tối — không nền sáng nào sót lại", () => {
-  it("không file .tsx nào dùng `bg-white`", () => {
-    // `text-white` thì ĐƯỢC — chữ trắng trên nền màu vẫn đúng ở tông tối. Chỉ NỀN bị cấm.
-    const pham = FILES.filter((p) => /\bbg-white\b/.test(readFileSync(p, "utf8")))
-      .map((p) => p.slice(goc.length));
-    expect(pham, "nền trắng quay lại — sẽ chói giữa các thẻ tối").toEqual([]);
+  it("`bg-white` ĐẶC chỉ còn ở màn đăng nhập, đúng hai chỗ, cả hai là chi tiết sáng", () => {
+    // BA THỨ KHÔNG BỊ CẤM, và cả ba đều đúng ở tông tối:
+    //   · `text-white`   — chữ trắng trên nền màu
+    //   · `bg-white/10`  — kính mờ trên nền tối, thứ dựng nên nút và ô ở màn đăng nhập
+    //   · `border-white/25` — viền kính, cùng lý do
+    // Regex dùng `(?![/\w-])` để CHỈ bắt nền ĐẶC. Bản đầu bắt cả `bg-white/10` và đếm ra
+    // 6 thay vì 2 — một guard bắt nhầm thứ nó không định bắt.
+    const DAC = /bg-white(?![/\w-])/;
+
+    const co = FILES.filter((f) => DAC.test(readFileSync(f, "utf8"))).map((f) =>
+      f.slice(goc.length).replace(/\\/g, "/"),
+    );
+    expect(co, "nền trắng đặc quay lại — sẽ chói giữa các thẻ tối").toEqual([
+      "apps/hub/components/login-form.tsx",
+    ]);
+
+    // ĐẾM CHÍNH XÁC, không phải "bỏ qua login-form.tsx". Một ngoại lệ được ĐẾM là một
+    // ngoại lệ; một ngoại lệ theo TÊN FILE là một cánh cửa mở sẵn cho lần sau.
+    //
+    // Đúng hai chỗ, cả hai là CHI TIẾT SÁNG TRÊN NỀN TỐI, không phải mặt thẻ:
+    //   1. ô vuông trắng ôm logo ở dấu thương hiệu — bản thiết kế cũng vẽ trắng
+    //   2. nút "Đăng nhập với Google" — trắng theo yêu cầu nhận diện của Google
+    const src = readFileSync(join(goc, "apps/hub/components/login-form.tsx"), "utf8");
+    const dac = src.match(new RegExp(DAC.source, "g")) ?? [];
+    expect(dac.length, "số nền trắng đặc ở màn đăng nhập đã đổi").toBe(2);
+
+    // Nút Google phải giữ CHỮ TỐI — nếu không nó là nền trắng chữ trắng, và đó đúng là
+    // thứ luật này sinh ra để chặn.
+    expect(src, "nút Google mất chữ tối").toMatch(/bg-white[^"]*text-\[#1B1C3A\]/);
   });
 
   it("không mã hex nền sáng cũ nào còn trong mã nguồn", () => {
