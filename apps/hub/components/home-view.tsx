@@ -91,7 +91,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useIsDesktop } from "@/lib/viewport";
 import type { GetLichHomNayOutput, HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/core/contracts";
@@ -981,16 +981,141 @@ function StreakCard({ streakDays }: { streakDays: number }) {
 }
 
 
+
 // ---------------------------------------------------------------------------
-// UFO của bản vẽ — trang trí thuần: SVG chép nguyên, đường bay là MỘT keyframe CSS
-// (ufoPath, globals.css) thay cho vòng JS đuổi chuột của bản trình diễn. aria-hidden
-// + pointer-events-none (.ufo-track): nó không được chặn một cú bấm hay một lời đọc
-// màn hình nào; prefers-reduced-motion giấu cả track (media query trong globals.css).
+// UFO của bản vẽ — nay có "não" (24/08/2026, chủ đầu tư: "ufo phải thông minh hơn
+// và tương tác chuột tốt hơn"). Vật lý chép NGUYÊN HẰNG SỐ từ script #ufo-fly của
+// bản trình diễn:
+//   · lang thang: tự bốc điểm đậu ngẫu nhiên, bay tới (lực 130), tới nơi thì lượn
+//     tại chỗ 0,5–2,7s rồi bốc điểm mới;
+//   · SỢ CHUỘT trong bán kính 180px: lực đẩy 3200 tỉ lệ theo độ gần, trần tốc độ
+//     nhảy 75 → 680, lớp `scared` bật dấu "!", thân run (ufoShiver), đèn chiếu tắt;
+//   · nghiêng theo vận tốc ngang (±18°), càng xuống thấp càng to (depth 0.78–1.28);
+//   · nảy lại ở bốn mép của .ufo-track.
+// Khác bản vẽ hai chỗ, đều là luật của kho:
+//   · prefers-reduced-motion: không chạy vòng rAF nào (CSS đã giấu cả .ufo-track —
+//     media query trong globals.css — nên cũng không có gì để vẽ);
+//   · giấu tab thì dừng rAF (một hiệu ứng nền không được phép ăn pin ở tab nền),
+//     mở lại thì đi tiếp — cùng khuôn với sao-nen.tsx.
+// Toạ độ tính trong KHUNG .ufo-track (bản vẽ dùng viewport vì cảnh của nó fixed;
+// ở đây track nằm sau sidebar 240px nên chuột phải trừ gốc track).
 // ---------------------------------------------------------------------------
 function UfoBay() {
+  const vetRef = useRef<HTMLDivElement | null>(null);
+  const bayRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const vet = vetRef.current;
+    const bay = bayRef.current;
+    if (!vet || !bay) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    let W = vet.clientWidth, H = vet.clientHeight;
+    let goc = vet.getBoundingClientRect();
+    const doKhung = () => {
+      W = vet.clientWidth;
+      H = vet.clientHeight;
+      goc = vet.getBoundingClientRect();
+    };
+
+    let x = W * 0.6, y = 110, vx = 0, vy = 0, tx = 0, ty = 0, dau = 0, so = 0;
+    let mx = -9e3, my = -9e3;
+    const bocDiem = () => {
+      tx = 40 + Math.random() * Math.max(1, W - 240);
+      ty = 40 + Math.random() * Math.max(1, H - 260);
+      dau = 500 + Math.random() * 2200;
+    };
+    bocDiem();
+
+    const onMouse = (e: MouseEvent) => {
+      mx = e.clientX - goc.left;
+      my = e.clientY - goc.top;
+    };
+
+    let raf = 0;
+    let truoc = performance.now();
+    const buoc = (now: number) => {
+      const dt = Math.min(50, now - truoc) / 1000;
+      truoc = now;
+
+      // Sợ chuột: tâm thân tàu (~70,48 trong SVG 140×100) so với con trỏ.
+      const cx = x + 70, cy = y + 48;
+      const dxm = cx - mx, dym = cy - my;
+      const dm = Math.hypot(dxm, dym) || 1;
+      if (dm < 180) {
+        const f = (180 - dm) / 180;
+        vx += (dxm / dm) * 3200 * f * dt;
+        vy += (dym / dm) * 3200 * f * dt;
+        if (so <= 0) bay.classList.add("scared");
+        so = 1;
+      } else if (so > 0) {
+        so -= dt;
+        if (so <= 0) bay.classList.remove("scared");
+      }
+
+      // Lang thang khi không sợ: bay về điểm đậu, tới nơi thì nghỉ rồi bốc điểm mới.
+      const dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy) || 1;
+      if (d < 26) {
+        if (dau > 0) dau -= dt * 1000;
+        else bocDiem();
+      } else if (so <= 0) {
+        vx += (dx / d) * 130 * dt;
+        vy += (dy / d) * 130 * dt;
+      }
+
+      // Ma sát + trần tốc độ — hai chế độ: thong thả 75, bỏ chạy 680.
+      const k = Math.pow(so > 0 ? 0.9 : 0.93, dt * 60);
+      vx *= k;
+      vy *= k;
+      const vmax = so > 0 ? 680 : 75;
+      const v = Math.hypot(vx, vy);
+      if (v > vmax) {
+        vx *= vmax / v;
+        vy *= vmax / v;
+      }
+      x += vx * dt;
+      y += vy * dt;
+
+      // Nảy ở bốn mép khung.
+      if (x < 8) { x = 8; vx = Math.abs(vx); }
+      if (x > W - 150) { x = W - 150; vx = -Math.abs(vx); }
+      if (y < 8) { y = 8; vy = Math.abs(vy); }
+      if (y > H - 170) { y = H - 170; vy = -Math.abs(vy); }
+
+      // Nghiêng theo vận tốc ngang; càng thấp càng gần mắt nên càng to.
+      const nghieng = Math.max(-18, Math.min(18, vx * 0.05));
+      const sau = 0.78 + (y / (H || 1)) * 0.5;
+      bay.style.transform =
+        "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) rotate(" + nghieng.toFixed(1) + "deg) scale(" + sau.toFixed(3) + ")";
+      raf = requestAnimationFrame(buoc);
+    };
+    raf = requestAnimationFrame(buoc);
+
+    // Giấu tab thì dừng vòng vẽ — cùng luật với sao-nen.tsx.
+    const onHidden = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+      } else {
+        truoc = performance.now();
+        raf = requestAnimationFrame(buoc);
+      }
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    window.addEventListener("mousemove", onMouse, { passive: true });
+    window.addEventListener("resize", doKhung);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("mousemove", onMouse);
+      window.removeEventListener("resize", doKhung);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
+  }, []);
+
   return (
-    <div className="ufo-track" aria-hidden="true">
-      <div className="ufo-fly">
+    <div ref={vetRef} className="ufo-track" aria-hidden="true">
+      <div ref={bayRef} className="ufo-fly">
+        <span className="ufo-alert">!</span>
         <div className="ufo-bob">
           <svg width="140" height="100" viewBox="0 0 140 100" xmlns="http://www.w3.org/2000/svg">
             <defs>

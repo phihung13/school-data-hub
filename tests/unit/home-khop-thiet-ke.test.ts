@@ -95,6 +95,24 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
     expect(HOME).toMatch(/hv-r[\s\S]*?<CotPhaiNguoiLon/);
   });
 
+  it("UFO có não như bản vẽ (24/08: 'ufo phải thông minh hơn và tương tác chuột tốt hơn'): đúng hằng số vật lý + đủ kỷ luật nền", () => {
+    // Hằng số chép nguyên từ script #ufo-fly của bản trình diễn — lệch là ai đó đã
+    // "tinh chỉnh" cảm giác bay mà không so lại với bản gốc.
+    for (const hs of ["dm < 180", "* 3200 * f * dt", "so > 0 ? 680 : 75", "so > 0 ? 0.9 : 0.93", "* 130 * dt", 'classList.add("scared")']) {
+      expect(HOME, `UFO thiếu hằng số/hành vi: ${hs}`).toContain(hs);
+    }
+    // Kỷ luật của kho, cùng khuôn sao-nen.tsx: giảm-chuyển-động thì không chạy vòng
+    // nào; giấu tab thì dừng rAF. HOME đã bỏ chú thích nên đây là mã thật, không phải lời kể.
+    const ufo = HOME.slice(HOME.indexOf("function UfoBay"));
+    expect(ufo).toContain('matchMedia?.("(prefers-reduced-motion: reduce)")');
+    expect(ufo).toContain('addEventListener("visibilitychange"');
+    expect(ufo).toContain("cancelAnimationFrame(raf)");
+    // Vỏ "sợ" trong CSS: dấu chấm than bung, thân run, đèn chiếu tắt.
+    expect(CSS).toMatch(/\.ufo-fly\.scared \.ufo-alert \{ animation: ufoPop/);
+    expect(CSS).toMatch(/\.ufo-fly\.scared \.ufo-bob \{ animation: ufoShiver/);
+    expect(CSS).toMatch(/\.ufo-fly\.scared \.ufo-beam \{ opacity: 0/);
+  });
+
   it("luật 'không suy số 0 từ im lặng' sống sót qua lượt thay da: nút check-in chỉ hiện khi BIẾT CHẮC chưa check-in", () => {
     expect(HOME).toMatch(/todayState === "ready" && data\.checkedInToday === false/);
   });

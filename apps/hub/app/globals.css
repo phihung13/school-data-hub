@@ -427,12 +427,17 @@ textarea::placeholder {
 .rd-beam { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, rgba(14,159,216,.4), transparent 70deg, transparent 360deg); animation: rdSpin 3.2s linear infinite; }
 .rd-dot { position: absolute; left: 20%; top: 32%; width: 5px; height: 5px; border-radius: 99px; background: #00D97A; box-shadow: 0 0 10px #00D97A; animation: glowPulse 2s ease-in-out infinite; }
 
-/* ── UFO bay ngang trời. Bản thiết kế lái nó bằng JS đuổi chuột; ở đây một đường bay
-      CSS là đủ vui mà không thêm vòng lặp JS nào cho trang mọi người mở mỗi sáng ── */
+/* ── UFO — nay lái bằng JS như bản vẽ (24/08/2026, chủ đầu tư: "ufo phải thông minh
+      hơn và tương tác chuột tốt hơn"). Vật lý ở UfoBay (home-view.tsx), chép nguyên
+      hằng số của bản vẽ; CSS chỉ giữ vỏ + ba phản ứng "sợ": dấu "!", run, tắt đèn. ── */
 .ufo-track { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 6; }
-.ufo-fly { position: absolute; left: -160px; top: 0; will-change: transform; filter: drop-shadow(0 12px 16px rgba(10,42,94,.3)); animation: ufoPath 26s linear infinite; }
+.ufo-fly { position: absolute; left: 0; top: 0; will-change: transform; filter: drop-shadow(0 12px 16px rgba(10,42,94,.3)); }
 .ufo-bob { animation: ufoBob 2.7s ease-in-out infinite alternate; }
 .ufo-beam { animation: ufoBeam 1.9s ease-in-out infinite; }
+.ufo-alert { position: absolute; left: 50%; top: -14px; transform: translateX(-50%) scale(0); width: 26px; height: 26px; border-radius: 99px; background: #FFC629; color: #0A2A5E; font-size: 17px; font-weight: 900; line-height: 26px; text-align: center; box-shadow: 0 4px 10px rgba(245,163,0,.5); }
+.ufo-fly.scared .ufo-alert { animation: ufoPop .45s cubic-bezier(.34,1.56,.64,1) forwards; }
+.ufo-fly.scared .ufo-bob { animation: ufoShiver .14s linear infinite; }
+.ufo-fly.scared .ufo-beam { opacity: 0; animation: none; }
 
 @keyframes scanY { 0% { transform: translateY(-40vh); } 100% { transform: translateY(130vh); } }
 @keyframes fadeUp { 0% { opacity: 0; transform: translateY(18px); } 100% { opacity: 1; transform: none; } }
@@ -442,11 +447,8 @@ textarea::placeholder {
 @keyframes rdSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 @keyframes ufoBob { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
 @keyframes ufoBeam { 0%, 100% { opacity: .3; } 50% { opacity: .8; } }
-@keyframes ufoPath {
-  0% { transform: translate(0, 12vh) scale(.8); }
-  45% { transform: translate(58vw, 4vh) scale(.9); }
-  100% { transform: translate(calc(100vw + 320px), 10vh) scale(.85); }
-}
+@keyframes ufoPop { to { transform: translateX(-50%) scale(1); } }
+@keyframes ufoShiver { 0% { transform: translate(-2px, 1px) rotate(-2.5deg); } 50% { transform: translate(2px, -1px) rotate(2.5deg); } 100% { transform: translate(-2px, 1px) rotate(-2.5deg); } }
 
 /* GIẢM CHUYỂN ĐỘNG: mọi trang trí động của trang chủ đứng yên hoặc biến mất — cùng luật
    đã giữ ở intro và nền sao. Thẻ vẫn hiện (fadeUp tắt), dữ liệu không mất gì. */
