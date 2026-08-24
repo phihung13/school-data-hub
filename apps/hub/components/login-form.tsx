@@ -101,6 +101,33 @@ export function LoginForm({
   }, [devAccounts, chon]);
 
   useEffect(() => {
+    // TẢI TRƯỚC VIDEO INTRO trong lúc người dùng còn đứng ở màn đăng nhập (24/08/2026,
+    // chủ đầu tư: "ấn đăng nhập xong load video lâu cực kì" — ba lần, và họ đúng).
+    //
+    // Intro chỉ được IntroCinematic đụng tới SAU cú bấm đăng nhập + một lần nạp trang,
+    // tức 3,4 MB bắt đầu tải đúng lúc người dùng đang nhìn màn đen chặn. Đã đo mô hình
+    // cache trước khi chọn cách này: Next trả `max-age=0 + ETag` (lần hai = 304, không
+    // tốn byte), Cloudflare `max-age=14400` — nên tải trước ở đây là sang trang chủ
+    // trình duyệt lấy từ cache, gần như tức thì.
+    //
+    // Chỉ tải BẢN ĐÚNG CODEC — cùng phép chọn mà thẻ <video> sẽ làm; tải cả hai là phí
+    // gấp đôi băng thông cho một file không bao giờ phát. Lùi 1,2s để nhường những giây
+    // đầu cho video nền của chính màn này (poster đã che nên không ai thấy khoảng lùi).
+    const t = window.setTimeout(() => {
+      try {
+        const co = document.createElement("video").canPlayType('video/mp4; codecs="av01.0.08M.08"');
+        const file = co ? "/trinh-dien/uploads/intro-av1.mp4" : "/trinh-dien/uploads/intro-software.mp4";
+        // Hỏng thì thôi — đây là tối ưu, không phải điều kiện: IntroCinematic có trần
+        // chờ 2,5s và tự bỏ intro khi mạng không kịp.
+        void fetch(file, { cache: "force-cache" }).catch(() => {});
+      } catch {
+        // canPlayType/fetch không có (môi trường lạ): bỏ qua, không chặn đăng nhập.
+      }
+    }, 1200);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
     // Hỏi trạng thái cửa MỘT lần khi mở trang. 404 = cửa không tồn tại (production):
     // không vẽ khối tài khoản thử nữa. 503 = máy chủ chưa đặt bí mật: nói thẳng cho
     // người vận hành, đừng để họ bấm rồi đoán.

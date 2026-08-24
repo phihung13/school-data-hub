@@ -211,3 +211,37 @@ describe("màn đen chặn cho intro", () => {
     expect(sauPlay, "nhánh chiếu phải gỡ màn đen sau khi lớp phủ của nó đã vẽ").toContain("intro-man-den");
   });
 });
+
+// ---------------------------------------------------------------------------
+// INTRO KHÔNG ĐƯỢC BẮT NGƯỜI DÙNG ĐỢI — hai tầng, thiếu tầng nào hỏng kiểu đó
+// ---------------------------------------------------------------------------
+// Chủ đầu tư 24/08/2026, ba lần cùng một câu: *"ấn đăng nhập xong load video lâu cực kì"*.
+// Nguyên nhân: intro (3,4 MB) chỉ bắt đầu tải SAU cú bấm + một lần nạp trang — màn đen
+// chặn đứng đó trong lúc file chảy qua mạng.
+describe("intro không bắt người dùng đợi", () => {
+  const LOGIN3 = readFileSync(join(goc, "apps/hub/components/login-form.tsx"), "utf8");
+  const INTRO3 = readFileSync(join(goc, "apps/hub/components/intro-cinematic.tsx"), "utf8");
+
+  it("tầng 1 — màn đăng nhập TẢI TRƯỚC file intro, và chỉ bản đúng codec", () => {
+    // Người dùng đứng ở màn đăng nhập vài giây là đủ cho 3,4 MB vào cache (đã đo:
+    // Next trả max-age=0 + ETag → lần hai là 304; Cloudflare giữ 4 giờ).
+    expect(LOGIN3, "mất tải-trước — màn đen sẽ lại chờ 3,4 MB").toContain("intro-av1.mp4");
+    // Phải CHỌN codec như thẻ <video> sẽ chọn — tải cả hai là phí gấp đôi băng thông
+    // cho một file không bao giờ phát.
+    expect(LOGIN3).toContain("canPlayType");
+    expect(LOGIN3, "thiếu bản dự phòng cho máy không đọc AV1").toContain("intro-software.mp4");
+    expect(LOGIN3, "force-cache để lần hai lấy từ cache, không hỏi lại mạng").toContain('cache: "force-cache"');
+  });
+
+  it("tầng 2 — trần chờ 2,5s: mạng không kịp thì BỎ intro, vào thẳng app", () => {
+    // `play()` trên video chưa đệm đủ treo lời hứa vô hạn — không trần là người dùng
+    // nhìn nền đen 5–10 giây vì một đoạn TRANG TRÍ.
+    expect(INTRO3, "mất trần chờ").toMatch(/setTimeout\(\(\) => setDangChay\(false\), 2500\)/);
+    // Nghe `playing` (ảnh đã thật sự chạy), không phải `canplay` (mới đủ dữ liệu).
+    expect(INTRO3, "trần phải được xoá khi video THẬT SỰ chạy").toMatch(
+      /addEventListener\("playing"/,
+    );
+    // Và phải dọn cả hai khi unmount — không dọn là setState trên component đã chết.
+    expect(INTRO3).toMatch(/removeEventListener\("playing"/);
+  });
+});

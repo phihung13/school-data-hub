@@ -73,9 +73,28 @@ export function IntroCinematic() {
     document.getElementById("intro-man-den")?.remove();
     const v = videoRef.current;
     if (!v) return;
+
+    // TRẦN CHỜ 2,5 GIÂY (24/08/2026 — "ấn đăng nhập xong load video lâu cực kì").
+    //
+    // `play()` trên một video chưa đệm đủ sẽ treo lời hứa cho tới khi đủ dữ liệu — mạng
+    // chậm là người dùng nhìn nền đen 5–10 giây vì một ĐOẠN TRANG TRÍ. Trang đăng nhập đã
+    // tải trước file này (cache ấm thì `playing` bắn trong vài trăm ms, trần không bao
+    // giờ chạm); trần chỉ cắn ở ca cache lạnh — vào thẳng bằng URL, xoá cache, mạng đứt —
+    // và ở ca đó bỏ intro là quyết định đúng: app quan trọng hơn phim.
+    //
+    // Nghe `playing` chứ không `canplay`: `canplay` bắn khi ĐỦ DỮ LIỆU ĐỂ BẮT ĐẦU nhưng
+    // khung hình đầu có thể chưa lên màn; `playing` là ảnh đã thật sự chạy.
+    const tran = window.setTimeout(() => setDangChay(false), 2500);
+    const daChay = () => window.clearTimeout(tran);
+    v.addEventListener("playing", daChay);
+
     // Câm — xem khối lý lẽ đầu file. Hỏng thì đóng luôn, không để màn đen treo.
     v.muted = true;
     v.play().catch(() => setDangChay(false));
+    return () => {
+      window.clearTimeout(tran);
+      v.removeEventListener("playing", daChay);
+    };
   }, [dangChay]);
 
   if (!dangChay) return null;
