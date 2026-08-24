@@ -189,7 +189,12 @@ describe("màn đăng nhập khớp TRẠNG THÁI CUỐI của bản thiết k�
     expect(LOGIN, "khung bọc phải có nền đen cho phần hụt bên phải").toMatch(
       /aria-hidden className="pointer-events-none absolute inset-0 bg-\[#04102A\]"/,
     );
-    expect(LOGIN, "mép video phải tan vào đen, không cắt cứng").toContain("#04102A_92%");
+    // Đen đặc phải tới TRƯỚC mép video: dải tính theo % MÀN, mép video theo chiều-cao
+    // ×16/9 (~88–95% tuỳ tỉ lệ màn). Chỉnh 24/08 ("che đi cái lòi video"): mốc đen đặc
+    // phải ≤80% — cao hơn là viền video lại ló ra trên màn rộng.
+    const mocDen = /#04102A_(\d+)%/.exec(LOGIN);
+    expect(mocDen, "mép video phải tan vào đen, không cắt cứng").not.toBeNull();
+    expect(Number(mocDen![1]), "đen đặc phải tới trước mép video (≤80%)").toBeLessThanOrEqual(80);
     expect(LOGIN, "lớp phủ 5 tầng đã bị lệnh chủ đầu tư thay").not.toContain("104%_106%");
   });
 

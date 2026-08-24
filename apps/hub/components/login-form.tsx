@@ -278,9 +278,11 @@ export function LoginForm({
             · `object-fit:cover` tràn viền → video CAO BẰNG TRANG, giữ nguyên tỉ lệ, neo
               TRÁI (`w-auto max-w-none`); màn rộng hơn 16:9 thì phần phải là nền đen của
               chính khung bọc — sư tử không bao giờ bị cắt.
-            · lớp phủ 5 tầng `.cin-shade` → MỘT dải tan phải: mép video tan dần vào nền
-              đen thay vì một đường cắt cứng, và vùng panel đứng luôn tối ổn định bất kể
-              khung hình nào đang chiếu.
+            · lớp phủ 5 tầng `.cin-shade` → MỘT dải tan phải, ĐEN ĐẶC TỪ 78% (chỉnh 24/08:
+              "login đen hơn qua chỗ viền video để che đi cái lòi video"). Dải tính theo %
+              MÀN còn mép video tính theo chiều-cao×16/9 (~88–95% tuỳ tỉ lệ màn) — đen đặc
+              phải tới TRƯỚC mép video ở mọi tỉ lệ, nếu không viền video ló ra đúng như
+              chủ đầu tư thấy.
           `aria-hidden` + `pointer-events-none`: trang trí thuần. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#04102A]">
         <video
@@ -297,7 +299,7 @@ export function LoginForm({
         </video>
         {/* Màn voan nhẹ toàn khung + DẢI TAN PHẢI về đúng màu nền đen — mép video không
             thành một đường cắt cứng, vùng panel luôn tối ổn định. */}
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,16,42,.2)_0%,rgba(4,16,42,.25)_45%,rgba(4,16,42,.82)_72%,#04102A_92%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,16,42,.2)_0%,rgba(4,16,42,.3)_38%,rgba(4,16,42,.88)_60%,#04102A_78%)]" />
       </div>
 
       {/* DẤU THƯƠNG HIỆU — `.cin-brand`, góc trái trên. aria-hidden: tên đã có trong h1. */}
