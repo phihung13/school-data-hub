@@ -297,9 +297,13 @@ export function LoginForm({
           <source src="/trinh-dien/uploads/su-tu-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />
           <source src="/trinh-dien/uploads/su-tu-chay.mp4" type="video/mp4" />
         </video>
-        {/* Màn voan nhẹ toàn khung + DẢI TAN PHẢI về đúng màu nền đen — mép video không
-            thành một đường cắt cứng, vùng panel luôn tối ổn định. */}
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,16,42,.2)_0%,rgba(4,16,42,.3)_38%,rgba(4,16,42,.88)_60%,#04102A_78%)]" />
+        {/* BÓNG LAN KHÔNG ĐỀU — chủ đầu tư 24/08: "lan ra không đều mới đẹp, tôi đã cố
+            tình làm nó xéo xéo hoặc lệch lệch". Lấy lại chất của .cin-shade gốc (lớp xéo
+            292° + vầng radial góc) thay cho dải phẳng 90°, NHƯNG vẫn giữ bảo đảm che mép
+            video: dải đứng hẹp đen đặc 0–14% từ mép phải là lưới an toàn (mép video nằm
+            ~88–95% tuỳ tỉ lệ màn), còn đường ranh nhìn thấy là lớp xéo + vầng cong phủ
+            lên trên — lan lệch, không thẳng hàng. */}
+        <div className="absolute inset-0 bg-[radial-gradient(900px_700px_at_103%_104%,#04102A,rgba(4,13,32,.75)_48%,transparent_76%),linear-gradient(270deg,#04102A_0%,#04102A_14%,rgba(4,16,42,.6)_26%,rgba(4,16,42,0)_42%),linear-gradient(292deg,#04102A_0%,rgba(4,13,32,.85)_26%,rgba(4,13,32,.35)_50%,rgba(4,13,32,0)_68%),linear-gradient(180deg,rgba(4,13,32,.22),rgba(4,13,32,.38))]" />
       </div>
 
       {/* DẤU THƯƠNG HIỆU — `.cin-brand`, góc trái trên. aria-hidden: tên đã có trong h1. */}

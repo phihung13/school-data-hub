@@ -189,12 +189,17 @@ describe("màn đăng nhập khớp TRẠNG THÁI CUỐI của bản thiết k�
     expect(LOGIN, "khung bọc phải có nền đen cho phần hụt bên phải").toMatch(
       /aria-hidden className="pointer-events-none absolute inset-0 bg-\[#04102A\]"/,
     );
-    // Đen đặc phải tới TRƯỚC mép video: dải tính theo % MÀN, mép video theo chiều-cao
-    // ×16/9 (~88–95% tuỳ tỉ lệ màn). Chỉnh 24/08 ("che đi cái lòi video"): mốc đen đặc
-    // phải ≤80% — cao hơn là viền video lại ló ra trên màn rộng.
-    const mocDen = /#04102A_(\d+)%/.exec(LOGIN);
-    expect(mocDen, "mép video phải tan vào đen, không cắt cứng").not.toBeNull();
-    expect(Number(mocDen![1]), "đen đặc phải tới trước mép video (≤80%)").toBeLessThanOrEqual(80);
+    // Hai yêu cầu CÙNG LÚC của chủ đầu tư, 24/08, theo thứ tự lệnh:
+    //   a. "che đi cái lòi video" — phải có dải ĐỨNG đen đặc từ mép phải rộng ≥12% màn
+    //      (mép video nằm ~88–95% tuỳ tỉ lệ, dải 14% phủ hết);
+    //   b. "lan ra không đều mới đẹp… cố tình làm nó xéo xéo" — phải có lớp XÉO (góc
+    //      292° của .cin-shade gốc) và vầng radial góc, để đường ranh nhìn thấy không
+    //      phải một vạch thẳng đứng. Bỏ lớp xéo để "cho gọn" là làm trái lệnh b.
+    const band = /linear-gradient\(270deg,#04102A_0%,#04102A_(\d+)%/.exec(LOGIN);
+    expect(band, "mất dải an toàn che mép video").not.toBeNull();
+    expect(Number(band![1]), "dải an toàn phải rộng ≥12% màn").toBeGreaterThanOrEqual(12);
+    expect(LOGIN, "mất lớp xéo 292° — bóng lại lan đều tăm tắp").toContain("linear-gradient(292deg");
+    expect(LOGIN, "mất vầng radial góc phải-dưới").toContain("radial-gradient(900px_700px_at_103%_104%");
     expect(LOGIN, "lớp phủ 5 tầng đã bị lệnh chủ đầu tư thay").not.toContain("104%_106%");
   });
 
