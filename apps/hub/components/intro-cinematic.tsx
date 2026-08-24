@@ -120,15 +120,15 @@ export function IntroCinematic() {
 
           VỊ TRÍ nút không phải thẩm mỹ ngẫu nhiên: nó ĐÈ LÊN watermark Gemini trong video
           (lệnh chủ đầu tư 24/08/2026). Đo bằng cách cắt khung hình: tâm watermark ở
-          ~(89,6% ngang · 84,5% dọc) → nút neo right 6,5% / bottom 13,5% để tâm nút trùng
-          tâm watermark; nền đậm lên .60 để che hẳn. Video mới từ nguồn khác thì đo lại
+          ~(89,6% ngang · 84,5% dọc) → nút neo right 6,5% / bottom 13,5%, rồi chủ đầu tư
+          nhích bằng mắt (24/08): xuống 20px, qua phải 5px → calc. Nền đậm .60 che hẳn. Video mới từ nguồn khác thì đo lại
           bằng đúng cách đó (crop + drawgrid), đừng ước lượng bằng mắt. */}
       <button
         type="button"
         onClick={() => setDangChay(false)}
-        className="absolute bottom-[13.5%] right-[6.5%] flex min-h-[44px] items-center gap-2 rounded-full border border-white/25 bg-black/60 px-6 text-[13.5px] font-extrabold text-white backdrop-blur-sm"
+        className="absolute bottom-[calc(13.5%-20px)] right-[calc(6.5%-5px)] flex min-h-[44px] items-center gap-2 rounded-full border border-white/25 bg-black/60 px-6 text-[13.5px] font-extrabold text-white backdrop-blur-sm"
       >
-        Vào Hub
+        Vào trang chủ
         <span aria-hidden className="msr text-[18px]">
           arrow_forward
         </span>

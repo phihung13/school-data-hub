@@ -137,7 +137,7 @@ describe("đăng nhập → intro → trang chủ", () => {
   it("LUÔN có đường ra: nút bỏ qua, và tự đóng khi video hỏng", () => {
     // Phim 10 giây không bỏ qua được là 10 giây không vào được app — cô giáo mở máy giữa
     // tiết thì đó là 10 giây trước mặt cả lớp.
-    expect(INTRO, "thiếu nút bỏ qua").toContain("Vào Hub");
+    expect(INTRO, "thiếu nút bỏ qua").toContain("Vào trang chủ");
     // Mạng rớt hoặc thiếu file mà không bắt `onError` thì còn lại một màn đen phủ cả app.
     expect(INTRO, "thiếu onError — video hỏng sẽ để lại màn đen").toMatch(/onError=\{\(\) => setDangChay\(false\)\}/);
     expect(INTRO, "thiếu onEnded").toMatch(/onEnded=\{\(\) => setDangChay\(false\)\}/);
@@ -218,6 +218,32 @@ describe("màn đen chặn cho intro", () => {
 // Chủ đầu tư 24/08/2026, ba lần cùng một câu: *"ấn đăng nhập xong load video lâu cực kì"*.
 // Nguyên nhân: intro (3,4 MB) chỉ bắt đầu tải SAU cú bấm + một lần nạp trang — màn đen
 // chặn đứng đó trong lúc file chảy qua mạng.
+describe("nền sao và hover không dịch chuyển — hai lệnh 24/08", () => {
+  const LOGIN4 = readFileSync(join(goc, "apps/hub/components/login-form.tsx"), "utf8");
+  // BÓC CHÚ THÍCH trước khi soát — lần THỨ SÁU trong đợt này một guard suýt đỏ vì chính
+  // lời giải thích của nó: chú thích sao-nen.tsx kể vì sao KHÔNG dùng unpkg, và guard dò
+  // chữ "unpkg" đọc trúng câu kể đó.
+  const SAO = readFileSync(join(goc, "apps/hub/components/sao-nen.tsx"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ 	]*\/\/.*$/gm, "");
+
+  it("nền đen có sao, tự vẽ — KHÔNG three.js, không CDN", () => {
+    // "bôi đen nhiều mà nó không chứa gì thì cũng ko tốt" — nhưng mạng trường có lọc nội
+    // dung: kéo three.js từ unpkg là canvas trắng trơn không báo lỗi (DOC-TRUOC đã ghi).
+    expect(LOGIN4).toContain("<SaoNen />");
+    expect(SAO, "cấm import thư viện ngoài cho hiệu ứng nền").not.toMatch(/from "three|unpkg|cdn/);
+    expect(SAO, "phải tôn trọng giảm-chuyển-động").toContain("prefers-reduced-motion");
+    expect(SAO, "tab nền không được ăn pin").toContain("visibilitychange");
+    expect(SAO, "trang trí không được chặn cú bấm nào").toContain("pointer-events-none");
+  });
+
+  it("hover KHÔNG dịch chuyển phần tử — nguồn giật đã trị, không được rước lại", () => {
+    // Nút nhích lên dưới con trỏ đứng ở mép = vòng hover bật-tắt vô hạn: nhích lên → trỏ
+    // ra ngoài → tụt về → trỏ lại vào. Đó là cái "giật giật" chủ đầu tư báo 24/08.
+    expect(LOGIN4, "hover-translate quay lại màn đăng nhập").not.toMatch(/hover:-translate-y/);
+  });
+});
+
 describe("intro không bắt người dùng đợi", () => {
   const LOGIN3 = readFileSync(join(goc, "apps/hub/components/login-form.tsx"), "utf8");
   const INTRO3 = readFileSync(join(goc, "apps/hub/components/intro-cinematic.tsx"), "utf8");

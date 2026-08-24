@@ -27,6 +27,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mascot } from "./mascot";
+import { SaoNen } from "./sao-nen";
 import { CO_INTRO } from "./intro-cinematic";
 import { MainContent } from "./page-shell";
 import { resolveThenPath } from "@/lib/trpc-client";
@@ -304,6 +305,10 @@ export function LoginForm({
             ~88–95% tuỳ tỉ lệ màn), còn đường ranh nhìn thấy là lớp xéo + vầng cong phủ
             lên trên — lan lệch, không thẳng hàng. */}
         <div className="absolute inset-0 bg-[radial-gradient(900px_700px_at_103%_104%,#04102A,rgba(4,13,32,.75)_48%,transparent_76%),linear-gradient(270deg,#04102A_0%,#04102A_14%,rgba(4,16,42,.6)_26%,rgba(4,16,42,0)_42%),linear-gradient(292deg,#04102A_0%,rgba(4,13,32,.85)_26%,rgba(4,13,32,.35)_50%,rgba(4,13,32,0)_68%),linear-gradient(180deg,rgba(4,13,32,.22),rgba(4,13,32,.38))]" />
+        {/* NỀN SAO — chủ đầu tư 24/08: "bôi đen nhiều mà nó không chứa gì thì cũng ko
+            tốt". Nằm TRÊN lớp bóng nên sao rõ nhất ở vùng đen bên phải, mờ dần nơi video
+            còn sáng. Tự vẽ canvas 2D, không three.js — xem lý lẽ trong sao-nen.tsx. */}
+        <SaoNen />
       </div>
 
       {/* DẤU THƯƠNG HIỆU — `.cin-brand`, góc trái trên. aria-hidden: tên đã có trong h1. */}
@@ -329,7 +334,7 @@ export function LoginForm({
         <div className="relative flex w-full flex-col bg-[linear-gradient(160deg,rgba(255,198,41,.95),rgba(255,198,41,.4)_45%,rgba(255,198,41,.85))] [clip-path:polygon(0_0,calc(100%-26px)_0,100%_26px,100%_100%,26px_100%,0_calc(100%-26px))] [filter:drop-shadow(13px_17px_0_rgba(6,16,38,.5))_drop-shadow(0_26px_40px_rgba(2,8,22,.6))_drop-shadow(0_0_24px_rgba(255,198,41,.16))] motion-safe:animate-[panelFloat_7s_ease-in-out_infinite]">
           <div
             aria-hidden
-            className="absolute inset-[1.5px] z-0 bg-[radial-gradient(120%_90%_at_12%_0%,rgba(94,150,230,.3),transparent_52%),radial-gradient(95%_75%_at_100%_100%,rgba(255,198,41,.15),transparent_56%),linear-gradient(rgba(53,224,255,.055)_1px,transparent_1px),linear-gradient(90deg,rgba(53,224,255,.055)_1px,transparent_1px),linear-gradient(160deg,rgba(8,20,46,.94),rgba(4,12,30,.88))] bg-[length:auto,auto,100%_46px,46px_100%,auto] backdrop-blur-[10px] [clip-path:polygon(0_0,calc(100%-25px)_0,100%_25px,100%_100%,25px_100%,0_calc(100%-25px))]"
+            className="absolute inset-[1.5px] z-0 bg-[radial-gradient(120%_90%_at_12%_0%,rgba(94,150,230,.3),transparent_52%),radial-gradient(95%_75%_at_100%_100%,rgba(255,198,41,.15),transparent_56%),linear-gradient(rgba(53,224,255,.055)_1px,transparent_1px),linear-gradient(90deg,rgba(53,224,255,.055)_1px,transparent_1px),linear-gradient(160deg,rgba(8,20,46,.94),rgba(4,12,30,.88))] bg-[length:auto,auto,100%_46px,46px_100%,auto] [clip-path:polygon(0_0,calc(100%-25px)_0,100%_25px,100%_100%,25px_100%,0_calc(100%-25px))]"
           />
           <div
             aria-hidden
@@ -375,7 +380,7 @@ export function LoginForm({
                   type="button"
                   disabled={loading || !chon}
                   onClick={() => loginDev(chon)}
-                  className="flex h-14 w-full items-center justify-center gap-[10px] whitespace-nowrap rounded-[10px] bg-white px-[26px] text-[15.5px] font-black text-[#1B1C3A] shadow-[0_20px_50px_rgba(2,8,22,.55),0_0_0_1.5px_rgba(255,198,41,.65),0_0_42px_rgba(255,198,41,.3)] transition-transform hover:-translate-y-[3px] disabled:opacity-50"
+                  className="flex h-14 w-full items-center justify-center gap-[10px] whitespace-nowrap rounded-[10px] bg-white px-[26px] text-[15.5px] font-black text-[#1B1C3A] shadow-[0_20px_50px_rgba(2,8,22,.55),0_0_0_1.5px_rgba(255,198,41,.65),0_0_42px_rgba(255,198,41,.3)] transition hover:brightness-95 active:scale-[.985] disabled:opacity-50"
                 >
                   <GoogleMark />
                   {loading ? "Đang vào…" : "Đăng nhập với Google"}
@@ -395,7 +400,7 @@ export function LoginForm({
               <button
                 type="button"
                 onClick={() => setGuardianOpen((v) => !v)}
-                className="flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[10px] border-[1.5px] border-white/35 bg-white/10 text-[14px] font-black text-white transition-transform hover:-translate-y-0.5 active:scale-[.985]"
+                className="flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[10px] border-[1.5px] border-white/35 bg-white/10 text-[14px] font-black text-white transition hover:bg-white/[.16] active:scale-[.985]"
               >
                 {/* aria-hidden: nếu không, nút đọc thành "chat_bubble Phụ huynh · Zalo". */}
                 <span className="msr text-[19px]" aria-hidden>
@@ -451,7 +456,7 @@ export function LoginForm({
                     type="button"
                     disabled={loading || !chon}
                     onClick={() => loginDev(chon)}
-                    className="flex flex-none items-center gap-1.5 rounded-[8px] bg-gradient-to-br from-gold to-gold-dark px-4 text-[12.5px] font-black text-navy transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+                    className="flex flex-none items-center gap-1.5 rounded-[8px] bg-gradient-to-br from-gold to-gold-dark px-4 text-[12.5px] font-black text-navy transition hover:brightness-105 disabled:opacity-50"
                   >
                     {loading ? "Đang vào…" : "Vào Hub"}
                     <span aria-hidden className="msr text-[16px]">arrow_forward</span>

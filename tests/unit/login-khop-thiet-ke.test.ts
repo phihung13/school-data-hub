@@ -96,7 +96,11 @@ describe("màn đăng nhập khớp TRẠNG THÁI CUỐI của bản thiết k�
         gon(loi.replace(/\s0\s0\/.*$/, "")),
       );
     }
-    expect(LOGIN).toContain("backdrop-blur-[10px]");
+    // LẬT 24/08 (lượt "thẻ đăng nhập giật giật"): blur của thiết kế ĐÃ BỎ CÓ CHỦ Ý.
+    // backdrop-blur trên panel mài lại VIDEO ĐANG CHẠY ở từng khung hình — trả GPU mỗi
+    // giây cho một hiệu ứng mắt không thấy, vì nền trong đã đục 88–94%. Đây là một trong
+    // hai nguồn giật chủ đầu tư báo. Dựng lại blur là rước lại cái giật.
+    expect(LOGIN, "backdrop-blur quay lại — nguồn giật đã trị").not.toContain("backdrop-blur-[10px]");
     const sheen = giaTriCuoi(".cin-main::after", "background")!;
     expect(sheen).toContain("115deg");
     expect(gon(LOGIN), "mất vệt sáng sheen").toContain(gon(sheen.replace(/\s*0 0\/260% 100%\s*$/, "")));
