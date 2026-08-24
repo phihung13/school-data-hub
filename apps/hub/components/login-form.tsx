@@ -306,9 +306,12 @@ export function LoginForm({
             lên trên — lan lệch, không thẳng hàng. */}
         <div className="absolute inset-0 bg-[radial-gradient(900px_700px_at_103%_104%,#04102A,rgba(4,13,32,.75)_48%,transparent_76%),linear-gradient(270deg,#04102A_0%,#04102A_14%,rgba(4,16,42,.6)_26%,rgba(4,16,42,0)_42%),linear-gradient(292deg,#04102A_0%,rgba(4,13,32,.85)_26%,rgba(4,13,32,.35)_50%,rgba(4,13,32,0)_68%),linear-gradient(180deg,rgba(4,13,32,.22),rgba(4,13,32,.38))]" />
         {/* NỀN SAO — chủ đầu tư 24/08: "bôi đen nhiều mà nó không chứa gì thì cũng ko
-            tốt". Nằm TRÊN lớp bóng nên sao rõ nhất ở vùng đen bên phải, mờ dần nơi video
-            còn sáng. Tự vẽ canvas 2D, không three.js — xem lý lẽ trong sao-nen.tsx. */}
-        <SaoNen />
+            tốt", rồi chỉnh tiếp: "chỉ dồn bên phần có loang đen thôi, không được tràn qua
+            video". MẶT NẠ trùng hình với ba lớp loang đen ở trên (dải đứng 270° + lớp xéo
+            292° + vầng góc, thu hẹp một chút để sao dứt hẳn trước mép sáng): trong mask,
+            đen = hiện, trong suốt = ẩn — sao sống đúng trong vùng tối, video sạch.
+            Tự vẽ canvas 2D, không three.js — xem lý lẽ trong sao-nen.tsx. */}
+        <SaoNen className="[mask-image:linear-gradient(270deg,#000_0%,#000_16%,transparent_40%),linear-gradient(292deg,#000_0%,#000_24%,transparent_52%),radial-gradient(900px_700px_at_103%_104%,#000_30%,transparent_70%)]" />
       </div>
 
       {/* DẤU THƯƠNG HIỆU — `.cin-brand`, góc trái trên. aria-hidden: tên đã có trong h1. */}

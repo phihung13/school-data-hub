@@ -230,7 +230,10 @@ describe("nền sao và hover không dịch chuyển — hai lệnh 24/08", () =
   it("nền đen có sao, tự vẽ — KHÔNG three.js, không CDN", () => {
     // "bôi đen nhiều mà nó không chứa gì thì cũng ko tốt" — nhưng mạng trường có lọc nội
     // dung: kéo three.js từ unpkg là canvas trắng trơn không báo lỗi (DOC-TRUOC đã ghi).
-    expect(LOGIN4).toContain("<SaoNen />");
+    // "chỉ dồn bên phần có loang đen thôi, không được tràn qua video" (chỉnh lần hai
+    // 24/08): sao phải mang MẶT NẠ trùng hình vùng tối — bỏ mặt nạ là sao phủ lên video.
+    expect(LOGIN4).toMatch(/<SaoNen className="\[mask-image:/);
+    expect(LOGIN4, "mặt nạ phải có lớp xéo 292° trùng với lớp bóng").toMatch(/mask-image:[^"]*292deg/);
     expect(SAO, "cấm import thư viện ngoài cho hiệu ứng nền").not.toMatch(/from "three|unpkg|cdn/);
     expect(SAO, "phải tôn trọng giảm-chuyển-động").toContain("prefers-reduced-motion");
     expect(SAO, "tab nền không được ăn pin").toContain("visibilitychange");

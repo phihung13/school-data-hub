@@ -25,7 +25,7 @@ interface Sao {
   pha: number; // pha nhấp nháy riêng — không có thì cả trời sao thở cùng nhịp, giả ngay
 }
 
-export function SaoNen() {
+export function SaoNen({ className = "" }: { className?: string }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -125,5 +125,7 @@ export function SaoNen() {
 
   // pointer-events-none + aria-hidden: đây là trang trí — chuột theo dõi qua window,
   // canvas không được chặn một cú bấm nào của panel phía trên.
-  return <canvas ref={ref} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />;
+  return (
+    <canvas ref={ref} aria-hidden className={`pointer-events-none absolute inset-0 h-full w-full ${className}`} />
+  );
 }
