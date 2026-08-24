@@ -408,23 +408,39 @@ export function LoginForm({
                 >
                   DEV · CHỌN TÀI KHOẢN THỬ (THAY GOOGLE SSO THẬT)
                 </label>
-                <select
-                  id="tk-thu"
-                  value={chon}
-                  disabled={loading}
-                  onChange={(e) => setChon(e.target.value)}
-                  className="mt-2 w-full rounded-[8px] border border-[rgba(127,208,255,.4)] bg-[rgba(13,38,80,.85)] px-3 py-[11px] text-[12.5px] font-extrabold text-ink focus:border-gold disabled:opacity-50"
-                >
-                  {chiaNhom(devAccounts).map((nhom) => (
-                    <optgroup key={nhom.ten} label={nhom.ten}>
-                      {nhom.tai.map((acc) => (
-                        <option key={acc.authUid} value={acc.authUid}>
-                          {acc.displayName}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                {/* Ô chọn + nút VÀO đứng CẠNH NHAU — chủ đầu tư 24/08/2026: "chọn tài
+                    khoản mà không cho nút đăng nhập thì chọn xong vào kiểu gì". Nút đăng
+                    nhập thật (Google) đứng TRÊN và mang tên khác, không ai tự nối "chọn ở
+                    dưới" với "bấm nút trên". KHÔNG đăng nhập ngay khi đổi lựa chọn: người
+                    dùng bàn phím duyệt option bằng mũi tên sẽ bị bắn vào app giữa chừng. */}
+                <div className="mt-2 flex gap-2">
+                  <select
+                    id="tk-thu"
+                    value={chon}
+                    disabled={loading}
+                    onChange={(e) => setChon(e.target.value)}
+                    className="min-w-0 flex-1 rounded-[8px] border border-[rgba(127,208,255,.4)] bg-[rgba(13,38,80,.85)] px-3 py-[11px] text-[12.5px] font-extrabold text-ink focus:border-gold disabled:opacity-50"
+                  >
+                    {chiaNhom(devAccounts).map((nhom) => (
+                      <optgroup key={nhom.ten} label={nhom.ten}>
+                        {nhom.tai.map((acc) => (
+                          <option key={acc.authUid} value={acc.authUid}>
+                            {acc.displayName}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={loading || !chon}
+                    onClick={() => loginDev(chon)}
+                    className="flex flex-none items-center gap-1.5 rounded-[8px] bg-gradient-to-br from-gold to-gold-dark px-4 text-[12.5px] font-black text-navy transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+                  >
+                    {loading ? "Đang vào…" : "Vào Hub"}
+                    <span aria-hidden className="msr text-[16px]">arrow_forward</span>
+                  </button>
+                </div>
               </div>
             )}
 
