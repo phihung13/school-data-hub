@@ -4,6 +4,7 @@ import "./globals.css";
 import { TrpcProvider } from "@/lib/trpc-provider";
 import { NavProgress } from "@/components/ui/nav-progress";
 import { CongCheckinProvider } from "@/components/cong-checkin";
+import { IntroCinematic } from "@/components/intro-cinematic";
 import { getCurrentSession } from "@/lib/session";
 import { resolveIdentity } from "@hub/core/auth-adapter";
 import { phaiDungOCheckin } from "@/server/checkin-gate";
@@ -108,6 +109,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <TrpcProvider>
           {/* Chưa đăng nhập (trang /login) thì không có cổng nào — và cũng không có
               truy vấn nào. */}
+          {/* Đoạn intro sau đăng nhập. Đứng NGOÀI biểu thức ba ngôi bên dưới, và ngoài
+              cổng check-in: nó tự gác bằng cờ `sessionStorage` nên không cần biết người
+              dùng là ai, còn cổng check-in là thứ chờ sẵn phía sau khi phim tắt. */}
+          <IntroCinematic />
           {cong ? (
             <CongCheckinProvider
               batBuoc={cong.batBuoc}

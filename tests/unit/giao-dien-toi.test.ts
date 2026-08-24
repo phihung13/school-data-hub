@@ -80,3 +80,66 @@ describe("giao diện tối — token nền và token chữ KHÔNG được gộ
     expect(CSS, "body chưa đổi nền").not.toMatch(/body\s*\{[^}]*background:\s*#f7f9fc/i);
   });
 });
+
+// ---------------------------------------------------------------------------
+// ĐĂNG NHẬP → INTRO → TRANG CHỦ, và ba đường làm nó kẹt
+// ---------------------------------------------------------------------------
+// Chủ đầu tư 24/08/2026: *"trang login chưa đổi, intro các thứ nữa"*. Luồng của bản trình
+// diễn nay là luồng THẬT.
+//
+// Bài này canh những chỗ mà một lần "dọn cho gọn" sẽ NHỐT người dùng, chứ không canh phần
+// nhìn — phần nhìn hỏng thì thấy ngay, còn ba ca dưới đây hỏng lặng lẽ:
+describe("đăng nhập → intro → trang chủ", () => {
+  const INTRO = readFileSync(join(goc, "apps/hub/components/intro-cinematic.tsx"), "utf8");
+  const LOGIN = readFileSync(join(goc, "apps/hub/components/login-form.tsx"), "utf8");
+  const LAYOUT = readFileSync(join(goc, "apps/hub/app/layout.tsx"), "utf8");
+
+  it("cờ intro XOÁ TRƯỚC khi phát, không phải lúc phim kết thúc", () => {
+    // Xoá ở lúc kết thúc thì một lần F5 giữa chừng để lại cờ còn nguyên → intro phát lại
+    // mỗi lần tải trang, không dứt. Người dùng không có cách nào thoát ngoài xoá cookie.
+    const i = INTRO.indexOf("removeItem");
+    const j = INTRO.indexOf("setDangChay(true)");
+    expect(i, "không thấy removeItem").toBeGreaterThan(-1);
+    expect(i, "xoá cờ phải đứng TRƯỚC lệnh phát").toBeLessThan(j);
+  });
+
+  it("intro CHỈ đặt cờ khi đích là /home", () => {
+    // `?then=` hợp lệ có thể là `/oidc/interaction/<uid>` — người dùng đang giữa luồng
+    // đăng nhập của một app khác. Chen một đoạn phim toàn màn vào đó là chặn đúng việc
+    // họ đang làm.
+    expect(LOGIN).toMatch(/target === "\/home"[\s\S]{0,80}setItem\(CO_INTRO/);
+  });
+
+  it("LUÔN có đường ra: nút bỏ qua, và tự đóng khi video hỏng", () => {
+    // Phim 10 giây không bỏ qua được là 10 giây không vào được app — cô giáo mở máy giữa
+    // tiết thì đó là 10 giây trước mặt cả lớp.
+    expect(INTRO, "thiếu nút bỏ qua").toContain("Vào Hub");
+    // Mạng rớt hoặc thiếu file mà không bắt `onError` thì còn lại một màn đen phủ cả app.
+    expect(INTRO, "thiếu onError — video hỏng sẽ để lại màn đen").toMatch(/onError=\{\(\) => setDangChay\(false\)\}/);
+    expect(INTRO, "thiếu onEnded").toMatch(/onEnded=\{\(\) => setDangChay\(false\)\}/);
+  });
+
+  it("tôn trọng 'giảm chuyển động', và chạy CÂM", () => {
+    expect(INTRO, "không kiểm prefers-reduced-motion").toContain("prefers-reduced-motion");
+    // Có một lần nạp trang xen giữa cú bấm đăng nhập và trang đích, nên trang mới KHÔNG
+    // còn cử chỉ người dùng — `play()` có tiếng sẽ bị chặn. Câm là chọn có chủ ý.
+    expect(INTRO).toMatch(/v\.muted = true/);
+  });
+
+  it("intro đứng NGOÀI cổng check-in trong layout", () => {
+    // Đặt trong nhánh `cong ? (…)` thì nó chỉ chạy cho người có cổng, và JSX vỡ vì nhánh
+    // đó nhận một biểu thức chứ không nhận hai phần tử — đã vỡ thật một lần khi dựng.
+    const i = LAYOUT.indexOf("<IntroCinematic />");
+    const j = LAYOUT.indexOf("{cong ? (");
+    expect(i, "layout chưa gắn IntroCinematic").toBeGreaterThan(-1);
+    expect(i, "IntroCinematic phải đứng TRƯỚC nhánh cổng check-in").toBeLessThan(j);
+  });
+
+  it("trang đăng nhập dùng LẠI video đã tối ưu, không thêm file mới", () => {
+    expect(LOGIN, "login phải dùng chung video với bản trình diễn").toContain(
+      "/trinh-dien/uploads/su-tu-av1.mp4",
+    );
+    expect(LOGIN, "thiếu poster — 1,7 giây đầu sẽ là màn trống").toContain("su-tu-poster.webp");
+    expect(LOGIN, "nền parallax cũ đã gỡ").not.toMatch(/<LoginParallaxBg/);
+  });
+});

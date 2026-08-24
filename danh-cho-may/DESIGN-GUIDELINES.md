@@ -55,6 +55,33 @@ brighten cả hai, và ca "nó là nền" sẽ hỏng lặng lẽ. Chỉ bộ te
 `/dieu-khoan`"* — một chỗ hụt đã biết, cố ý khoá lại. Sang bảng tối cả hai token đều đạt,
 nên bài đã lật thành *"cả hai đều đạt"*. Giữ nguyên câu cũ là để CI bảo vệ một lời nói dối.
 
+### Luồng đăng nhập → intro → trang chủ
+
+Luồng của bản trình diễn nay là luồng THẬT (24/08/2026).
+
+**Trang đăng nhập** bỏ nền parallax sáu lớp ảnh, thay bằng chính video sư tử đã tối ưu cho
+bản trình diễn (AV1 1,55 MB, `moov` ở đầu, poster 50 KB). Ba cái được cùng lúc: khớp tông
+với phần còn lại của app; **nhẹ hơn thứ nó thay** — sáu lớp ảnh cộng một vòng lặp rAF 60fps
+chạy suốt thời gian người ta còn ở trang, đổi lấy một video 8 giây có phần cứng giải mã; và
+không thêm một byte nào vào kho.
+
+Giữ nguyên tên sản phẩm **"Viet Anh School Hub"**. Bản thiết kế ghi "Major Operating System"
+nhưng đổi tên sản phẩm là quyết định của chủ đầu tư, không phải hệ quả của một lượt đổi màu.
+
+**Đoạn intro** chạy một lần sau đăng nhập, gác bằng cờ `sessionStorage`. Bốn quyết định,
+mỗi cái vì một ca hỏng cụ thể:
+
+| Quyết định | Vì sao |
+|---|---|
+| Cờ ở `sessionStorage`, không phải `?intro=1` | `goAfterLogin()` cố ý dùng hard navigation để Server Component đọc được cookie mới — lý lẽ đó không được đụng. Tham số URL thì nằm lại trên thanh địa chỉ cho người ta bookmark, và F5 phát lại phim mỗi lần |
+| **Xoá cờ TRƯỚC khi phát** | Xoá lúc phim kết thúc thì một lần F5 giữa chừng để lại cờ còn nguyên → phát lại mỗi lần tải trang, không dứt |
+| Chỉ đặt cờ khi đích là `/home` | `?then=` hợp lệ có thể là `/oidc/interaction/<uid>` — người dùng đang giữa luồng đăng nhập của app khác; chen phim toàn màn vào đó là chặn đúng việc họ đang làm |
+| **Chạy CÂM** | Bản trình diễn mở tiếng được vì mọi thứ cùng một trang, cú bấm đăng nhập còn hiệu lực làm cử chỉ người dùng. Ở đây có một lần nạp trang xen vào nên trang mới không còn cử chỉ nào — `play()` có tiếng sẽ bị chặn. Và đây là app dùng trong lớp: nhạc tự bật khi cô giáo đăng nhập giữa giờ là thứ không ai muốn |
+
+Kèm ba đường ra bắt buộc: nút bỏ qua có mặt từ khung hình đầu, `onEnded`, và `onError` —
+thiếu cái cuối thì video hỏng để lại **một màn đen phủ cả app**. Tôn trọng
+`prefers-reduced-motion`: người đặt tuỳ chọn đó không phải xem phim toàn màn tự chạy.
+
 ### Người canh
 
 `tests/unit/giao-dien-toi.test.ts` — cấm `bg-white` và bảy mã hex nền sáng cũ quay lại bất

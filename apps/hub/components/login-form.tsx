@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mascot } from "./mascot";
-import { LoginParallaxBg } from "./login-parallax-bg";
+import { CO_INTRO } from "./intro-cinematic";
 import { MainContent } from "./page-shell";
 import { resolveThenPath } from "@/lib/trpc-client";
 
@@ -98,6 +98,17 @@ export function LoginForm({
    * `/oidc/interaction/<uid>` — đường do server.mjs phục vụ, router của Next không biết tới.
    */
   function goAfterLogin() {
+    // Đặt cờ intro NGAY TRƯỚC khi nạp trang. `sessionStorage` sống sót qua hard navigation
+    // (cùng tab, cùng origin) và chết theo tab — xem khối lý lẽ ở `intro-cinematic.tsx`.
+    //
+    // CHỈ khi đích là trang chủ. `?then=` hợp lệ có thể là `/oidc/interaction/<uid>` —
+    // người dùng đang giữa một luồng đăng nhập của app khác, chen một đoạn phim toàn màn
+    // vào đó là chặn đúng việc họ đang làm.
+    try {
+      if (target === "/home") sessionStorage.setItem(CO_INTRO, "1");
+    } catch {
+      // Chế độ riêng tư chặn sessionStorage: bỏ intro, không chặn đăng nhập.
+    }
     window.location.assign(target);
   }
 
@@ -191,9 +202,34 @@ export function LoginForm({
     <div className="flex min-h-screen w-full flex-col md:block">
       <MobileHeroBand />
 
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-pagebg md:h-screen md:justify-end md:bg-[#F4E9D8] md:px-[54px] md:py-11">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-pagebg md:h-screen md:justify-end md:px-[54px] md:py-11">
         <div className="hidden md:block">
-          <LoginParallaxBg />
+          {/* NỀN VIDEO thay nền parallax sáu lớp ảnh (đổi 24/08/2026 cùng lượt chuyển
+            giao diện tối). Dùng lại đúng file đã tối ưu cho bản trình diễn — AV1 1,55 MB,
+            `moov` ở đầu, poster 50 KB hiện sau ~0,3s — nên không thêm một byte nào vào kho.
+
+            Nhẹ hơn hẳn thứ nó thay: sáu lớp ảnh + một vòng lặp rAF 60fps chạy suốt thời
+            gian người ta còn ở trang này, đổi lấy một video 8 giây có phần cứng giải mã.
+
+            `aria-hidden` + `pointer-events-none`: đây là TRANG TRÍ. Trình đọc màn hình đi
+            thẳng tới ô đăng nhập, không phải lội qua nó. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
+          <video
+            className="h-full w-full object-cover"
+            poster="/trinh-dien/uploads/su-tu-poster.webp"
+            preload="auto"
+            loop
+            muted
+            playsInline
+            autoPlay
+          >
+            <source src="/trinh-dien/uploads/su-tu-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />
+            <source src="/trinh-dien/uploads/su-tu-chay.mp4" type="video/mp4" />
+          </video>
+          {/* Lớp phủ: video là nền, không phải nội dung. Thiếu nó thì chữ trên thẻ phải
+              cạnh tranh với sư tử đang chạy, và tương phản đo được sẽ đổi theo từng khung. */}
+          <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(4,16,42,.62)_0%,rgba(4,16,42,.86)_52%,rgba(4,16,42,.96)_100%)]" />
+        </div>
         </div>
 
         {/* CỘT THẺ ĐĂNG NHẬP LÀ <main id="noi-dung"> CỦA TRANG /login (sửa 05/08/2026).
@@ -208,15 +244,15 @@ export function LoginForm({
             nhìn thấy, trong khi backdrop-filter buộc trình duyệt tách một lớp composite và
             vẽ lại nó theo TỪNG KHUNG HÌNH của vòng parallax 60fps ngay bên dưới. Chi phí
             có thật, hiệu ứng thì không — nền `md:bg-card` giữ nguyên phần nhìn thấy được. */}
-        <MainContent className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 focus:outline-none md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#EFE6D6] md:bg-card md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)]">
+        <MainContent className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 focus:outline-none md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#1E3A6B] md:bg-card md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)]">
           <div>
-            {/* #9A8F6E chỉ đạt 3,22:1 trên thẻ trắng — dưới chuẩn 4,5:1. Mã đầu tiên thử
-                thay (#8A7B52) đo lại chỉ được 4,17:1, nên chốt #806E44 = 4,96:1 trên trắng:
+            {/* #FFD98A chỉ đạt 3,22:1 trên thẻ trắng — dưới chuẩn 4,5:1. Mã đầu tiên thử
+                thay (#FFD98A) đo lại chỉ được 4,17:1, nên chốt #FFD98A = 4,96:1 trên trắng:
                 cùng sắc vàng-nâu của bộ nhận diện, đủ biên để không tụt lại ở lần sửa sau. */}
-            <div className="hidden text-[12.5px] font-extrabold uppercase tracking-[.14em] text-[#806E44] md:block">
+            <div className="hidden text-[12.5px] font-extrabold uppercase tracking-[.14em] text-[#FFD98A] md:block">
               Chào mừng trở lại
             </div>
-            <h1 className="text-[24px] font-black leading-[1.15] tracking-[-.015em] text-ink md:mt-[7px] md:text-[31px] md:text-[#26275D]">
+            <h1 className="text-[24px] font-black leading-[1.15] tracking-[-.015em] text-ink md:mt-[7px] md:text-[31px] md:text-[#FFFFFF]">
               Viet Anh{" "}
               <span className="relative inline-block">
                 School Hub
@@ -226,14 +262,14 @@ export function LoginForm({
           </div>
 
           {error && (
-            <div role="alert" className="flex items-start gap-[9px] rounded-2xl border border-[#F6D2D2] bg-[#FFF1F1] p-[11px_13px] animate-popIn">
+            <div role="alert" className="flex items-start gap-[9px] rounded-2xl border border-[#5A2126] bg-[#351216] p-[11px_13px] animate-popIn">
               {/* aria-hidden: tên icon là chữ THẬT trong DOM. Không che thì trình đọc màn
                   hình đọc "error" (tiếng Anh) trước câu lỗi tiếng Việt ngay bên cạnh —
                   khối đã có role="alert" nói đủ rồi, icon chỉ là hình. */}
               <span className="msr flex-none text-[19px] text-[#FF8A8F]" aria-hidden>
                 error
               </span>
-              <span className="text-[12.5px] font-bold leading-[1.45] text-[#A32127]">{error}</span>
+              <span className="text-[12.5px] font-bold leading-[1.45] text-[#FF8A8F]">{error}</span>
             </div>
           )}
 
@@ -251,9 +287,9 @@ export function LoginForm({
           {gate === "open" && <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />}
 
           <div className="flex items-center gap-2.5">
-            <span className="h-px flex-1 bg-[#EFE9DC]" />
+            <span className="h-px flex-1 bg-[#0E2244]" />
             <span className="text-[11px] font-extrabold text-[#93A9C8]">hoặc</span>
-            <span className="h-px flex-1 bg-[#EFE9DC]" />
+            <span className="h-px flex-1 bg-[#0E2244]" />
           </div>
 
           <button
@@ -278,12 +314,12 @@ export function LoginForm({
               đường hỗ trợ CÓ THẬT: nhắn GVCN — cùng lối mà GuardianPanel đang chỉ.
               Trả link về khi trang chính sách thật ra đời và được BGH duyệt nội dung.
 
-              Sửa 01/08/2026: màu chữ #9AA0B2 → #93A9C8. Trên thẻ đăng nhập (nền trắng, và
-              nền kem #F4E9D8 ở khung máy tính) #9AA0B2 chỉ đạt 2,61:1 / 2,17:1 — dưới chuẩn
+              Sửa 01/08/2026: màu chữ #93A9C8 → #93A9C8. Trên thẻ đăng nhập (nền trắng, và
+              nền kem #0A1B38 ở khung máy tính) #93A9C8 chỉ đạt 2,61:1 / 2,17:1 — dưới chuẩn
               4,5:1. Đây là câu DUY NHẤT trên màn nói cho người chưa đăng nhập được biết phải
               hỏi ai; nó không phải chữ trang trí. #93A9C8 = 5,44:1 trên trắng, 4,53:1 trên
-              #F4E9D8. Cùng lý do cho chữ "hoặc" ở dải phân cách. */}
-          <p className="border-t border-[#F1EADD] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#93A9C8]">
+              #0A1B38. Cùng lý do cho chữ "hoặc" ở dải phân cách. */}
+          <p className="border-t border-[#12244A] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#93A9C8]">
             Tài khoản do Trường Việt Anh cấp · Cần hỗ trợ, nhắn giáo viên chủ nhiệm.
           </p>
         </MainContent>
@@ -401,14 +437,14 @@ function StaffPanel({
         <label htmlFor="tk-thu" className="sr-only">
           Chọn tài khoản thử
         </label>
-        <div className="flex items-center gap-2.5 rounded-[15px] border-[1.6px] border-[#E4DFD3] bg-card px-3.5 shadow-[0_6px_16px_rgba(38,39,93,.10)]">
+        <div className="flex items-center gap-2.5 rounded-[15px] border-[1.6px] border-[#1E3A6B] bg-card px-3.5 shadow-[0_6px_16px_rgba(38,39,93,.10)]">
           <GoogleMark />
           <select
             id="tk-thu"
             value={chon}
             disabled={loading}
             onChange={(e) => setChon(e.target.value)}
-            className="min-h-[52px] min-w-0 flex-1 bg-transparent text-[13.5px] font-black text-[#1B1C3A] outline-none disabled:opacity-50"
+            className="min-h-[52px] min-w-0 flex-1 bg-transparent text-[13.5px] font-black text-[#EAF2FF] outline-none disabled:opacity-50"
           >
             {chiaNhom(devAccounts).map((nhom) => (
               <optgroup key={nhom.ten} label={nhom.ten}>
