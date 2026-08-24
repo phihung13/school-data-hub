@@ -47,17 +47,30 @@ export function IntroCinematic() {
       // phần trang trí — không được để nó chặn đường vào app.
       return;
     }
-    if (!bat) return;
+    // Màn đen chặn (script inline ở layout dựng TRƯỚC khi trang vẽ) từ đây do component
+    // này quản. Nhánh KHÔNG chiếu phải gỡ ngay; nhánh chiếu gỡ ở effect dưới — sau khi
+    // lớp phủ của chính component đã vẽ đè lên, nên không có khung hình hở nào ở giữa.
+    const goManDen = () => document.getElementById("intro-man-den")?.remove();
+
+    if (!bat) {
+      goManDen();
+      return;
+    }
 
     // TÔN TRỌNG "GIẢM CHUYỂN ĐỘNG". Một đoạn phim toàn màn tự chạy là đúng thứ người đặt
     // tuỳ chọn này muốn tránh; với người say chuyển động nó gây khó chịu thật sự.
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      goManDen();
+      return;
+    }
 
     setDangChay(true);
   }, []);
 
   useEffect(() => {
     if (!dangChay) return;
+    // Lớp phủ của component đã vẽ (effect chạy SAU paint) — màn đen chặn hết việc.
+    document.getElementById("intro-man-den")?.remove();
     const v = videoRef.current;
     if (!v) return;
     // Câm — xem khối lý lẽ đầu file. Hỏng thì đóng luôn, không để màn đen treo.

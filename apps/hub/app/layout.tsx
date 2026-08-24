@@ -86,6 +86,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="vi" className={beVietnamPro.variable}>
       <body>
+
         {/* Phần tử BẮT BUỘC đứng đầu <body>: đích Tab đầu tiên của mọi trang. Ẩn khỏi mắt
             cho tới khi nhận focus (kiểu .skip-link trong globals.css). Đích #noi-dung do
             <main> trong components/page-shell.tsx cung cấp — qua <PageShell> (check-in,
@@ -102,6 +103,39 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a href="#noi-dung" className="skip-link">
           Bỏ qua menu, tới nội dung chính
         </a>
+
+        {/* MÀN ĐEN CHẶN cho intro — ĐỨNG SAU đường tắt, TRƯỚC nội dung: bài a11y đòi
+            skip-link là phần tử đầu <body> (đích Tab đầu tiên), còn script thì chỉ cần
+            chạy trước phần thân nặng phía dưới — <script> không chiếm tab-order nên hai
+            yêu cầu không giẫm nhau. Sửa 24/08/2026, chủ đầu tư: "khi ấn đăng nhập thì nó
+            vào trang home ngay, sau đó nó mới load intro".
+
+            `IntroCinematic` đọc cờ trong useEffect — tức SAU hydrate, mà hydrate chạy sau
+            khi HTML trang chủ đã vẽ. Khoảng giữa đó người dùng thấy trang chủ trần trụi
+            rồi intro mới phủ lên. Script inline KHÔNG defer này chạy ngay khi parser gặp
+            nó — trước khi phần thân phía dưới được vẽ — nên màn đen có mặt trước khung
+            hình đầu tiên.
+
+            Ba chốt an toàn, mỗi cái cho một đường hỏng:
+            · KHÔNG xoá cờ ở đây — IntroCinematic vẫn là chủ của cờ; xoá hai nơi là hai
+              nơi để lệch.
+            · Tôn trọng prefers-reduced-motion NGAY TỪ ĐÂY: người tắt chuyển động không
+              phải nhìn một màn đen chờ một đoạn phim sẽ không chiếu.
+            · setTimeout 6s tự gỡ: nếu hydrate chết (JS lỗi, mạng đứt giữa chừng), màn đen
+              không được phép thành nhà tù — 6s là trần, quá đó thà lộ trang còn hơn nhốt. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{if(sessionStorage.getItem("hub:intro")!=="1")return;' +
+              'if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;' +
+              'var d=document.createElement("div");d.id="intro-man-den";' +
+              'd.style.cssText="position:fixed;inset:0;background:#04102A;z-index:79";' +
+              'document.documentElement.appendChild(d);' +
+              'setTimeout(function(){var e=document.getElementById("intro-man-den");if(e)e.remove()},6000);' +
+              '}catch(e){}})();',
+          }}
+        />
+
         {/* Thanh báo "đang chuyển trang" — đặt ngoài TrpcProvider vì nó không cần dữ
             liệu nào, chỉ nghe cú bấm. Đứng ở layout gốc nên phủ MỌI trang: thêm màn mới
             không phải nhớ cắm lại, và đó là chủ ý (xem nav-progress.tsx). */}

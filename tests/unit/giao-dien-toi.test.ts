@@ -167,3 +167,47 @@ describe("đăng nhập → intro → trang chủ", () => {
     expect(LOGIN, "nền parallax cũ đã gỡ").not.toMatch(/<LoginParallaxBg/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// MÀN ĐEN CHẶN — không được lộ trang chủ trước khi intro phủ
+// ---------------------------------------------------------------------------
+// Chủ đầu tư 24/08/2026: *"khi ấn đăng nhập thì nó vào trang home ngay, sau đó nó mới
+// load intro"*. Nguyên nhân: cờ intro đọc trong useEffect — SAU hydrate, mà hydrate chạy
+// sau khi HTML trang chủ đã vẽ. Sửa bằng một <script> inline KHÔNG defer ở đầu <body>:
+// parser gặp là chạy ngay, màn đen dựng TRƯỚC khung hình đầu tiên của trang.
+describe("màn đen chặn cho intro", () => {
+  const LAYOUT2 = readFileSync(join(goc, "apps/hub/app/layout.tsx"), "utf8");
+  const INTRO2 = readFileSync(join(goc, "apps/hub/components/intro-cinematic.tsx"), "utf8");
+
+  it("script chặn đứng TRƯỚC nội dung trang trong layout", () => {
+    const iScript = LAYOUT2.indexOf("intro-man-den");
+    const iChildren = LAYOUT2.indexOf("{cong ? (");
+    expect(iScript, "mất script chặn — trang chủ lại lộ ra trước intro").toBeGreaterThan(-1);
+    expect(iScript, "script phải đứng TRƯỚC nội dung, sau nó là vô nghĩa").toBeLessThan(iChildren);
+  });
+
+  it("script chặn giữ đủ ba chốt an toàn", () => {
+    const i = LAYOUT2.indexOf("dangerouslySetInnerHTML");
+    const script = LAYOUT2.slice(i, LAYOUT2.indexOf("/>", i));
+    // 1. KHÔNG xoá cờ — IntroCinematic là chủ duy nhất của cờ; xoá hai nơi là hai nơi lệch.
+    expect(script, "script tự xoá cờ — tranh quyền với IntroCinematic").not.toContain("removeItem");
+    // 2. Tôn trọng giảm-chuyển-động ngay từ đây: không bắt ai nhìn màn đen chờ một đoạn
+    //    phim sẽ không chiếu.
+    expect(script).toContain("prefers-reduced-motion");
+    // 3. Trần 6 giây tự gỡ: hydrate chết thì màn đen không được thành nhà tù.
+    expect(script).toMatch(/setTimeout[\s\S]*6000/);
+    // Và nó phải nằm DƯỚI lớp phủ của IntroCinematic (79 < 80) để lúc bàn giao không nháy.
+    expect(script).toContain("z-index:79");
+  });
+
+  it("IntroCinematic gỡ màn đen ở CẢ ba nhánh — không cờ, giảm chuyển động, và bắt đầu chiếu", () => {
+    // Sót nhánh nào thì ở nhánh đó người dùng nhìn màn đen tới trần 6 giây.
+    const soLanGo = (INTRO2.match(/getElementById\("intro-man-den"\)/g) ?? []).length;
+    expect(soLanGo, "phải có chỗ gỡ màn đen ở nhánh không-chiếu VÀ nhánh chiếu").toBeGreaterThanOrEqual(2);
+    // Nhánh chiếu: gỡ trong effect của `dangChay` — SAU khi lớp phủ của chính component
+    // đã vẽ đè lên, nên không có khung hình hở nào ở giữa.
+    const iPlay = INTRO2.indexOf("if (!dangChay) return;");
+    const sauPlay = INTRO2.slice(iPlay, iPlay + 300);
+    expect(sauPlay, "nhánh chiếu phải gỡ màn đen sau khi lớp phủ của nó đã vẽ").toContain("intro-man-den");
+  });
+});
