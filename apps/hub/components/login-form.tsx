@@ -215,7 +215,7 @@ export function LoginForm({
             thẳng tới ô đăng nhập, không phải lội qua nó. */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <video
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover [filter:brightness(1.18)_saturate(1.08)]"
             poster="/trinh-dien/uploads/su-tu-poster.webp"
             preload="auto"
             loop
@@ -228,7 +228,7 @@ export function LoginForm({
           </video>
           {/* Lớp phủ: video là nền, không phải nội dung. Thiếu nó thì chữ trên thẻ phải
               cạnh tranh với sư tử đang chạy, và tương phản đo được sẽ đổi theo từng khung. */}
-          <div className="absolute inset-0 bg-[radial-gradient(620px_470px_at_104%_106%,rgba(4,13,32,.92),rgba(4,13,32,.5)_46%,transparent_74%),radial-gradient(640px_460px_at_-6%_-8%,rgba(4,13,32,.72),transparent_66%),linear-gradient(180deg,rgba(4,13,32,.35),rgba(4,13,32,.78))]" />
+          <div className="absolute inset-0 bg-[radial-gradient(620px_470px_at_104%_106%,rgba(4,13,32,.88),rgba(4,13,32,.45)_46%,transparent_74%),radial-gradient(640px_460px_at_-6%_-8%,rgba(4,13,32,.66),rgba(4,13,32,.32)_42%,transparent_78%),radial-gradient(700px_520px_at_-6%_108%,rgba(4,13,32,.64),rgba(4,13,32,.3)_42%,transparent_78%),linear-gradient(270deg,rgba(4,13,32,.88)_0%,rgba(4,13,32,.5)_9%,rgba(4,13,32,0)_20%),linear-gradient(292deg,rgba(4,13,32,.84)_0%,rgba(4,13,32,.68)_30%,rgba(4,13,32,.34)_52%,rgba(4,13,32,0)_68%)]" />
         </div>
         </div>
 
@@ -248,15 +248,15 @@ export function LoginForm({
             `aria-hidden`: tên trường đã có trong <h1> ngay bên dưới; đọc hai lần là thừa. */}
         <div aria-hidden className="absolute left-6 top-5 z-[8] flex items-center gap-3 md:left-10 md:top-[26px]">
           <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-white shadow-[0_10px_26px_rgba(2,10,30,.45)]">
-            <img src="/logo.webp?v=ddafa976" alt="" className="h-[34px] w-[34px] rounded-lg object-cover" />
+            <img src="/logo.webp?v=ddafa976" alt="" className="h-9 w-9 rounded-[9px] object-cover" />
           </span>
           <span className="flex flex-col gap-0.5">
-            <span className="text-[16px] font-black text-white">Viet Anh</span>
-            <span className="text-[9px] font-extrabold tracking-[.22em] text-[#FFE3A6]">SCHOOL HUB</span>
+            <span className="text-[16px] font-black text-white">School Hub</span>
+            <span className="text-[9px] font-extrabold tracking-[.22em] text-[#FFE3A6]">TRƯỜNG VIỆT ANH</span>
           </span>
         </div>
 
-        <MainContent className="relative z-[8] ml-auto flex w-full flex-col items-stretch gap-4 px-6 pb-24 pt-28 focus:outline-none md:mb-[110px] md:mr-16 md:mt-auto md:w-[460px] md:items-end md:gap-[18px] md:px-0 md:pb-0 md:pt-0 md:text-right">
+        <MainContent className="relative z-[8] ml-auto flex w-full flex-col items-stretch gap-4 px-6 pb-24 pt-28 focus:outline-none md:mb-[110px] md:mr-16 md:mt-auto md:max-w-[560px] md:items-end md:gap-[18px] md:px-0 md:pb-0 md:pt-0 md:text-right">
           <div className="flex flex-col gap-3 md:items-end">
             {/* Nhãn nhỏ chữ đơn cách — `.cin-kicker`. Chấm vàng có nhịp thở để màn mở đầu
                 không đứng chết, nhưng nó là TRANG TRÍ nên `aria-hidden`. */}
@@ -296,25 +296,27 @@ export function LoginForm({
           {/* Ô cảnh báo "cửa đang mở không mật khẩu" đã GỠ 02/08/2026 theo yêu cầu chủ
               đầu tư. Cảnh báo tương ứng vẫn còn ở `tools/start-local.sh` — chỗ đó là
               người vận hành đọc, không phải người dùng cuối. */}
-          {gate === "open" && <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />}
+          {/* HÀNG NÚT — `.cin-cta`: một hàng, `row-reverse` nên Google nằm PHẢI và Zalo
+              nằm TRÁI. Dải "hoặc" ở bản trước là thứ tôi tự thêm; bản thiết kế không có,
+              và nó sai nghĩa — hai nút này không phải hai lựa chọn loại trừ nhau mà là hai
+              cửa cho hai nhóm người khác nhau (nhân sự trường · phụ huynh).
 
-          <div className="flex items-center gap-2.5">
-            <span className="h-px flex-1 bg-white/20" />
-            <span className="text-[11px] font-extrabold text-white/70">hoặc</span>
-            <span className="h-px flex-1 bg-white/20" />
+              Khổ điện thoại xếp dọc: hai nút 58px cạnh nhau cần ~600px, không vừa. */}
+          <div className="flex flex-col gap-3 md:flex-row-reverse md:items-center md:gap-3">
+            {gate === "open" && <StaffPanel devAccounts={devAccounts} loading={loading} onPick={loginDev} />}
+
+            <button
+              type="button"
+              onClick={() => setGuardianOpen((v) => !v)}
+              className="flex h-[58px] items-center justify-center gap-2.5 rounded-[16px] border-[1.5px] border-white/35 bg-white/10 px-[22px] text-[14px] font-black text-white backdrop-blur-md transition-transform hover:-translate-y-0.5 active:scale-[.985]"
+            >
+              {/* aria-hidden: nếu không, nút này đọc thành "chat_bubble Phụ huynh · Zalo". */}
+              <span className="msr text-[19px]" aria-hidden>
+                chat_bubble
+              </span>
+              Phụ huynh · Zalo
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setGuardianOpen((v) => !v)}
-            className="flex h-[58px] items-center justify-center gap-2.5 rounded-[16px] border-[1.5px] border-white/35 bg-white/10 px-6 text-[14.5px] font-black text-white backdrop-blur-md transition-transform hover:-translate-y-0.5 active:scale-[.985]"
-          >
-            {/* aria-hidden: nếu không, nút này đọc thành "chat_bubble Dành cho phụ huynh". */}
-            <span className="msr text-[19px]" aria-hidden>
-              chat_bubble
-            </span>
-            Dành cho phụ huynh · Zalo
-          </button>
 
           {guardianOpen && <GuardianPanel code={code} setCode={setCode} loading={loading} onSubmit={redeemCode} />}
 
@@ -445,38 +447,65 @@ function StaffPanel({
           Gộp theo NHÓM VAI chứ không xếp phẳng: người chọn đang tìm "một cô chủ nhiệm"
           hay "một em học sinh", không tìm một cái tên cụ thể. `optgroup` làm đúng việc
           đó, và trình đọc màn hình cũng đọc được tên nhóm. */}
-      <div className="flex flex-col gap-2.5">
-        <label htmlFor="tk-thu" className="sr-only">
-          Chọn tài khoản thử
-        </label>
-        <div className="flex w-full items-center gap-2.5 rounded-[16px] border-[1.5px] border-white/25 bg-white/10 px-3.5 backdrop-blur-md md:w-[400px]">
-          <GoogleMark />
-          <select
-            id="tk-thu"
-            value={chon}
-            disabled={loading}
-            onChange={(e) => setChon(e.target.value)}
-            className="min-h-[52px] min-w-0 flex-1 bg-transparent text-[13.5px] font-black text-[#EAF2FF] outline-none disabled:opacity-50"
-          >
-            {chiaNhom(devAccounts).map((nhom) => (
-              <optgroup key={nhom.ten} label={nhom.ten}>
-                {nhom.tai.map((acc) => (
-                  <option key={acc.authUid} value={acc.authUid}>
-                    {acc.displayName}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </div>
+      <div className="flex flex-col items-stretch gap-3 md:items-end">
+        {/* NÚT GOOGLE — `.sso`. Ba thứ ở đây là chi tiết nhận diện của bản thiết kế, và
+            thiếu bất kỳ cái nào thì nút "trông khác" dù đúng kích thước:
+              · viền vàng 1,5px  `0 0 0 1.5px rgba(255,198,41,.65)`
+              · quầng sáng vàng   `0 0 42px rgba(255,198,41,.3)`
+              · bóng đổ sâu       `0 20px 50px rgba(2,8,22,.55)`
+            Cả ba nằm trong MỘT `box-shadow` — viền vẽ bằng shadow chứ không bằng `border`
+            để không cộng thêm 3px vào kích thước nút. */}
         <button
           type="button"
           disabled={loading || !chon}
           onClick={() => onPick(chon)}
-          className="flex h-[58px] w-full items-center justify-center gap-3 rounded-[16px] bg-white text-[15px] font-black text-[#1B1C3A] shadow-[0_14px_34px_rgba(2,10,30,.45)] transition-transform hover:-translate-y-0.5 disabled:opacity-50 md:w-[400px]"
+          className="flex h-[58px] w-full items-center justify-center gap-3 rounded-[16px] bg-white text-[15.5px] font-black text-[#1B1C3A] shadow-[0_20px_50px_rgba(2,8,22,.55),0_0_0_1.5px_rgba(255,198,41,.65),0_0_42px_rgba(255,198,41,.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-50 md:w-[400px]"
         >
-          {loading ? "Đang vào…" : "Vào Hub"}
+          <GoogleMark />
+          {loading ? "Đang vào…" : "Đăng nhập với Google"}
+          {/* Mũi tên hổ phách `.sso .arr` — `#F5A300`, 18px. */}
+          <span aria-hidden className="msr text-[18px] text-gold-dark">
+            arrow_forward
+          </span>
         </button>
+
+        {/* HÀNG CHIP TÀI KHOẢN THỬ — `.devrow` + `.devchip`.
+            Bản thiết kế vẽ 2 chip; kho thật có 15 tài khoản, nên hàng này CUỐN DÒNG thay vì
+            tràn ngang. Vẫn là chip, vẫn có chấm avatar vàng — chỉ nhiều hơn.
+
+            Thay cho ô <select> ở bản trước. Ô đó giải đúng một vấn đề thật (9 nút cao 56px
+            là hơn 500px cuộn), nhưng nó không phải thứ bản thiết kế vẽ, và chip cuốn dòng
+            giải cùng vấn đề đó mà vẫn đúng hình. */}
+        <fieldset className="flex flex-col gap-2 border-0 p-0 md:items-end">
+          <legend className="sr-only">Chọn tài khoản thử</legend>
+          <div className="flex flex-wrap gap-2 md:justify-end">
+            {devAccounts.map((acc) => {
+              const dangChon = acc.authUid === chon;
+              return (
+                <button
+                  key={acc.authUid}
+                  type="button"
+                  disabled={loading}
+                  aria-pressed={dangChon}
+                  onClick={() => setChon(acc.authUid)}
+                  className={`inline-flex min-h-[32px] items-center gap-[7px] rounded-full border py-[5px] pl-[5px] pr-[13px] text-[11.5px] font-extrabold text-ink transition-colors disabled:opacity-50 ${
+                    dangChon
+                      ? "border-gold bg-[rgba(13,38,80,.95)] shadow-[0_0_0_1px_rgba(255,198,41,.5)]"
+                      : "border-[rgba(127,208,255,.4)] bg-[rgba(13,38,80,.85)]"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[10.5px] font-black text-navy"
+                  >
+                    {acc.displayName.trim().slice(0, 1).toUpperCase()}
+                  </span>
+                  {acc.displayName}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       </div>
     </div>
   );
