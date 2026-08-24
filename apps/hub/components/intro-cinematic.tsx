@@ -116,11 +116,17 @@ export function IntroCinematic() {
 
       {/* ĐƯỜNG RA LUÔN CÓ MẶT, ngay từ khung hình đầu. Một đoạn phim 10 giây không bỏ qua
           được là 10 giây người ta không vào được app — và cô giáo mở máy giữa tiết thì đó
-          là 10 giây trước mặt cả lớp. */}
+          là 10 giây trước mặt cả lớp.
+
+          VỊ TRÍ nút không phải thẩm mỹ ngẫu nhiên: nó ĐÈ LÊN watermark Gemini trong video
+          (lệnh chủ đầu tư 24/08/2026). Đo bằng cách cắt khung hình: tâm watermark ở
+          ~(89,6% ngang · 84,5% dọc) → nút neo right 6,5% / bottom 13,5% để tâm nút trùng
+          tâm watermark; nền đậm lên .60 để che hẳn. Video mới từ nguồn khác thì đo lại
+          bằng đúng cách đó (crop + drawgrid), đừng ước lượng bằng mắt. */}
       <button
         type="button"
         onClick={() => setDangChay(false)}
-        className="absolute bottom-10 left-1/2 flex min-h-[44px] -translate-x-1/2 items-center gap-2 rounded-full border border-white/25 bg-black/45 px-6 text-[13.5px] font-extrabold text-white backdrop-blur-sm"
+        className="absolute bottom-[13.5%] right-[6.5%] flex min-h-[44px] items-center gap-2 rounded-full border border-white/25 bg-black/60 px-6 text-[13.5px] font-extrabold text-white backdrop-blur-sm"
       >
         Vào Hub
         <span aria-hidden className="msr text-[18px]">

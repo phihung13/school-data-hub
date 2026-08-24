@@ -265,12 +265,12 @@ export function LoginForm({
   }
 
   return (
-    // Khung tràn viền, panel CĂN GIỮA DỌC bên phải như thiết kế, nhưng mép phải 84px
+    // Khung tràn viền, panel CĂN GIỮA DỌC bên phải như thiết kế, nhưng mép phải 104px
     // thay vì 64px — chủ đầu tư 24/08/2026 chỉnh hai lượt: "dời qua trái" rồi "thêm 20px
-    // so với cũ thôi chứ ko qua trái hẳn". 64+20=84, chỉ nhích, không đổi phía. Căn bằng
+    // so với cũ thôi chứ ko qua trái hẳn". 64+20+20=104 (nhích lần hai 24/08: "dời qua trái thêm 20px cho tôi xem"). Căn bằng
     // flexbox thay vì absolute để khi các bảng phụ (mã mời, mở khoá) bung ra làm panel
     // cao hơn màn, trang còn cuộn được.
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#04102A] p-4 md:h-screen md:justify-end md:p-0 md:pr-[84px]">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#04102A] p-4 md:h-screen md:justify-end md:p-0 md:pr-[104px]">
       {/* NỀN VIDEO — `.cin-bg` + `.cin-shade`, ở MỌI khổ màn. Dùng lại file đã tối ưu
           cho bản trình diễn; `aria-hidden` + `pointer-events-none`: trang trí thuần. */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
