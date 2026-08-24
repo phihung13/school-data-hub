@@ -33,8 +33,8 @@ import { HuongDanTichHop, QuyTrinhDauNoi } from "./huong-dan-tich-hop";
 import { DanPhieuDauNoi } from "./dan-phieu-dau-noi";
 
 const NHAN_RO: Record<string, { chu: string; nen: string; mau: string }> = {
-  xanh: { chu: "Rổ Xanh · không gắn tên em nào", nen: "bg-[#E3F8ED]", mau: "text-[#126B45]" },
-  vang: { chu: "Rổ Vàng · có gắn tên từng em", nen: "bg-[#FFF7E0]", mau: "text-[#8A5A00]" },
+  xanh: { chu: "Rổ Xanh · không gắn tên em nào", nen: "bg-[#0C2E22]", mau: "text-[#126B45]" },
+  vang: { chu: "Rổ Vàng · có gắn tên từng em", nen: "bg-[#2A2208]", mau: "text-[#FFD98A]" },
 };
 
 const NHAN_VAI: Record<HubRole, string> = {
@@ -87,7 +87,7 @@ export function MiniAppAdminView({
           <button
             type="button"
             onClick={() => setMoQuyTrinh(true)}
-            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-line2 bg-white px-4 text-[13px] font-extrabold text-cardtitle2"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-line2 bg-card px-4 text-[13px] font-extrabold text-cardtitle2"
           >
             {/* `checklist`, không phải `route`: font đã cắt gọn không có `route`, và một tên
                 ngoài danh sách vẽ ra một Ô TRỐNG chứ không báo lỗi
@@ -190,14 +190,14 @@ function TheApp({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {/* <h2>: mỗi app là một khối ngang cấp dưới <h1> "Mini App" của khung màn. */}
-            <h2 className="text-[15px] font-black text-navy">{app.displayName}</h2>
+            <h2 className="text-[15px] font-black text-cardtitle">{app.displayName}</h2>
             {/* Trạng thái nói bằng CHỮ, không chỉ bằng màu (§11: màu không phải tín hiệu
                 duy nhất). Người mù màu và người đọc bằng tai vẫn phải biết app nào đang bật. */}
             <span
               className={
                 app.enabled
-                  ? "rounded-full bg-[#E3F8ED] px-2.5 py-0.5 text-[10.5px] font-black text-[#126B45]"
-                  : "rounded-full bg-[#F1F4F8] px-2.5 py-0.5 text-[10.5px] font-black text-muted"
+                  ? "rounded-full bg-[#0C2E22] px-2.5 py-0.5 text-[10.5px] font-black text-[#126B45]"
+                  : "rounded-full bg-[#12244A] px-2.5 py-0.5 text-[10.5px] font-black text-muted"
               }
             >
               {app.enabled ? "ĐANG BẬT" : "ĐANG TẮT"}
@@ -212,7 +212,7 @@ function TheApp({
           disabled={dangDoi}
           className={
             app.enabled
-              ? "flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-[#F0C9CB] bg-white px-4 text-[12.5px] font-extrabold text-[#D2383E] disabled:opacity-50"
+              ? "flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-[#F0C9CB] bg-card px-4 text-[12.5px] font-extrabold text-[#FF8A8F] disabled:opacity-50"
               : "flex min-h-[44px] items-center gap-1.5 rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 text-[12.5px] font-black text-white disabled:opacity-50"
           }
         >
@@ -228,7 +228,7 @@ function TheApp({
           là `<p>` trần. Người dùng chuột nhìn thấy chữ đỏ hiện ra; người dùng bàn phím và
           trình đọc màn hình thì không nghe gì cả — họ bấm "Tắt app", tiêu điểm vẫn ở nút,
           nút hết mờ, và không có tín hiệu nào phân biệt "đã tắt" với "máy chủ từ chối".
-          Màu: #D2383E trên nền hồng #FFF3F3 chỉ đạt 4,43:1. `dangerText` #C7333A = 4,89:1
+          Màu: #FF8A8F trên nền hồng #FFF3F3 chỉ đạt 4,43:1. `dangerText` #FF8A8F = 4,89:1
           trên đúng nền đó. */}
       {loiDoi && (
         <p
@@ -244,11 +244,11 @@ function TheApp({
         {/* Mảng vai RỖNG là fail-closed, và nó phải NÓI RA điều đó. Một dòng trống ở chỗ
             này đọc thành "chưa kịp tải", trong khi nó có nghĩa là không ai mở được app. */}
         {app.allowedRoles.length === 0 ? (
-          <span className="rounded-full bg-[#FFF7E0] px-2.5 py-1 text-[10.5px] font-black text-[#8A5A00]">
+          <span className="rounded-full bg-[#2A2208] px-2.5 py-1 text-[10.5px] font-black text-[#FFD98A]">
             Chưa cấp cho vai nào — không ai mở được
           </span>
         ) : (
-          <span className="rounded-full bg-[#F1F4F8] px-2.5 py-1 text-[10.5px] font-bold text-cardtitle2">
+          <span className="rounded-full bg-[#12244A] px-2.5 py-1 text-[10.5px] font-bold text-cardtitle2">
             Mở cho: {app.allowedRoles.map((r) => NHAN_VAI[r] ?? r).join(", ")}
           </span>
         )}
@@ -296,7 +296,7 @@ function TheApp({
         <Muc nhan="Rà lại">
           <span
             className={
-              quaHan ? "font-black text-[#D2383E]" : sapHan ? "font-bold text-[#8A5A00]" : "text-ink"
+              quaHan ? "font-black text-[#FF8A8F]" : sapHan ? "font-bold text-[#FFD98A]" : "text-ink"
             }
           >
             {app.reviewDueOn}
@@ -493,7 +493,7 @@ function KhoiWebhook({
 }) {
   const coSao = tachDong(loai).includes("*");
   return (
-    <fieldset className="rounded-2xl border border-line bg-white p-3">
+    <fieldset className="rounded-2xl border border-line bg-card p-3">
       <legend className="px-1 text-[10.5px] font-black uppercase tracking-wide text-muted">
         Gửi dữ liệu về Hub
       </legend>
@@ -561,7 +561,7 @@ function KhoiSso({
   setScope: (v: MiniAppScope[]) => void;
 }) {
   return (
-    <fieldset className="rounded-2xl border border-line bg-white p-3">
+    <fieldset className="rounded-2xl border border-line bg-card p-3">
       <legend className="px-1 text-[10.5px] font-black uppercase tracking-wide text-muted">
         Đăng nhập bằng tài khoản Hub
       </legend>
@@ -620,7 +620,7 @@ function KhoiSso({
                     className={
                       chon
                         ? "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl bg-navy px-3 text-[12px] font-black text-white"
-                        : "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-[12px] font-bold text-cardtitle2"
+                        : "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-line bg-card px-3 text-[12px] font-bold text-cardtitle2"
                     }
                   >
                     <input
@@ -689,7 +689,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
           routers/admin.ts. Nói ra ở đây thay vì để một ô xám khoá lại: ô khoá đọc thành
           "chưa làm xong", còn dòng chữ này nói thẳng là không sửa được và vì sao. */}
       {/* `muted2` GIỮ NGUYÊN sau khi đo lại 05/08/2026: token vừa được nâng #6B7789 →
-          #5F6B7D, và trên nền form #F9FBFD nó đạt 5,21:1 — trên chuẩn 4,5:1. Đây là đoạn
+          #93A9C8, và trên nền form #F9FBFD nó đạt 5,21:1 — trên chuẩn 4,5:1. Đây là đoạn
           giải thích VÌ SAO mã app và rổ dữ liệu không sửa được; nó phải đọc được. */}
       {/* GẤP LẠI, KHÔNG CẮT (06/08/2026). Đoạn này ba câu và nó là thứ đầu tiên đập vào
           mắt khi mở form sửa — trong khi 95% lượt mở form là để đổi tên hoặc gia hạn ngày
@@ -738,7 +738,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
                 className={
                   chon
                     ? "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl bg-navy px-3 text-[12px] font-black text-white"
-                    : "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-[12px] font-bold text-cardtitle2"
+                    : "flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-line bg-card px-3 text-[12px] font-bold text-cardtitle2"
                 }
               >
                 <input
@@ -755,7 +755,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
         {vai.length === 0 && (
           // CẮT vế "Đó là trạng thái hợp lệ (và là mặc định của app mới), chỉ cần biết
           // là mình đang chọn nó" — trấn an dài cho một dòng đã nói đủ.
-          <p className="mt-1.5 text-[11.5px] font-bold text-[#8A5A00]">
+          <p className="mt-1.5 text-[11.5px] font-bold text-[#FFD98A]">
             Không chọn vai nào = không ai mở được app.
           </p>
         )}
@@ -783,7 +783,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
         <button
           type="button"
           onClick={onXong}
-          className="flex min-h-[44px] items-center rounded-xl border border-line bg-white px-5 text-[13px] font-extrabold text-cardtitle2"
+          className="flex min-h-[44px] items-center rounded-xl border border-line bg-card px-5 text-[13px] font-extrabold text-cardtitle2"
         >
           Huỷ
         </button>
@@ -797,7 +797,7 @@ function FormSua({ app, onXong }: { app: MiniAppRow; onXong: () => void }) {
 // ---------------------------------------------------------------------------
 
 const O_INPUT =
-  "min-h-[44px] w-full rounded-xl border border-line bg-white px-3 text-[13px] font-semibold text-ink outline-none focus:border-navy";
+  "min-h-[44px] w-full rounded-xl border border-line bg-card px-3 text-[13px] font-semibold text-ink outline-none focus:border-navy";
 
 function O({ nhan, children, goiY }: { nhan: string; children: React.ReactNode; goiY?: string }) {
   return (
@@ -957,7 +957,7 @@ function NutThemApp({ onXong }: { onXong: () => void }) {
         <button
           type="button"
           onClick={() => setMo(false)}
-          className="flex min-h-[44px] items-center rounded-xl border border-line bg-white px-5 text-[13px] font-extrabold text-cardtitle2"
+          className="flex min-h-[44px] items-center rounded-xl border border-line bg-card px-5 text-[13px] font-extrabold text-cardtitle2"
         >
           Huỷ
         </button>

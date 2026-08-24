@@ -207,8 +207,8 @@ export function LoginForm({
             Bỏ `md:backdrop-blur-[6px]`: nền dưới thẻ đã đục 94% nên hiệu ứng gần như không
             nhìn thấy, trong khi backdrop-filter buộc trình duyệt tách một lớp composite và
             vẽ lại nó theo TỪNG KHUNG HÌNH của vòng parallax 60fps ngay bên dưới. Chi phí
-            có thật, hiệu ứng thì không — nền `md:bg-white` giữ nguyên phần nhìn thấy được. */}
-        <MainContent className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 focus:outline-none md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#EFE6D6] md:bg-white md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)]">
+            có thật, hiệu ứng thì không — nền `md:bg-card` giữ nguyên phần nhìn thấy được. */}
+        <MainContent className="relative z-[2] flex w-full flex-col gap-4 px-6 py-8 focus:outline-none md:w-[428px] md:gap-[18px] md:rounded-[22px] md:border md:border-[#EFE6D6] md:bg-card md:p-8 md:shadow-[0_2px_6px_rgba(38,39,93,.05),0_18px_34px_rgba(38,39,93,.10),0_44px_80px_rgba(38,39,93,.20)]">
           <div>
             {/* #9A8F6E chỉ đạt 3,22:1 trên thẻ trắng — dưới chuẩn 4,5:1. Mã đầu tiên thử
                 thay (#8A7B52) đo lại chỉ được 4,17:1, nên chốt #806E44 = 4,96:1 trên trắng:
@@ -230,7 +230,7 @@ export function LoginForm({
               {/* aria-hidden: tên icon là chữ THẬT trong DOM. Không che thì trình đọc màn
                   hình đọc "error" (tiếng Anh) trước câu lỗi tiếng Việt ngay bên cạnh —
                   khối đã có role="alert" nói đủ rồi, icon chỉ là hình. */}
-              <span className="msr flex-none text-[19px] text-[#D2383E]" aria-hidden>
+              <span className="msr flex-none text-[19px] text-[#FF8A8F]" aria-hidden>
                 error
               </span>
               <span className="text-[12.5px] font-bold leading-[1.45] text-[#A32127]">{error}</span>
@@ -252,7 +252,7 @@ export function LoginForm({
 
           <div className="flex items-center gap-2.5">
             <span className="h-px flex-1 bg-[#EFE9DC]" />
-            <span className="text-[11px] font-extrabold text-[#5B6B80]">hoặc</span>
+            <span className="text-[11px] font-extrabold text-[#93A9C8]">hoặc</span>
             <span className="h-px flex-1 bg-[#EFE9DC]" />
           </div>
 
@@ -278,12 +278,12 @@ export function LoginForm({
               đường hỗ trợ CÓ THẬT: nhắn GVCN — cùng lối mà GuardianPanel đang chỉ.
               Trả link về khi trang chính sách thật ra đời và được BGH duyệt nội dung.
 
-              Sửa 01/08/2026: màu chữ #9AA0B2 → #5B6B80. Trên thẻ đăng nhập (nền trắng, và
+              Sửa 01/08/2026: màu chữ #9AA0B2 → #93A9C8. Trên thẻ đăng nhập (nền trắng, và
               nền kem #F4E9D8 ở khung máy tính) #9AA0B2 chỉ đạt 2,61:1 / 2,17:1 — dưới chuẩn
               4,5:1. Đây là câu DUY NHẤT trên màn nói cho người chưa đăng nhập được biết phải
-              hỏi ai; nó không phải chữ trang trí. #5B6B80 = 5,44:1 trên trắng, 4,53:1 trên
+              hỏi ai; nó không phải chữ trang trí. #93A9C8 = 5,44:1 trên trắng, 4,53:1 trên
               #F4E9D8. Cùng lý do cho chữ "hoặc" ở dải phân cách. */}
-          <p className="border-t border-[#F1EADD] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#5B6B80]">
+          <p className="border-t border-[#F1EADD] pt-[14px] text-center text-[11px] font-bold leading-[1.5] text-[#93A9C8]">
             Tài khoản do Trường Việt Anh cấp · Cần hỗ trợ, nhắn giáo viên chủ nhiệm.
           </p>
         </MainContent>
@@ -308,7 +308,7 @@ function MobileHeroBand() {
         style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.6), rgba(255,198,41,.08) 72%)" }}
       />
       <div className="relative mt-6 flex flex-col items-center gap-2.5">
-        <div className="flex h-[72px] w-[72px] animate-floaty items-center justify-center rounded-[21px] bg-white shadow-[0_10px_26px_rgba(6,32,74,.34)]">
+        <div className="flex h-[72px] w-[72px] animate-floaty items-center justify-center rounded-[21px] bg-card shadow-[0_10px_26px_rgba(6,32,74,.34)]">
           <img src="/logo.webp?v=ddafa976" alt="" className="h-[58px] w-[58px] rounded-2xl object-cover" />
         </div>
         <div className="text-center">
@@ -401,7 +401,7 @@ function StaffPanel({
         <label htmlFor="tk-thu" className="sr-only">
           Chọn tài khoản thử
         </label>
-        <div className="flex items-center gap-2.5 rounded-[15px] border-[1.6px] border-[#E4DFD3] bg-white px-3.5 shadow-[0_6px_16px_rgba(38,39,93,.10)]">
+        <div className="flex items-center gap-2.5 rounded-[15px] border-[1.6px] border-[#E4DFD3] bg-card px-3.5 shadow-[0_6px_16px_rgba(38,39,93,.10)]">
           <GoogleMark />
           <select
             id="tk-thu"
@@ -476,7 +476,7 @@ function UnlockPanel({
         // `current-password` để trình duyệt/điện thoại lưu hộ: người demo nhập một lần
         // trên máy này, lần sau cookie đã nhớ, còn máy mới thì trình duyệt gợi ý lại.
         autoComplete="current-password"
-        className="rounded-xl border border-line px-4 py-3 text-[15px] font-bold text-navy focus:border-navy"
+        className="rounded-xl border border-line px-4 py-3 text-[15px] font-bold text-cardtitle focus:border-navy"
       />
       <button
         type="submit"
@@ -553,7 +553,7 @@ function GuardianPanel({
         placeholder="ABC123"
         // KHÔNG outline-none trần: nó đè lưới an toàn :focus-visible của globals.css và
         // để lại đúng một tín hiệu focus là màu viền — thứ người mù màu không thấy.
-        className="rounded-xl border border-line px-4 py-3 text-center text-[18px] font-black tracking-[0.3em] text-navy focus:border-navy"
+        className="rounded-xl border border-line px-4 py-3 text-center text-[18px] font-black tracking-[0.3em] text-cardtitle focus:border-navy"
       />
       <button
         type="submit"
@@ -563,7 +563,7 @@ function GuardianPanel({
         Xác nhận mã mời
       </button>
       <p className="text-center text-[11px] text-caption">
-        Thất lạc mã? <b className="text-navy">Nhắn thầy cô chủ nhiệm</b>
+        Thất lạc mã? <b className="text-cardtitle">Nhắn thầy cô chủ nhiệm</b>
       </p>
     </form>
   );

@@ -44,7 +44,7 @@ export function ClassPicker({
             className={
               active
                 ? "min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                : "min-h-[44px] rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#F5F8FC]"
+                : "min-h-[44px] rounded-xl border border-line bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#0E1E3C]"
             }
           >
             {c.classCode}

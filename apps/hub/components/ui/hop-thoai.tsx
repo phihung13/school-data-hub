@@ -120,11 +120,11 @@ export function HopThoai({
         role="dialog"
         aria-modal="true"
         aria-labelledby={tieuDeId}
-        className={`relative my-auto w-full ${rong} rounded-[24px] bg-white shadow-[0_30px_70px_rgba(6,20,45,.4)]`}
+        className={`relative my-auto w-full ${rong} rounded-[24px] bg-card shadow-[0_30px_70px_rgba(6,20,45,.4)]`}
       >
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
-            <h2 id={tieuDeId} className="text-[16px] font-black leading-tight text-navy">
+            <h2 id={tieuDeId} className="text-[16px] font-black leading-tight text-cardtitle">
               {tieuDe}
             </h2>
             {moTa && <p className="mt-0.5 text-[12px] font-semibold text-muted">{moTa}</p>}
@@ -138,7 +138,7 @@ export function HopThoai({
               type="button"
               onClick={onDong}
               aria-label="Đóng"
-              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-chip text-navy"
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-chip text-cardtitle"
             >
               <span className="msr text-[20px]" aria-hidden>
                 close

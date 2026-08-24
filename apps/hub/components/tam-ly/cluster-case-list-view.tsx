@@ -51,12 +51,12 @@ function Pill({
   // Màu KHÔNG bao giờ là tín hiệu duy nhất (§11): mỗi viên đều có icon và chữ.
   const cls =
     tone === "urgent"
-      ? "bg-[#FFF0F0] text-[#C0272D]"
+      ? "bg-[#3D141A] text-[#FF8A8F]"
       : tone === "open"
-        ? "bg-[#E2F0FC] text-[#1D4E8F]"
+        ? "bg-[#0E2647] text-[#35E0FF]"
         : tone === "quiet"
-          ? "bg-[#FFF1C9] text-gold-textDark"
-          : "bg-chip text-[#5B6B80]";
+          ? "bg-[#3A2E08] text-gold-textDark"
+          : "bg-chip text-[#93A9C8]";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-black ${cls}`}>
       <span className="msr text-[14px]" aria-hidden>
@@ -78,12 +78,12 @@ function Pill({
  */
 function StatTile({ value, label, icon }: { value: number; label: string; icon: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-[16px] border border-line bg-white px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+    <div className="flex min-w-0 flex-col gap-1 rounded-[16px] border border-line bg-card px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
       <span className="msr flex-none text-[20px] text-domain-counselor sm:text-[22px]" aria-hidden>
         {icon}
       </span>
       <div className="min-w-0">
-        <div className="text-[19px] font-black leading-none text-navy">{value}</div>
+        <div className="text-[19px] font-black leading-none text-cardtitle">{value}</div>
         <div className="mt-1 text-[11px] font-bold leading-tight text-muted">{label}</div>
       </div>
     </div>
@@ -105,12 +105,12 @@ export function ClusterCaseListView() {
       }
     >
       <div>
-        <h1 className="text-[22px] font-black text-navy md:text-[24px]">Việc đang chờ trong cụm</h1>
+        <h1 className="text-[22px] font-black text-cardtitle md:text-[24px]">Việc đang chờ trong cụm</h1>
         {/* Rút còn một dòng ngắn (01/08/2026): câu cũ dài 60 ký tự nên xuống hai dòng ở
             360px, và nội dung "hồ sơ đang mở + cờ khẩn" đã được ba StatTile ngay dưới nói
             bằng số. §1.5 — caption tối đa một dòng. Khoảng thời gian thì GIỮ: nó là điều
             duy nhất trong câu mà không con số nào bên dưới nói ra. */}
-        <p className="mt-1 text-[12.5px] font-semibold text-[#5B6B80]">
+        <p className="mt-1 text-[12.5px] font-semibold text-[#93A9C8]">
           {data ? `Nhìn lại ${data.urgentWindowDays} ngày` : "Đang xác định phạm vi cụm…"}
         </p>
       </div>
@@ -159,7 +159,7 @@ export function ClusterCaseListView() {
                 <Card>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[14.5px] font-black text-navy">{row.fullName}</div>
+                      <div className="text-[14.5px] font-black text-cardtitle">{row.fullName}</div>
                       <div className="mt-0.5 text-[11px] font-semibold text-muted">
                         {[row.studentCode, classLabel(row.className), row.schoolName]
                           .filter((p) => p !== "")

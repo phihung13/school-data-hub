@@ -152,7 +152,7 @@ export function EmbedFrame({
       )}
       <EmbedFloatingMenu appOrigin={embed.origin} onReload={() => window.location.reload()} />
       {status === "timeout" && (
-        <div className="absolute inset-x-0 top-0 bg-[#FFF4E5] px-4 py-2 pr-24 text-[13px] text-[#8A5A00]">
+        <div className="absolute inset-x-0 top-0 bg-[#FFF4E5] px-4 py-2 pr-24 text-[13px] text-[#FFD98A]">
           {embed.displayName} không phản hồi sau 18 giây — bấm ⋯ để tải lại, hoặc ✕ để thoát.
         </div>
       )}

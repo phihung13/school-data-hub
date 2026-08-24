@@ -74,8 +74,8 @@ import { newMutationId } from "./mutation-id";
 
 const STATUS_META = {
   pending: { label: "Chờ duyệt", bg: "bg-chip", fg: "text-subtle", icon: "hourglass_empty" },
-  approved: { label: "Đã duyệt", bg: "bg-[#E3F8ED]", fg: "text-successText", icon: "check_circle" },
-  rejected: { label: "Đã trả lại", bg: "bg-[#FFF0F0]", fg: "text-[#C0272D]", icon: "undo" },
+  approved: { label: "Đã duyệt", bg: "bg-[#0C2E22]", fg: "text-successText", icon: "check_circle" },
+  rejected: { label: "Đã trả lại", bg: "bg-[#3D141A]", fg: "text-[#FF8A8F]", icon: "undo" },
 } as const;
 
 /**
@@ -83,12 +83,12 @@ const STATUS_META = {
  * tương phản, đúng cách `DECISION_ON` của khối gửi muộn và `CHOICE_STYLE` của màn điểm
  * danh đang làm.
  *
- * Đo trên nền thật (WCAG 2.x): #00693F/#E3F8ED = 6,12:1 · #8A5A00/#FFF1C9 = 5,27:1.
- * Nút chưa chọn: #5B6B80 trên trắng = 5,44:1. Không mã hex mới nào — cả hai cặp đã có
+ * Đo trên nền thật (WCAG 2.x): #4EE39B/#0C2E22 = 6,12:1 · #FFD98A/#3A2E08 = 5,27:1.
+ * Nút chưa chọn: #93A9C8 trên trắng = 5,44:1. Không mã hex mới nào — cả hai cặp đã có
  * tên token (`surface-success`/`successText`, `surface-warn`/`gold-textDark`).
  */
 const DECISION_ON: Record<ReportDecision, string> = {
-  approved: "border-[#00A05F] bg-surface-success text-successText",
+  approved: "border-[#4EE39B] bg-surface-success text-successText",
   rejected: "border-gold-dark bg-surface-warn text-gold-textDark",
 };
 
@@ -246,14 +246,14 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
           {/* h-11 w-11 = 44px (§11). Trước đó 32×32: đổi tuần là thao tác cô làm bằng
               ngón cái trên điện thoại ngay đầu giờ, bấm trượt sang tuần sai thì cô duyệt
               báo cáo của một tuần khác mà không có gì báo. */}
-          <div className="flex items-center gap-1 rounded-xl border border-line bg-white px-1.5 py-1">
+          <div className="flex items-center gap-1 rounded-xl border border-line bg-card px-1.5 py-1">
             <button
               type="button"
               onClick={() => shiftWeek(-7)}
               aria-label="Tuần trước"
-              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[#F5F8FC]"
+              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[#0E1E3C]"
             >
-              <span className="msr text-[18px] text-navy" aria-hidden>
+              <span className="msr text-[18px] text-cardtitle" aria-hidden>
                 chevron_left
               </span>
             </button>
@@ -273,9 +273,9 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
               type="button"
               onClick={() => shiftWeek(7)}
               aria-label="Tuần sau"
-              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[#F5F8FC]"
+              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[#0E1E3C]"
             >
-              <span className="msr text-[18px] text-navy" aria-hidden>
+              <span className="msr text-[18px] text-cardtitle" aria-hidden>
                 chevron_right
               </span>
             </button>
@@ -439,7 +439,7 @@ function ApprovalBoard({
 
       {/* Thanh dính đáy: với 40 thẻ, mỗi thẻ cao bằng nguyên bản xem trước, một thanh
           đứng yên trên đầu danh sách là một thanh cô không nhìn thấy lúc cần bấm. */}
-      <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2.5 rounded-2xl border border-line bg-white p-3 shadow-[0_-4px_16px_rgba(10,42,94,.10)]">
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2.5 rounded-2xl border border-line bg-card p-3 shadow-[0_-4px_16px_rgba(10,42,94,.10)]">
         {/* `role="status"` để số em đang chọn được đọc lên sau mỗi lần tick — không có
             nó thì người dùng bàn phím tick năm lần mà không nghe được mình đang ở đâu. */}
         <div role="status" className="text-[12px] font-extrabold text-cardtitle2">
@@ -458,7 +458,7 @@ function ApprovalBoard({
                 aria-pressed={dangChon}
                 onClick={() => setDecision(k)}
                 className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.6px] px-4 py-2.5 text-[12.5px] font-black ${
-                  dangChon ? DECISION_ON[k] : "border-line bg-white text-subtle"
+                  dangChon ? DECISION_ON[k] : "border-line bg-card text-subtle"
                 }`}
               >
                 <span className="msr text-[16px]" aria-hidden>
@@ -503,7 +503,7 @@ function ApprovalBoard({
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               placeholder="Ví dụ: tuần này em nghỉ ốm 3 ngày, báo cáo chưa phản ánh đúng…"
-              className="w-full resize-none rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
+              className="w-full resize-none rounded-xl border border-line bg-card px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
             />
           </div>
         )}
@@ -647,7 +647,7 @@ function ReportPreviewBlock({ preview, studentName }: { preview: ReportPreview; 
       <div className="flex items-center gap-1.5">
         {/* `visibility` chứ không phải một icon phong bì: font đã cắt gọn (public/fonts)
             và tên ngoài danh sách sẽ hiện Ô TRỐNG không báo lỗi — xem tests/unit/a11y. */}
-        <span className="msr text-[16px] text-navy" aria-hidden>
+        <span className="msr text-[16px] text-cardtitle" aria-hidden>
           visibility
         </span>
         {/* <h4> → <h2> (05/08/2026). Trang này có đúng một <h1> (tiêu đề màn, do GvcnShell
@@ -669,7 +669,7 @@ function ReportPreviewBlock({ preview, studentName }: { preview: ReportPreview; 
             nghĩa đó vừa đúng bốn chữ. "CÓ THỂ khác", không phải "khác" — máy chủ chỉ biết
             mình không đọc được nguồn, không biết em có đủ 3 ngày Vui hay không; nhãn in ra
             không được nói mạnh hơn thứ máy chủ thật sự biết.
-            #5B6B80 trên #F1F4F8 = 4,93:1. Icon `aria-hidden`, chữ là chữ thật nên trình
+            #93A9C8 trên #12244A = 4,93:1. Icon `aria-hidden`, chữ là chữ thật nên trình
             đọc màn hình vẫn nghe được — không phải một dấu hiệu chỉ dành cho mắt. */}
         {preview.glowIncomplete && (
           <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-chip px-2 py-0.5 text-[10.5px] font-black text-subtle">
@@ -681,7 +681,7 @@ function ReportPreviewBlock({ preview, studentName }: { preview: ReportPreview; 
         )}
       </div>
 
-      <p className="mt-2 text-[14px] font-black text-navy">"{preview.headline}"</p>
+      <p className="mt-2 text-[14px] font-black text-cardtitle">"{preview.headline}"</p>
 
       {/* Ở đây từng có hai câu giải thích vì sao bản của cô có thể thiếu một mục Glow.
           Gỡ 06/08/2026 — chủ đầu tư chỉ đích danh nó trong danh sách "chữ giải thích bé bé".

@@ -17,11 +17,11 @@ const config: Config = {
           DEFAULT: "#FFC629",
           dark: "#F5A300",
           text: "#6B4A00",
-          textDark: "#8A5A00",
+          textDark: "#FFD98A",
         },
-        ink: "#0F172A",
-        cardtitle: "#0A2A5E",
-        muted: "#66707D",
+        ink: "#EAF2FF",
+        cardtitle: "#FFFFFF",
+        muted: "#8FA9CC",
         // muted2 #6B7789 → #5F6B7D (05/08/2026, đợt rà impeccable).
         //
         // Mã cũ là mã mà chính chú thích ngay dưới đây đã gọi tên là "đạt chuẩn do may mắn":
@@ -34,7 +34,7 @@ const config: Config = {
         // #F6FAFF / #FFFBF2 / #F6FEF9 chỉ đạt 4,33 · 4,40 · 4,42:1. Đổi một dòng ở đây sửa
         // luôn ~50 chỗ dùng, và sàn ngoại lệ trong bài test đã bị gỡ cùng lượt — từ nay
         // MỌI token chữ xám đo cùng một thước 4,5:1 trên mặt nền tệ nhất.
-        muted2: "#5F6B7D",
+        muted2: "#8FA9CC",
         // NÂNG TOKEN 01/08/2026 (gói "tuong-phan-man-hoc-sinh"), không vá từng chỗ.
         //
         // Đo thật trên DOM ở 360px, phiên học sinh Minh: caption cũ #8A94A6 = 3,06:1 và
@@ -59,10 +59,10 @@ const config: Config = {
         // đã đổi tay caption2 → muted từ 31/07 và đó là đích đúng; giữ hai tên để ~50 chỗ
         // gọi caption2 không phải sửa, nhưng chúng đang trỏ về cùng một màu.
         // tests/unit/a11y.test.ts đo lại hai token này từ chính file này, không chép số.
-        caption: "#5F6B7D",
-        caption2: "#66707D",
-        line: "#E4E9F0",
-        chip: "#F1F4F8",
+        caption: "#93A9C8",
+        caption2: "#8298B8",
+        line: "#1E3A6B",
+        chip: "#12244A",
         // SÁU TOKEN THÊM 05/08/2026 (đợt rà impeccable) — không phải màu mới, chỉ là những
         // mã ĐÃ CHẠY khắp nơi bằng cách viết tay. Ba đợt đo đếm được ~290 mã hex viết thẳng
         // trong component, và cái giá của chúng đã hiện ra thật: lần sửa #E8940D hôm 01/08
@@ -73,31 +73,40 @@ const config: Config = {
         //   successText#00693F — chữ trên nền xanh nhạt (6,12:1 trên trắng)
         //   dangerText #C7333A — chữ đỏ trên nền hồng #FFF5F5 (4,94:1; mã cũ #D2383E chỉ 4,49)
         //   line2      #C9D2DE — viền/chevron nhạt, KHÔNG dùng cho chữ
-        subtle: "#5B6B80",
-        cardtitle2: "#33507C",
-        link: "#1D4E8F",
-        successText: "#00693F",
-        dangerText: "#C7333A",
-        line2: "#C9D2DE",
+        subtle: "#93A9C8",
+        cardtitle2: "#A9C4E8",
+        link: "#35E0FF",
+        successText: "#4EE39B",
+        dangerText: "#FF8A8F",
+        line2: "#27467E",
         // NỀN TRẠNG THÁI — cùng đợt, cùng lý do, khác vai trò: đây là các MẶT NỀN mà chữ
         // ở trên phải đo tương phản với. Chúng đã chạy sẵn ở 100+ chỗ dưới dạng mã hex viết
         // tay, nên mỗi lần ai đó hỏi "chữ này có đọc được không" thì phải đi tìm nền bằng mắt.
         // Giá trị GIỮ NGUYÊN từng mã một — đợt này chỉ đặt tên, không đổi một pixel màu nào.
         surface: {
-          success: "#E3F8ED", // nền xanh: đã xong, đã tới nơi
-          warn: "#FFF1C9", // nền vàng đậm: đang chờ xử lý
-          warnSoft: "#FFF7E0", // nền vàng nhạt: nhắc nhẹ, số liệu
+          success: "#0C2E22", // nền xanh: đã xong, đã tới nơi
+          warn: "#3A2E08", // nền vàng đậm: đang chờ xử lý
+          warnSoft: "#2A2208", // nền vàng nhạt: nhắc nhẹ, số liệu
           gold: "#FFFBEE", // nền nút phụ viền vàng
-          danger: "#FFF5F5", // nền hồng: lỗi, đăng xuất
-          danger2: "#FFF0F0", // nền hồng đậm hơn một nấc (pill khẩn)
-          info: "#E2F0FC", // nền lam: thông tin trung tính
-          infoSoft: "#F0F7FF", // nền lam nhạt: thẻ giải thích
-          alt: "#F5F8FC", // nền xen kẽ trong danh sách
-          shell: "#EAEFF6", // nền ngoài khung thẻ
-          muted: "#E9ECF2", // nền ô app chưa mở, thanh tiến trình
+          danger: "#351216", // nền hồng: lỗi, đăng xuất
+          danger2: "#3D141A", // nền hồng đậm hơn một nấc (pill khẩn)
+          info: "#0E2647", // nền lam: thông tin trung tính
+          infoSoft: "#0C1F3C", // nền lam nhạt: thẻ giải thích
+          alt: "#0E1E3C", // nền xen kẽ trong danh sách
+          shell: "#081730", // nền ngoài khung thẻ
+          muted: "#16294B", // nền ô app chưa mở, thanh tiến trình
         },
-        pagebg: "#F7F9FC",
-        pagebgDesktop: "#F5F7FA",
+        /**
+         * Nền và viền THẺ — thêm 24/08/2026 khi đổi sang giao diện tối Major OS.
+         *
+         * Vì sao là token mới chứ không ghi đè `white`: `bg-white` (133 chỗ) là NỀN, còn
+         * `text-white` (70 chỗ) là CHỮ. Ghi đè `white` thì cả hai cùng tối và chữ biến
+         * mất. Hai vai trò khác nhau thì phải là hai token khác nhau.
+         */
+        card: "#0E1E3C",
+        cardline: "#1E3A6B",
+        pagebg: "#050F26",
+        pagebgDesktop: "#050F26",
         mood: {
           happy: "#00D97A",
           happyDark: "#00A85E",

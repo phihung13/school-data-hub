@@ -530,12 +530,20 @@ describe("tương phản chữ ≥ 4,5:1 trong các file thuộc gói này", () 
   const colors = tailwindColors();
 
   /**
-   * Các mặt nền SÁNG của app. Chữ trong hai file dưới đây nằm trên một trong ba mặt này,
-   * và ta lấy mặt TỆ NHẤT (chip #F1F4F8) làm chuẩn: một token chữ phải đọc được trên mọi
-   * mặt nền mà app có, nếu không thì việc nó đạt chuẩn hay không phụ thuộc vào chỗ ai đó
-   * vô tình dán nó vào — đúng loại "đạt chuẩn do may mắn" không giữ được qua lần sửa sau.
+   * Các mặt nền của app. Một token chữ phải đọc được trên MỌI mặt nền app có — nếu không
+   * thì việc nó đạt chuẩn hay không phụ thuộc vào chỗ ai đó vô tình dán nó vào, đúng loại
+   * "đạt chuẩn do may mắn" không giữ được qua lần sửa sau.
+   *
+   * ĐỔI 24/08/2026 — app chuyển sang giao diện tối "Major OS". Ba mặt nền cũ
+   * (`#FFFFFF`, `#F7F9FC`, `#F1F4F8`) KHÔNG CÒN TỒN TẠI trong kho; đo chữ trên chúng là đo
+   * một app không có thật. Luật không đổi một chữ — vẫn ≥4,5:1 trên mặt tệ nhất — chỉ danh
+   * sách mặt nền đổi theo thực tế.
+   *
+   * Mặt TỆ NHẤT nay là `surface.muted` (#16294B), mặt sáng nhất trong bảng tối. Đã tính
+   * trước khi đổi: cả 12 token chữ đều đạt, thấp nhất là `caption2` ở 4,91:1. Bảng màu đạt
+   * chuẩn THẬT, không phải hạ ngưỡng cho vừa.
    */
-  const SURFACES = ["#FFFFFF", "#F7F9FC", "#F1F4F8"];
+  const SURFACES = ["#0E1E3C", "#050F26", "#12244A", "#16294B", "#081730"];
 
   const CHECKED = [
     "apps/hub/components/tab-bar.tsx",
@@ -608,8 +616,10 @@ describe("tương phản chữ ≥ 4,5:1 trong các file thuộc gói này", () 
     expect(rule, "globals.css chưa đặt màu ::placeholder").not.toBe("");
     const hex = rule.match(/color:\s*(#[0-9a-fA-F]{6})/)?.[1] ?? "";
     expect(hex, "rule ::placeholder không có mã màu 6 ký tự").not.toBe("");
-    // #FCFDFE là nền ô tâm sự — mặt nền sáng nhất trong các ô nhập, cũng là ca tệ nhất.
-    for (const bg of [...SURFACES, "#FCFDFE"]) {
+    // `#0B1B38` là nền ô tâm sự ở giao diện tối (đổi 24/08/2026 từ `#FCFDFE`). Ô đó là
+    // chỗ riêng tư nhất cả app, và placeholder ở đấy đang gánh việc của NHÃN — nó dạy em
+    // biết ô này viết được gì — nên nó phải đọc được, không phải "đủ mờ cho đẹp".
+    for (const bg of [...SURFACES, "#0B1B38"]) {
       expect(contrast(hex.toUpperCase(), bg), `placeholder ${hex} trên ${bg}`).toBeGreaterThanOrEqual(4.5);
     }
     // Firefox hạ placeholder xuống opacity .54 nếu không nói gì — màu tính đúng vẫn bị

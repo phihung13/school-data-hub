@@ -562,14 +562,28 @@ describe("/dieu-khoan: nền trang đậm hơn ba mặt nền mà §11 đem ra �
 
   it("nền trang vẫn là mã màu đã được đem đi đo", () => {
     // Đổi nền mà không đo lại là cách hai token xám âm thầm rơi xuống dưới ngưỡng.
-    expect(pageBg).toBe("#EAEFF6");
+    // ĐỔI 24/08/2026 cùng lượt chuyển giao diện tối: `#EAEFF6` -> `#081730`.
+    expect(pageBg).toBe("#081730");
   });
 
-  it("`muted` KHÔNG đạt trên nền này, `caption` thì đạt — đây là lý do có luật dưới", () => {
-    // §11 đo trên #FFFFFF · #F7F9FC · #F1F4F8. Nền của màn này đậm hơn cả ba, nên hai
-    // token rơi về hai phía của ngưỡng 4,5:1 — chuyện không thấy được nếu chỉ tin token.
-    expect(contrast(token("muted"), pageBg)).toBeLessThan(4.5);
-    expect(contrast(token("caption"), pageBg)).toBeGreaterThanOrEqual(4.5);
+  it("CẢ HAI token xám nay đều đạt trên nền này — cái chuông ở đây đã reo xong", () => {
+    // ═══════════════════════════════════════════════════════════════════════
+    // LẬT 24/08/2026 — bài này trước đây khẳng định điều NGƯỢC LẠI
+    // ═══════════════════════════════════════════════════════════════════════
+    // Nguyên văn cũ: *"`muted` KHÔNG đạt trên nền này, `caption` thì đạt — đây là lý do có
+    // luật dưới"*. Nó là một CÁI CHUÔNG: ghim lại một chỗ hụt đã biết, để không ai quên.
+    //
+    // Nền sáng cũ `#EAEFF6` đậm hơn ba mặt §11 đem ra đo, nên `muted` rơi xuống dưới 4,5:1
+    // đúng ở màn này. Sang bảng màu tối, nền là `#081730` và cả hai token đều đạt rộng rãi
+    // — chuông đã reo xong, và giữ nguyên câu khẳng định cũ thì nó thành một lời nói dối
+    // được CI bảo vệ.
+    //
+    // Luật KHÔNG đổi một chữ: mọi token xám phải đạt ≥4,5:1 trên nền màn này. Chỉ có điều
+    // nay cả hai cùng đạt, nên phép đo đổi chiều.
+    for (const ten of ["muted", "caption"]) {
+      const ratio = contrast(token(ten), pageBg);
+      expect(ratio, `${ten} (${token(ten)}) trên ${pageBg} chỉ đạt ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it("câu 'vì sao bố mẹ đang đứng ở đây' đọc được trên nền trang", () => {

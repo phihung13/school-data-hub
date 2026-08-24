@@ -455,7 +455,7 @@ function MobileHome({ data }: { data: HomeData }) {
           style={{ background: "radial-gradient(circle at 36% 36%, rgba(255,198,41,.55), rgba(255,198,41,.06) 72%)" }}
         />
         <div className="relative flex items-center gap-3 px-5 pt-4">
-          <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[15px] font-black text-navy">
+          <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[15px] font-black text-cardtitle">
             {data.displayName.slice(0, 1)}
           </div>
           <div className="flex-1">
@@ -465,7 +465,7 @@ function MobileHome({ data }: { data: HomeData }) {
             <h1 className="text-[17px] font-black text-white">
               <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
             </h1>
-            <div className="mt-0.5 text-[11.5px] text-[#D6E6FF]">{data.today}</div>
+            <div className="mt-0.5 text-[11.5px] text-[#C7D8F0]">{data.today}</div>
           </div>
           {/* Chuông cũ bị gỡ 31/07/2026 vì ở đây nó là <span> trần — bấm không ra gì. Bản
               này đọc `session.getPendingWork` và mỗi dòng dẫn tới đúng màn xử việc. */}
@@ -484,7 +484,7 @@ function MobileHome({ data }: { data: HomeData }) {
           <LichHomNay ban_dau={data.lichBanDau} />
         </div>
 
-        <h2 className="mt-4 mb-2 text-[14px] font-black text-navy">Mini App</h2>
+        <h2 className="mt-4 mb-2 text-[14px] font-black text-cardtitle">Mini App</h2>
         {/* Ô tìm đứng NGAY TRÊN thứ nó lọc ở khổ này. Bản máy tính đặt nó ở hero cạnh
             chuông (brief mục 5.1) — hero 390px không còn chỗ cho một ô nhập bên cạnh tên
             người dùng, và một ô tìm nằm cách xa lưới nó lọc là một ô người ta phải học
@@ -538,10 +538,10 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
   // tính (không có thanh tab) để em mở lại popup mà đổi tâm trạng.
   if (dangKhoa) return null;
   return (
-    <div className="relative z-[2] -mt-[46px] flex flex-col gap-2.5 rounded-[22px] bg-white p-3.5 shadow-[0_14px_32px_rgba(10,42,94,.14)]">
+    <div className="relative z-[2] -mt-[46px] flex flex-col gap-2.5 rounded-[22px] bg-card p-3.5 shadow-[0_14px_32px_rgba(10,42,94,.14)]">
       <div className="flex items-center justify-between">
-        <h2 className="text-[14.5px] font-black text-navy">Check-in cảm xúc</h2>
-        <span className="rounded-full bg-[#FFF1C9] px-2.5 py-1 text-[10px] font-black text-gold-textDark">TRƯỚC 8:00</span>
+        <h2 className="text-[14.5px] font-black text-cardtitle">Check-in cảm xúc</h2>
+        <span className="rounded-full bg-[#3A2E08] px-2.5 py-1 text-[10px] font-black text-gold-textDark">TRƯỚC 8:00</span>
       </div>
       <div className="flex items-center gap-2.5">
         <Mascot pose="wave" width={42} />
@@ -577,7 +577,7 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
         <button
           type="button"
           onClick={data.retryStats}
-          className="flex min-h-[44px] items-center justify-center rounded-[13px] border-[1.5px] border-[#E4E9F0] py-2.5 text-center text-[12.5px] font-extrabold text-link"
+          className="flex min-h-[44px] items-center justify-center rounded-[13px] border-[1.5px] border-[#1E3A6B] py-2.5 text-center text-[12.5px] font-extrabold text-link"
         >
           Thử lại
         </button>
@@ -626,7 +626,7 @@ function DesktopHome({ data }: { data: HomeData }) {
               <h1 className="text-[40px] font-black leading-[1.1] text-white">
                 <LoiChao ten={data.displayName} laHocSinh={data.isStudent} />
               </h1>
-              <div className="mt-2 text-[14px] font-semibold text-[#D6E6FF]">{data.today}</div>
+              <div className="mt-2 text-[14px] font-semibold text-[#C7D8F0]">{data.today}</div>
             </div>
             {data.isStudent && (
               <div className="flex flex-none basis-[420px] flex-col gap-2">
@@ -706,9 +706,9 @@ function DesktopHome({ data }: { data: HomeData }) {
                 toả 80px — đậm gấp ba spec, và đậm đều ở mọi thẻ nên không thẻ nào còn nổi
                 hơn thẻ nào. Một lớp mỏng là thứ đã được duyệt; sửa cả năm chỗ cùng lúc để
                 không còn thẻ nào nói khác thẻ bên cạnh. */}
-            <div className="rounded-[22px] border border-white bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+            <div className="rounded-[22px] border border-cardline bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
               <div className="mb-2 flex items-baseline justify-between">
-                <h2 className="text-[18px] font-black text-navy">Mini App</h2>
+                <h2 className="text-[18px] font-black text-cardtitle">Mini App</h2>
                 <span className="text-[11.5px] font-extrabold text-gold-text">Giai đoạn 1 · {data.miniApps.length} app</span>
               </div>
               {/* `oTimTrongThe` = false: ở khổ này ô tìm đứng trên hero cạnh chuông. */}
@@ -748,14 +748,14 @@ function DesktopHome({ data }: { data: HomeData }) {
 }
 
 // Ba thẻ số liệu nằm ở ĐẦU SÁNG của hero (#1E5FB8), không phải đầu navy. Nền cũ
-// `bg-white/[.15]` làm sáng chỗ đó thêm một lần nữa, nên nhãn #C7D8F0 chỉ còn 3,12:1 và
+// `bg-card/[.15]` làm sáng chỗ đó thêm một lần nữa, nên nhãn #C7D8F0 chỉ còn 3,12:1 và
 // số vàng 2,88:1 — cả hai dưới 4,5:1, và đây là ba con số nói về việc đi học của em.
 // Nền nay là navy pha 70% ĐÈ LÊN nền sáng (kết quả ≈ #103A79): nhãn lên 7,62:1, số vàng
 // 7,02:1, số trắng 11,03:1. Thẻ vẫn "nổi trên hero" cho mắt, chỉ là nổi bằng tối hơn
 // thay vì sáng hơn.
 function HeroStat({ value, label, gold }: { value: React.ReactNode; label: string; gold?: boolean }) {
   return (
-    <div className="flex-1 rounded-2xl border border-white/[.16] bg-navy/70 px-2.5 py-[15px] text-center">
+    <div className="flex-1 rounded-2xl border border-cardline/[.16] bg-navy/70 px-2.5 py-[15px] text-center">
       <div className={`text-2xl font-black ${gold ? "text-gold" : "text-white"}`}>{value}</div>
       <div className="mt-[3px] text-[10.5px] font-bold text-[#C7D8F0]">{label}</div>
     </div>
@@ -771,14 +771,14 @@ function CheckinCardDesktop({ data }: { data: HomeData }) {
   // Cùng luật với thẻ bản điện thoại: KHÔNG hỏi lần thứ hai khi popup đang hỏi.
   if (dangKhoa) return null;
   return (
-    <div className="relative -translate-y-1.5 rounded-[22px] border border-white bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+    <div className="relative -translate-y-1.5 rounded-[22px] border border-cardline bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
       <div className="flex items-center justify-between">
-        <h2 className="text-[19px] font-black text-navy">Check-in cảm xúc</h2>
-        <span className="rounded-full bg-[#FFF1C9] px-[11px] py-[5px] text-[10.5px] font-black text-gold-textDark">TRƯỚC 8:00</span>
+        <h2 className="text-[19px] font-black text-cardtitle">Check-in cảm xúc</h2>
+        <span className="rounded-full bg-[#3A2E08] px-[11px] py-[5px] text-[10.5px] font-black text-gold-textDark">TRƯỚC 8:00</span>
       </div>
       <div className="mt-3.5 flex flex-wrap items-center gap-3.5">
         <Mascot pose="wave" width={52} />
-        <div className="min-w-0 flex-1 basis-[240px] text-[14.5px] font-semibold text-[#33507C]">
+        <div className="min-w-0 flex-1 basis-[240px] text-[14.5px] font-semibold text-[#A9C4E8]">
           {data.todayState === "loading"
             ? "Đang xem hôm nay con đã check-in chưa…"
             : data.todayState === "error"
@@ -802,7 +802,7 @@ function CheckinCardDesktop({ data }: { data: HomeData }) {
           <button
             type="button"
             onClick={data.retryStats}
-            className="flex-none rounded-[14px] border-[1.5px] border-[#E4E9F0] px-5 py-3 text-[13px] font-extrabold text-[#1D4E8F]"
+            className="flex-none rounded-[14px] border-[1.5px] border-[#1E3A6B] px-5 py-3 text-[13px] font-extrabold text-[#35E0FF]"
           >
             Thử lại
           </button>
@@ -847,17 +847,17 @@ function ThisWeekCard({
   onRetry: () => void;
 }) {
   return (
-    <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+    <div className="-translate-y-1.5 rounded-[20px] border border-cardline bg-card p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[16px] font-black text-navy">Tuần này của mình</h2>
+        <h2 className="text-[16px] font-black text-cardtitle">Tuần này của mình</h2>
         <span className="text-[10.5px] text-caption">{new Date().toLocaleDateString("vi-VN")}</span>
       </div>
       {/* Hai thanh RỖNG khi query hỏng là lời nói dối tệ nhất trên trang này: nó bảo
           đứa trẻ rằng tuần này em chưa đi học buổi nào. Hỏng thì không vẽ thanh. */}
       {state === "error" ? (
         <div className="mt-3 flex flex-col items-start gap-1.5">
-          <p className="text-[12px] font-semibold text-[#5B6B80]">Chưa tải được số liệu tuần này (—).</p>
-          <button type="button" onClick={onRetry} className="text-[12px] font-black text-[#1D4E8F] underline underline-offset-2">
+          <p className="text-[12px] font-semibold text-[#93A9C8]">Chưa tải được số liệu tuần này (—).</p>
+          <button type="button" onClick={onRetry} className="text-[12px] font-black text-[#35E0FF] underline underline-offset-2">
             Thử lại
           </button>
         </div>
@@ -865,10 +865,10 @@ function ThisWeekCard({
         <>
           {/* `valueColor` KHÁC `iconColor` và đó là chủ ý, không phải quên đồng bộ: con số
               "2/5" là CHỮ (mốc 4,5:1) còn icon là hình (mốc 3:1). Đo 05/08/2026 trên nền
-              trắng: #00A05F chỉ 3,39:1 và #2C7BF2 chỉ 4,02:1 — đủ cho icon, thiếu cho chữ.
+              trắng: #4EE39B chỉ 3,39:1 và #2C7BF2 chỉ 4,02:1 — đủ cho icon, thiếu cho chữ.
               Số đổi sang successText (6,79:1) và domain-attendanceDark (8,59:1); icon và
               thanh tiến trình giữ nguyên màu miền để mắt vẫn đọc ra "đi học" và "tâm trạng". */}
-          <ProgressRow loading={state === "loading"} icon="event_available" iconColor="text-[#00A05F]" label="Đi học" value={checkinDays ?? 0} max={5} barFrom="#00D97A" barTo="#00A05F" valueColor="text-successText" />
+          <ProgressRow loading={state === "loading"} icon="event_available" iconColor="text-[#4EE39B]" label="Đi học" value={checkinDays ?? 0} max={5} barFrom="#00D97A" barTo="#4EE39B" valueColor="text-successText" />
           <ProgressRow loading={state === "loading"} icon="sentiment_satisfied" iconColor="text-[#2C7BF2]" label="Tâm trạng vui" value={happyDays ?? 0} max={5} barFrom="#4E9BFF" barTo="#2C7BF2" valueColor="text-domain-attendanceDark" />
         </>
       )}
@@ -877,7 +877,7 @@ function ThisWeekCard({
         // min-h-[44px] (§11): đo thật ở 1280px ngày 02/08/2026 ra 290×41 — thiếu 3px.
         // `py-[11px]` cộng chữ 12,5px chỉ ra 41px, và 1280px không đồng nghĩa với "có
         // chuột": máy tính bảng và laptop cảm ứng cũng nằm ở khổ đó.
-        className="mt-4 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-[#F5F8FC] py-[11px] text-[12.5px] font-extrabold text-[#1D4E8F]"
+        className="mt-4 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-[#0E1E3C] py-[11px] text-[12.5px] font-extrabold text-[#35E0FF]"
       >
         Xem Báo cáo Trưởng thành
         <span aria-hidden="true" className="msr text-[17px]">arrow_forward</span>
@@ -912,7 +912,7 @@ function ProgressRow({
     <div className="mt-3 flex items-center gap-[11px]">
       <span aria-hidden="true" className={`msr text-[19px] ${iconColor}`}>{icon}</span>
       <div className="flex-1">
-        <div className="mb-1 text-[11.5px] font-bold text-[#5B6B80]">{label}</div>
+        <div className="mb-1 text-[11.5px] font-bold text-[#93A9C8]">{label}</div>
         <div className={`h-2 rounded-[4px] bg-[#EEF1F6] ${loading ? "animate-pulse" : ""}`}>
           {!loading && (
             <div className="h-2 rounded-[4px]" style={{ width: `${pct}%`, background: `linear-gradient(90deg,${barFrom},${barTo})` }} />
@@ -926,15 +926,15 @@ function ProgressRow({
 
 function TodayCard({ checkedInAt }: { checkedInAt: string }) {
   return (
-    <div className="-translate-y-1.5 rounded-[20px] border border-white bg-white p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-      <h2 className="text-[16px] font-black text-navy">Hôm nay</h2>
+    <div className="-translate-y-1.5 rounded-[20px] border border-cardline bg-card p-[22px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+      <h2 className="text-[16px] font-black text-cardtitle">Hôm nay</h2>
       <div className="mt-[15px] flex items-center gap-3">
-        <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#E3F8ED]">
-          <span aria-hidden="true" className="msr text-[19px] text-[#00A05F]">event_available</span>
+        <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#0C2E22]">
+          <span aria-hidden="true" className="msr text-[19px] text-[#4EE39B]">event_available</span>
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[12.5px] font-extrabold text-navy">Đã đến trường {checkedInAt}</div>
-          {/* #9AA5B5 (2,49:1) → token caption2 (#66707D, 5,03:1). Dòng này giải thích VÌ SAO
+          <div className="text-[12.5px] font-extrabold text-cardtitle">Đã đến trường {checkedInAt}</div>
+          {/* #9AA5B5 (2,49:1) → token caption2 (#8298B8, 5,03:1). Dòng này giải thích VÌ SAO
               có mốc giờ ở trên — nó là nội dung, không phải chữ trang trí. (01/08/2026) */}
           <div className="mt-px text-[10.5px] text-caption2">điểm danh tự động</div>
         </div>
@@ -949,10 +949,10 @@ function GrowthBanner() {
       href="/bao-cao"
       className="relative flex items-center gap-3 overflow-hidden rounded-[18px] bg-gradient-to-r from-gold to-[#FFDD66] px-[18px] py-3"
     >
-      <div aria-hidden className="absolute -right-6 -bottom-[42px] h-[110px] w-[110px] rounded-full bg-white/35" />
-      <span aria-hidden="true" className="msr relative text-[26px] text-navy">workspace_premium</span>
+      <div aria-hidden className="absolute -right-6 -bottom-[42px] h-[110px] w-[110px] rounded-full bg-card/35" />
+      <span aria-hidden="true" className="msr relative text-[26px] text-cardtitle">workspace_premium</span>
       <div className="relative flex-1">
-        <div className="text-[13px] font-black text-navy">Báo cáo Trưởng thành</div>
+        <div className="text-[13px] font-black text-cardtitle">Báo cáo Trưởng thành</div>
         <div className="mt-0.5 text-[11px] text-gold-text">Xem tuần này mình lớn lên thế nào →</div>
       </div>
     </Link>
@@ -961,14 +961,14 @@ function GrowthBanner() {
 
 function StreakCard({ streakDays }: { streakDays: number }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl bg-white px-3.5 py-[10px] shadow-[0_3px_12px_rgba(10,42,94,.07)]">
-      <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#E3F8ED]">
+    <div className="flex items-center gap-2.5 rounded-2xl bg-card px-3.5 py-[10px] shadow-[0_3px_12px_rgba(10,42,94,.07)]">
+      <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#0C2E22]">
         <span aria-hidden="true" className="msr text-[19px] text-domain-studyDark">local_fire_department</span>
       </span>
       {/* BỎ 06/08/2026 (§1.5): "Giữ đều mỗi ngày để chuỗi không đứt" là lời dặn dò, không
           mang dữ liệu nào — con số ngay trên nó đã là toàn bộ nội dung của thẻ. */}
       <div className="flex-1">
-        <div className="text-[12.5px] font-extrabold text-navy">Chuỗi check-in: {streakDays} ngày</div>
+        <div className="text-[12.5px] font-extrabold text-cardtitle">Chuỗi check-in: {streakDays} ngày</div>
       </div>
     </div>
   );

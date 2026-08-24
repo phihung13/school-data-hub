@@ -37,7 +37,7 @@ const CHOICES: TeacherAttendanceStatus[] = ["present", "late", "absent", "excuse
  * DESIGN-GUIDELINES §11 ghi thẳng "không có ngoại lệ theo cỡ chữ".
  *
  * Cách sửa: giữ chữ trắng, hạ nền xuống ĐÚNG tông đậm mà bảng màu đã có sẵn và ba nút
- * này đang dùng làm màu chữ ở trạng thái tắt (#00693F · #C0272D · #1D4E8F) — không chế
+ * này đang dùng làm màu chữ ở trạng thái tắt (#4EE39B · #FF8A8F · #35E0FF) — không chế
  * thêm màu mới. Đo lại sau khi đổi: 6,79:1 · 5,88:1 · 8,27:1.
  *
  * Vì sao đáng làm ngay chứ không xếp hàng chờ đợt tiếp cận: đây là đường ghi DUY NHẤT
@@ -45,10 +45,10 @@ const CHOICES: TeacherAttendanceStatus[] = ["present", "late", "absent", "excuse
  * `tests/unit/a11y-man-nguoi-lon.test.ts` đo lại từ chính bảng này, không chép số.
  */
 export const CHOICE_STYLE: Record<TeacherAttendanceStatus, { on: string; off: string }> = {
-  present: { on: "bg-[#00693F] text-white", off: "text-[#00693F] hover:bg-[#E3F8ED]" },
-  late: { on: "bg-[#F5A300] text-[#4A3200]", off: "text-gold-textDark hover:bg-[#FFF1C9]" },
-  absent: { on: "bg-[#C0272D] text-white", off: "text-[#C0272D] hover:bg-[#FFF0F0]" },
-  excused: { on: "bg-[#1D4E8F] text-white", off: "text-[#1D4E8F] hover:bg-[#E2F0FC]" },
+  present: { on: "bg-[#4EE39B] text-[#00301C]", off: "text-[#4EE39B] hover:bg-[#0C2E22]" },
+  late: { on: "bg-[#F5A300] text-[#4A3200]", off: "text-gold-textDark hover:bg-[#3A2E08]" },
+  absent: { on: "bg-[#FF8A8F] text-[#4A0D11]", off: "text-[#FF8A8F] hover:bg-[#3D141A]" },
+  excused: { on: "bg-[#35E0FF] text-[#04303B]", off: "text-[#35E0FF] hover:bg-[#0E2647]" },
 };
 
 export function ClassAttendanceView({ displayName, email }: { displayName: string; email: string }) {
@@ -131,7 +131,7 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
             selectedId={classId}
             onSelect={switchClass}
           />
-          <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
+          <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-card px-3 py-2">
             <span className="msr text-[17px] text-caption" aria-hidden>
               calendar_month
             </span>
@@ -245,7 +245,7 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
                     const picked = draft[s.studentId] ?? null;
                     const changed = picked !== null && picked !== s.status;
                     return (
-                      <tr key={s.studentId} className="border-b border-[#F1F4F8] last:border-0">
+                      <tr key={s.studentId} className="border-b border-[#12244A] last:border-0">
                         <td className="px-4 py-3">
                           <div className="text-[13px] font-extrabold text-ink">{s.fullName}</div>
                           <div className="mt-0.5 flex items-center gap-2">
@@ -278,7 +278,7 @@ export function ClassAttendanceView({ displayName, email }: { displayName: strin
               {/* aria-live: con số này đổi sau MỖI cú bấm mà không có gì chuyển động trên
                   màn hình ngoài chính nó. Người dùng bàn phím / trình đọc màn hình bấm
                   bốn ô liền rồi bấm "Lưu điểm danh" mà không hề nghe mình sắp ghi mấy em. */}
-              <div className="text-[13px] font-black text-navy" aria-live="polite" aria-atomic="true">
+              <div className="text-[13px] font-black text-cardtitle" aria-live="polite" aria-atomic="true">
                 {changes.length === 0
                   ? "Chưa có thay đổi nào để lưu"
                   : `${changes.length} em sẽ được ghi lại`}
@@ -363,7 +363,7 @@ function StatusPicker({
             className={`min-h-[44px] rounded-xl border px-3 py-2 text-[11.5px] font-black transition-colors ${
               on
                 ? `${CHOICE_STYLE[choice].on} ${changed ? "border-navy" : "border-transparent"}`
-                : `border-line bg-white ${CHOICE_STYLE[choice].off}`
+                : `border-line bg-card ${CHOICE_STYLE[choice].off}`
             }`}
           >
             {ATTENDANCE_STATUS_LABEL[choice]}

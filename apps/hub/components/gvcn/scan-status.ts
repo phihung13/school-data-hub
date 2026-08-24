@@ -353,7 +353,7 @@ export function boardEmptyPresentation(
       // RÚT NGẮN: vế "việc cũ chưa đóng, không phải hết việc" nói lại đúng tiêu đề ngay
       // trên nó ("Hôm nay không có cờ mới") cộng con số hồ sơ đang mở.
       body: `Quét hôm nay không có cờ mới, nhưng lớp còn ${openCareCases} hồ sơ chăm sóc đang mở.`,
-      boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#F5F7FA]",
+      boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#050F26]",
       titleClass: "text-cardtitle2",
       bodyClass: "text-[#4A5460]",
     };
@@ -380,7 +380,7 @@ export function boardEmptyPresentation(
       scan.detail || "Lần quét gần nhất chưa đủ để nói lớp ổn hay không.",
       openCareCases > 0 ? `Còn ${openCareCases} hồ sơ chăm sóc đang mở.` : "",
     ),
-    boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#F5F7FA]",
+    boxClass: "border-2 border-dashed border-[#D6DEE9] bg-[#050F26]",
     titleClass: "text-cardtitle2",
     bodyClass: "text-[#4A5460]",
   };

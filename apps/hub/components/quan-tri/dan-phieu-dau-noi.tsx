@@ -113,7 +113,7 @@ export function DanPhieuDauNoi({ onXong }: { onXong: () => void }) {
     <button
       type="button"
       onClick={() => setMo(true)}
-      className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-line2 bg-white px-4 text-[13px] font-extrabold text-cardtitle2"
+      className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-line2 bg-card px-4 text-[13px] font-extrabold text-cardtitle2"
     >
       {/* `assignment`, không phải `content_paste`: font đã cắt gọn không có tên kia, và một
           tên ngoài danh sách vẽ ra Ô TRỐNG chứ không báo lỗi (tests/unit/a11y.test.ts canh). */}
@@ -143,7 +143,7 @@ export function DanPhieuDauNoi({ onXong }: { onXong: () => void }) {
           <a
             href="/api/quan-tri/ban-yeu-cau-dau-noi"
             download
-            className="flex min-h-[44px] items-center gap-1.5 self-start rounded-xl bg-chip px-4 text-[12.5px] font-extrabold text-navy"
+            className="flex min-h-[44px] items-center gap-1.5 self-start rounded-xl bg-chip px-4 text-[12.5px] font-extrabold text-cardtitle"
           >
             <span className="msr text-[18px]" aria-hidden>
               download
@@ -163,7 +163,7 @@ export function DanPhieuDauNoi({ onXong }: { onXong: () => void }) {
               rows={8}
               spellCheck={false}
               placeholder={'{\n  "phienBan": 1,\n  "maApp": "…",\n  …\n}'}
-              className="w-full rounded-xl border border-line bg-white p-3 font-mono text-[12px] leading-relaxed text-ink outline-none focus:border-navy"
+              className="w-full rounded-xl border border-line bg-card p-3 font-mono text-[12px] leading-relaxed text-ink outline-none focus:border-navy"
             />
           </label>
 
@@ -221,7 +221,7 @@ export function DanPhieuDauNoi({ onXong }: { onXong: () => void }) {
             <button
               type="button"
               onClick={() => setMo(false)}
-              className="flex min-h-[44px] items-center rounded-xl border border-line bg-white px-5 text-[13px] font-extrabold text-cardtitle2"
+              className="flex min-h-[44px] items-center rounded-xl border border-line bg-card px-5 text-[13px] font-extrabold text-cardtitle2"
             >
               Huỷ
             </button>
@@ -242,7 +242,7 @@ function Hang({ nhan, children, nhanManh }: { nhan: string; children: React.Reac
       <div className="w-full text-[10.5px] font-black uppercase tracking-wide text-muted sm:w-[150px] sm:flex-none">
         {nhan}
       </div>
-      <div className={`min-w-0 flex-1 text-[12.5px] ${nhanManh ? "font-black text-navy" : "font-semibold text-ink"}`}>
+      <div className={`min-w-0 flex-1 text-[12.5px] ${nhanManh ? "font-black text-cardtitle" : "font-semibold text-ink"}`}>
         {children}
       </div>
     </div>
@@ -253,7 +253,7 @@ function XemTruoc({ phieu, khaiBao }: { phieu: PhieuDauNoi; khaiBao: CreateMiniA
   return (
     <section className="rounded-2xl border border-line bg-surface-alt p-3">
       {/* <h3>: khối con của <h2> tiêu đề hộp thoại. */}
-      <h3 className="text-[13px] font-black text-navy">Sẽ khai app này</h3>
+      <h3 className="text-[13px] font-black text-cardtitle">Sẽ khai app này</h3>
       <div className="mt-1.5">
         <Hang nhan="Mã app" nhanManh>
           <span className="font-mono">{phieu.maApp}</span>

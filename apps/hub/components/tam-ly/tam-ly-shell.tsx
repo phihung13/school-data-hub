@@ -47,7 +47,7 @@ export function TamLyShell({
             // lại duy nhất trong app — mini app không có tab bar Hub (§6).
             <Link
               href={backHref}
-              className="inline-flex min-h-[44px] w-fit items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] font-extrabold text-[#33507C] hover:bg-[#F5F8FC]"
+              className="inline-flex min-h-[44px] w-fit items-center gap-1.5 rounded-xl border border-line bg-card px-3.5 py-2.5 text-[12.5px] font-extrabold text-[#A9C4E8] hover:bg-[#0E1E3C]"
             >
               <span className="msr text-[18px]" aria-hidden>
                 arrow_back
@@ -65,7 +65,7 @@ export function TamLyShell({
 /** Thẻ trắng chuẩn của Hub — cùng hình dạng với `Card` của khung GVCN, không tự chế kiểu mới. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
+    <div className={`rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
       {children}
     </div>
   );

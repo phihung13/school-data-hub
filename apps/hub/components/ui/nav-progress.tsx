@@ -86,7 +86,7 @@ export function NavProgress() {
     // aria-hidden: đây là tín hiệu THỊ GIÁC cho việc trang sắp đổi. Trình đọc màn hình
     // đã tự thông báo khi trang mới lên (tiêu đề đổi), nên thêm một vùng aria-live nữa ở
     // đây chỉ tạo tiếng ồn kép.
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[3px] bg-[#E9ECF2]">
+    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[3px] bg-[#16294B]">
       <div className="h-full w-1/3 animate-embedSlide rounded-r-full bg-gold" />
     </div>
   );

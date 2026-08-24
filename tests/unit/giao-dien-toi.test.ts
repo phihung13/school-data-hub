@@ -1,0 +1,82 @@
+// tests/unit/giao-dien-toi.test.ts — giao diện tối "Major OS" (24/08/2026).
+//
+// Chủ đầu tư: *"trang home phải là thay trang home cũ đi chứ, có tương tác thật luôn mà,
+// thay cho tất cả các vai, không phải đồ giả nữa đâu"*. Nên đây KHÔNG còn là bản trình
+// diễn — app thật đổi tông, giữ nguyên nội dung theo vai.
+//
+// Cách làm: đổi ĐỊNH NGHĨA token trong `tailwind.config.ts`, không đổi 520 chỗ dùng. App
+// vốn dùng token ngữ nghĩa (`text-ink`, `bg-surface-alt`, `border-line`…) ở phần lớn chỗ,
+// nên một chỗ đổi là mọi màn đổi theo — kể cả màn chưa ai mở ra xem.
+//
+// Bài này canh hai thứ mà một lần "sửa nhanh" rất dễ phá:
+//
+//   1. NỀN SÁNG QUAY LẠI. Dán `bg-white` hay một mã hex sáng vào một màn là chỗ đó chói
+//      trắng giữa các thẻ tối. Nó không làm hỏng test nào khác, không làm hỏng build, và
+//      chỉ lộ ra khi có người mở đúng màn đó.
+//   2. `card`/`cardline` BỊ GỘP VÀO `white`. Cám dỗ là ghi đè thẳng token `white` cho gọn.
+//      Làm thế thì `text-white` (70 chỗ — chữ trắng trên nút navy, trên ô cảm xúc) cũng
+//      tối theo và chữ biến mất. Hai vai trò khác nhau phải là hai token khác nhau.
+import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const goc = fileURLToPath(new URL("../../", import.meta.url));
+const TW = readFileSync(join(goc, "apps/hub/tailwind.config.ts"), "utf8");
+const CSS = readFileSync(join(goc, "apps/hub/app/globals.css"), "utf8");
+
+function moiTsx(thuMuc: string, ra: string[] = []): string[] {
+  for (const e of readdirSync(thuMuc)) {
+    const p = join(thuMuc, e);
+    if (statSync(p).isDirectory()) moiTsx(p, ra);
+    else if (e.endsWith(".tsx")) ra.push(p);
+  }
+  return ra;
+}
+const FILES = [
+  ...moiTsx(join(goc, "apps/hub/components")),
+  ...moiTsx(join(goc, "apps/hub/app")),
+].filter((p) => !p.includes(".next"));
+
+/** Mã hex của nền sáng cũ — không được quay lại bất kỳ đâu trong mã nguồn. */
+const NEN_SANG_CU = ["#F1F4F8", "#F5F8FC", "#E4E9F0", "#EAEFF6", "#F7F9FC", "#F5F7FA", "#FCFDFE"];
+
+describe("giao diện tối — không nền sáng nào sót lại", () => {
+  it("không file .tsx nào dùng `bg-white`", () => {
+    // `text-white` thì ĐƯỢC — chữ trắng trên nền màu vẫn đúng ở tông tối. Chỉ NỀN bị cấm.
+    const pham = FILES.filter((p) => /\bbg-white\b/.test(readFileSync(p, "utf8")))
+      .map((p) => p.slice(goc.length));
+    expect(pham, "nền trắng quay lại — sẽ chói giữa các thẻ tối").toEqual([]);
+  });
+
+  it("không mã hex nền sáng cũ nào còn trong mã nguồn", () => {
+    const pham: string[] = [];
+    for (const p of FILES) {
+      const src = readFileSync(p, "utf8").toUpperCase();
+      for (const hex of NEN_SANG_CU) if (src.includes(hex)) pham.push(`${p.slice(goc.length)}: ${hex}`);
+    }
+    expect(pham).toEqual([]);
+  });
+
+  it("MẪU SỐ: các file thật sự được quét, regex không hỏng", () => {
+    // Không có vế này thì hai bài trên xanh cả khi `FILES` rỗng vì đường dẫn sai.
+    expect(FILES.length).toBeGreaterThanOrEqual(40);
+    expect(FILES.some((p) => p.endsWith("home-view.tsx"))).toBe(true);
+  });
+});
+
+describe("giao diện tối — token nền và token chữ KHÔNG được gộp", () => {
+  it("`card` và `cardline` tồn tại, và `white` KHÔNG bị ghi đè", () => {
+    expect(TW, "thiếu token nền thẻ").toMatch(/\bcard:\s*"#[0-9A-Fa-f]{6}"/);
+    expect(TW, "thiếu token viền thẻ").toMatch(/\bcardline:\s*"#[0-9A-Fa-f]{6}"/);
+    // Ghi đè `white` là làm `text-white` tối theo — 70 chỗ chữ biến mất cùng lúc.
+    expect(TW, "ghi đè `white` sẽ nuốt luôn text-white").not.toMatch(/^\s*white:\s*"/m);
+  });
+
+  it("nền trang và color-scheme đều đã là tối", () => {
+    expect(CSS, "color-scheme còn light — ô nhập và thanh cuộn vẫn vẽ theo hệ sáng").toContain(
+      "color-scheme: dark",
+    );
+    expect(CSS, "body chưa đổi nền").not.toMatch(/body\s*\{[^}]*background:\s*#f7f9fc/i);
+  });
+});

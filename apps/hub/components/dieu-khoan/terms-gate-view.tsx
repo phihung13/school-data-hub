@@ -107,7 +107,7 @@ export function TermsMarkdown({ source }: { source: string }) {
       {parseTermsBlocks(source).map((block, i) => {
         if (block.kind === "h2") {
           return (
-            <h2 key={i} className="pt-2 text-[14px] font-black text-navy">
+            <h2 key={i} className="pt-2 text-[14px] font-black text-cardtitle">
               {block.text}
             </h2>
           );
@@ -219,24 +219,24 @@ export function TermsGateView({ displayName }: { displayName: string }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#EAEFF6]">
+    <div className="flex min-h-screen w-full flex-col bg-[#081730]">
       <MiniAppHeader title="Điều khoản & đồng ý" subtitle={displayName} icon="shield" />
 
       {/* `focus:outline-none` đã nằm sẵn trong chính <MainContent> (page-shell.tsx) —
           khai lại ở đây là một bản sao im lặng: ngày nào page-shell đổi ý, chỗ này vẫn
           giữ luật cũ mà không ai biết. */}
       <MainContent className="mx-auto w-full max-w-2xl flex-1 px-4 py-5">
-        <h1 className="text-[19px] font-black leading-tight text-navy">
+        <h1 className="text-[19px] font-black leading-tight text-cardtitle">
           Trường xin phép bố mẹ trước khi ghi tâm trạng của con
         </h1>
 
         {/* LUẬT 1 — nói rõ vì sao đang đứng ở đây.
 
             `text-caption` chứ KHÔNG phải `text-muted` (sửa 02/08/2026). Nền trang này là
-            #EAEFF6 — đậm hơn cả ba mặt nền mà DESIGN-GUIDELINES §11 đem ra đo (#FFFFFF ·
-            #F7F9FC · #F1F4F8), nên hai token xám rơi về hai phía của ngưỡng:
-              muted   #66707D trên #EAEFF6 = 4,35:1  ✗ (chuẩn chữ thường là 4,5:1)
-              caption #5F6B7D trên #EAEFF6 = 4,68:1  ✓
+            #081730 — đậm hơn cả ba mặt nền mà DESIGN-GUIDELINES §11 đem ra đo (#FFFFFF ·
+            #050F26 · #12244A), nên hai token xám rơi về hai phía của ngưỡng:
+              muted   #8298B8 trên #081730 = 4,35:1  ✗ (chuẩn chữ thường là 4,5:1)
+              caption #93A9C8 trên #081730 = 4,68:1  ✓
             Đây không phải chữ trang trí: nó là câu DUY NHẤT trả lời "vì sao tôi đang ở
             trang này", tức LUẬT 1 của chính file này. Một câu pháp lý mà mờ dưới chuẩn
             trên màn điện thoại rẻ ngoài nắng thì luật đó không được thi hành. */}
@@ -250,7 +250,7 @@ export function TermsGateView({ displayName }: { displayName: string }) {
             tests/unit/dieu-khoan.test.ts đối chiếu chúng với chính bản điều khoản trong
             CSDL. Sửa chữ ở đây mà không sửa hệ là làm bài test đỏ, đúng như mong muốn. */}
         <div className="mt-4 rounded-2xl border-[1.5px] border-[#CFE0D4] bg-[#F2F8F4] p-4">
-          <p className="flex items-center gap-1.5 text-[13px] font-black text-[#00693F]">
+          <p className="flex items-center gap-1.5 text-[13px] font-black text-[#4EE39B]">
             <span aria-hidden="true" className="msr text-[18px]">
               verified_user
             </span>
@@ -269,12 +269,12 @@ export function TermsGateView({ displayName }: { displayName: string }) {
 
         {/* Ba trạng thái của phần DỮ LIỆU, tách khỏi khung trang tĩnh ở trên. */}
         {gate.error && (
-          <div className="mt-4 rounded-2xl border border-line bg-white">
+          <div className="mt-4 rounded-2xl border border-line bg-card">
             <ErrorState error={gate.error} onRetry={() => void gate.refetch()} label="điều khoản" />
           </div>
         )}
         {!gate.error && gate.isLoading && (
-          <div className="mt-4 rounded-2xl border border-line bg-white">
+          <div className="mt-4 rounded-2xl border border-line bg-card">
             <LoadingState label="Đang tải bản điều khoản…" />
           </div>
         )}
@@ -285,14 +285,14 @@ export function TermsGateView({ displayName }: { displayName: string }) {
             Phiếu này áp dụng cho
           </h2>
           {children.length === 0 ? (
-            <p className="mt-2 rounded-2xl border border-line bg-white p-4 text-[13px] text-muted">
+            <p className="mt-2 rounded-2xl border border-line bg-card p-4 text-[13px] text-muted">
               Hệ thống chưa ghi nhận con nào gắn với tài khoản của bố mẹ. Bố mẹ nhắn giáo viên chủ
               nhiệm để trường nối lại giúp.
             </p>
           ) : (
             <ul className="mt-2 space-y-2">
               {children.map((c) => (
-                <li key={c.studentId} className="rounded-2xl border border-line bg-white p-4">
+                <li key={c.studentId} className="rounded-2xl border border-line bg-card p-4">
                   <p className="text-[14px] font-black text-ink">{c.studentName}</p>
                   <p className="text-[11.5px] font-bold text-caption">{c.studentCode}</p>
                   <p className="mt-1.5 text-[12.5px] font-bold text-ink">{nhanTamTrang(c)}</p>
@@ -306,12 +306,12 @@ export function TermsGateView({ displayName }: { displayName: string }) {
 
         {/* Nội dung bản điều khoản, đọc từ CSDL. */}
         <section
-          className={`mt-4 rounded-2xl border border-line bg-white p-5 ${data ? "" : "hidden"}`}
+          className={`mt-4 rounded-2xl border border-line bg-card p-5 ${data ? "" : "hidden"}`}
           aria-labelledby="noi-dung-dk"
         >
           {terms ? (
             <>
-              <h2 id="noi-dung-dk" className="text-[15px] font-black text-navy">
+              <h2 id="noi-dung-dk" className="text-[15px] font-black text-cardtitle">
                 {terms.title}
               </h2>
               <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-caption">
@@ -330,7 +330,7 @@ export function TermsGateView({ displayName }: { displayName: string }) {
         </section>
 
         {terms && children.length > 0 && (
-          <section className="mt-4 rounded-2xl border-[1.5px] border-navy/15 bg-white p-5">
+          <section className="mt-4 rounded-2xl border-[1.5px] border-navy/15 bg-card p-5">
             {/* VÙNG CHẠM CỦA Ô TICK — sửa 02/08/2026.
 
                 Ô tick đo được đúng 20 × 20px (`h-5 w-5`), và nó là CỔNG của nút "Tôi đồng
@@ -375,7 +375,7 @@ export function TermsGateView({ displayName }: { displayName: string }) {
                 type="button"
                 disabled={decide.isPending}
                 onClick={() => bam("declined")}
-                className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[13px] font-extrabold text-[#5B6B80] disabled:opacity-40"
+                className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-5 py-3 text-[13px] font-extrabold text-[#93A9C8] disabled:opacity-40"
               >
                 Tôi chưa đồng ý
               </button>
@@ -413,7 +413,7 @@ export function TermsGateView({ displayName }: { displayName: string }) {
             có nút Back của trình duyệt. Trượt tay ở lối ra duy nhất là bị nhốt.
             `gap-x-4 gap-y-1` thay cho `gap-4`: hai hộp nay cao 44px, dính nhau theo chiều
             dọc thì khoảng cách 16px cũ thành thừa và đẩy chân trang. */}
-        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 pb-8 text-[12.5px] font-bold text-navy">
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 pb-8 text-[12.5px] font-bold text-cardtitle">
           <a href="/home" className="flex min-h-[44px] items-center underline underline-offset-2">
             Về trang chủ
           </a>

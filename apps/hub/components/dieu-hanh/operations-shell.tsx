@@ -63,16 +63,16 @@ export function OperationsShell({
           {/* 44px (§11) — trước 01/08/2026 là h-9 w-9 = đúng 36px. Đây là lối ra duy
               nhất của màn Điều hành trên điện thoại; nay có thêm chữ đứng cạnh mũi tên
               vì `aria-label` không nói gì với người NHÌN THẤY nút. */}
-          <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 py-3 md:hidden">
+          <div className="flex items-center gap-2.5 border-b border-line bg-card px-4 py-3 md:hidden">
             <Link
               href="/home"
               aria-label="Về trang chủ"
               className="flex min-h-[44px] flex-none items-center gap-1.5 rounded-xl bg-chip px-3"
             >
-              <span className="msr text-[20px] text-navy" aria-hidden>
+              <span className="msr text-[20px] text-cardtitle" aria-hidden>
                 arrow_back
               </span>
-              <span className="text-[12.5px] font-extrabold text-navy">Trang chủ</span>
+              <span className="text-[12.5px] font-extrabold text-cardtitle">Trang chủ</span>
             </Link>
           </div>
 
@@ -95,7 +95,7 @@ export function OperationsShell({
                   Xếp dọc dưới tiêu đề ở khổ hẹp, về cuối hàng từ `md` — đúng hai vị trí cũ. */}
               <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
                 <div className="min-w-0">
-                  <h1 className="text-[19px] font-black leading-tight text-navy md:text-[24px]">{title}</h1>
+                  <h1 className="text-[19px] font-black leading-tight text-cardtitle md:text-[24px]">{title}</h1>
                   {subtitle && (
                     <div className="mt-0.5 text-[12px] font-semibold text-muted md:mt-1 md:text-[13px]">
                       {subtitle}
@@ -121,7 +121,7 @@ export function OperationsShell({
 /** Thẻ trắng chuẩn của Hub — cùng hình dạng với Card của GvcnShell. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
+    <div className={`rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
       {children}
     </div>
   );

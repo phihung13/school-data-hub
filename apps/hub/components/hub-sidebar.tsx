@@ -131,8 +131,8 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
   const roleTag = trimmedClass ? `${roleLabel} · ${trimmedClass}` : roleLabel;
 
   return (
-    <nav className="flex h-full w-full flex-col border-r border-line bg-white">
-      <div className="flex items-center gap-[11px] border-b border-[#F1F4F8] px-[18px] pb-[14px] pt-[18px]">
+    <nav className="flex h-full w-full flex-col border-r border-line bg-card">
+      <div className="flex items-center gap-[11px] border-b border-[#12244A] px-[18px] pb-[14px] pt-[18px]">
         {/* Logo WebP 180×180, 3.870 B. Đổi từ /logo.jpg (74.181 B) ngày 31/07/2026: bản
             WebP đã được tạo từ đợt trước nhưng KHÔNG ai tham chiếu tới, nên mọi lần mở
             trang vẫn kéo về bản JPEG nặng gấp 19 lần cho một ô 36×36 — 70 KB thừa trên
@@ -144,7 +144,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
         {/* eslint-disable-next-line @next/next/no-img-element -- logo tĩnh, kích thước cố định nhỏ */}
         <img src="/logo.webp?v=ddafa976" alt="" className="h-9 w-9 flex-none rounded-[10px]" />
         <div className="min-w-0">
-          <div className="text-[15px] font-black leading-[1.15] text-navy">School Hub</div>
+          <div className="text-[15px] font-black leading-[1.15] text-cardtitle">School Hub</div>
           <div className="text-[9.5px] font-extrabold tracking-wide text-muted">{roleTag}</div>
         </div>
       </div>
@@ -162,7 +162,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
               className={
                 isActive
                   ? "flex min-h-[44px] items-center gap-[11px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-3 py-[11px] shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                  : "flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px] hover:bg-[#F5F8FC]"
+                  : "flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px] hover:bg-[#0E1E3C]"
               }
             >
               <span className={`msr text-[20px] ${isActive ? "text-gold" : "text-caption"}`} aria-hidden>
@@ -172,7 +172,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
                 {item.label}
               </span>
               {!isActive && item.badge ? (
-                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#FFF1C9] px-1.5 text-[10.5px] font-black text-gold-textDark">
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#3A2E08] px-1.5 text-[10.5px] font-black text-gold-textDark">
                   {item.badge}
                 </span>
               ) : null}
@@ -183,13 +183,13 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
           // Cố tình KHÔNG phải <Link>: trang chưa tồn tại, cho bấm được là hứa suông.
           //
           // MỜ Ở ICON, KHÔNG MỜ Ở CHỮ (sửa 05/08/2026). Cả khối này từng mang `opacity-45`:
-          // nhãn #5B6B80 tụt còn 1,91:1 và badge còn 1,80:1 trên nền trắng — dưới một nửa
+          // nhãn #93A9C8 tụt còn 1,91:1 và badge còn 1,80:1 trên nền trắng — dưới một nửa
           // chuẩn 4,5:1, tức là chữ nói "màn này chưa mở" lại chính là chữ khó đọc nhất
           // sidebar. DESIGN-GUIDELINES §3 cho phép mờ .45 để báo trạng thái tắt, nhưng §11
           // nói tương phản không có ngoại lệ; hai điều đó chỉ sống chung được khi tín hiệu
           // mờ nằm ở phần TRANG TRÍ. Nên icon giữ nguyên .45, chữ về đúng ngưỡng:
-          //   nhãn  text-subtle #5B6B80 = 5,73:1 trên trắng
-          //   badge text-muted  #66707D = 4,56:1 trên nền chip #F1F4F8
+          //   nhãn  text-subtle #93A9C8 = 5,73:1 trên trắng
+          //   badge text-muted  #8298B8 = 4,56:1 trên nền chip #12244A
           <div
             key={item.key}
             aria-disabled="true"
@@ -215,7 +215,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
           thứ hai (đầu trang điện thoại) — xem lý lẽ ở đầu user-menu.tsx. Mục "Hồ sơ" đã
           rời khỏi danh sách điều hướng bên trên và về đây, nên đây KHÔNG còn là lối tắt
           tiện tay mà là đường DUY NHẤT tới hồ sơ và tới nút đăng xuất. */}
-      <div className="border-t border-[#F1F4F8] p-2.5 pb-[14px]">
+      <div className="border-t border-[#12244A] p-2.5 pb-[14px]">
         <UserMenu variant="sidebar" fullName={fullName} email={email} roleTag={roleTag} />
       </div>
     </nav>

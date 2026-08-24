@@ -92,14 +92,14 @@ export function useLocMiniApp(tiles: MiniAppTile[]): LuoiDaLoc {
 
 /**
  * `nen`: ô đứng trên nền navy của hero (máy tính) hay trên thẻ trắng (điện thoại). Hai nền
- * khác nhau chỉ đổi VIỀN — ruột ô luôn trắng, vì màu chữ gợi ý của app (#5B6B80, đặt một
+ * khác nhau chỉ đổi VIỀN — ruột ô luôn trắng, vì màu chữ gợi ý của app (#93A9C8, đặt một
  * lần ở globals.css) được đo trên nền trắng: 5,44:1. Đặt ô lên nền navy trong suốt là để
  * chữ gợi ý rơi xuống 1,x:1 ngay tại chỗ nói cho người ta biết ô này làm gì.
  */
 export function OTimMiniApp({ tuKhoa, datTuKhoa, nen }: { tuKhoa: string; datTuKhoa: (v: string) => void; nen: "hero" | "the" }) {
   return (
     <div
-      className={`flex min-h-[44px] items-center gap-2 rounded-full bg-white px-3.5 ${
+      className={`flex min-h-[44px] items-center gap-2 rounded-full bg-card px-3.5 ${
         nen === "hero" ? "shadow-[0_6px_18px_rgba(6,20,45,.22)]" : "border border-line"
       }`}
     >

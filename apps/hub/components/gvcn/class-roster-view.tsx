@@ -128,7 +128,7 @@ export function ClassRosterView({ displayName, email }: { displayName: string; e
                   </thead>
                   <tbody>
                     {students.map((s) => (
-                      <tr key={s.studentId} className="border-b border-[#F1F4F8] last:border-0">
+                      <tr key={s.studentId} className="border-b border-[#12244A] last:border-0">
                         <td className="px-4 py-3">
                           <StudentNameLink studentId={s.studentId} fullName={s.fullName} />
                         </td>
@@ -214,7 +214,7 @@ function CareChips({ helpPending, hasOpenCase }: { helpPending: boolean; hasOpen
   return (
     <div className="flex flex-wrap gap-1.5">
       {helpPending && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF0F0] px-2.5 py-1 text-[10.5px] font-black text-[#C0272D]">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#3D141A] px-2.5 py-1 text-[10.5px] font-black text-[#FF8A8F]">
           <span className="msr text-[14px]" aria-hidden>
             pan_tool
           </span>
@@ -222,7 +222,7 @@ function CareChips({ helpPending, hasOpenCase }: { helpPending: boolean; hasOpen
         </span>
       )}
       {hasOpenCase && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF1C9] px-2.5 py-1 text-[10.5px] font-black text-gold-textDark">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#3A2E08] px-2.5 py-1 text-[10.5px] font-black text-gold-textDark">
           <span className="msr text-[14px]" aria-hidden>
             folder_open
           </span>

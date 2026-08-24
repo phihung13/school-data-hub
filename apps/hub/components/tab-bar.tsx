@@ -15,12 +15,12 @@
 //     WCAG 2.5.8 đều lấy mốc 44px. Nay min-h-[44px] cho MỌI mục, cả hai thanh.
 //   · TƯƠNG PHẢN. Nhãn mục KHÔNG đứng ở trang hiện tại dùng token caption2 (#9AA5B5):
 //     2,49:1 trên nền trắng, ở cỡ chữ 9,5px. Đó là tên của những nơi người dùng có thể
-//     đi tới — không phải chữ trang trí. Nay dùng token muted (#66707D, 5,03:1).
+//     đi tới — không phải chữ trang trí. Nay dùng token muted (#8298B8, 5,03:1).
 //
 // CẬP NHẬT 01/08/2026 (gói "tuong-phan-man-hoc-sinh"): món nợ mà đoạn trên ghi lại
 // ("Ba mục kia của app vẫn dùng caption2 và vẫn sai; việc nâng chính TOKEN nằm ở gói
-// khác") ĐÃ TRẢ — apps/hub/tailwind.config.ts nay đặt caption #5F6B7D (4,90:1 ở nền tệ
-// nhất) và caption2 #66707D (4,56:1), phủ cả 58 chỗ dùng trong apps/hub. File này giữ
+// khác") ĐÃ TRẢ — apps/hub/tailwind.config.ts nay đặt caption #93A9C8 (4,90:1 ở nền tệ
+// nhất) và caption2 #8298B8 (4,56:1), phủ cả 58 chỗ dùng trong apps/hub. File này giữ
 // nguyên `text-muted` vì caption2 nay trỏ về đúng cùng một màu — không cần sửa lần hai.
 // tests/unit/a11y.test.ts giữ cả hai luật, tính tỉ lệ tương phản từ tailwind.config.ts
 // thật chứ không chép số vào test.
@@ -54,7 +54,7 @@ export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps =
     // aria-label trên <nav>: trang có thể có nhiều landmark điều hướng (menu trái +
     // tab bar), trình đọc màn hình liệt kê chúng bằng nhãn — không nhãn thì người dùng
     // nghe "navigation, navigation" và không biết cái nào là cái nào.
-    <nav aria-label="Thanh điều hướng chính" className="mt-auto flex items-end justify-between border-t border-[#E9ECF2] bg-white px-4 pb-2.5 pt-2">
+    <nav aria-label="Thanh điều hướng chính" className="mt-auto flex items-end justify-between border-t border-[#16294B] bg-card px-4 pb-2.5 pt-2">
       {/* aria-hidden cho MỌI icon trang trí: nội dung DOM của .msr là chữ thô ("home",
           "person"...), font chỉ đổi HÌNH hiển thị chứ không đổi nội dung. Không ẩn thì
           trình đọc màn hình đọc nguyên "home Trang chủ person Hồ sơ" (WCAG 1.1.1/4.1.2).
@@ -66,8 +66,8 @@ export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps =
         aria-current={isHome ? "page" : undefined}
         className="flex min-h-[44px] w-[70px] flex-col items-center justify-center gap-0.5"
       >
-        <span aria-hidden="true" className={`msr text-[22px] ${isHome ? "text-navy" : "text-muted"}`}>home</span>
-        <span className={`text-[9.5px] font-black ${isHome ? "text-navy" : "text-muted"}`}>Trang chủ</span>
+        <span aria-hidden="true" className={`msr text-[22px] ${isHome ? "text-cardtitle" : "text-muted"}`}>home</span>
+        <span className={`text-[9.5px] font-black ${isHome ? "text-cardtitle" : "text-muted"}`}>Trang chủ</span>
       </Link>
 
       {/* NÚT, KHÔNG PHẢI LINK (21/08/2026). Trước đây nó dẫn sang `/checkin` — một trang
@@ -82,13 +82,13 @@ export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps =
       >
         <span
           aria-hidden="true"
-          className="flex h-[52px] w-[52px] animate-pulseDot items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-gold to-gold-dark shadow-[0_8px_18px_rgba(232,148,13,.42)]"
+          className="flex h-[52px] w-[52px] animate-pulseDot items-center justify-center rounded-full border-4 border-cardline bg-gradient-to-br from-gold to-gold-dark shadow-[0_8px_18px_rgba(232,148,13,.42)]"
         >
-          <span className="msr text-[25px] text-navy">sentiment_satisfied</span>
+          <span className="msr text-[25px] text-cardtitle">sentiment_satisfied</span>
         </span>
-        {/* gold-textDark (#8A5A00) chứ không phải #E8940D: chữ cam trên nền trắng chỉ đạt
+        {/* gold-textDark (#FFD98A) chứ không phải #E8940D: chữ cam trên nền trắng chỉ đạt
             2,42:1 — dưới chuẩn 4,5:1 và đúng ở nhãn của HÀNH ĐỘNG CHÍNH mỗi sáng của em.
-            #8A5A00 là màu "chữ trên vàng" đã chốt ở DESIGN-GUIDELINES §3/§7, đạt 5,93:1.
+            #FFD98A là màu "chữ trên vàng" đã chốt ở DESIGN-GUIDELINES §3/§7, đạt 5,93:1.
             Vòng tròn vàng bên trên vẫn giữ nguyên — nó là hình khối, không phải chữ. */}
         <span className="text-[9.5px] font-black text-gold-textDark">Check-in</span>
       </button>
@@ -161,7 +161,7 @@ function AdultTabBar({ roles, fullName = "", email, roleTag }: { roles: HubRole[
   return (
     <nav
       aria-label="Thanh điều hướng chính"
-      className="mt-auto flex items-stretch justify-around border-t border-[#E9ECF2] bg-white px-2 pb-2.5 pt-2"
+      className="mt-auto flex items-stretch justify-around border-t border-[#16294B] bg-card px-2 pb-2.5 pt-2"
     >
       {items.map((item) => {
         const isActive = pathname === item.href;
@@ -174,10 +174,10 @@ function AdultTabBar({ roles, fullName = "", email, roleTag }: { roles: HubRole[
             aria-current={isActive ? "page" : undefined}
             className="flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5"
           >
-            <span aria-hidden="true" className={`msr text-[22px] ${isActive ? "text-navy" : "text-muted"}`}>
+            <span aria-hidden="true" className={`msr text-[22px] ${isActive ? "text-cardtitle" : "text-muted"}`}>
               {item.icon}
             </span>
-            <span className={`text-[9.5px] ${isActive ? "font-black text-navy" : "font-bold text-muted"}`}>
+            <span className={`text-[9.5px] ${isActive ? "font-black text-cardtitle" : "font-bold text-muted"}`}>
               {item.label}
             </span>
           </Link>

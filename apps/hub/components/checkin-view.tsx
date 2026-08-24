@@ -278,14 +278,14 @@ function QueueFailureNotice({
           <div
             key={item.clientId}
             className={`flex flex-col items-center gap-1.5 rounded-[14px] border-[1.6px] p-3.5 text-center ${
-              moodOnly ? "border-[#DDE6F2] bg-[#F4F8FD]" : "border-[#FFE29A] bg-[#FFF7E0]"
+              moodOnly ? "border-[#DDE6F2] bg-[#F4F8FD]" : "border-[#4A3A0C] bg-[#2A2208]"
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <span aria-hidden className="msr text-[18px] text-[#8A5A00]">
+              <span aria-hidden className="msr text-[18px] text-[#FFD98A]">
                 {moodOnly ? "info" : "schedule_send"}
               </span>
-              <p className="text-[12.5px] font-black leading-relaxed text-navy">
+              <p className="text-[12.5px] font-black leading-relaxed text-cardtitle">
                 {moodOnly
                   ? `Lượt điểm danh ${when} của con đã vào sổ, riêng phần tâm trạng thì chưa`
                   : `Lần con ghi ${when} chưa gửi được lên trường`}
@@ -303,7 +303,7 @@ function QueueFailureNotice({
                   · nhánh còn lại: bỏ "Máy đã giữ lần bấm ấy trong điện thoại và thử gửi lại" +
                     "lần này con sẽ thấy ngay là đã ghi xong" — cả hai đều kể chuyện bên trong
                     máy, không đổi việc em phải làm (ghi lại). */}
-            <p className="text-[11.5px] leading-relaxed text-[#8A5A00]">
+            <p className="text-[11.5px] leading-relaxed text-[#FFD98A]">
               {moodOnly
                 ? "Chưa có phiếu đồng ý — không phải lỗi của con."
                 : expired
@@ -419,8 +419,8 @@ function CheckinShell({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="checkin" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-white md:overflow-hidden md:bg-pagebgDesktop">
-        <div className="flex flex-none items-center gap-3 border-b border-[#E9ECF2] bg-white px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
+      <MainContent className="flex min-w-0 flex-1 flex-col bg-card md:overflow-hidden md:bg-pagebgDesktop">
+        <div className="flex flex-none items-center gap-3 border-b border-[#16294B] bg-card px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
           <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-domain-attendance to-domain-attendanceDark">
             <span aria-hidden="true" className="msr text-[19px] text-white">sentiment_satisfied</span>
           </span>
@@ -439,7 +439,7 @@ function CheckinShell({
               thêm menu bên cạnh. Các thể bên trong tự trải theo chiều ngang đó (bốn ô cảm
               xúc thành MỘT HÀNG, khối "đã ghi" thành hai cột) chứ không xếp dọc rồi chừa
               trống hai bên. */}
-          <div className="flex flex-1 flex-col bg-white md:mx-auto md:w-full md:max-w-[1160px] md:flex-none md:rounded-[22px] md:shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+          <div className="flex flex-1 flex-col bg-card md:mx-auto md:w-full md:max-w-[1160px] md:flex-none md:rounded-[22px] md:shadow-[0_3px_14px_rgba(10,42,94,.06)]">
             {children}
           </div>
         </div>
@@ -674,7 +674,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
           <Mascot pose={helpStuck ? "think" : "celebrate"} width={72} />
           {/* tabIndex={-1}: <h2> không tự nhận được focus, thiếu nó thì .focus() ở trên
               không làm gì cả và lỗi im lặng y như cũ. */}
-          <h2 ref={successHeadingRef} tabIndex={-1} className="text-[19px] font-black text-navy">
+          <h2 ref={successHeadingRef} tabIndex={-1} className="text-[19px] font-black text-cardtitle">
             {helpStuck
               ? "Lời con nhắn chưa gửi được"
               : moodBlocked
@@ -683,7 +683,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
           </h2>
           {lastMood !== null && !moodBlocked && (
             <p className="text-[14px] text-ink">
-              Con đã ghi: <b className="font-black text-navy">{MOOD_LABEL[lastMood]}</b>
+              Con đã ghi: <b className="font-black text-cardtitle">{MOOD_LABEL[lastMood]}</b>
             </p>
           )}
           {/* 0047 — CHƯA CÓ PHIẾU ĐỒNG Ý CỦA BỐ MẸ.
@@ -702,17 +702,17 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
                   hai dòng, mà vế thứ hai ("không phải lỗi của con") là vế em cần đọc rõ nhất
                   ở màn này. Tách ra thì nó đứng riêng thay vì trôi ở cuối câu. */}
               <p className="text-[12.5px] font-bold text-ink">Chưa có phiếu đồng ý của bố mẹ.</p>
-              <p className="text-[12px] font-black text-navy">Không phải lỗi của con.</p>
+              <p className="text-[12px] font-black text-cardtitle">Không phải lỗi của con.</p>
               {/* Luật 2 của khối (xem ba luật ở trên) KHÔNG bị cắt, chỉ đổi hình: cái em
                   KHÔNG mất nay là hai chip icon + nhãn ngắn thay cho một câu hai mệnh đề.
                   Chip nói nhanh hơn câu ở đúng chỗ này, vì em đang quét màn hình tìm xem
                   mình có mất gì không. */}
               <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="flex items-center gap-1 rounded-full bg-[#E3F8ED] px-2.5 py-1 text-[11px] font-black text-successText">
+                <span className="flex items-center gap-1 rounded-full bg-[#0C2E22] px-2.5 py-1 text-[11px] font-black text-successText">
                   <span aria-hidden className="msr text-[14px]">check_circle</span>
                   Điểm danh vẫn ghi
                 </span>
-                <span className="flex items-center gap-1 rounded-full bg-[#FFF7E0] px-2.5 py-1 text-[11px] font-black text-gold-textDark">
+                <span className="flex items-center gap-1 rounded-full bg-[#2A2208] px-2.5 py-1 text-[11px] font-black text-gold-textDark">
                   <span aria-hidden className="msr text-[14px]">waving_hand</span>
                   Nút cần gặp vẫn dùng được
                 </span>
@@ -726,7 +726,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
           )}
           {/* Ghi đè thì phải nói ra — xem ghi chú "GHI ĐÈ TRONG IM LẶNG" ở đầu file. */}
           {notice && (
-            <p className="flex items-center gap-1.5 rounded-[12px] bg-[#FFF7E0] px-3.5 py-2 text-[12px] font-bold text-gold-textDark">
+            <p className="flex items-center gap-1.5 rounded-[12px] bg-[#2A2208] px-3.5 py-2 text-[12px] font-bold text-gold-textDark">
               <span aria-hidden className="msr text-[16px]">
                 edit
               </span>
@@ -739,7 +739,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
               (🔥 → `local_fire_department`). Nay là chip: icon lửa + "Chuỗi {n} ngày", cùng
               hình dạng với chip chuỗi ở popup check-in trang chủ. */}
           {streakDays !== null && (
-            <span className="flex items-center gap-1.5 rounded-full bg-[#FFF7E0] px-3 py-1.5 text-[12px] font-black text-gold-textDark">
+            <span className="flex items-center gap-1.5 rounded-full bg-[#2A2208] px-3 py-1.5 text-[12px] font-black text-gold-textDark">
               <span aria-hidden className="msr text-[16px]">local_fire_department</span>
               Chuỗi {streakDays} ngày
             </span>
@@ -757,7 +757,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
             // RÚT NGẮN 06/08/2026 (§1.5): bỏ phần nhắc lại nguyên văn nhãn của nút em vừa
             // bấm ("Lời “Mình cần gặp thầy cô” của con…") — em vừa bấm nó xong, không cần
             // đọc lại. Chữ còn lại giữ ĐÚNG mệnh đề của QĐ-2 ("đã tới", không phải "đã đọc").
-            <p className="flex items-center gap-1.5 rounded-full bg-[#E3F8ED] px-3.5 py-2 text-[12px] font-black text-successText">
+            <p className="flex items-center gap-1.5 rounded-full bg-[#0C2E22] px-3.5 py-2 text-[12px] font-black text-successText">
               <span aria-hidden className="msr flex-none text-[16px]">waving_hand</span>
               Lời cần gặp đã tới chỗ thầy cô
             </p>
@@ -768,7 +768,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
               lời cầu cứu nằm hàng đợi là một tín hiệu KHÔNG tới ai. Nói thẳng, và cho hai
               đường đi thật: thử lại ngay, hoặc gặp người thật. */}
           {helpStuck && (
-            <div className="flex w-full max-w-[340px] flex-col items-center gap-2 rounded-[14px] border-[1.6px] border-[#FFD5D6] bg-[#FFF5F5] p-3.5 text-center">
+            <div className="flex w-full max-w-[340px] flex-col items-center gap-2 rounded-[14px] border-[1.6px] border-[#FFD5D6] bg-[#351216] p-3.5 text-center">
               {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — đây là câu báo hỏng của QĐ-2.
                   Bỏ "Máy sẽ tự gửi khi có mạng lại": chip `cloud_off` ngay trên khối này
                   ("Đang offline — đã lưu máy, tự gửi khi có mạng") đã nói đúng câu đó, và
@@ -834,11 +834,11 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
         <div className="flex flex-1 flex-col items-center px-6 pb-8 pt-8 text-center md:flex-row md:items-center md:justify-center md:gap-10 md:px-10 md:py-12 md:text-left">
           <div className="flex flex-col items-center md:flex-1 md:items-start">
             <Mascot pose="thumbsup" width={64} />
-            <h2 className="mt-3 text-[19px] font-black text-navy md:text-[24px]">Hôm nay con ghi rồi nhé</h2>
+            <h2 className="mt-3 text-[19px] font-black text-cardtitle md:text-[24px]">Hôm nay con ghi rồi nhé</h2>
             <p className="mt-2 text-[14px] text-ink md:text-[16px]">
               {moodToday !== null ? (
                 <>
-                  Con đã ghi: <b className="font-black text-navy">{MOOD_LABEL[moodToday]}</b>
+                  Con đã ghi: <b className="font-black text-cardtitle">{MOOD_LABEL[moodToday]}</b>
                 </>
               ) : (
                 // Có bản ghi hôm nay nhưng không đọc được tâm trạng: nói đúng chừng
@@ -888,7 +888,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
 
             <Link
               href="/can-gap-thay-co"
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-[14px] border-[1.6px] border-gold bg-[#FFFBEE] py-3 text-[13px] font-black text-gold-textDark"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-[14px] border-[1.6px] border-gold bg-[#2A2208] py-3 text-[13px] font-black text-gold-textDark"
             >
               <span aria-hidden className="msr text-[18px] text-gold-textDark">waving_hand</span>
               Mình cần gặp thầy cô
@@ -925,7 +925,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
             <span>
               {moodToday !== null ? (
                 <>
-                  Đang ghi là <b className="font-black text-navy">{MOOD_LABEL[moodToday]}</b>
+                  Đang ghi là <b className="font-black text-cardtitle">{MOOD_LABEL[moodToday]}</b>
                 </>
               ) : (
                 <>Hôm nay con đã ghi một lần</>
@@ -986,7 +986,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
 
         {/* Lỗi không tự khỏi — nói ra thay vì giả vờ đã ghi xong (xem đầu file). */}
         {failure != null && (
-          <div className="mt-4 flex flex-col items-center gap-2 rounded-[14px] border-[1.5px] border-[#FFD5D6] bg-[#FFF5F5] p-3.5 text-center">
+          <div className="mt-4 flex flex-col items-center gap-2 rounded-[14px] border-[1.5px] border-[#FFD5D6] bg-[#351216] p-3.5 text-center">
             <MutationError error={failure} />
             {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — câu báo hỏng. Bỏ vế chỉ đường bằng
                 chữ ("Bấm lại ô em đã chọn để gửi lại nhé"): nút "Gửi lại" ngay dưới làm đúng
@@ -1015,7 +1015,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
           // ngay dưới bốn ô — to hơn cả thứ nó đứng cạnh, trong khi nó là lối RẼ chứ không
           // phải việc chính của màn.
           className={`mt-4 flex items-center justify-center gap-2 rounded-[14px] border-[1.6px] py-3 text-[13px] font-black transition-colors md:mx-auto md:mt-7 md:w-[420px] ${
-            wantsHelp ? "border-gold bg-gold/20 text-gold-textDark" : "border-gold bg-[#FFFBEE] text-gold-textDark"
+            wantsHelp ? "border-gold bg-gold/20 text-gold-textDark" : "border-gold bg-[#2A2208] text-gold-textDark"
           }`}
         >
           <span aria-hidden className="msr text-[18px] text-gold-textDark">waving_hand</span>

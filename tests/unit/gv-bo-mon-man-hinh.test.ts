@@ -192,11 +192,12 @@ describe("QĐ-3 và §11 trên chính màn này", () => {
   });
 
   it("không mã hex mới trong màn — chỉ token (DESIGN.md, luật một dòng cho màu chữ)", () => {
-    // Ngoại lệ DUY NHẤT là #F1F4F8 dùng làm viền giữa hai dòng bảng, chép nguyên từ
-    // class-roster-view.tsx để hai bảng của hai vai không kẻ hai kiểu. Nó là giá trị của
-    // token `chip`; ghi tên ra đây thay vì bỏ qua cả luật.
+    // Ngoại lệ DUY NHẤT là viền giữa hai dòng bảng, chép nguyên từ class-roster-view.tsx
+    // để hai bảng của hai vai không kẻ hai kiểu. Nó là giá trị của token `chip`; ghi tên
+    // ra đây thay vì bỏ qua cả luật.
+    // ĐỔI 24/08/2026 cùng lượt chuyển giao diện tối: token `chip` #F1F4F8 -> #12244A.
     const hex = [...src.matchAll(/#[0-9A-Fa-f]{6}/g)].map((m) => m[0].toUpperCase());
-    expect([...new Set(hex)]).toEqual(["#F1F4F8"]);
+    expect([...new Set(hex)]).toEqual(["#12244A"]);
   });
 });
 

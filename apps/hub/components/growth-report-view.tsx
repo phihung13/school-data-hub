@@ -49,12 +49,12 @@ const GLOW_BG: Record<"green" | "blue" | "amber", string> = {
   amber: "bg-[#FFFBF2]",
 };
 const GLOW_ICON_BG: Record<"green" | "blue" | "amber", string> = {
-  green: "bg-[#E3F8ED]",
-  blue: "bg-[#E2F0FC]",
-  amber: "bg-[#FFF1C9]",
+  green: "bg-[#0C2E22]",
+  blue: "bg-[#0E2647]",
+  amber: "bg-[#3A2E08]",
 };
 const GLOW_ICON_COLOR: Record<"green" | "blue" | "amber", string> = {
-  green: "text-[#00A05F]",
+  green: "text-[#4EE39B]",
   blue: "text-[#2C7BF2]",
   amber: "text-[#E8940D]",
 };
@@ -173,7 +173,7 @@ function MobileReport({
   return (
     // flex-col + min-h-screen: thanh tab phải nằm ĐÁY MÀN HÌNH, không trôi ngay dưới nội
     // dung khi báo cáo ngắn. <PageShell> đã tự căn giữa nên nó ở trong, không ở ngoài.
-    <div className="flex min-h-screen w-full flex-col bg-[#EAEFF6]">
+    <div className="flex min-h-screen w-full flex-col bg-[#081730]">
       <PageShell>
       <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light px-5 pb-12 pt-4">
         <div
@@ -185,17 +185,17 @@ function MobileReport({
           {/* Tiêu đề trang thật, không phải chữ to: màn này không có <h1> nào, nên trình
               đọc màn hình mở link Zalo ra không biết đang đứng ở đâu. Giữ nguyên class. */}
           <h1 className="text-[17px] font-black text-white">Báo cáo Trưởng thành</h1>
-          <div className="mt-0.5 text-[11px] text-[#D6E6FF]">
+          <div className="mt-0.5 text-[11px] text-[#C7D8F0]">
             {report.studentName} · {report.className} · {formatWeekLabel(report.weekLabel)}
           </div>
         </div>
       </div>
       <div className="relative -mt-7 h-7 rounded-t-[100%] bg-pagebg" aria-hidden />
 
-      <div className="relative z-[2] -mt-8 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-[0_12px_30px_rgba(10,42,94,.13)]">
+      <div className="relative z-[2] -mt-8 flex items-center gap-3 rounded-2xl bg-card px-4 py-3.5 shadow-[0_12px_30px_rgba(10,42,94,.13)]">
         <Mascot pose="celebrate" width={52} />
         <div>
-          <div className="text-[14px] font-black text-navy">{report.headline}</div>
+          <div className="text-[14px] font-black text-cardtitle">{report.headline}</div>
           <div className="mt-0.5 text-[11.5px] text-muted2">
             {report.glow.length} tỏa sáng · {report.grow.length} đang lớn lên
           </div>
@@ -205,7 +205,7 @@ function MobileReport({
       <div className="flex flex-col gap-3 px-4 pb-8 pt-4">
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="msr text-[17px] text-gold-dark">sunny</span>
-          <h2 className="text-[13.5px] font-black text-navy">Tỏa sáng (Glow)</h2>
+          <h2 className="text-[13.5px] font-black text-cardtitle">Tỏa sáng (Glow)</h2>
         </div>
         {report.glow.length === 0 && (
           <p className="text-[12px] text-muted">{glowEmptyMessage(report)}</p>
@@ -230,8 +230,8 @@ function MobileReport({
               </span>
             </span>
             <div className="min-w-0 flex-1">
-              <div className="text-[12.5px] font-black text-navy">{item.title}</div>
-              {/* ĐO LẠI 05/08/2026, KHÔNG ĐỔI: token muted2 vừa nâng lên #5F6B7D, nên chi
+              <div className="text-[12.5px] font-black text-cardtitle">{item.title}</div>
+              {/* ĐO LẠI 05/08/2026, KHÔNG ĐỔI: token muted2 vừa nâng lên #93A9C8, nên chi
                   tiết Glow trên ba nền thẻ đạt 5,16:1 (#F6FAFF) · 5,23:1 (#FFFBF2) ·
                   5,27:1 (#F6FEF9). Trước lần nâng đó nó là 4,33–4,42:1. Không hạ xuống
                   text-caption nữa: hai token nay cùng một mã màu, đổi chỉ là đổi tên. */}
@@ -244,11 +244,11 @@ function MobileReport({
           <>
             <div className="mt-2 flex items-center gap-2">
               <span aria-hidden="true" className="msr text-[17px] text-domain-studyDark">psychiatry</span>
-              <h2 className="text-[13.5px] font-black text-navy">Đang lớn lên (Grow)</h2>
+              <h2 className="text-[13.5px] font-black text-cardtitle">Đang lớn lên (Grow)</h2>
             </div>
             {report.grow.map((item, i) => (
-              <div key={i} className="rounded-2xl bg-white p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)]">
-                <div className="text-[12.5px] font-black text-navy">{item.title}</div>
+              <div key={i} className="rounded-2xl bg-card p-3 shadow-[0_3px_12px_rgba(10,42,94,.07)]">
+                <div className="text-[12.5px] font-black text-cardtitle">{item.title}</div>
                 <div className="mt-1 text-[11.5px] leading-relaxed text-muted2">{item.detail}</div>
               </div>
             ))}
@@ -292,7 +292,7 @@ function DesktopReport({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
-      <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-7 py-3.5">
+      <div className="flex flex-none items-center gap-3.5 border-b border-[#16294B] bg-card px-7 py-3.5">
         <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-[#9D6BFF] to-[#7434E8]">
           <span aria-hidden="true" className="msr text-[19px] text-white">workspace_premium</span>
         </span>
@@ -302,7 +302,7 @@ function DesktopReport({
         </div>
         <button
           onClick={onPrevWeek}
-          className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
+          className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
         >
           <span aria-hidden="true" className="msr text-[17px] text-subtle">chevron_left</span>
           Tuần trước
@@ -310,7 +310,7 @@ function DesktopReport({
         {weekOffset < 0 && (
           <button
             onClick={onNextWeek}
-            className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
+            className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
           >
             Tuần sau
             <span aria-hidden="true" className="msr text-[17px] text-subtle">chevron_right</span>
@@ -330,31 +330,31 @@ function DesktopReport({
               <Mascot pose="celebrate" width={88} />
               <div className="relative min-w-0 flex-1 basis-[280px]">
                 <div className="text-[24px] font-black text-white">{report.headline}</div>
-                <div className="mt-1.5 text-[13.5px] leading-relaxed text-[#D6E6FF]">
+                <div className="mt-1.5 text-[13.5px] leading-relaxed text-[#C7D8F0]">
                   {report.glow.length} điều con đang tỏa sáng · {report.grow.length} điều con đang lớn lên.
                 </div>
               </div>
               {/* Hai thẻ số liệu này nằm ở đầu SÁNG của hero (#1E5FB8) y hệt ba thẻ trên
-                  trang chủ, và mắc đúng một lỗi: `bg-white/15` làm sáng chỗ đó thêm lần
+                  trang chủ, và mắc đúng một lỗi: `bg-card/15` làm sáng chỗ đó thêm lần
                   nữa, nhãn #C7D8F0 chỉ còn 3,12:1 và số vàng 2,88:1. Nền navy pha 70%
                   (kết quả ≈ #103A79) đưa nhãn lên 7,62:1, số vàng 7,02:1, số trắng
                   11,03:1 — vẫn là thẻ nổi trên hero, chỉ nổi bằng tối thay vì sáng. */}
               <div className="relative flex gap-2.5">
-                <div className="rounded-2xl border border-white/15 bg-navy/70 px-[18px] py-3.5 text-center">
+                <div className="rounded-2xl border border-cardline/15 bg-navy/70 px-[18px] py-3.5 text-center">
                   <div className="text-[22px] font-black text-gold">{report.checkinDaysThisWeek}/5</div>
                   <div className="mt-0.5 text-[10px] font-bold text-[#C7D8F0]">ngày đến lớp</div>
                 </div>
-                <div className="rounded-2xl border border-white/15 bg-navy/70 px-[18px] py-3.5 text-center">
+                <div className="rounded-2xl border border-cardline/15 bg-navy/70 px-[18px] py-3.5 text-center">
                   <div className="text-[22px] font-black text-white">{report.streakDays}</div>
                   <div className="mt-0.5 text-[10px] font-bold text-[#C7D8F0]">chuỗi check-in</div>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+            <div className="rounded-[22px] bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="msr text-[21px] text-[#F5A300]">sunny</span>
-                <h2 className="text-[17px] font-black text-navy">Tỏa sáng (Glow)</h2>
+                <h2 className="text-[17px] font-black text-cardtitle">Tỏa sáng (Glow)</h2>
               </div>
               <div className="mt-4 flex flex-col gap-3">
                 {report.glow.length === 0 && (
@@ -379,16 +379,16 @@ function DesktopReport({
             </div>
 
             {report.grow.length > 0 && (
-              <div className="rounded-[22px] bg-white p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="rounded-[22px] bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
                 <div className="flex items-center gap-2">
-                  <span aria-hidden="true" className="msr text-[21px] text-[#00A05F]">psychiatry</span>
-                  <h2 className="text-[17px] font-black text-navy">Đang lớn lên (Grow)</h2>
+                  <span aria-hidden="true" className="msr text-[21px] text-[#4EE39B]">psychiatry</span>
+                  <h2 className="text-[17px] font-black text-cardtitle">Đang lớn lên (Grow)</h2>
                 </div>
                 <div className="mt-4 flex flex-wrap items-start gap-4">
                   <Mascot pose="think" width={56} />
                   <div className="min-w-0 flex-1 basis-[320px]">
                     <div className="text-[15px] font-black text-ink">{report.grow[0]!.title}</div>
-                    <div className="mt-1.5 text-[13px] leading-relaxed text-[#5B6B80]">{report.grow[0]!.detail}</div>
+                    <div className="mt-1.5 text-[13px] leading-relaxed text-[#93A9C8]">{report.grow[0]!.detail}</div>
                   </div>
                 </div>
               </div>
@@ -403,15 +403,15 @@ function DesktopReport({
                 cho người mà cả trang này sinh ra để phục vụ. Đo thật ngay lần đầu mở bản
                 desktop bằng phiên phụ huynh. */}
             {isStudent && (
-            <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-              <div className="text-[15px] font-black text-navy">Báo cáo này gửi cho ai?</div>
+            <div className="rounded-[20px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="text-[15px] font-black text-cardtitle">Báo cáo này gửi cho ai?</div>
               <div className="mt-3.5 flex flex-col gap-3">
                 {/* "Chưa có phụ huynh nào" là một KHẲNG ĐỊNH — không được nói nó khi
                     mới chỉ là chưa tải xong hoặc đã hỏng. */}
                 {guardians.isPending ? (
                   <p className="text-[12px] text-caption">Đang tải…</p>
                 ) : guardians.error ? (
-                  <p className="text-[12px] font-bold text-[#D2383E]">
+                  <p className="text-[12px] font-bold text-[#FF8A8F]">
                     Chưa tải được danh sách người nhận.{" "}
                     <button type="button" onClick={() => void guardians.refetch()} className="underline underline-offset-2">
                       Thử lại
@@ -420,7 +420,7 @@ function DesktopReport({
                 ) : guardians.data?.length ? (
                   guardians.data.map((g, i) => (
                     <div key={i} className="flex items-center gap-2.5">
-                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-[#FFF1C9] text-[12.5px] font-black text-gold-text">
+                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-[#3A2E08] text-[12.5px] font-black text-gold-text">
                         {g.full_name.trim().slice(0, 1).toUpperCase() || "?"}
                       </span>
                       <div className="min-w-0 flex-1 text-[12.5px] font-bold text-ink">{g.full_name}</div>

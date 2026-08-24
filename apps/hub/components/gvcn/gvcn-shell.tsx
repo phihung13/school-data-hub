@@ -101,16 +101,16 @@ export function GvcnShell({
               min-h-[44px] (§11, WCAG 2.5.5) — trước 01/08/2026 là h-9 w-9 = đúng 36px,
               mà đây là đường ra DUY NHẤT của năm màn con trên điện thoại. */}
           {backTo && (
-            <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 py-3 md:hidden">
+            <div className="flex items-center gap-2.5 border-b border-line bg-card px-4 py-3 md:hidden">
               <Link
                 href={backTo.href}
                 aria-label={`Về ${backTo.label}`}
                 className="flex min-h-[44px] flex-none items-center gap-1.5 rounded-xl bg-chip px-3"
               >
-                <span className="msr text-[20px] text-navy" aria-hidden>
+                <span className="msr text-[20px] text-cardtitle" aria-hidden>
                   arrow_back
                 </span>
-                <span className="text-[12.5px] font-extrabold text-navy">{backTo.label}</span>
+                <span className="text-[12.5px] font-extrabold text-cardtitle">{backTo.label}</span>
               </Link>
             </div>
           )}
@@ -139,7 +139,7 @@ export function GvcnShell({
                   trong DOM, và tests/unit/a11y-nen.test.ts gọi đúng cái bẫy đó bằng tên. */}
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <h1 className="text-[19px] font-black leading-tight text-navy md:text-[24px]">{title}</h1>
+                  <h1 className="text-[19px] font-black leading-tight text-cardtitle md:text-[24px]">{title}</h1>
                   {subtitle && (
                     <div className="mt-0.5 text-[12px] font-semibold text-muted md:mt-1 md:text-[13px]">
                       {subtitle}
@@ -170,7 +170,7 @@ export function GvcnShell({
 /** Thẻ trắng chuẩn của Hub (DESIGN.md §Components) — bo 20px, bóng nhẹ, không viền màu. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
+    <div className={`rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${className}`}>
       {children}
     </div>
   );

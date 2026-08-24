@@ -80,7 +80,7 @@ export function EmbedIntro({
     <div
       role="status"
       aria-live="polite"
-      className="absolute inset-0 z-[3] flex flex-col items-center justify-center gap-4 bg-white px-8 text-center"
+      className="absolute inset-0 z-[3] flex flex-col items-center justify-center gap-4 bg-card px-8 text-center"
     >
       {iconImageUrl ? (
         // Ảnh tự host trong /public (xem chú thích iconImageUrl ở registry.ts) — không
@@ -92,7 +92,7 @@ export function EmbedIntro({
         // public/fonts/icon-names.txt, tên ngoài danh sách đó hiện ra một Ô TRỐNG và
         // KHÔNG báo lỗi gì. Bài tests/unit/a11y.test.ts bắt đúng chỗ này ngay lần chạy
         // đầu tiên — cổng canh làm đúng việc của nó.
-        <span aria-hidden className="msr text-[48px] text-navy">space_dashboard</span>
+        <span aria-hidden className="msr text-[48px] text-cardtitle">space_dashboard</span>
       )}
 
       <div className="text-[19px] font-black text-ink">{tenApp}</div>
@@ -111,7 +111,7 @@ export function EmbedIntro({
           </button>
           <a
             href="/home"
-            className="flex min-h-[44px] items-center gap-2 rounded-[14px] border-[1.6px] border-[#D9E1EC] px-5 text-[13.5px] font-black text-navy"
+            className="flex min-h-[44px] items-center gap-2 rounded-[14px] border-[1.6px] border-[#D9E1EC] px-5 text-[13.5px] font-black text-cardtitle"
           >
             <span aria-hidden className="msr text-[19px]">home</span>
             Về Hub
@@ -121,7 +121,7 @@ export function EmbedIntro({
         // Thanh chạy — KHÔNG giả vờ biết còn bao nhiêu phần trăm. Không ai đo được app
         // ngoài còn bao lâu, nên một thanh đầy dần theo phần trăm bịa là nói dối bằng
         // hình. Thanh này chỉ nói "vẫn đang chạy", đúng chừng đó.
-        <div className="mt-1 h-[3px] w-[180px] overflow-hidden rounded-full bg-[#E9ECF2]">
+        <div className="mt-1 h-[3px] w-[180px] overflow-hidden rounded-full bg-[#16294B]">
           <div className="h-full w-1/3 animate-embedSlide rounded-full bg-navy" />
         </div>
       )}

@@ -125,16 +125,16 @@ export function UserMenu({ fullName, email, roleTag, variant, placement = "duoi"
         aria-label={variant === "avatar" ? `Tài khoản của ${fullName}` : undefined}
         className={
           variant === "sidebar"
-            ? "flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2.5 py-[9px] hover:bg-[#F5F8FC]"
+            ? "flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2.5 py-[9px] hover:bg-[#0E1E3C]"
             : // 44×44 đúng ngưỡng vùng bấm §11. Vòng tròn hiển thị 42px, vùng bấm phủ đủ.
-              "flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+              "flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-card/10"
         }
       >
         <span
           className={
             variant === "sidebar"
-              ? "flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[13px] font-black text-navy"
-              : "flex h-[42px] w-[42px] items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[15px] font-black text-navy"
+              ? "flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[13px] font-black text-cardtitle"
+              : "flex h-[42px] w-[42px] items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[15px] font-black text-cardtitle"
           }
         >
           {initial}
@@ -160,10 +160,10 @@ export function UserMenu({ fullName, email, roleTag, variant, placement = "duoi"
           aria-label="Tài khoản"
           className={
             variant === "sidebar"
-              ? "absolute bottom-[62px] left-0 right-0 z-30 flex flex-col gap-px rounded-2xl border border-line bg-white p-[7px] shadow-[0_16px_36px_rgba(10,42,94,.2)]"
+              ? "absolute bottom-[62px] left-0 right-0 z-30 flex flex-col gap-px rounded-2xl border border-line bg-card p-[7px] shadow-[0_16px_36px_rgba(10,42,94,.2)]"
               : // Neo mép PHẢI: nút nằm sát mép phải, neo trái sẽ đẩy hộp ra ngoài màn
                 // hình 360px. min-w vừa đủ đọc email, max-w chặn tràn.
-                `absolute right-0 z-30 flex w-[248px] max-w-[calc(100vw-32px)] flex-col gap-px rounded-2xl border border-line bg-white p-[7px] shadow-[0_16px_36px_rgba(10,42,94,.2)] ${
+                `absolute right-0 z-30 flex w-[248px] max-w-[calc(100vw-32px)] flex-col gap-px rounded-2xl border border-line bg-card p-[7px] shadow-[0_16px_36px_rgba(10,42,94,.2)] ${
                   placement === "tren" ? "bottom-[54px]" : "top-[52px]"
                 }`
           }
@@ -294,7 +294,7 @@ function LogoutMenuItem() {
               window.location.href = "/login";
             });
           }}
-          // Trắng trên #C7333A (token dangerText) = 6,03:1.
+          // Trắng trên #FF8A8F (token dangerText) = 6,03:1.
           className="min-h-[44px] flex-1 rounded-[9px] bg-dangerText px-3 text-[12px] font-black text-white"
         >
           Đăng xuất
@@ -302,10 +302,10 @@ function LogoutMenuItem() {
         <button
           type="button"
           onClick={() => setHoiLai(false)}
-          // Viền `subtle` (#5B6B80 = 5,09:1 trên nền hồng) chứ không phải `line` (1,22:1):
-          // nút trắng trên nền hồng #FFF5F5 cách nhau 1,03:1, nên viền là thứ DUY NHẤT vẽ
+          // Viền `subtle` (#93A9C8 = 5,09:1 trên nền hồng) chứ không phải `line` (1,22:1):
+          // nút trắng trên nền hồng #351216 cách nhau 1,03:1, nên viền là thứ DUY NHẤT vẽ
           // ra ranh giới của nó. Đường lùi phải nhìn thấy rõ ít nhất bằng đường đi tiếp.
-          className="min-h-[44px] flex-1 rounded-[9px] border border-subtle bg-white px-3 text-[12px] font-extrabold text-cardtitle2"
+          className="min-h-[44px] flex-1 rounded-[9px] border border-subtle bg-card px-3 text-[12px] font-extrabold text-cardtitle2"
         >
           Ở lại
         </button>

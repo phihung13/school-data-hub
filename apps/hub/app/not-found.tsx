@@ -12,10 +12,10 @@ import { Mascot } from "@/components/mascot";
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-[#EAEFF6] px-6 py-12 text-center">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-[#081730] px-6 py-12 text-center">
       <Mascot pose="think" width={78} />
       <div className="text-[13px] font-black tracking-wide text-caption2">KHÔNG TÌM THẤY TRANG</div>
-      <h1 className="max-w-md text-[20px] font-black leading-snug text-navy">
+      <h1 className="max-w-md text-[20px] font-black leading-snug text-cardtitle">
         Trang em vừa mở không có ở đây.
       </h1>
       <p className="max-w-md text-[13.5px] leading-relaxed text-caption">

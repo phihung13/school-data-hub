@@ -123,23 +123,23 @@ function LogoutBox({ className = "" }: { className?: string }) {
       <button
         type="button"
         onClick={() => setHoiLai(true)}
-        // Chữ đỏ của nút dùng token `dangerText` (#C7333A), không phải #D2383E: #D2383E đạt
+        // Chữ đỏ của nút dùng token `dangerText` (#FF8A8F), không phải #FF8A8F: #FF8A8F đạt
         // 4,80:1 trên trắng nên nhìn qua tưởng đủ — nhưng nút này nằm trên NỀN HỒNG
-        // #FFF5F5 (token surface-danger), và ở đó nó chỉ 4,49:1, hụt 0,01 so với mốc 4,5:1.
-        // #C7333A trên #FFF5F5 = 4,94:1. (05/08/2026)
-        // Icon `logout` giữ #D2383E: nó là thành phần phi văn bản (aria-hidden, chữ "Đăng
+        // #351216 (token surface-danger), và ở đó nó chỉ 4,49:1, hụt 0,01 so với mốc 4,5:1.
+        // #FF8A8F trên #351216 = 4,94:1. (05/08/2026)
+        // Icon `logout` giữ #FF8A8F: nó là thành phần phi văn bản (aria-hidden, chữ "Đăng
         // xuất" ngay bên cạnh mới mang nghĩa) nên mốc của nó là 3:1, và 4,49:1 vượt xa.
         //
         // VIỀN ĐỔI 06/08/2026 — #FFD5D6 → token `dangerText`. Đo lại đợt này ra một con số
-        // không chống chế được: nền nút #FFF5F5 so với nền trang #F5F7FA là **1,00:1**, và
+        // không chống chế được: nền nút #351216 so với nền trang #050F26 là **1,00:1**, và
         // viền cũ #FFD5D6 so với cả hai là 1,25:1. Tức là RANH GIỚI của nút không tồn tại —
         // WCAG 1.4.11 đòi 3:1 cho phần nhìn được dùng để nhận ra một điều khiển, và thứ duy
         // nhất đang làm việc đó là dòng chữ bên trong. Trên một nút KHÔNG LÙI ĐƯỢC thì nhận
-        // nhầm ranh giới là bấm nhầm. #C7333A cho 4,94:1 trên nền trang — và đúng là "nút
+        // nhầm ranh giới là bấm nhầm. #FF8A8F cho 4,94:1 trên nền trang — và đúng là "nút
         // Đăng xuất viền đỏ" mà ảnh mẫu vẽ.
         className={`flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-dangerText bg-surface-danger px-6 py-3 text-[14px] font-black text-dangerText hover:bg-[#FFECEC] ${className}`}
       >
-        <span aria-hidden="true" className="msr text-[20px] text-[#D2383E]">logout</span>
+        <span aria-hidden="true" className="msr text-[20px] text-[#FF8A8F]">logout</span>
         Đăng xuất
       </button>
     );
@@ -160,7 +160,7 @@ function LogoutBox({ className = "" }: { className?: string }) {
           type="button"
           ref={nutXacNhan}
           onClick={logout}
-          // Trắng trên #C7333A = 6,03:1 — nút xác nhận là chỗ duy nhất trong màn dùng nền
+          // Trắng trên #FF8A8F = 6,03:1 — nút xác nhận là chỗ duy nhất trong màn dùng nền
           // đỏ đặc, và nó phải đọc được chắc chắn hơn nút mở ra nó.
           className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-dangerText px-4 text-[13px] font-black text-white"
         >
@@ -170,11 +170,11 @@ function LogoutBox({ className = "" }: { className?: string }) {
         <button
           type="button"
           onClick={() => setHoiLai(false)}
-          // Viền `subtle` (#5B6B80) chứ không phải `line` (#E4E9F0): nút này màu trắng đứng
-          // trên nền hồng #FFF5F5 — hai mặt cách nhau 1,03:1, nên viền là thứ DUY NHẤT vẽ
+          // Viền `subtle` (#93A9C8) chứ không phải `line` (#1E3A6B): nút này màu trắng đứng
+          // trên nền hồng #351216 — hai mặt cách nhau 1,03:1, nên viền là thứ DUY NHẤT vẽ
           // ra nó. `line` cho 1,22:1, `subtle` cho 5,09:1. Đường lùi phải nhìn thấy rõ ít
           // nhất bằng đường đi tiếp.
-          className="flex min-h-[44px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-subtle bg-white px-4 text-[13px] font-black text-cardtitle2"
+          className="flex min-h-[44px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-subtle bg-card px-4 text-[13px] font-black text-cardtitle2"
         >
           Ở lại
         </button>
@@ -209,7 +209,7 @@ function LogoutBox({ className = "" }: { className?: string }) {
 function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
   const teacher = teacherLabel(teacherName);
   return (
-    <div className="flex flex-col gap-3 rounded-[22px] border-[1.5px] border-[#CFE4FB] bg-surface-infoSoft p-5 text-left md:p-[22px]">
+    <div className="flex flex-col gap-3 rounded-[22px] border-[1.5px] border-[#1E4E8C] bg-surface-infoSoft p-5 text-left md:p-[22px]">
       <div className="flex items-center gap-2">
         <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">shield_person</span>
         <span className="text-[15px] font-black text-link">Ai thấy gì của mình?</span>
@@ -217,7 +217,7 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
       {/* Màu không bao giờ là tín hiệu duy nhất (§11): mỗi dòng có icon check/cancel
           KÈM chữ nói rõ thấy gì — người mù màu vẫn đọc đủ nghĩa. */}
       <div className="flex items-start gap-2.5">
-        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#4EE39B]">check_circle</span>
         <span className="text-[12.5px] leading-relaxed text-link">
           <b>Thầy cô tâm lý</b> — đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
         </span>
@@ -228,7 +228,7 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
           hướng nguy hiểm: em tưởng cô không thấy và viết như chỗ riêng tư. Icon đổi về
           check_circle vì cô nay thuộc hẳn nhóm "đọc được", không còn lưng chừng. */}
       <div className="flex items-start gap-2.5">
-        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#00A05F]">check_circle</span>
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#4EE39B]">check_circle</span>
         <span className="text-[12.5px] leading-relaxed text-link">
           <b>{teacher}</b> — xem điểm danh, đọc được nhật ký cảm xúc của con và lời nhắn con gửi.
         </span>
@@ -243,14 +243,14 @@ function WhoSeesWhatCard({ teacherName }: { teacherName: string | null }) {
           <span>
             <b>Bố mẹ</b> — điểm danh, Báo cáo Trưởng thành
           </span>
-          <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-black text-link">
+          <span className="flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-[11px] font-black text-link">
             <span aria-hidden="true" className="msr text-[13px]">visibility_off</span>
             không xem cảm xúc
           </span>
         </span>
       </div>
       <div className="flex items-start gap-2.5">
-        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#D2383E]">cancel</span>
+        <span aria-hidden="true" className="msr flex-none text-[18px] text-[#FF8A8F]">cancel</span>
         <span className="text-[12.5px] leading-relaxed text-link">
           <b>Bạn cùng lớp</b> — không thấy gì cả
         </span>
@@ -271,13 +271,13 @@ function HelpLink({ teacherName, className }: { teacherName: string | null; clas
   return (
     <a href="/can-gap-thay-co" className={className}>
       <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-surface-success">
-        <span aria-hidden="true" className="msr text-[20px] text-[#00A05F]">support_agent</span>
+        <span aria-hidden="true" className="msr text-[20px] text-[#4EE39B]">support_agent</span>
       </span>
       <div className="min-w-0 flex-1">
         <div className="text-[14px] font-extrabold text-ink">Trợ giúp &amp; nhắn thầy cô chủ nhiệm</div>
         <div className="mt-px text-[11.5px] text-caption">{teacherLabel(teacherName)}</div>
       </div>
-      {/* Token `line2` = #C9D2DE. Mũi tên này là trang trí thuần (aria-hidden, chữ ngay bên
+      {/* Token `line2` = #27467E. Mũi tên này là trang trí thuần (aria-hidden, chữ ngay bên
           trái đã nói đủ) nên không có mốc tương phản nào áp lên nó — nhưng mỗi mã hex viết
           tay là một chỗ đợt sửa sau bỏ sót. */}
       <span aria-hidden="true" className="msr text-[20px] text-line2">chevron_right</span>
@@ -288,7 +288,7 @@ function HelpLink({ teacherName, className }: { teacherName: string | null; clas
 /** Avatar tròn vàng + chữ cái đầu. Tên rỗng ra "?" chứ không ra một vòng tròn trống. */
 function Avatar({ initial }: { initial: string }) {
   return (
-    <span className="flex h-[84px] w-[84px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[32px] font-black text-navy shadow-[0_8px_18px_rgba(232,148,13,.3)]">
+    <span className="flex h-[84px] w-[84px] flex-none items-center justify-center rounded-full bg-gradient-to-br from-gold to-gold-dark text-[32px] font-black text-cardtitle shadow-[0_8px_18px_rgba(232,148,13,.3)]">
       {initial}
     </span>
   );
@@ -311,7 +311,7 @@ function IdentityCard({
   email: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-5 rounded-[22px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-[26px]">
+    <div className="flex flex-wrap items-center gap-5 rounded-[22px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-[26px]">
       <Avatar initial={initial} />
       <div className="min-w-0 flex-1 basis-[220px]">
         <div className="text-[19px] font-black text-ink md:text-[22px]">{name}</div>
@@ -352,7 +352,7 @@ function StatTile({
       <div className="flex items-center justify-center gap-1">
         {/* Cả icon lẫn CON SỐ đều phải đọc được trên nền nhạt: con số là CHỮ nên mốc của nó
             là 4,5:1, và nó lại chính là thứ duy nhất mang dữ liệu trong ô này. Mã cũ
-            #E8940D chỉ 2,26:1 trên #FFF7E0. (05/08/2026) */}
+            #E8940D chỉ 2,26:1 trên #2A2208. (05/08/2026) */}
         <span aria-hidden="true" className={`msr text-[19px] ${iconClass}`}>{icon}</span>
         <span className="text-[20px] font-black">{value}</span>
       </div>
@@ -375,10 +375,10 @@ function StatRow({ presentDays, streakDays }: { presentDays: number; streakDays:
     return (
       <div
         role="status"
-        className="flex items-center gap-2.5 rounded-2xl bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)]"
+        className="flex items-center gap-2.5 rounded-2xl bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)]"
       >
-        {/* `caption2` chứ không phải `line2`: #C9D2DE trên trắng là 1,53:1 — icon gần như
-            biến mất, mà đây là ô CHỈ CÓ một icon và một dòng chữ. #66707D = 5,03:1. */}
+        {/* `caption2` chứ không phải `line2`: #27467E trên trắng là 1,53:1 — icon gần như
+            biến mất, mà đây là ô CHỈ CÓ một icon và một dòng chữ. #8298B8 = 5,03:1. */}
         <span aria-hidden="true" className="msr text-[20px] text-caption2">event_busy</span>
         <span className="text-[12.5px] font-bold text-muted">Chưa có ngày nào được ghi</span>
       </div>
@@ -398,7 +398,7 @@ function StatRow({ presentDays, streakDays }: { presentDays: number; streakDays:
         value={presentDays}
         label="ngày có mặt"
         className="bg-surface-success text-successText"
-        iconClass="text-[#00A05F]"
+        iconClass="text-[#4EE39B]"
       />
     </div>
   );
@@ -407,8 +407,8 @@ function StatRow({ presentDays, streakDays }: { presentDays: number; streakDays:
 /** Thẻ "Tài khoản". Ảnh mẫu gọi nó là "Tài khoản & thiết bị" — phần thiết bị đã bỏ, xem đầu file. */
 function AccountCard({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="rounded-[22px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
-      <div className="text-[15px] font-black text-navy md:text-[16px]">Tài khoản</div>
+    <div className="rounded-[22px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+      <div className="text-[15px] font-black text-cardtitle md:text-[16px]">Tài khoản</div>
       <div className="mt-3 flex flex-col">
         <div className="flex items-center gap-3.5 py-[15px]">
           <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] bg-surface-infoSoft">
@@ -461,7 +461,7 @@ const H1_CLASS = "text-[16px] font-black text-ink md:text-[17px]";
  */
 function ScreenHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-none items-center gap-3.5 border-b border-line bg-white px-5 py-3.5 md:px-7">
+    <div className="flex flex-none items-center gap-3.5 border-b border-line bg-card px-5 py-3.5 md:px-7">
       <div className="min-w-0 flex-1">
         {children}
         <div className="text-[11.5px] text-caption">Tài khoản trường</div>
@@ -581,7 +581,7 @@ function StudentProfile({
                 <WhoSeesWhatCard teacherName={profile.homeroomTeacherName} />
                 {/* RÚT NGẮN 06/08/2026 (§1.5). Bỏ "Hồ sơ là của con." — không mang thông
                     tin nào. Giữ phần dùng được: sai thì báo cho ai. */}
-                <div className="flex items-center gap-3 rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+                <div className="flex items-center gap-3 rounded-[20px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
                   <Mascot pose="think" width={46} />
                   <p className="text-[12.5px] font-semibold text-cardtitle2">
                     Thông tin chưa đúng — nói với {teacherLabel(profile.homeroomTeacherName)} nhé.

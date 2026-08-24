@@ -152,7 +152,7 @@ export function HelpRequestView({
             cả hai là để hai <h1> trong cùng một DOM — mỗi lần đọc lại phải đoán cái nào
             là thật. Một cái duy nhất, luôn có mặt, luôn đúng. */}
         <h1 className="sr-only">Mình cần gặp thầy cô</h1>
-        <div className="hidden flex-none items-center gap-3 border-b border-[#E9ECF2] bg-white px-7 py-3.5 md:flex">
+        <div className="hidden flex-none items-center gap-3 border-b border-[#16294B] bg-card px-7 py-3.5 md:flex">
             {/* VÙNG CHẠM 44px mà KHÔNG phóng to phần nhìn thấy — cùng mẫu mini-app-header.tsx
                 đã dựng: `min-h-[44px] px-1` nằm trên chính phần tử bấm được, vòng tròn 36×36
                 và nền hover vẫn nguyên kích thước cũ vì chúng nằm ở lớp trong. Nút này 36×36
@@ -163,7 +163,7 @@ export function HelpRequestView({
               aria-label="Quay lại"
               className="flex min-h-[44px] items-center justify-center px-1"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full text-[#4E5F78] hover:bg-[#F1F4F8]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full text-[#4E5F78] hover:bg-[#12244A]">
                 <span aria-hidden="true" className="msr text-[21px]">arrow_back</span>
               </span>
             </button>
@@ -191,13 +191,13 @@ export function HelpRequestView({
               <SentSuccessPanel teacherName={teacherFirstWord} onGoHome={() => router.push("/home")} />
             ) : (
               <div className="flex flex-wrap items-start gap-4 md:gap-5">
-                <div className="min-w-0 flex-[2.1_1_320px] flex flex-col gap-[22px] rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:flex-[2.1_1_520px] md:p-6">
+                <div className="min-w-0 flex-[2.1_1_320px] flex flex-col gap-[22px] rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:flex-[2.1_1_520px] md:p-6">
                   {/* Mỗi bước là một <fieldset> có <legend>: người dùng trình đọc màn hình
                       nghe được "nút Ở lớp, 1 trên 5, trong nhóm CHUYỆN GÌ KHIẾN CON MUỐN
                       GẶP CÔ" chứ không phải một dãy nút rời không rõ thuộc về câu hỏi nào.
                       aria-pressed nói trạng thái đã chọn — trước đó chỉ có màu viền. */}
                   <fieldset className="min-w-0 border-0 p-0">
-                    <legend className="text-[13px] font-black tracking-wide text-[#5B6B80]">
+                    <legend className="text-[13px] font-black tracking-wide text-[#93A9C8]">
                       1 · CHUYỆN GÌ KHIẾN CON MUỐN GẶP CÔ?
                     </legend>
                     <div className="mt-3 flex flex-wrap gap-2.5">
@@ -215,13 +215,13 @@ export function HelpRequestView({
                             // sàn chiều cao, không đổi padding nên hình dạng giữ nguyên.
                             className={
                               active
-                                ? "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-[18px] py-3 text-[13.5px] font-extrabold text-navy shadow-[0_0_0_3px_rgba(30,95,184,.1)]"
-                                : "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.5px] border-[#E4E9F0] px-[18px] py-3 text-[13.5px] font-bold text-[#33507C] hover:border-[#C9D6E6]"
+                                ? "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-[18px] py-3 text-[13.5px] font-extrabold text-cardtitle shadow-[0_0_0_3px_rgba(30,95,184,.1)]"
+                                : "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.5px] border-[#1E3A6B] px-[18px] py-3 text-[13.5px] font-bold text-[#A9C4E8] hover:border-[#C9D6E6]"
                             }
                           >
                             <span
                               aria-hidden="true"
-                              className={`msr text-[19px] ${active ? "text-[#2C7BF2]" : "text-[#5B6B80]"}`}
+                              className={`msr text-[19px] ${active ? "text-[#2C7BF2]" : "text-[#93A9C8]"}`}
                             >
                               {TOPIC_ICON[key]}
                             </span>
@@ -233,7 +233,7 @@ export function HelpRequestView({
                   </fieldset>
 
                   <fieldset className="min-w-0 border-0 p-0">
-                    <legend className="text-[13px] font-black tracking-wide text-[#5B6B80]">
+                    <legend className="text-[13px] font-black tracking-wide text-[#93A9C8]">
                       2 · CON MUỐN GẶP KHI NÀO?
                     </legend>
                     <div className="mt-3 flex flex-wrap gap-2.5">
@@ -249,11 +249,11 @@ export function HelpRequestView({
                             className={
                               active
                                 ? isUrgent
-                                  // dangerText (#C7333A) chứ không phải #D2383E: đúng cặp
+                                  // dangerText (#FF8A8F) chứ không phải #FF8A8F: đúng cặp
                                   // chữ-đỏ-trên-nền-hồng đo được 4,49:1 — hụt chuẩn 0,01 và
-                                  // chỉ lộ ra khi đo trên nền thật (#FFF5F5) thay vì nền trắng.
-                                  ? "flex-1 basis-[150px] rounded-2xl border-[1.7px] border-[#F0474D] bg-[#FFF5F5] px-3.5 py-3.5 text-center text-[13px] font-black text-dangerText"
-                                  : "flex-1 basis-[150px] rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-3.5 py-3.5 text-center text-[13px] font-black text-navy"
+                                  // chỉ lộ ra khi đo trên nền thật (#351216) thay vì nền trắng.
+                                  ? "flex-1 basis-[150px] rounded-2xl border-[1.7px] border-[#F0474D] bg-[#351216] px-3.5 py-3.5 text-center text-[13px] font-black text-dangerText"
+                                  : "flex-1 basis-[150px] rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-3.5 py-3.5 text-center text-[13px] font-black text-cardtitle"
                                 : "flex-1 basis-[150px] rounded-2xl border-[1.5px] border-line px-3.5 py-3.5 text-center text-[13px] font-bold text-cardtitle2 hover:border-[#C9D6E6]"
                             }
                           >
@@ -269,12 +269,12 @@ export function HelpRequestView({
                       {/* <label htmlFor> thật, không phải <span> đứng cạnh: chạm vào chữ là
                           con trỏ nhảy vào ô (vùng chạm rộng gấp mấy lần trên điện thoại),
                           và trình đọc màn hình nói được ô này để làm gì. */}
-                      <label htmlFor="loi-nhan-cho-co" className="text-[13px] font-black tracking-wide text-[#5B6B80]">
+                      <label htmlFor="loi-nhan-cho-co" className="text-[13px] font-black tracking-wide text-[#93A9C8]">
                         3 · CON MUỐN NÓI GÌ TRƯỚC KHÔNG?
                       </label>
                       {/* #9AA5B5 → token muted. Đo sống ở 360px: "không bắt buộc" là 2,49:1
                           trên nền trắng — mà đây là chữ nói cho em biết có được BỎ QUA ô
-                          này không, tức là nó quyết định em có bấm gửi hay bỏ dở. #66707D
+                          này không, tức là nó quyết định em có bấm gửi hay bỏ dở. #8298B8
                           = 5,03:1. (01/08/2026) */}
                       <span className="text-[11px] font-bold text-muted">không bắt buộc</span>
                     </div>
@@ -290,16 +290,16 @@ export function HelpRequestView({
                       //
                       // Đã bỏ `placeholder:text-[#9AA5B5]` (01/08/2026). Đo qua
                       // getComputedStyle(el,'::placeholder') ở 360px: 2,45:1 trên nền ô
-                      // #FCFDFE. Câu gợi ý ở đây không phải trang trí — nó là câu MẪU dạy em
+                      // #0B1B38. Câu gợi ý ở đây không phải trang trí — nó là câu MẪU dạy em
                       // biết ô này viết được gì; ở sân trường lúc 7 giờ sáng, nắng gắt, màn
                       // điện thoại rẻ, 2,45:1 là biến mất. Màu nay đến từ MỘT chỗ duy nhất
-                      // trong globals.css (#5B6B80 = 5,34:1 trên #FCFDFE) nên mọi ô nhập của
+                      // trong globals.css (#93A9C8 = 5,34:1 trên #0B1B38) nên mọi ô nhập của
                       // app cùng đọc được, không phải ô nào có người nhớ thì ô đó mới đạt.
-                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-[#E4E9F0] bg-[#FCFDFE] p-4 text-[13.5px] leading-relaxed text-ink focus:border-navy"
+                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-[#1E3A6B] bg-[#0B1B38] p-4 text-[13.5px] leading-relaxed text-ink focus:border-navy"
                     />
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3 border-t border-[#F1F4F8] pt-1">
+                  <div className="flex flex-wrap items-center gap-3 border-t border-[#12244A] pt-1">
                     <button
                       onClick={handleSubmit}
                       disabled={!canSubmit}
@@ -320,7 +320,7 @@ export function HelpRequestView({
                     </button>
                     <button
                       onClick={() => router.push("/home")}
-                      className="rounded-2xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-4 text-[14px] font-extrabold text-[#5B6B80]"
+                      className="rounded-2xl border-[1.5px] border-[#1E3A6B] bg-card px-5 py-4 text-[14px] font-extrabold text-[#93A9C8]"
                     >
                       Để sau
                     </button>
@@ -331,7 +331,7 @@ export function HelpRequestView({
                 </div>
 
                 <div className="min-w-0 flex-[1_1_300px] flex flex-col gap-4">
-                  <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+                  <div className="rounded-[20px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
                     <div className="flex items-center gap-3">
                       <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-gradient-to-br from-navy to-[#1E5FB8] text-[16px] font-black text-white">
                         {teacherInitial}
@@ -349,14 +349,14 @@ export function HelpRequestView({
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 rounded-[20px] border-[1.5px] border-[#CFE4FB] bg-[#F0F7FF] p-5">
+                  <div className="flex flex-col gap-3 rounded-[20px] border-[1.5px] border-[#1E4E8C] bg-[#0C1F3C] p-5">
                     <div className="flex items-center gap-2">
                       <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">lock</span>
-                      <span className="text-[14px] font-black text-[#1D4E8F]">Ai đọc được lời con?</span>
+                      <span className="text-[14px] font-black text-[#35E0FF]">Ai đọc được lời con?</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <span aria-hidden="true" className="msr flex-none text-[17px] text-[#00A05F]">check_circle</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+                      <span aria-hidden="true" className="msr flex-none text-[17px] text-[#4EE39B]">check_circle</span>
+                      <span className="text-[12.5px] leading-relaxed text-[#35E0FF]">
                         {teacherFirstWord} — chủ nhiệm của con
                       </span>
                     </div>
@@ -372,8 +372,8 @@ export function HelpRequestView({
                         môn" — biện minh cho quyền đọc. Danh sách này trả lời đúng một câu
                         hỏi ("ai đọc được?"), nên mỗi dòng chỉ cần một cái tên. */}
                     <div className="flex items-start gap-2">
-                      <span aria-hidden="true" className="msr flex-none text-[17px] text-[#00A05F]">check_circle</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">
+                      <span aria-hidden="true" className="msr flex-none text-[17px] text-[#4EE39B]">check_circle</span>
+                      <span className="text-[12.5px] leading-relaxed text-[#35E0FF]">
                         Thầy cô tâm lý của trường — đọc cùng {teacherFirstWord}
                       </span>
                     </div>
@@ -385,14 +385,14 @@ export function HelpRequestView({
                         "Không nhìn thấy" giữ nguyên vai trò tín hiệu kép của §11 — màu một
                         mình không bao giờ đủ. */}
                     <div className="flex items-start gap-2">
-                      <span aria-hidden="true" className="msr flex-none text-[17px] text-[#D2383E]">cancel</span>
+                      <span aria-hidden="true" className="msr flex-none text-[17px] text-[#FF8A8F]">cancel</span>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[12.5px] font-black text-[#1D4E8F]">Không nhìn thấy</div>
+                        <div className="text-[12.5px] font-black text-[#35E0FF]">Không nhìn thấy</div>
                         <div className="mt-1 flex flex-wrap gap-1.5">
                           {["Bạn cùng lớp", "Thầy cô dạy môn", "Thầy cô lớp khác", "Bố mẹ"].map((ai) => (
                             <span
                               key={ai}
-                              className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#1D4E8F]"
+                              className="rounded-full bg-card px-2.5 py-1 text-[11px] font-bold text-[#35E0FF]"
                             >
                               {ai}
                             </span>
@@ -406,15 +406,15 @@ export function HelpRequestView({
                         thao tác không tồn tại là hứa suông đúng chỗ em đang cân nhắc có nên kể
                         hay không. Thay bằng một câu vừa thật vừa dùng được: ô lời nhắn không bắt
                         buộc, bỏ trống vẫn gửi được. */}
-                    {/* Chữ đổi #4E7BB0 → #1D4E8F (token link): trên nền thẻ #F0F7FF, #4E7BB0
+                    {/* Chữ đổi #4E7BB0 → #35E0FF (token link): trên nền thẻ #0C1F3C, #4E7BB0
                         chỉ 4,07:1, dưới mốc 4,5:1 — và đây là câu duy nhất nói cho em biết
                         ô lời nhắn KHÔNG bắt buộc, tức câu quyết định em bấm gửi hay bỏ dở.
-                        #1D4E8F = 7,66:1, cũng là màu ba dòng ngay trên đã dùng. (05/08/2026) */}
+                        #35E0FF = 7,66:1, cũng là màu ba dòng ngay trên đã dùng. (05/08/2026) */}
                     {/* RÚT NGẮN 06/08/2026 (§1.5). Ba mệnh đề cũ nói cùng MỘT điều theo ba
                         cách ("viết bao nhiêu cũng được" · "không viết gì cũng gửi được" ·
                         "thầy cô vẫn biết là con muốn gặp"). Giữ cách nói thẳng nhất, vì đây
                         vẫn là câu quyết định em bấm gửi hay bỏ dở. */}
-                    <div className="border-t border-[#CFE4FB] pt-2.5 text-[11.5px] text-link">
+                    <div className="border-t border-[#1E4E8C] pt-2.5 text-[11.5px] text-link">
                       Không viết gì cũng gửi được.
                     </div>
                   </div>
@@ -464,10 +464,10 @@ function SentSuccessPanel({ teacherName, onGoHome }: { teacherName: string; onGo
     <div
       role="status"
       aria-live="polite"
-      className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] bg-white p-6 text-center shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-10"
+      className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] bg-card p-6 text-center shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-10"
     >
       <Mascot pose="celebrate" width={72} />
-      <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-navy">
+      <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-cardtitle">
         Đã gửi cho {teacherName} rồi!
       </h2>
       {/* RÚT NGẮN 06/08/2026 (§1.5): bỏ "Đây là một bước dũng cảm." Lời ghi nhận đó nay do
@@ -514,10 +514,10 @@ function NotDeliveredPanel({ teacherName, onGoHome }: { teacherName: string; onG
     <div
       role="status"
       aria-live="polite"
-      className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] border-[1.5px] border-[#FFE29A] bg-[#FFF7E0] p-6 text-center md:p-10"
+      className="mx-auto flex max-w-[520px] flex-col items-center gap-4 rounded-[22px] border-[1.5px] border-[#4A3A0C] bg-[#2A2208] p-6 text-center md:p-10"
     >
       <Mascot pose="think" width={72} />
-      <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-navy">
+      <h2 ref={headingRef} tabIndex={-1} className="text-[18px] font-black text-cardtitle">
         Lời này chưa vào sổ của {teacherName}
       </h2>
       {/* RÚT NGẮN 06/08/2026 (§1.5), KHÔNG BỎ — khối này báo "lời chưa vào sổ", tức là lúc
@@ -528,16 +528,16 @@ function NotDeliveredPanel({ teacherName, onGoHome }: { teacherName: string; onG
           Cắt: "nên lời vừa rồi chưa được ghi thêm" (tiêu đề đã nói) và "Ngày mai con gửi ở
           đây được như bình thường" (suy ra được từ "mỗi ngày một lời", và không phải việc
           em làm hôm nay). Luật "mỗi ngày một lời" thành chip vì nó là luật, không phải câu. */}
-      <p className="text-[13.5px] leading-relaxed text-[#8A5A00]">
+      <p className="text-[13.5px] leading-relaxed text-[#FFD98A]">
         Hôm nay con đã gửi một lần, và {teacherName} đã gặp con về lời đó.
       </p>
-      <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11.5px] font-black text-[#8A5A00]">
+      <span className="flex items-center gap-1 rounded-full bg-card px-3 py-1 text-[11.5px] font-black text-[#FFD98A]">
         {/* `info` chứ không phải `looks_one`: font đã cắt gọn theo public/fonts/icon-names.txt
             — tên ngoài danh sách đó hiện ra ô trống, không báo lỗi, không ai biết. */}
         <span aria-hidden="true" className="msr text-[14px]">info</span>
         Mỗi ngày một lời
       </span>
-      <p className="text-[12.5px] leading-relaxed text-[#8A5A00]">
+      <p className="text-[12.5px] leading-relaxed text-[#FFD98A]">
         Còn chuyện <b>hôm nay</b>: con tìm {teacherName} nói trực tiếp nhé.
       </p>
       <button
@@ -619,9 +619,9 @@ function SentStatusStrip({
       <div
         role="status"
         aria-live="polite"
-        className="mb-4 flex items-center gap-2 rounded-[18px] bg-white px-4 py-3 text-[12.5px] font-semibold text-caption shadow-[0_3px_14px_rgba(10,42,94,.06)]"
+        className="mb-4 flex items-center gap-2 rounded-[18px] bg-card px-4 py-3 text-[12.5px] font-semibold text-caption shadow-[0_3px_14px_rgba(10,42,94,.06)]"
       >
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#E4E9F0] border-t-navy" aria-hidden />
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#1E3A6B] border-t-navy" aria-hidden />
         Đang xem lại những lần con đã gửi…
       </div>
     );
@@ -633,19 +633,19 @@ function SentStatusStrip({
     return (
       <div
         role="alert"
-        className="mb-4 flex flex-wrap items-center gap-2 rounded-[18px] bg-white px-4 py-3 shadow-[0_3px_14px_rgba(10,42,94,.06)]"
+        className="mb-4 flex flex-wrap items-center gap-2 rounded-[18px] bg-card px-4 py-3 shadow-[0_3px_14px_rgba(10,42,94,.06)]"
       >
         {/* #E8940D trên nền trắng = 2,42:1, dưới mốc 3:1 của WCAG 1.4.11 — và đây là icon
             duy nhất của một dải role="alert" nói "chưa xem được những lần con đã gửi".
-            #8A5A00 (gold-textDark) = 5,93:1 trên trắng, cùng màu đã dùng cho ba chỗ khác trong
+            #FFD98A (gold-textDark) = 5,93:1 trên trắng, cùng màu đã dùng cho ba chỗ khác trong
             đợt này. (05/08/2026) */}
         <span className="msr text-[18px] text-gold-textDark" aria-hidden>
           cloud_off
         </span>
-        <span className="text-[12.5px] font-semibold text-[#5B6B80]">
+        <span className="text-[12.5px] font-semibold text-[#93A9C8]">
           Chưa xem được những lần con đã gửi trước đó.
         </span>
-        <button type="button" onClick={onRetry} className="text-[12.5px] font-black text-[#1D4E8F] underline underline-offset-2">
+        <button type="button" onClick={onRetry} className="text-[12.5px] font-black text-[#35E0FF] underline underline-offset-2">
           Thử lại
         </button>
       </div>
@@ -666,28 +666,28 @@ function SentStatusStrip({
     // cạnh — tức thứ mang nghĩa đã đủ, dải màu chỉ là lớp thứ ba nói lại cùng một điều bằng
     // thứ ngôn ngữ mà người mù màu không đọc được. Nền nhạt giữ được cảm giác "hai trạng
     // thái khác nhau" cho mắt mà không giả vờ là tín hiệu.
-    // Chữ trên hai nền này vẫn đo đủ: #8A5A00 trên #FFF7E0 = 5,54:1, #00693F trên #E3F8ED
+    // Chữ trên hai nền này vẫn đo đủ: #FFD98A trên #2A2208 = 5,54:1, #4EE39B trên #0C2E22
     // = 6,12:1 — cả hai vượt 4,5:1.
     <div
       className={`mb-4 flex flex-col gap-1.5 rounded-[18px] border p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] ${
-        waiting ? "border-[#FFE29A] bg-[#FFF7E0]" : "border-[#B7E6CE] bg-[#E3F8ED]"
+        waiting ? "border-[#4A3A0C] bg-[#2A2208]" : "border-[#B7E6CE] bg-[#0C2E22]"
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className={`msr text-[20px] ${waiting ? "text-[#8A5A00]" : "text-[#00693F]"}`}
+          className={`msr text-[20px] ${waiting ? "text-[#FFD98A]" : "text-[#4EE39B]"}`}
           aria-hidden
         >
           {waiting ? "hourglass_top" : "check_circle"}
         </span>
-        <span className="text-[13.5px] font-black text-navy">
+        <span className="text-[13.5px] font-black text-cardtitle">
           {waiting
             ? `Lời con đã tới chỗ ${teacherName}`
             : `${teacherName} đã nhận lời của con`}
         </span>
       </div>
 
-      <div className="text-[12px] font-semibold text-[#5B6B80]">
+      <div className="text-[12px] font-semibold text-[#93A9C8]">
         Con gửi {dayWord(latest.requestedOn)} lúc {latest.requestedAtTime}
         {latest.acknowledged && latest.acknowledgedOn
           ? ` · nhận ${dayWord(latest.acknowledgedOn)}${latest.acknowledgedAtTime ? ` lúc ${latest.acknowledgedAtTime}` : ""}`

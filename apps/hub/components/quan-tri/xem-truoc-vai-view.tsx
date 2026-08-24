@@ -85,7 +85,7 @@ export function XemTruocVaiView({
         <button
           type="button"
           onClick={() => setHep((v) => !v)}
-          className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-white px-4 text-[12.5px] font-extrabold text-cardtitle2"
+          className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-card px-4 text-[12.5px] font-extrabold text-cardtitle2"
         >
           <span className="msr text-[18px]" aria-hidden>
             {/* `space_dashboard` / `view_list` — font đã cắt gọn không có `view_column`
@@ -179,7 +179,7 @@ function CotVai({
             khung màn. Người đọc bằng tai nhảy giữa các vai bằng phím tiêu đề; một cột
             không có tiêu đề thì không nhảy tới được, và cả trang đọc thành một dòng
             danh sách dài không có mốc nào. Giữ nguyên class, chỉ đổi thẻ. */}
-        <h2 className="text-[15px] font-black text-navy">{ten}</h2>
+        <h2 className="text-[15px] font-black text-cardtitle">{ten}</h2>
         <div className="mt-0.5 text-[11.5px] text-caption">{phu}</div>
       </div>
 
@@ -196,7 +196,7 @@ function CotVai({
           ...appNgoai.map((a) => (
             <li
               key={a.appId}
-              className="flex items-center gap-2 rounded-lg bg-[#F1F4F8] px-2.5 py-1.5 text-[12px]"
+              className="flex items-center gap-2 rounded-lg bg-[#12244A] px-2.5 py-1.5 text-[12px]"
             >
               <span className="msr text-[16px] text-caption" aria-hidden>
                 auto_awesome
@@ -204,7 +204,7 @@ function CotVai({
               <span className="min-w-0 flex-1 truncate font-bold text-ink">{a.displayName}</span>
               {/* Nói rõ ô này đến từ SỔ ĐĂNG KÝ chứ không từ bản khai — hai nguồn, hai
                   cách sửa: một cái sửa bằng mã, một cái sửa bằng nút trên màn quản trị. */}
-              <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[9.5px] font-black text-muted">
+              <span className="flex-none rounded-full bg-card px-2 py-0.5 text-[9.5px] font-black text-muted">
                 app ngoài
               </span>
             </li>
@@ -286,12 +286,12 @@ function Muc({ m }: { m: MucDieuHuong }) {
     // MỜ Ở ICON, KHÔNG MỜ Ở CHỮ — cùng luật và cùng phép đo với hub-sidebar.tsx.
     // `opacity-60` cũ kéo `text-caption` xuống 2,40:1 và badge xuống 2,32:1 trên nền
     // #FAFBFD. Nay nền nhạt + badge chữ đã đủ tách mục mờ khỏi mục thật, nên chữ được trả
-    // về đúng ngưỡng: caption #5F6B7D = 5,32:1 trên #FAFBFD.
+    // về đúng ngưỡng: caption #93A9C8 = 5,32:1 trên #FAFBFD.
     <li
       className={
         m.sapCo
           ? "flex items-center gap-2 rounded-lg bg-[#FAFBFD] px-2.5 py-1.5 text-[12px]"
-          : "flex items-center gap-2 rounded-lg bg-[#F1F4F8] px-2.5 py-1.5 text-[12px]"
+          : "flex items-center gap-2 rounded-lg bg-[#12244A] px-2.5 py-1.5 text-[12px]"
       }
     >
       <span className={`msr text-[16px] text-caption ${m.sapCo ? "opacity-60" : ""}`} aria-hidden>
@@ -299,7 +299,7 @@ function Muc({ m }: { m: MucDieuHuong }) {
       </span>
       <span className="min-w-0 flex-1 truncate font-bold text-ink">{m.nhan}</span>
       {m.sapCo ? (
-        <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[9.5px] font-black text-muted">
+        <span className="flex-none rounded-full bg-card px-2 py-0.5 text-[9.5px] font-black text-muted">
           {m.sapCo}
         </span>
       ) : (

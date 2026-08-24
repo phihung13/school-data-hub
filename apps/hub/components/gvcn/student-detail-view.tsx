@@ -56,7 +56,7 @@ import { Card, GvcnShell } from "./gvcn-shell";
  * đọc-ngược đã đo được: `tone` chỉ đến từ mood, còn `statusIcon` chỉ có giá trị cho
  * 'absent' và 'late' — nên ô ngày mang `status='present'` do CÔ ghi hộ (mà dòng cô ghi
  * hộ luôn có mood = null, vì markAttendance cố ý không đặt hộ tâm trạng cho em) rơi
- * đúng vào nhánh "border-dashed bg-white", TRÙNG KHÍT với ô không có dữ liệu — và chú
+ * đúng vào nhánh "border-dashed bg-card", TRÙNG KHÍT với ô không có dữ liệu — và chú
  * giải ngay dưới lưới gọi hình dạng đó là "Chưa có dữ liệu". Cô ghi em có mặt, lịch vẽ
  * là chưa ai ghi gì.
  *
@@ -68,18 +68,18 @@ import { Card, GvcnShell } from "./gvcn-shell";
  *
  * `late` và `queued_late` dùng chung cặp màu, nên khác nhau bằng ICON + CHỮ (§11).
  * Tương phản chữ/nền, đo theo công thức WCAG trên chính các cặp dưới đây:
- *     present     #00693F / #E3F8ED = 6,12:1
- *     late        #6B4A00 / #FFF1C9 = 7,17:1
- *     queued_late #6B4A00 / #FFF1C9 = 7,17:1
- *     absent      #C0272D / #FFF0F0 = 5,32:1
- *     excused     #1D4E8F / #E2F0FC = 7,13:1
+ *     present     #4EE39B / #0C2E22 = 6,12:1
+ *     late        #6B4A00 / #3A2E08 = 7,17:1
+ *     queued_late #6B4A00 / #3A2E08 = 7,17:1
+ *     absent      #FF8A8F / #3D141A = 5,32:1
+ *     excused     #35E0FF / #0E2647 = 7,13:1
  */
 export const STATUS_CELL: Record<AttendanceStatus, { bg: string; fg: string; icon: string }> = {
-  present: { bg: "#E3F8ED", fg: "#00693F", icon: ATTENDANCE_STATUS_ICON.present },
-  late: { bg: "#FFF1C9", fg: "#6B4A00", icon: ATTENDANCE_STATUS_ICON.late },
-  queued_late: { bg: "#FFF1C9", fg: "#6B4A00", icon: ATTENDANCE_STATUS_ICON.queued_late },
-  absent: { bg: "#FFF0F0", fg: "#C0272D", icon: ATTENDANCE_STATUS_ICON.absent },
-  excused: { bg: "#E2F0FC", fg: "#1D4E8F", icon: ATTENDANCE_STATUS_ICON.excused },
+  present: { bg: "#0C2E22", fg: "#4EE39B", icon: ATTENDANCE_STATUS_ICON.present },
+  late: { bg: "#3A2E08", fg: "#FFD98A", icon: ATTENDANCE_STATUS_ICON.late },
+  queued_late: { bg: "#3A2E08", fg: "#FFD98A", icon: ATTENDANCE_STATUS_ICON.queued_late },
+  absent: { bg: "#3D141A", fg: "#FF8A8F", icon: ATTENDANCE_STATUS_ICON.absent },
+  excused: { bg: "#0E2647", fg: "#35E0FF", icon: ATTENDANCE_STATUS_ICON.excused },
 };
 
 /** Thứ tự trong chú giải — đi từ "bình thường nhất" tới "cần chú ý nhất". */
@@ -190,7 +190,7 @@ export function StudentDetailView({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/gvcn/lop"
-            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#F5F8FC]"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#0E1E3C]"
           >
             <span className="msr text-[17px]" aria-hidden>
               arrow_back
@@ -207,7 +207,7 @@ export function StudentDetailView({
                 className={
                   days === choice
                     ? "min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                    : "min-h-[44px] rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#F5F8FC]"
+                    : "min-h-[44px] rounded-xl border border-line bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#0E1E3C]"
                 }
               >
                 {choice} ngày
@@ -270,7 +270,7 @@ function CheckinStrip({
   return (
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-black text-navy">Check-in {win.days} ngày gần đây</h2>
+        <h2 className="text-[15px] font-black text-cardtitle">Check-in {win.days} ngày gần đây</h2>
         <span className="text-[11.5px] font-semibold text-muted">
           {recorded}/{schoolDays} ngày học có dữ liệu
         </span>
@@ -311,7 +311,7 @@ function CheckinStrip({
           Đổi 01/08/2026 — chấm tròn thành CHÍNH icon mà ô ngày đang dùng. Chú giải bằng
           chấm màu chỉ giải thích được cho người đọc ra màu; với người mù màu nó vẽ lại
           đúng bài toán vừa đặt ra. Nay ô ngày và chú giải nói cùng một ngôn ngữ. */}
-      <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[#F1F4F8] pt-3">
+      <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[#12244A] pt-3">
         {LEGEND_ORDER.map((st) => (
           <span key={st} className="flex items-center gap-1 text-[11px] font-bold text-subtle">
             <span
@@ -330,7 +330,7 @@ function CheckinStrip({
         <span className="flex items-center gap-1 text-[11px] font-bold text-subtle">
           <span
             aria-hidden
-            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border border-dashed border-line2 bg-white text-subtle"
+            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border border-dashed border-line2 bg-card text-subtle"
           >
             <span className="msr text-[13px]">{ATTENDANCE_UNKNOWN_ICON}</span>
           </span>
@@ -342,7 +342,7 @@ function CheckinStrip({
             không vẽ một icon riêng: vẽ icon cho cuối tuần là quay lại đúng chuyện vừa
             sửa — bịa một tín hiệu cho một ngày không có tín hiệu nào. */}
         <span className="flex items-center gap-1 text-[11px] font-bold text-subtle">
-          <span aria-hidden className="h-[18px] w-[18px] flex-none rounded-md bg-[#F7F9FC]" />
+          <span aria-hidden className="h-[18px] w-[18px] flex-none rounded-md bg-[#050F26]" />
           Cuối tuần
         </span>
       </div>
@@ -389,7 +389,7 @@ export function dayCellLabel(iso: string, entry: StudentCheckinDay | null): stri
   // ghi LẪN thứ Bảy/Chủ nhật. Chú thích đầu file lại hứa ngược: "Cuối tuần được đánh dấu
   // riêng để không bị đọc nhầm thành 2 ngày mất tín hiệu mỗi tuần". Lời hứa đó chỉ tồn
   // tại cho MẮT, và tồn tại rất mờ: đo theo công thức WCAG, khác biệt duy nhất giữa hai
-  // loại ô là nền #F7F9FC so với #FFFFFF = 1,04:1, cộng một viền nét đứt #D8DFE9 = 1,34:1.
+  // loại ô là nền #050F26 so với #FFFFFF = 1,04:1, cộng một viền nét đứt #D8DFE9 = 1,34:1.
   // Cho tai thì không có gì cả — `title=` và `sr-only` đọc ra hai câu giống hệt nhau.
   // Nên trong 14 ngày, một cô dùng trình đọc màn hình nghe 4 lần "chưa có dữ liệu" mà 4
   // lần đó KHÔNG phải tín hiệu thiếu; còn màn hình thì in một icon "Chưa điểm danh" lên
@@ -461,12 +461,12 @@ function DayCell({
         entry
           ? ""
           : weekend
-            ? "bg-[#F7F9FC]"
-            : "border border-dashed border-[#D8DFE9] bg-white"
+            ? "bg-[#050F26]"
+            : "border border-dashed border-[#D8DFE9] bg-card"
       }`}
       style={tone ? { background: tone.bg, color: tone.fg } : undefined}
     >
-      {/* Ngày cuối tuần từng dùng #B4BECC trên #F7F9FC = 1,78:1 — không phải "mờ cho
+      {/* Ngày cuối tuần từng dùng #B4BECC trên #050F26 = 1,78:1 — không phải "mờ cho
           nhẹ", là không đọc được. Ngày thường chưa có dữ liệu từng dùng #8A94A6 = 3,06:1.
           Cả hai nay là `muted`; sự khác nhau giữa cuối tuần và ngày học đã do NỀN và
           viền nét đứt nói, không cần nói lại bằng cách làm chữ nhạt đi. */}
@@ -537,7 +537,7 @@ function SignalCard({
 
   return (
     <Card>
-      <h2 className="text-[15px] font-black text-navy">Tín hiệu cần để ý</h2>
+      <h2 className="text-[15px] font-black text-cardtitle">Tín hiệu cần để ý</h2>
 
       {/* Hai khối dưới đây bỏ `border-l-[5px]` (02/08/2026) — dải màu dày một cạnh làm
           điểm nhấn là mẫu bị cấm, và help-request-view.tsx đã sửa đúng kiểu này hôm
@@ -546,16 +546,16 @@ function SignalCard({
           ngay cạnh, nên dải màu là lớp thứ ba nói lại cùng một điều bằng thứ ngôn ngữ
           mà người mù màu không đọc được. Viền 1px cùng tông giữ được cảm giác "khối này
           khác khối kia" cho mắt mà không giả vờ là tín hiệu. Hai mã viền lấy từ bảng
-          đang dùng (#FFE29A 6 chỗ · #FFD5D6 5 chỗ), không chế màu mới. */}
+          đang dùng (#4A3A0C 6 chỗ · #FFD5D6 5 chỗ), không chế màu mới. */}
       {openCase ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-xl border border-[#FFE29A] bg-[#FFFBEE] px-3.5 py-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-xl border border-[#4A3A0C] bg-[#2A2208] px-3.5 py-3">
           <span className="msr text-[19px] text-[#E8940D]" aria-hidden>
             folder_open
           </span>
           <span className="text-[12.5px] font-black text-gold-textDark">
             Hồ sơ chăm sóc đang mở từ {formatDateTime(openCase.openedAt)}
           </span>
-          <span className="basis-full text-[11.5px] text-[#8A5A00]">
+          <span className="basis-full text-[11.5px] text-[#FFD98A]">
             Đóng hồ sơ ở buồng lái, tại thẻ cờ của em.
           </span>
         </div>
@@ -591,14 +591,14 @@ function SignalCard({
                   </span>
                 )}
                 {h.topic && (
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-cardtitle2">
+                  <span className="rounded-full bg-card px-2.5 py-1 text-[11px] font-bold text-cardtitle2">
                     {HELP_REQUEST_TOPIC_LABEL[h.topic as keyof typeof HELP_REQUEST_TOPIC_LABEL]}
                   </span>
                 )}
               </div>
 
               {h.note && (
-                <blockquote className="mt-2.5 rounded-xl bg-white p-3">
+                <blockquote className="mt-2.5 rounded-xl bg-card p-3">
                   <div className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wide text-muted">
                     <span className="msr text-[14px]" aria-hidden>
                       lock
@@ -641,7 +641,7 @@ function InterventionCard({
 }) {
   return (
     <Card>
-      <h2 className="text-[15px] font-black text-navy">Nhật ký can thiệp của em</h2>
+      <h2 className="text-[15px] font-black text-cardtitle">Nhật ký can thiệp của em</h2>
       {rows.length === 0 ? (
         <p className="mt-3 text-[12px] leading-relaxed text-muted">
           Chưa ai ghi hành động nào — ghi ở buồng lái.
@@ -676,8 +676,8 @@ function InterventionCard({
 // 4. Trạng thái duyệt Báo cáo Trưởng thành.
 // ---------------------------------------------------------------------------
 const APPROVAL_TONE: Record<string, { bg: string; fg: string; icon: string; label: string }> = {
-  approved: { bg: "bg-[#E3F8ED]", fg: "text-successText", icon: "task_alt", label: "Đã duyệt" },
-  rejected: { bg: "bg-[#FFF0F0]", fg: "text-[#C0272D]", icon: "undo", label: "Đã trả lại" },
+  approved: { bg: "bg-[#0C2E22]", fg: "text-successText", icon: "task_alt", label: "Đã duyệt" },
+  rejected: { bg: "bg-[#3D141A]", fg: "text-[#FF8A8F]", icon: "undo", label: "Đã trả lại" },
   pending: { bg: "bg-chip", fg: "text-subtle", icon: "hourglass_top", label: "Chưa quyết định" },
 };
 
@@ -689,7 +689,7 @@ function ApprovalCard({
   return (
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-black text-navy">Duyệt Báo cáo Trưởng thành</h2>
+        <h2 className="text-[15px] font-black text-cardtitle">Duyệt Báo cáo Trưởng thành</h2>
         <Link
           href="/gvcn/duyet-bao-cao"
           className="inline-flex min-h-[44px] items-center text-[11.5px] font-black text-link underline underline-offset-2"
@@ -709,7 +709,7 @@ function ApprovalCard({
           {rows.map((r) => {
             const tone = APPROVAL_TONE[r.status] ?? APPROVAL_TONE.pending!;
             return (
-              <li key={r.weekStart} className="flex flex-wrap items-center gap-2.5 border-b border-[#F1F4F8] pb-2 last:border-0 last:pb-0">
+              <li key={r.weekStart} className="flex flex-wrap items-center gap-2.5 border-b border-[#12244A] pb-2 last:border-0 last:pb-0">
                 <span className="text-[12.5px] font-extrabold tabular-nums text-ink">
                   Tuần {formatDate(r.weekStart)}
                 </span>

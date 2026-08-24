@@ -61,7 +61,7 @@ export function AttendanceView({
         <HubSidebar roles={roles} active="attendance" fullName={displayName} email={email} classCode={classCode} />
       </div>
       <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-        <div className="flex flex-none items-center gap-3 border-b border-[#E9ECF2] bg-white px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
+        <div className="flex flex-none items-center gap-3 border-b border-[#16294B] bg-card px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
           <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-[#2C7BF2] to-[#0A4FBF]">
             <span aria-hidden="true" className="msr text-[19px] text-white">fact_check</span>
           </span>
@@ -86,24 +86,24 @@ export function AttendanceView({
         {query.data && (
           <div className="flex-1 p-4 md:overflow-y-auto md:p-7">
             <div className="flex flex-wrap gap-3 md:gap-4">
-              {/* Icon lửa đổi #F58F00 → #8A5A00 (token gold-textDark): #F58F00 trên nền
-                  #FFF7E0 chỉ 2,23:1, dưới mốc 3:1 cho thành phần phi văn bản (WCAG 1.4.11).
+              {/* Icon lửa đổi #F58F00 → #FFD98A (token gold-textDark): #F58F00 trên nền
+                  #2A2208 chỉ 2,23:1, dưới mốc 3:1 cho thành phần phi văn bản (WCAG 1.4.11).
                   Đây đúng loại lỗi mà đợt 01/08 chỉ vá được một chỗ trong bảy. (05/08/2026) */}
-              <StatCard icon="local_fire_department" iconBg="bg-[#FFF7E0]" iconColor="text-gold-textDark" label="Chuỗi hiện tại" value={String(query.data.streakDays)} sub="ngày liên tiếp" />
+              <StatCard icon="local_fire_department" iconBg="bg-[#2A2208]" iconColor="text-gold-textDark" label="Chuỗi hiện tại" value={String(query.data.streakDays)} sub="ngày liên tiếp" />
               <StatCard icon="military_tech" iconBg="bg-[#F0E9FD]" iconColor="text-[#7434E8]" label="Kỷ lục" value={String(query.data.longestStreakDays)} sub="chuỗi dài nhất" />
-              <StatCard icon="event_available" iconBg="bg-[#E3F8ED]" iconColor="text-[#00A05F]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
+              <StatCard icon="event_available" iconBg="bg-[#0C2E22]" iconColor="text-[#4EE39B]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
               {/* Phụ đề cũ là "cô đã xác nhận" — nói ngược với chính con số: câu SQL đếm
                   `status in ('late','queued_late')`, mà `queued_late` đúng là những ngày
                   CHƯA ai xác nhận (care.acknowledgeLate đổi chúng thành 'present'). Một
                   con số mà dòng chữ dưới nó nói sai về chính nó thì tệ hơn không có số.
-                  Icon cũng đổi sang màu #8A5A00: #E8940D trên nền #FFF1C9 chỉ 2,15:1,
+                  Icon cũng đổi sang màu #FFD98A: #E8940D trên nền #3A2E08 chỉ 2,15:1,
                   dưới mốc 3:1 cho thành phần phi văn bản. (01/08/2026) */}
-              <StatCard icon="schedule" iconBg="bg-[#FFF1C9]" iconColor="text-[#8A5A00]" label="Gửi muộn" value={String(query.data.lateCount)} sub="gồm cả ngày đang chờ cô xác nhận" />
+              <StatCard icon="schedule" iconBg="bg-[#3A2E08]" iconColor="text-[#FFD98A]" label="Gửi muộn" value={String(query.data.lateCount)} sub="gồm cả ngày đang chờ cô xác nhận" />
             </div>
 
-            <div className="mt-[18px] rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+            <div className="mt-[18px] rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-[16px] font-black text-navy">Tuần này</h2>
+                <h2 className="text-[16px] font-black text-cardtitle">Tuần này</h2>
                 <span className="text-[11.5px] font-bold text-caption">giờ check-in mỗi ngày</span>
               </div>
               {/* 5 cột giữ nguyên cả ở 390px: ô co lại còn ~62px, vẫn đủ cho vòng tròn
@@ -122,7 +122,7 @@ export function AttendanceView({
                         được bỏ đi: bỏ rồi thì ngày hôm nay chỉ còn được đánh dấu bằng
                         màu viền — màu là tín hiệu duy nhất, DESIGN-GUIDELINES §11 cấm. */}
                     <span
-                      className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-navy" : "text-[#5B6B80]"}`}
+                      className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-cardtitle" : "text-[#93A9C8]"}`}
                     >
                       {day.dayLabel}
                       {day.isToday && (
@@ -138,14 +138,14 @@ export function AttendanceView({
                       // "vắng" bằng màu — xem ghi chú của `dayCaptionText`. Nay viền xám và
                       // có nhãn cho tai, vì thứ duy nhất máy biết là "chưa ai ghi gì".
                       <span
-                        className={`flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#B9C4D4]"}`}
+                        className={`flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed ${day.isFuture ? "border-[#27467E]" : "border-[#B9C4D4]"}`}
                       >
                         <span className="sr-only">
                           {day.isFuture ? "chưa tới ngày này" : "chưa có ai điểm danh ngày này"}
                         </span>
                       </span>
                     )}
-                    <span className={`text-center text-[11.5px] font-bold leading-tight ${day.isToday ? "text-navy" : "text-[#33507C]"}`}>
+                    <span className={`text-center text-[11.5px] font-bold leading-tight ${day.isToday ? "text-cardtitle" : "text-[#A9C4E8]"}`}>
                       {dayCaptionText(day)}
                     </span>
                     {/* Dòng chữ ngắn cho ĐÚNG những ngày không phải "có mặt". Ngày có mặt
@@ -158,13 +158,13 @@ export function AttendanceView({
             </div>
 
             <div className="mt-[18px] flex flex-wrap items-start gap-[18px]">
-              <div className="min-w-0 flex-[2_1_320px] rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:flex-[2_1_520px] md:p-6">
-                <h2 className="text-[16px] font-black text-navy">Lịch sử gần đây</h2>
+              <div className="min-w-0 flex-[2_1_320px] rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:flex-[2_1_520px] md:p-6">
+                <h2 className="text-[16px] font-black text-cardtitle">Lịch sử gần đây</h2>
                 <div className="mt-3.5 flex flex-col">
                   {query.data.history.map((h, i) => (
                     <div
                       key={h.occurred_on}
-                      className={`flex items-center gap-3.5 py-3.5 ${i < query.data!.history.length - 1 ? "border-b border-[#F1F4F8]" : ""}`}
+                      className={`flex items-center gap-3.5 py-3.5 ${i < query.data!.history.length - 1 ? "border-b border-[#12244A]" : ""}`}
                     >
                       {/* Chấm màu KHÔNG còn là tín hiệu duy nhất và cũng không còn nói sai:
                           trước đây mọi trạng thái không phải 'present' đều bị gọi chung là
@@ -176,7 +176,7 @@ export function AttendanceView({
                       <span
                         aria-hidden="true"
                         className="h-2.5 w-2.5 flex-none rounded-full"
-                        style={{ background: dayMarkStyle(h.status)?.iconColor ?? "#5B6B80" }}
+                        style={{ background: dayMarkStyle(h.status)?.iconColor ?? "#93A9C8" }}
                       />
                       <div className="flex-1">
                         <div className="text-[13.5px] font-extrabold text-ink">
@@ -190,7 +190,7 @@ export function AttendanceView({
                       <span
                         aria-hidden="true"
                         className="msr text-[19px]"
-                        style={{ color: dayMarkStyle(h.status)?.iconColor ?? "#5B6B80" }}
+                        style={{ color: dayMarkStyle(h.status)?.iconColor ?? "#93A9C8" }}
                       >
                         {dayMarkStyle(h.status)?.icon ?? "question_mark"}
                       </span>
@@ -223,7 +223,7 @@ export function AttendanceView({
 // Sửa 01/08/2026 (gói "tuong-phan-man-hoc-sinh") — HAI TRẠNG THÁI KHÁC NGHĨA VẼ GIỐNG
 // HỆT NHAU, và dấu tick gần như vô hình. Hai lỗi nằm chung một khối mã cũ:
 //
-//  1. `text-[#00A05F]` cho dấu tick nằm NGOÀI toán tử ba ngôi, nên cùng một màu icon dùng
+//  1. `text-[#4EE39B]` cho dấu tick nằm NGOÀI toán tử ba ngôi, nên cùng một màu icon dùng
 //     cho cả hai nhánh nền. Trên nền ngày có mặt (gradient #00D97A→#00A85E) nó chỉ đạt
 //     1,81:1 ở đầu sáng và 1,09:1 ở đầu đậm — chuẩn phi văn bản (WCAG 1.4.11) là 3:1.
 //     Nói cách khác: dấu tick, thứ duy nhất bên trong vòng tròn, gần như biến mất.
@@ -258,12 +258,12 @@ const DAY_MARK: Record<AttendanceStatus, DayMarkStyle> = {
     note: null,
   },
   // Cô đã ghi tay là đi muộn — đã xong việc, không còn chờ ai.
-  late: { icon: "schedule", background: "#FFF1C9", iconColor: "#8A5A00", note: "đi muộn" },
+  late: { icon: "schedule", background: "#3A2E08", iconColor: "#FFD98A", note: "đi muộn" },
   // Máy nhận lúc sau 8:00 và ĐANG chờ cô xác nhận (care.acknowledgeLate đổi nó thành
   // 'present'). Đây chính là trạng thái trước đây bị vẽ thành xanh lá.
-  queued_late: { icon: "hourglass_top", background: "#FFF1C9", iconColor: "#8A5A00", note: "chờ xác nhận" },
+  queued_late: { icon: "hourglass_top", background: "#3A2E08", iconColor: "#FFD98A", note: "chờ xác nhận" },
   absent: { icon: "close", background: "#FFECEC", iconColor: "#A32127", note: "vắng" },
-  excused: { icon: "event_busy", background: "#EAEFF6", iconColor: "#33507C", note: "có phép" },
+  excused: { icon: "event_busy", background: "#081730", iconColor: "#A9C4E8", note: "có phép" },
 };
 
 /** Trạng thái lạ (schema đi trước giao diện) KHÔNG được vẽ thành dấu tick xanh. */
@@ -276,8 +276,8 @@ function dayMarkStyle(status: string): DayMarkStyle | null {
  * liệu; có chữ cho mọi trạng thái còn lại — kể cả trạng thái lạ, vì "chưa rõ" vẫn là một
  * câu thật, còn vẽ nó thành dấu tick xanh thì không.
  * Màu lấy đúng màu icon của trạng thái nên hai tín hiệu không bao giờ nói khác nhau; mọi
- * cặp đều đo trên nền ô (trắng, và #F7FAFF của ngày hôm nay): #8A5A00 = 5,93:1 · #A32127
- * = 7,49:1 · #33507C = 8,14:1 · #5B6B80 = 5,44:1.
+ * cặp đều đo trên nền ô (trắng, và #F7FAFF của ngày hôm nay): #FFD98A = 5,93:1 · #A32127
+ * = 7,49:1 · #A9C4E8 = 8,14:1 · #93A9C8 = 5,44:1.
  */
 export function dayNoteText(status: string | null): string | null {
   if (!status) return null;
@@ -338,7 +338,7 @@ export function DayNote({ status }: { status: string | null }) {
   return (
     <span
       className="text-center text-[10px] font-bold leading-tight"
-      style={{ color: style?.iconColor ?? "#5B6B80" }}
+      style={{ color: style?.iconColor ?? "#93A9C8" }}
     >
       {note}
     </span>
@@ -359,12 +359,12 @@ function TodayBadge({ status }: { status: string | null }) {
   return (
     <span
       className="flex flex-none items-center gap-1.5 rounded-full px-[13px] py-[7px]"
-      style={{ background: present ? "#E3F8ED" : (style?.background ?? "#EAEFF6") }}
+      style={{ background: present ? "#0C2E22" : (style?.background ?? "#081730") }}
     >
-      <span aria-hidden="true" className="msr text-[15px]" style={{ color: present ? "#00693F" : (style?.iconColor ?? "#33507C") }}>
+      <span aria-hidden="true" className="msr text-[15px]" style={{ color: present ? "#4EE39B" : (style?.iconColor ?? "#A9C4E8") }}>
         {present ? "check_circle" : (style?.icon ?? "question_mark")}
       </span>
-      <span className="text-[11.5px] font-extrabold" style={{ color: present ? "#00693F" : (style?.iconColor ?? "#33507C") }}>
+      <span className="text-[11.5px] font-extrabold" style={{ color: present ? "#4EE39B" : (style?.iconColor ?? "#A9C4E8") }}>
         {present ? (
           <>
             <span className="md:hidden">Đã điểm danh</span>
@@ -390,8 +390,8 @@ function DayMark({ status }: { status: string }) {
 
   if (!style) {
     return (
-      <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed border-[#C9D2DE]">
-        <span aria-hidden="true" className="msr text-[20px] text-[#5B6B80]">question_mark</span>
+      <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed border-[#27467E]">
+        <span aria-hidden="true" className="msr text-[20px] text-[#93A9C8]">question_mark</span>
         <span className="sr-only">{label}</span>
       </span>
     );
@@ -416,14 +416,14 @@ function StatCard({ icon, iconBg, iconColor, label, value, sub }: { icon: string
   return (
     // basis nhỏ hơn ở điện thoại để 4 thẻ xếp 2×2 thay vì 4 hàng cao (390px chỉ chứa
     // được một thẻ basis-200 mỗi hàng — phải cuộn hết màn hình mới thấy lịch tuần).
-    <div className="flex-1 basis-[140px] rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:basis-[200px] md:p-[22px]">
+    <div className="flex-1 basis-[140px] rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:basis-[200px] md:p-[22px]">
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[12px] font-extrabold text-[#5B6B80]">{label}</span>
+        <span className="text-[12px] font-extrabold text-[#93A9C8]">{label}</span>
         <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${iconBg}`}>
           <span aria-hidden="true" className={`msr text-[19px] ${iconColor}`}>{icon}</span>
         </span>
       </div>
-      <div className="mt-2 text-[28px] font-black text-navy md:text-[34px]">{value}</div>
+      <div className="mt-2 text-[28px] font-black text-cardtitle md:text-[34px]">{value}</div>
       <div className="mt-2.5 text-[11px] font-semibold text-caption">{sub}</div>
     </div>
   );
@@ -433,7 +433,7 @@ function RuleRow({ n, bg, color, children }: { n: number; bg: string; color: str
   return (
     <div className="mt-3 flex items-start gap-2.5">
       <span className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-black ${bg} ${color}`}>{n}</span>
-      <span className="text-[12.5px] leading-relaxed text-[#1D4E8F]">{children}</span>
+      <span className="text-[12.5px] leading-relaxed text-[#35E0FF]">{children}</span>
     </div>
   );
 }

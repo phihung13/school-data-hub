@@ -269,7 +269,7 @@ export function ErrorState({
         )}
         <a
           href="/home"
-          className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-line bg-white px-5 py-3 text-[12.5px] font-extrabold text-subtle"
+          className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-line bg-card px-5 py-3 text-[12.5px] font-extrabold text-subtle"
         >
           Về trang chủ
         </a>

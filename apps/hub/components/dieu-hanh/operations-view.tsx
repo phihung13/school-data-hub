@@ -79,7 +79,7 @@ function Num({ value, tone = "ink" }: { value: number | null; tone?: "ink" | "mu
       : tone === "warn"
         ? "text-gold-textDark"
         : tone === "danger"
-          ? "text-[#C0272D]"
+          ? "text-[#FF8A8F]"
           : "text-ink";
   return <span className={`text-[13px] font-black tabular-nums ${cls}`}>{value}</span>;
 }
@@ -197,8 +197,8 @@ export function OperationsView({
 
   const toolbar = (
     // min-h-[44px] (§11): ô chọn ngày trên điện thoại đo được ~34px trước 01/08/2026.
-    <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
-      <span className="msr text-[18px] text-navy" aria-hidden>
+    <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-card px-3 py-2">
+      <span className="msr text-[18px] text-cardtitle" aria-hidden>
         event
       </span>
       <span className="text-[11.5px] font-black text-muted">Ngày</span>
@@ -233,8 +233,8 @@ export function OperationsView({
       toolbar={toolbar}
     >
       {/* Lời hứa §9, in trước cả số liệu. */}
-      <div className="flex items-start gap-2.5 rounded-2xl border border-line bg-white px-4 py-3">
-        <span className="msr mt-0.5 text-[18px] text-navy" aria-hidden>
+      <div className="flex items-start gap-2.5 rounded-2xl border border-line bg-card px-4 py-3">
+        <span className="msr mt-0.5 text-[18px] text-cardtitle" aria-hidden>
           lock
         </span>
         {/* CẮT câu thứ hai (06/08/2026): "Nhóm dưới N em không hiện số, vì ở quy mô đó
@@ -275,7 +275,7 @@ export function OperationsView({
                 {data.grades.map((g) => (
                   <Card key={`${g.grade}`} className="flex flex-col gap-3">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-[15px] font-black text-navy">Khối {g.grade}</span>
+                      <span className="text-[15px] font-black text-cardtitle">Khối {g.grade}</span>
                       <span className="text-[11.5px] font-bold text-muted">
                         {g.classCount} lớp · {g.rosterCount} em
                       </span>
@@ -291,7 +291,7 @@ export function OperationsView({
                               24px, và con số này là chỗ duy nhất trong app vượt trần. Một
                               cỡ ngoài thang không làm thẻ nổi hơn — nó làm thang chữ thôi
                               là thang. */}
-                          <span className="text-[24px] font-black leading-none text-navy tabular-nums">
+                          <span className="text-[24px] font-black leading-none text-cardtitle tabular-nums">
                             {rate.text}
                           </span>
                           <span className="pb-1 text-[11.5px] font-bold text-muted">đã check-in</span>
@@ -415,7 +415,7 @@ export function OperationsView({
                   </thead>
                   <tbody>
                     {data.classes.map((c) => (
-                      <tr key={c.classId} className="border-b border-[#F1F4F8] last:border-0">
+                      <tr key={c.classId} className="border-b border-[#12244A] last:border-0">
                         <td className="px-3 py-3">
                           <div className="text-[13px] font-extrabold text-ink">{c.classCode}</div>
                           <div className="text-[10.5px] font-semibold text-muted">Khối {c.grade}</div>

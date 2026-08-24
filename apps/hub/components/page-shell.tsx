@@ -51,7 +51,7 @@ export function PageShell({
   bg?: string;
 }) {
   return (
-    <div className="flex min-h-screen w-full justify-center bg-[#EAEFF6] md:items-center md:py-10">
+    <div className="flex min-h-screen w-full justify-center bg-[#081730] md:items-center md:py-10">
       <main
         id={MAIN_CONTENT_ID}
         // tabIndex={-1}: bấm đường tắt phải ĐẶT ĐƯỢC focus vào đây, không chỉ cuộn tới.

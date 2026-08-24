@@ -102,7 +102,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
       ) : (
         <>
           <div>
-            <h1 className="text-[22px] font-black text-navy md:text-[24px]">{data!.student.fullName}</h1>
+            <h1 className="text-[22px] font-black text-cardtitle md:text-[24px]">{data!.student.fullName}</h1>
             <p className="mt-1 text-[12.5px] font-semibold text-subtle">
               {[data!.student.studentCode, classLabel(data!.student.className), data!.student.schoolName]
                 .filter((p) => p !== "")
@@ -124,7 +124,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-[15px] font-black text-navy">Hồ sơ chăm sóc</h2>
+                <h2 className="text-[15px] font-black text-cardtitle">Hồ sơ chăm sóc</h2>
                 <div className="mt-1 text-[12.5px] font-semibold text-[#4A5460]">
                   {openCase
                     ? `Đang mở từ ${formatDateTime(openCase.openedAt)}`
@@ -152,7 +152,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
             {/* ── Cột trái: những gì ĐÃ XẢY RA ────────────────────────── */}
             <div className="flex min-w-0 flex-1 basis-[460px] flex-col gap-4">
               <Card>
-                <h2 className="text-[15px] font-black text-navy">Tín hiệu "cần gặp thầy cô"</h2>
+                <h2 className="text-[15px] font-black text-cardtitle">Tín hiệu "cần gặp thầy cô"</h2>
                 {/* CẮT vế "Nội dung em viết chỉ GVCN của em đọc được" (06/08/2026): đó
                     đúng là điều `<ScopeNotice />` cách trên vài chục pixel vừa nói, và
                     ScopeNotice là chỗ luật cắt chỉ định giữ nhãn đó. Hai bản của cùng một
@@ -190,7 +190,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
               </Card>
 
               <Card>
-                <h2 className="text-[15px] font-black text-navy">Nhật ký can thiệp</h2>
+                <h2 className="text-[15px] font-black text-cardtitle">Nhật ký can thiệp</h2>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted">
                   Của cả GVCN lẫn tâm lý cụm
                 </p>
@@ -238,7 +238,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                   <span className="msr text-[17px] text-domain-counselor" aria-hidden>
                     visibility_off
                   </span>
-                  <h2 className="text-[15px] font-black text-navy">Ghi chú tư vấn</h2>
+                  <h2 className="text-[15px] font-black text-cardtitle">Ghi chú tư vấn</h2>
                 </div>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted">
                   Chỉ người viết và tâm lý cụm đọc được
@@ -266,7 +266,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                 {!data!.notesWritable && (
                   // Nói THẲNG là chưa ghi được, thay vì hiện một ô soạn thảo rồi bắn lỗi
                   // quyền vào mặt người dùng lúc bấm Lưu.
-                  <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-[#FFF7E0] px-3 py-2 text-[11.5px] font-semibold leading-relaxed text-[#8A5A00]">
+                  <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-[#2A2208] px-3 py-2 text-[11.5px] font-semibold leading-relaxed text-[#FFD98A]">
                     <span className="msr mt-[1px] flex-none text-[15px]" aria-hidden>
                       info
                     </span>
@@ -283,7 +283,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
             <div className="flex min-w-0 flex-1 basis-[380px] flex-col gap-4">
               {pendingSignals.length > 0 && (
                 <Card>
-                  <h2 className="text-[15px] font-black text-navy">Cờ khẩn đang chờ</h2>
+                  <h2 className="text-[15px] font-black text-cardtitle">Cờ khẩn đang chờ</h2>
                   {/* CẮT vế "Tín hiệu tắt khỏi hộp việc của cả GVCN lẫn tâm lý cụm" —
                       mô tả cơ chế. Điều cô cần biết trước khi bấm là ĐIỀU KIỆN bấm. */}
                   <p className="mt-1 text-[11px] leading-relaxed text-muted">
@@ -315,7 +315,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                 {/* GỠ 06/08/2026 câu "Có dòng ở đây thì hồ sơ không còn là "đo rồi để
                     đó", và đồng hồ nhắc được đặt lại." — cơ chế đồng hồ leo thang, cùng
                     lý do đã ghi ở `gvcn/intervention-notes-view.tsx`. Luật không đổi. */}
-                <h2 className="text-[15px] font-black text-navy">Ghi một việc vừa làm</h2>
+                <h2 className="text-[15px] font-black text-cardtitle">Ghi một việc vừa làm</h2>
 
                 <div className="mt-3">
                   <span className="text-[11.5px] font-extrabold text-cardtitle2">Việc đã làm</span>
@@ -329,7 +329,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                         className={
                           action === a
                             ? "min-h-[44px] rounded-full bg-domain-counselor px-4 py-1.5 text-[11.5px] font-black text-white"
-                            : "min-h-[44px] rounded-full border border-line bg-white px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-[#F5F8FC]"
+                            : "min-h-[44px] rounded-full border border-line bg-card px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-[#0E1E3C]"
                         }
                       >
                         {a}
@@ -398,7 +398,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
 
               {openCase && (
                 <Card>
-                  <h2 className="text-[15px] font-black text-navy">Đóng hồ sơ</h2>
+                  <h2 className="text-[15px] font-black text-cardtitle">Đóng hồ sơ</h2>
                   {/* CẮT vế "nên lý do phải ghi lại để lần sau đọc còn hiểu vì sao" —
                       biện minh cho một ô mà nút bên dưới đã khoá cho tới khi có chữ.
                       GIỮ HẬU QUẢ: đóng hồ sơ là em rời hộp việc của cụm. Đó không phải
@@ -422,7 +422,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                       onClick={() =>
                         closeCase.mutate({ caseId: openCase.caseId, resolution: resolution.trim() })
                       }
-                      className="min-h-[44px] rounded-xl border-[1.6px] border-line bg-white px-5 py-3 text-[12.5px] font-black text-cardtitle2 disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+                      className="min-h-[44px] rounded-xl border-[1.6px] border-line bg-card px-5 py-3 text-[12.5px] font-black text-cardtitle2 disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
                     >
                       {closeCase.isPending ? "Đang đóng…" : "Đóng hồ sơ này"}
                     </button>
@@ -467,7 +467,7 @@ function PendingSignalRow({
   const acknowledgeHelp = trpc.care.acknowledgeHelpRequest.useMutation({ onSuccess: onDone });
 
   return (
-    <li className="flex flex-col gap-1.5 border-b border-[#F1F4F8] pb-2 last:border-0 last:pb-0">
+    <li className="flex flex-col gap-1.5 border-b border-[#12244A] pb-2 last:border-0 last:pb-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-[12px] font-bold text-ink">
           {formatDate(signal.requestedOn)} · {signalLabel(signal)}
@@ -481,7 +481,7 @@ function PendingSignalRow({
           onClick={() =>
             acknowledgeHelp.mutate({ studentId, helpRequestIds: [signal.helpRequestId] })
           }
-          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#FFFBEE] px-4 py-2.5 text-[12px] font-black text-gold-textDark disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+          className="min-h-[44px] rounded-xl border-[1.6px] border-gold bg-[#2A2208] px-4 py-2.5 text-[12px] font-black text-gold-textDark disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
         >
           {acknowledgeHelp.isPending ? "Đang ghi…" : "Cô đã gặp em rồi"}
         </button>

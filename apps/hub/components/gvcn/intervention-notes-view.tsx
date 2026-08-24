@@ -117,7 +117,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                 được reset) — đúng thứ luật cắt gọi tên, và nó còn viết chết con số 7 ngày
                 trong khi ngưỡng đọc từ `care.thresholds` (mệnh lệnh 7). Luật không đổi:
                 mỗi dòng vẫn reset đồng hồ, vẫn theo ngưỡng của bảng. */}
-            <h2 className="text-[15px] font-black text-navy">Ghi một việc vừa làm</h2>
+            <h2 className="text-[15px] font-black text-cardtitle">Ghi một việc vừa làm</h2>
 
             {/* BA TRẠNG THÁI CỦA Ô CHỌN EM, ba câu khác nhau (sửa 01/08/2026).
 
@@ -140,7 +140,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                 onChange={(e) => setStudentId(e.target.value)}
                 disabled={rosterQuery.isPending || Boolean(rosterQuery.error) || students.length === 0}
                 aria-describedby={rosterQuery.error ? "loi-danh-sach-lop" : undefined}
-                className="mt-1 min-h-[44px] w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] font-semibold text-ink outline-none focus:border-navy disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+                className="mt-1 min-h-[44px] w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-[12.5px] font-semibold text-ink outline-none focus:border-navy disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
               >
                 <option value="">
                   {rosterQuery.isPending
@@ -181,7 +181,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
                     className={
                       action === a
                         ? "min-h-[44px] rounded-full bg-navy px-4 py-1.5 text-[11.5px] font-black text-white"
-                        : "min-h-[44px] rounded-full border border-line bg-white px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-[#F5F8FC]"
+                        : "min-h-[44px] rounded-full border border-line bg-card px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-[#0E1E3C]"
                     }
                   >
                     {a}
@@ -198,7 +198,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
               {/* Ghi rõ ranh giới của cái nút: nó ghi nhật ký, nó không chuyển việc.
                   Không có câu này thì "đã trao đổi" dễ bị đọc thành "đã bàn giao". */}
               {needsOutOfBandWarning(action) && (
-                <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-[#FFF7E0] px-3 py-2 text-[11.5px] font-semibold leading-relaxed text-[#8A5A00]">
+                <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-[#2A2208] px-3 py-2 text-[11.5px] font-semibold leading-relaxed text-[#FFD98A]">
                   <span className="msr mt-[1px] flex-none text-[15px]" aria-hidden>
                     info
                   </span>
@@ -255,7 +255,7 @@ export function InterventionNotesView({ displayName, email }: { displayName: str
           </Card>
 
           <Card className="min-w-0 flex-1 basis-[420px]">
-            <h2 className="text-[15px] font-black text-navy">Nhật ký của lớp</h2>
+            <h2 className="text-[15px] font-black text-cardtitle">Nhật ký của lớp</h2>
             {logQuery.error ? (
               <div className="mt-2">
                 <ErrorState error={logQuery.error} label="nhật ký can thiệp" onRetry={() => logQuery.refetch()} />

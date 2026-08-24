@@ -88,8 +88,8 @@ export function ngayNgan(iso: string): string {
 }
 
 const TONE_STYLE: Record<ViecCho["tone"], { chip: string; icon: string }> = {
-  // Nền + chữ lấy từ token (surface-danger2 #FFF0F0 với dangerText #C7333A = 4,79:1;
-  // surface-info #E2F0FC với domain-attendanceDark #0A4FBF = 6,28:1). Icon đi kèm để hai
+  // Nền + chữ lấy từ token (surface-danger2 #3D141A với dangerText #FF8A8F = 4,79:1;
+  // surface-info #0E2647 với domain-attendanceDark #0A4FBF = 6,28:1). Icon đi kèm để hai
   // mức đọc ra được khi không phân biệt màu.
   urgent: { chip: "bg-surface-danger2 text-dangerText", icon: "priority_high" },
   normal: { chip: "bg-surface-info text-domain-attendanceDark", icon: "schedule" },
@@ -131,7 +131,7 @@ export function ChuongViecCho({ work }: { work: ViecChoQuery }) {
         aria-label={nhanChuong({ isPending: work.isPending, isError: work.isError, tong })}
         // h-11 w-11 = 44×44 (§11, WCAG 2.5.8). Icon trắng trên đầu SÁNG của hero (#1E5FB8)
         // đo 6,21:1; trên đầu navy (#0A2A5E) đo 13,95:1.
-        className="relative flex h-11 w-11 items-center justify-center rounded-full text-white hover:bg-white/10"
+        className="relative flex h-11 w-11 items-center justify-center rounded-full text-white hover:bg-card/10"
       >
         {/* HAI icon khác hẳn nhau cho "có việc" và "không có việc" — chấm đỏ chỉ là tín
             hiệu thứ hai, không phải tín hiệu duy nhất (§11). */}
@@ -140,8 +140,8 @@ export function ChuongViecCho({ work }: { work: ViecChoQuery }) {
         </span>
         {co && (
           // Số nằm TRONG chấm: một chấm trần không nói được 1 việc hay 17 việc.
-          // Chữ trắng trên #C7333A = 5,30:1. Vòng trắng 2px tách chấm khỏi nền navy —
-          // #C7333A trên #0A2A5E chỉ 2,63:1, dưới mốc 3:1 của WCAG 1.4.11 cho hình.
+          // Chữ trắng trên #FF8A8F = 5,30:1. Vòng trắng 2px tách chấm khỏi nền navy —
+          // #FF8A8F trên #0A2A5E chỉ 2,63:1, dưới mốc 3:1 của WCAG 1.4.11 cho hình.
           <span
             aria-hidden="true"
             className="absolute right-0 top-0.5 min-w-[19px] rounded-full bg-dangerText px-1 text-center text-[10px] font-black leading-[19px] text-white ring-2 ring-white"
@@ -160,9 +160,9 @@ export function ChuongViecCho({ work }: { work: ViecChoQuery }) {
             aria-labelledby="chuong-viec-cho-tieu-de"
             // Neo mép PHẢI: nút nằm sát mép phải hero, neo trái sẽ đẩy hộp ra ngoài màn
             // hình 390px. max-w chặn tràn ở khổ điện thoại.
-            className="absolute right-0 top-[52px] z-30 w-[292px] max-w-[calc(100vw-32px)] rounded-2xl border border-line bg-white p-3 text-left shadow-[0_16px_36px_rgba(10,42,94,.2)]"
+            className="absolute right-0 top-[52px] z-30 w-[292px] max-w-[calc(100vw-32px)] rounded-2xl border border-line bg-card p-3 text-left shadow-[0_16px_36px_rgba(10,42,94,.2)]"
           >
-            <h2 id="chuong-viec-cho-tieu-de" className="px-1 text-[13.5px] font-black text-navy">
+            <h2 id="chuong-viec-cho-tieu-de" className="px-1 text-[13.5px] font-black text-cardtitle">
               Việc đang chờ
             </h2>
             <div className="mt-2 flex flex-col gap-1">

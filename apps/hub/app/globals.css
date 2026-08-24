@@ -5,14 +5,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* GIAO DIỆN TỐI "MAJOR OS" — đổi 24/08/2026 theo quyết định của chủ đầu tư: trang chủ
+   thật mang phong cách bản trình diễn, giữ nguyên nội dung theo vai.
+
+   `color-scheme: dark` KHÔNG phải trang trí: nó bảo trình duyệt vẽ thanh cuộn, ô nhập
+   và ô chọn theo hệ tối. Thiếu dòng này thì mọi <input>/<select> vẫn nền trắng chữ đen
+   nằm giữa các thẻ tối — chỗ hở dễ bỏ sót nhất khi đổi tông, vì nó chỉ lộ ra ở đúng
+   những màn có biểu mẫu. */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
-  background: #f7f9fc;
+  background: radial-gradient(1200px 800px at 50% -10%, #123E8A 0%, #071634 55%, #050F26 100%);
+  background-attachment: fixed;
   font-family: var(--font-be-vietnam-pro), system-ui, sans-serif;
-  color: #0f172a;
+  color: #EAF2FF;
   /* Khóa hiệu ứng "lò xo" (rubber-band/overscroll bounce) khi trang không có gì để cuộn —
      lướt 2 ngón trên trackpad kéo lộ màu trắng ngoài viền trang (bắt gặp thật ở khung
      Embed Bridge, 29/07/2026). overscroll-behavior chặn browser tự bounce khi đã hết nội
@@ -56,10 +64,10 @@ html {
    Vì sao đây không phải chuyện thẩm mỹ: placeholder trong app này đang gánh việc của
    NHÃN, không phải trang trí. Ô tâm sự ở /can-gap-thay-co — chỗ riêng tư nhất cả app —
    dùng câu mẫu "Con thấy hơi lo khi phải thuyết trình trước lớp vào thứ Sáu…" để DẠY em
-   biết ô đó viết được gì; đo sống trên DOM ở 360px, câu đó là 2,45:1 trên nền ô #FCFDFE.
+   biết ô đó viết được gì; đo sống trên DOM ở 360px, câu đó là 2,45:1 trên nền ô #0B1B38.
    Ở sân trường lúc 7 giờ sáng, nắng gắt, màn điện thoại rẻ, 2,45:1 là biến mất.
 
-   #5B6B80 = 5,44:1 trên trắng · 5,34:1 trên #FCFDFE · 4,84:1 trên #FFF1C9 — đạt trên mọi
+   #5B6B80 = 5,44:1 trên trắng · 5,34:1 trên #0B1B38 · 4,84:1 trên #FFF1C9 — đạt trên mọi
    mặt nền ô nhập app đang dùng. opacity:1 là bắt buộc: Firefox mặc định hạ placeholder
    xuống opacity .54, tức là màu ta vừa tính đúng sẽ bị pha loãng lần nữa ngay sau đó.
 
@@ -68,7 +76,7 @@ html {
    về #9CA3AF nữa. */
 input::placeholder,
 textarea::placeholder {
-  color: #5b6b80;
+  color: #8298b8;
   opacity: 1;
 }
 

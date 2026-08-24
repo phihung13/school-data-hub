@@ -52,7 +52,7 @@ function NutChep({ giaTri, nhan }: { giaTri: string; nhan: string }) {
       // dùng `h-9` = 36px, và bản đấu nối của Factory có 19 nút chép — tức 19 lần vi phạm
       // §11 trên một màn hình. Đây đúng là nút người ta bấm bằng ngón cái trên điện thoại
       // trong lúc đọc cho đội làm app nghe.
-      className="flex min-h-[44px] flex-none items-center gap-1 rounded-lg bg-chip px-2.5 text-[11px] font-black text-navy"
+      className="flex min-h-[44px] flex-none items-center gap-1 rounded-lg bg-chip px-2.5 text-[11px] font-black text-cardtitle"
     >
       <span className="msr text-[15px]" aria-hidden>
         {xong ? "check" : "content_copy"}
@@ -82,7 +82,7 @@ function Khoi({ tieuDe, children }: { tieuDe: string; children: ReactNode }) {
   return (
     <section className="mt-4 first:mt-0">
       {/* <h3>: mỗi khối là một mục con của <h2> tiêu đề hộp thoại. */}
-      <h3 className="text-[13px] font-black text-navy">{tieuDe}</h3>
+      <h3 className="text-[13px] font-black text-cardtitle">{tieuDe}</h3>
       <div className="mt-1">{children}</div>
     </section>
   );
@@ -303,7 +303,7 @@ export function QuyTrinhDauNoi({ hubUrl, onDong }: { hubUrl: string; onDong: () 
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-[13.5px] font-black text-navy">{b.ten}</span>
+                <span className="text-[13.5px] font-black text-cardtitle">{b.ten}</span>
                 <span className="text-[11px] font-bold uppercase tracking-wide text-muted">{b.noi}</span>
               </div>
               <p className="mt-0.5 text-[12px] font-semibold leading-relaxed text-cardtitle2">{b.chi}</p>

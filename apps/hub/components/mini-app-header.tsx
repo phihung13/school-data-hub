@@ -17,10 +17,10 @@ export function MiniAppHeader({
   gradient?: string;
 }) {
   return (
-    <div className="flex h-[68px] items-center gap-4 border-b border-line bg-white px-5">
+    <div className="flex h-[68px] items-center gap-4 border-b border-line bg-card px-5">
       <span
         className={`flex h-[38px] w-[38px] items-center justify-center overflow-hidden rounded-[12px] ${
-          iconImageUrl ? "bg-[#EAEFF6]" : `bg-gradient-to-br ${gradient}`
+          iconImageUrl ? "bg-[#081730]" : `bg-gradient-to-br ${gradient}`
         }`}
       >
         {iconImageUrl ? (
@@ -31,7 +31,7 @@ export function MiniAppHeader({
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[15px] font-black leading-tight text-navy">{title}</div>
+        <div className="truncate text-[15px] font-black leading-tight text-cardtitle">{title}</div>
         {/* 9px → 10px: DESIGN-GUIDELINES §4 đặt sàn 9,5px, mà dòng này không phải trang trí
             — ở /can-gap-thay-co nó là chỗ DUY NHẤT nói em đang gửi cho lớp nào. (01/08/2026) */}
         {subtitle && <div className="truncate text-[10px] font-black uppercase tracking-wide text-caption">{subtitle}</div>}

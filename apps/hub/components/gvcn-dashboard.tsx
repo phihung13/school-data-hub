@@ -55,7 +55,7 @@
 //
 //  9. (01/08/2026, gói "tiep-can-man-nguoi-lon") BA LỖI TIẾP CẬN ĐO ĐƯỢC BẰNG SỐ:
 //     · Chữ nội dung dùng token `caption`. Token đó vừa được gói "tuong-phan-man-hoc-
-//       sinh" nâng lên (#8A94A6 → #5F6B7D) nên tự nó đã đạt chuẩn; nhưng những dòng
+//       sinh" nâng lên (#8A94A6 → #93A9C8) nên tự nó đã đạt chuẩn; nhưng những dòng
 //       NÓI RA SỰ THẬT VỀ DỮ LIỆU — dòng phụ của bốn thẻ số, hai câu trạng thái rỗng —
 //       vẫn đổi sang `muted`, cùng lý do đã ghi ở report-approval-view.tsx: `caption`
 //       là tên dành cho chú thích, và một câu như "gửi muộn — chưa phải vắng" không
@@ -199,7 +199,7 @@ export function urgencyPresentation(flag: Pick<FlagSummary, "ruleCode">): Urgenc
     label: "CẦN ĐỂ Ý",
     icon: "visibility",
     borderClass: "border-l-[5px] border-gold",
-    badgeClass: "bg-[#FFF1C9] text-gold-textDark",
+    badgeClass: "bg-[#3A2E08] text-gold-textDark",
   };
 }
 
@@ -578,7 +578,7 @@ export function GvcnDashboard({
               và `tests/unit/giong-noi.test.ts` khoá đúng một chỗ được phép có nó (lời chào
               của trang chủ, sau điều kiện về vai học sinh). Đây là buồng lái nghiệp vụ của
               người lớn — cùng luật hai giọng (§8) đã bắt màn này bỏ "nhé". */}
-          <h1 className="text-[20px] font-black text-navy md:text-[24px]">Chào {greetName}</h1>
+          <h1 className="text-[20px] font-black text-cardtitle md:text-[24px]">Chào {greetName}</h1>
           <div className="mt-1 text-[13px] font-semibold text-subtle">
             GVCN {classLabel(d.className)} · {d.totals.totalStudents} học sinh
           </div>
@@ -593,7 +593,7 @@ export function GvcnDashboard({
         {d.totals.openCareCases > 0 ? (
           <Link
             href="/gvcn/lop"
-            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#E9ECF2] bg-white px-[15px] py-2.5 hover:border-navy"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#16294B] bg-card px-[15px] py-2.5 hover:border-navy"
           >
             {/* aria-hidden: chữ ngay cạnh đã nói đủ. 10 icon khác trong file này đã khai
                 đúng; thiếu ở đây thì trình đọc màn hình đọc thành "folder_open 2 hồ sơ…". */}
@@ -606,7 +606,7 @@ export function GvcnDashboard({
             <span aria-hidden className="msr text-[16px] text-subtle">chevron_right</span>
           </Link>
         ) : (
-          <span className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#E9ECF2] bg-white px-[15px] py-2.5">
+          <span className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#16294B] bg-card px-[15px] py-2.5">
             <span className="msr text-[17px] text-subtle" aria-hidden>
               folder_open
             </span>
@@ -656,8 +656,8 @@ export function GvcnDashboard({
         tabIndex={0}
         className="mt-[18px] -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:gap-4 md:overflow-visible md:px-0 md:pb-0"
       >
-        <StatCard label="Đã check-in" icon="how_to_reg" iconBg="bg-[#E3F8ED]" iconColor="text-[#00A05F]" value={`${d.totals.checkinCount}/${d.totals.totalStudents}`} sub="tính đến giờ" />
-        <StatCard label="Chờ xác nhận" icon="hourglass_top" iconBg="bg-[#FFF1C9]" iconColor="text-[#E8940D]" value={String(d.totals.pendingLateCount)} sub="gửi muộn — chưa phải vắng" accentTop="#FFC629" />
+        <StatCard label="Đã check-in" icon="how_to_reg" iconBg="bg-[#0C2E22]" iconColor="text-[#4EE39B]" value={`${d.totals.checkinCount}/${d.totals.totalStudents}`} sub="tính đến giờ" />
+        <StatCard label="Chờ xác nhận" icon="hourglass_top" iconBg="bg-[#3A2E08]" iconColor="text-[#E8940D]" value={String(d.totals.pendingLateCount)} sub="gửi muộn — chưa phải vắng" accentTop="#FFC629" />
         {/* "Cờ đang mở" → "Em cần để ý" (02/08/2026). Chủ đầu tư mở trang và hỏi thẳng:
             "cờ đang mở là cờ gì?" — câu hỏi đó CHÍNH LÀ câu trả lời về cái nhãn. "Cờ" là
             từ của người làm hệ thống; con số này đếm SỐ EM mà bộ quét thấy có dấu hiệu
@@ -669,19 +669,19 @@ export function GvcnDashboard({
             chỉ nó có thể là số của hôm kia mà trông như số của sáng nay.
             Câu "chưa em nào" vì thế KHÔNG còn được in vô điều kiện — `dongPhuEmCanDeY`
             chỉ trả về nó khi có phép đo của hôm nay đứng sau. */}
-        <StatCard label="Em cần để ý" icon="flag" iconBg="bg-[#FFF0F0]" iconColor="text-dangerText" value={String(d.priorityFlags.length)} sub={dongPhuEmCanDeY(scan, d.priorityFlags.length)} accentTop={d.priorityFlags.length > 0 ? "#F0474D" : undefined} />
+        <StatCard label="Em cần để ý" icon="flag" iconBg="bg-[#3D141A]" iconColor="text-dangerText" value={String(d.priorityFlags.length)} sub={dongPhuEmCanDeY(scan, d.priorityFlags.length)} accentTop={d.priorityFlags.length > 0 ? "#F0474D" : undefined} />
         <StatCard
           label="Vắng"
           icon="person_off"
-          iconBg="bg-[#FFF0F0]"
-          iconColor="text-[#C0272D]"
+          iconBg="bg-[#3D141A]"
+          iconColor="text-[#FF8A8F]"
           value={String(d.totals.absentCount)}
           sub={absentSubtitle(d.totals.absentCount, d.totals.notCheckedInCount)}
         />
         <StatCard
           label="Chưa điểm danh"
           icon="remove"
-          iconBg="bg-[#F1F4F8]"
+          iconBg="bg-[#12244A]"
           iconColor="text-subtle"
           value={String(d.totals.notCheckedInCount)}
           sub={
@@ -719,7 +719,7 @@ export function GvcnDashboard({
               trình đọc màn hình mở buồng lái chỉ có ĐÚNG MỘT mốc cho cả trang: không nhảy
               được tới danh sách việc, phải nghe tuần tự qua năm thẻ số.
               Class giữ nguyên từng ký tự — đổi THẺ, không đổi thiết kế. */}
-          <h2 className="text-[16px] font-black text-navy">Việc cần làm sáng nay</h2>
+          <h2 className="text-[16px] font-black text-cardtitle">Việc cần làm sáng nay</h2>
 
           {d.priorityFlags.map((flag) => (
             <FlagCard key={flag.flagId} flag={flag} />
@@ -746,8 +746,8 @@ export function GvcnDashboard({
               Câu đó KHÔNG biến mất khỏi sản phẩm: nó vẫn đứng ở đúng chỗ người ta thật sự
               đi tìm cảm xúc của một em — `gvcn/student-detail-view.tsx`, ngay dưới lịch
               điểm danh. Nói một lần ở đúng chỗ, thay vì nói mọi lúc ở chỗ không liên quan. */}
-          <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-            <h2 className="text-[15px] font-black text-navy">Hành động gần đây</h2>
+          <div className="rounded-[20px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+            <h2 className="text-[15px] font-black text-cardtitle">Hành động gần đây</h2>
             <div className="mt-3.5 flex flex-col gap-3">
               {d.recentActions.length === 0 && (
                 // "Chưa ai ghi" chứ không phải "chưa có hành động nào": sổ can thiệp chỉ
@@ -816,7 +816,7 @@ function BoardEmpty({ scan, openCareCases }: { scan: ScanPresentation; openCareC
       {look.showMascot ? (
         <Mascot pose="thumbsup" width={44} />
       ) : (
-        <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white">
+        <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-card">
           <span className="msr text-[22px] text-subtle" aria-hidden>
             {look.icon}
           </span>
@@ -906,7 +906,7 @@ function LateCheckinBoard({ items }: { items: PendingLateCheckin[] }) {
   if (items.length === 0 && xacNhan === null) return null;
 
   return (
-    <div className="flex flex-col gap-3.5 rounded-[20px] border-l-[5px] border-domain-attendance bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5">
+    <div className="flex flex-col gap-3.5 rounded-[20px] border-l-[5px] border-domain-attendance bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5">
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-surface-info">
           <span className="msr text-[22px] text-link" aria-hidden>
@@ -972,7 +972,7 @@ function LateCheckinBoard({ items }: { items: PendingLateCheckin[] }) {
                       ra ngoài mép — giờ gửi mới là thứ cô cần đọc để quyết định. */}
                   <label
                     className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border px-3 py-1.5 ${
-                      dangChon ? "border-navy bg-surface-infoSoft" : "border-line bg-white"
+                      dangChon ? "border-navy bg-surface-infoSoft" : "border-line bg-card"
                     }`}
                   >
                     <input
@@ -1026,7 +1026,7 @@ function LateCheckinBoard({ items }: { items: PendingLateCheckin[] }) {
                       if (k === "present") setReason("");
                     }}
                     className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.6px] px-4 py-2.5 text-[12.5px] font-black ${
-                      dangChon ? DECISION_ON[k] : "border-line bg-white text-subtle"
+                      dangChon ? DECISION_ON[k] : "border-line bg-card text-subtle"
                     }`}
                   >
                     <span className="msr text-[16px]" aria-hidden>
@@ -1053,7 +1053,7 @@ function LateCheckinBoard({ items }: { items: PendingLateCheckin[] }) {
                   onChange={(e) => setReason(e.target.value)}
                   rows={2}
                   placeholder="Ví dụ: gia đình đã báo nghỉ…"
-                  className="w-full resize-none rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
+                  className="w-full resize-none rounded-xl border border-line bg-card px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
                 />
               </div>
             )}
@@ -1116,11 +1116,11 @@ function LateCheckinBoard({ items }: { items: PendingLateCheckin[] }) {
  * Nền + chữ của nút kết luận ĐANG CHỌN. Tách ra khỏi JSX để đọc được bằng một phép kiểm
  * tương phản, đúng cách `CHOICE_STYLE` của màn điểm danh đang làm.
  *
- * Đo trên nền thật (WCAG 2.x): #00693F/#E3F8ED = 6,12:1 · #8A5A00/#FFF1C9 = 5,27:1 ·
- * #C7333A/#FFF5F5 = 4,95:1. Nút chưa chọn: #5B6B80 trên trắng = 5,44:1.
+ * Đo trên nền thật (WCAG 2.x): #4EE39B/#0C2E22 = 6,12:1 · #FFD98A/#3A2E08 = 5,27:1 ·
+ * #FF8A8F/#351216 = 4,95:1. Nút chưa chọn: #93A9C8 trên trắng = 5,44:1.
  */
 const DECISION_ON: Record<LateDecision, string> = {
-  present: "border-[#00A05F] bg-surface-success text-successText",
+  present: "border-[#4EE39B] bg-surface-success text-successText",
   late: "border-gold-dark bg-surface-warn text-gold-textDark",
   absent: "border-dangerText bg-surface-danger text-dangerText",
 };
@@ -1176,7 +1176,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
 
   return (
     <div
-      className={`flex flex-col gap-3.5 rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${look.borderClass}`}
+      className={`flex flex-col gap-3.5 rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-5 ${look.borderClass}`}
     >
       <div>
         {/* Màu viền vẫn là tín hiệu lớn nhất; nhãn chữ + icon là bản sao lưu cho
@@ -1226,7 +1226,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
         onChange={(e) => setNote(e.target.value)}
         placeholder="Ghi lại đã trò chuyện gì với em…"
         rows={2}
-        // Token `subtle` (#5B6B80) = 5,44:1 trên trắng. globals.css đã đặt đúng màu này làm lưới an toàn
+        // Token `subtle` (#93A9C8) = 5,44:1 trên trắng. globals.css đã đặt đúng màu này làm lưới an toàn
         // cho mọi ::placeholder; khai lại ở đây là cố ý — ô này là chỗ GVCN ghi lời đã
         // nói với một đứa trẻ, không được phụ thuộc vào việc lưới an toàn còn sống.
         className="w-full resize-none rounded-xl border border-line px-3.5 py-2.5 text-[12.5px] outline-none placeholder:text-subtle focus:border-navy"
@@ -1264,7 +1264,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
                 helpRequestIds: openHelp.map((h) => h.helpRequestId),
               })
             }
-            className="min-h-[44px] rounded-xl border-[1.6px] border-[#00A05F] bg-[#E3F8ED] px-5 py-3 text-[12.5px] font-black text-successText disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+            className="min-h-[44px] rounded-xl border-[1.6px] border-[#4EE39B] bg-[#0C2E22] px-5 py-3 text-[12.5px] font-black text-successText disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
           >
             {acknowledgeHelp.isPending
               ? "Đang ghi…"
@@ -1280,7 +1280,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           <button
             type="button"
             onClick={() => setClosing(true)}
-            className="min-h-[44px] rounded-xl border-[1.5px] border-[#E4E9F0] bg-white px-5 py-3 text-[12.5px] font-extrabold text-subtle"
+            className="min-h-[44px] rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-5 py-3 text-[12.5px] font-extrabold text-subtle"
           >
             Đóng hồ sơ
           </button>
@@ -1307,7 +1307,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
               type="button"
               disabled={closeCase.isPending || resolution.trim().length === 0}
               onClick={() => closeCase.mutate({ caseId: flag.caseId!, resolution: resolution.trim() })}
-              className="min-h-[44px] rounded-xl bg-[#0F172A] px-5 py-2.5 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+              className="min-h-[44px] rounded-xl bg-[#EAF2FF] px-5 py-2.5 text-[12.5px] font-black text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
             >
               {closeCase.isPending ? "Đang đóng…" : "Xác nhận đóng"}
             </button>
@@ -1373,7 +1373,7 @@ function StatCard({
       // và mỗi lần vuốt dừng đúng mép một thẻ (xem lý do ở khối cha). 142px vì thẻ hẹp
       // nhất còn chứa trọn "Chưa điểm danh" trên một dòng ở chữ 12px/800.
       // Từ md trở lên trả về hành vi cũ: co giãn, tối thiểu 190px (ghi chú 1 đầu file).
-      className="w-[142px] flex-none snap-start rounded-[20px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:w-auto md:flex-1 md:basis-[190px] md:p-5"
+      className="w-[142px] flex-none snap-start rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:w-auto md:flex-1 md:basis-[190px] md:p-5"
       style={accentTop ? { borderTop: `3px solid ${accentTop}` } : undefined}
     >
       <div className="flex items-start justify-between">
@@ -1382,7 +1382,7 @@ function StatCard({
           <span className={`msr text-[18px] ${iconColor}`}>{icon}</span>
         </span>
       </div>
-      <div className="mt-1.5 text-[26px] font-black text-navy md:text-[30px]">{value}</div>
+      <div className="mt-1.5 text-[26px] font-black text-cardtitle md:text-[30px]">{value}</div>
       {/* `muted` chứ không phải `caption`: dòng này là chỗ DUY NHẤT nói "gửi muộn — chưa
           phải vắng" và "không có ai vắng". Nó đọc được thì con số phía trên mới có nghĩa;
           đọc không ra thì con số trở thành một con số trần. */}

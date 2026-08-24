@@ -157,7 +157,7 @@ export function TeachingView({
                       </thead>
                       <tbody>
                         {students.map((s) => (
-                          <tr key={s.studentId} className="border-b border-[#F1F4F8] last:border-0">
+                          <tr key={s.studentId} className="border-b border-[#12244A] last:border-0">
                             <td className="px-4 py-3 text-[13px] font-extrabold text-ink">{s.fullName}</td>
                             <td className="px-4 py-3 text-[12px] font-semibold tabular-nums text-muted">
                               {s.studentCode}
@@ -194,9 +194,9 @@ export function TeachingView({
  *
  * Ba cặp màu, đo theo công thức WCAG trên chính nền của chúng (§11 — không ngoại lệ theo
  * cỡ chữ, và đo trên mặt nền tệ nhất chứ không trên trắng):
- *   · `successText` #00693F trên `surface-success` #E3F8ED = 6,12:1
- *   · `dangerText`  #C7333A trên `surface-danger2` #FFF0F0 = 4,79:1
- *   · `subtle`      #5B6B80 trên `chip`            #F1F4F8 = 4,93:1
+ *   · `successText` #4EE39B trên `surface-success` #0C2E22 = 6,12:1
+ *   · `dangerText`  #FF8A8F trên `surface-danger2` #3D141A = 4,79:1
+ *   · `subtle`      #93A9C8 trên `chip`            #12244A = 4,93:1
  * Không mã hex mới — cả sáu giá trị đều là token đã có trong `tailwind.config.ts`.
  */
 function TinhHinhLop({ lop }: { lop: TeachingClass }) {

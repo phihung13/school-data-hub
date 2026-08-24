@@ -34,7 +34,7 @@ import { ErrorState, LoadingState } from "./ui/query-state";
 const HUY_HIEU: Record<number, { icon: string; mau: string }> = {
   1: { icon: "emoji_events", mau: "text-gold-textDark" },
   2: { icon: "military_tech", mau: "text-[#6B7789]" },
-  3: { icon: "military_tech", mau: "text-[#8A5A00]" },
+  3: { icon: "military_tech", mau: "text-[#FFD98A]" },
 };
 
 /**
@@ -77,7 +77,7 @@ export function ThiDuaView({
       </div>
 
       <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-        <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-4 py-3 md:px-7 md:py-3.5">
+        <div className="flex flex-none items-center gap-3.5 border-b border-[#16294B] bg-card px-4 py-3 md:px-7 md:py-3.5">
           <div className="min-w-0 flex-1">
             <h1 className="text-[16px] font-black text-ink">Bảng thi đua</h1>
             {/* ĐỘ TƯƠI đứng ngay dưới tiêu đề, không giấu trong một góc. Ca "chưa tính
@@ -98,8 +98,8 @@ export function ThiDuaView({
           {d && (
             <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
               {/* ── Xếp hạng cá nhân ───────────────────────────────────────── */}
-              <section className="rounded-[18px] border border-[#E4E9F0] bg-white p-4">
-                <h2 className="text-[14px] font-black text-navy">Cá nhân</h2>
+              <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
+                <h2 className="text-[14px] font-black text-cardtitle">Cá nhân</h2>
                 {d.caNhan.length === 0 ? (
                   <p className="mt-2 text-[12.5px] text-muted2">
                     Chưa có điểm nào trong 30 ngày gần đây.
@@ -119,9 +119,9 @@ export function ThiDuaView({
                   <>
                     {/* Dấu ngắt: nói rõ đây không phải hạng kế tiếp của danh sách trên. */}
                     <div className="my-1.5 flex items-center gap-2 px-1 text-[11px] text-caption">
-                      <span className="h-px flex-1 bg-[#E9ECF2]" />
+                      <span className="h-px flex-1 bg-[#16294B]" />
                       <span>vị trí của con</span>
-                      <span className="h-px flex-1 bg-[#E9ECF2]" />
+                      <span className="h-px flex-1 bg-[#16294B]" />
                     </div>
                     <ol className="flex flex-col">
                       <DongCaNhan r={toiNgoaiBang} />
@@ -134,8 +134,8 @@ export function ThiDuaView({
                   Xếp theo ĐIỂM TRUNG BÌNH mỗi em: xếp bằng tổng thì lớp đông luôn
                   thắng, và bảng đo sĩ số chứ không đo thi đua. */}
               <div className="grid gap-4 md:grid-cols-2">
-                <section className="rounded-[18px] border border-[#E4E9F0] bg-white p-4">
-                  <h2 className="text-[14px] font-black text-navy">Lớp</h2>
+                <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
+                  <h2 className="text-[14px] font-black text-cardtitle">Lớp</h2>
                   <p className="mt-0.5 text-[11px] text-caption">Điểm trung bình mỗi bạn</p>
                   <ol className="mt-2 flex flex-col">
                     {d.lop.map((r) => (
@@ -150,21 +150,21 @@ export function ThiDuaView({
                           {r.lop}
                           {r.laLopToi && <span className="ml-1.5 text-[11px] font-black text-link">lớp con</span>}
                         </span>
-                        <span className="text-[13px] font-black text-navy">{r.diemTrungBinh}</span>
+                        <span className="text-[13px] font-black text-cardtitle">{r.diemTrungBinh}</span>
                       </li>
                     ))}
                   </ol>
                 </section>
 
-                <section className="rounded-[18px] border border-[#E4E9F0] bg-white p-4">
-                  <h2 className="text-[14px] font-black text-navy">Khối</h2>
+                <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
+                  <h2 className="text-[14px] font-black text-cardtitle">Khối</h2>
                   <p className="mt-0.5 text-[11px] text-caption">Điểm trung bình mỗi bạn</p>
                   <ol className="mt-2 flex flex-col">
                     {d.khoi.map((r) => (
                       <li key={r.khoi} className="flex min-h-[44px] items-center gap-3 rounded-xl px-2.5">
                         <ThuHang hang={r.thuHang} />
                         <span className="min-w-0 flex-1 text-[13px] font-bold text-ink">Khối {r.khoi}</span>
-                        <span className="text-[13px] font-black text-navy">{r.diemTrungBinh}</span>
+                        <span className="text-[13px] font-black text-cardtitle">{r.diemTrungBinh}</span>
                       </li>
                     ))}
                   </ol>
@@ -217,7 +217,7 @@ function DongCaNhan({ r }: { r: { hoTen: string; lop: string; tongDiem: number; 
         {r.laToi && <span className="ml-1.5 text-[11px] font-black text-link">con</span>}
       </span>
       <span className="text-[11.5px] text-caption">{r.lop}</span>
-      <span className="w-[46px] text-right text-[13px] font-black text-navy">{r.tongDiem}</span>
+      <span className="w-[46px] text-right text-[13px] font-black text-cardtitle">{r.tongDiem}</span>
     </li>
   );
 }

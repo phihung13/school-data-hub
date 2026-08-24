@@ -38,10 +38,10 @@ export function LichHomNay({ ban_dau }: { ban_dau: GetLichHomNayOutput | null })
   if (q.error) return null;
 
   return (
-    <section className="rounded-[18px] border border-[#E4E9F0] bg-white p-4">
+    <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
       <div className="mb-2 flex items-center gap-2">
         <span aria-hidden className="msr text-[19px] text-[#2C7BF2]">event</span>
-        <h2 className="text-[14px] font-black text-navy">Lịch hôm nay</h2>
+        <h2 className="text-[14px] font-black text-cardtitle">Lịch hôm nay</h2>
       </div>
 
       {q.isPending && <p className="text-[12.5px] text-muted2">…</p>}
@@ -52,7 +52,7 @@ export function LichHomNay({ ban_dau }: { ban_dau: GetLichHomNayOutput | null })
             <li key={e.id} className="flex min-h-[44px] items-center gap-3 rounded-xl px-1">
               {/* Giờ đứng ĐẦU DÒNG và cố định bề rộng: mắt quét một cột giờ thẳng hàng
                   nhanh hơn hẳn một cột giờ so le theo độ dài tiêu đề. */}
-              <span className="w-[42px] flex-none text-[12.5px] font-black text-navy">{e.gio}</span>
+              <span className="w-[42px] flex-none text-[12.5px] font-black text-cardtitle">{e.gio}</span>
               <span aria-hidden className="msr flex-none text-[17px] text-caption">
                 {ICON[e.loai] ?? "event"}
               </span>
@@ -81,7 +81,7 @@ export function LichHomNay({ ban_dau }: { ban_dau: GetLichHomNayOutput | null })
       {/* Dòng khai nguồn — hiện ở CẢ hai nhánh có và không có sự kiện. Bỏ nó khi có sự
           kiện là để người đọc tưởng đây đã là lịch đầy đủ của mình. */}
       {d && !d.daNoiGoogle && (
-        <p className="mt-2 flex items-start gap-1.5 border-t border-[#F1F4F8] pt-2 text-[11px] text-caption">
+        <p className="mt-2 flex items-start gap-1.5 border-t border-[#12244A] pt-2 text-[11px] text-caption">
           <span aria-hidden className="msr flex-none text-[14px]">info</span>
           Đây là lịch do trường nhập. Lịch Google chưa được nối.
         </p>

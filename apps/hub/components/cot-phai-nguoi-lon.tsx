@@ -157,8 +157,8 @@ interface TheProps {
 
 function TheRail({ tieuDe, trangThai, error, onRetry, di, children }: TheProps) {
   return (
-    <div className="rounded-[20px] border border-white bg-white p-[18px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-      <h2 className="text-[15px] font-black text-navy">{tieuDe}</h2>
+    <div className="rounded-[20px] border border-cardline bg-card p-[18px] shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+      <h2 className="text-[15px] font-black text-cardtitle">{tieuDe}</h2>
       {trangThai === "loading" && (
         // Khung xương, KHÔNG vòng xoay giữa màn (§13 "ưu tiên cảm giác nhanh"): thẻ này
         // cao ~130px và một vòng xoay ở đó làm cột nhảy hai lần mỗi lần tải trang.
@@ -222,7 +222,7 @@ function DongSo({
         <span className="block text-[12px] font-bold text-subtle">{nhan}</span>
         {phu && <span className="mt-px block text-[10.5px] text-caption">{phu}</span>}
       </span>
-      <span className="text-[17px] font-black text-navy">{so}</span>
+      <span className="text-[17px] font-black text-cardtitle">{so}</span>
     </div>
   );
 }

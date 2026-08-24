@@ -50,13 +50,13 @@ const MOOD_GRADIENT: Record<MoodValue, string> = {
 const MOOD_NAME: Record<MoodValue, string> = { 4: "Vui", 3: "Bình thường", 2: "Mệt", 1: "Buồn" };
 const MOOD_DOT: Record<MoodValue, string> = { 4: "#00C96F", 3: "#2C7BF2", 2: "#F5A300", 1: "#F0474D" };
 const GLOW_BG: Record<string, string> = { green: "bg-[#F6FEF9]", blue: "bg-[#F6FAFF]", amber: "bg-[#FFFBF2]" };
-const GLOW_ICON_BG: Record<string, string> = { green: "bg-[#E3F8ED]", blue: "bg-[#E2F0FC]", amber: "bg-[#FFF1C9]" };
+const GLOW_ICON_BG: Record<string, string> = { green: "bg-[#0C2E22]", blue: "bg-[#0E2647]", amber: "bg-[#3A2E08]" };
 // Mỗi màu icon đo trên ĐÚNG nền ô của nó (GLOW_ICON_BG cùng khoá), mốc 3:1 của WCAG 1.4.11:
-//   green #00A05F trên #E3F8ED = 3,05:1 · blue #2C7BF2 trên #E2F0FC = 3,47:1 — giữ nguyên.
-//   amber #E8940D trên #FFF1C9 = 2,15:1 — trượt, nay là #8A5A00 (gold-textDark) = 5,93:1.
+//   green #4EE39B trên #0C2E22 = 3,05:1 · blue #2C7BF2 trên #0E2647 = 3,47:1 — giữ nguyên.
+//   amber #E8940D trên #3A2E08 = 2,15:1 — trượt, nay là #FFD98A (gold-textDark) = 5,93:1.
 // Đây là chỗ thứ hai của chính mã #E8940D: lần sửa 01/08 chỉ chạm được ô "Gửi muộn" ở
 // /diem-danh vì sáu chỗ còn lại nằm trong file người sửa không mở ra. (05/08/2026)
-const GLOW_ICON_COLOR: Record<string, string> = { green: "text-[#00A05F]", blue: "text-[#2C7BF2]", amber: "text-gold-textDark" };
+const GLOW_ICON_COLOR: Record<string, string> = { green: "text-[#4EE39B]", blue: "text-[#2C7BF2]", amber: "text-gold-textDark" };
 const GLOW_ICON: Record<string, string> = { green: "event_available", blue: "pool", amber: "menu_book" };
 
 export function ThisWeekView({
@@ -98,7 +98,7 @@ export function ThisWeekView({
         <HubSidebar roles={roles} active="week" fullName={displayName} email={email} classCode={classCode} />
       </div>
       <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-          <div className="flex flex-none items-center gap-3.5 border-b border-[#E9ECF2] bg-white px-4 py-3 md:px-7 md:py-3.5">
+          <div className="flex flex-none items-center gap-3.5 border-b border-[#16294B] bg-card px-4 py-3 md:px-7 md:py-3.5">
             <div className="min-w-0 flex-1">
               <h1 className="text-[16px] font-black text-ink">Tuần này của mình</h1>
               {/* "…" chỉ được phép khi ĐANG tải thật; hỏng thì nói là hỏng. */}
@@ -119,9 +119,9 @@ export function ThisWeekView({
 
           {attendance.data && report.data && (
             <div className="flex-1 p-4 md:overflow-y-auto md:p-7">
-              <div className="rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+              <div className="rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="text-[16px] font-black text-navy">Mỗi ngày của con</h2>
+                  <h2 className="text-[16px] font-black text-cardtitle">Mỗi ngày của con</h2>
                   <span className="text-[11.5px] font-bold text-caption">giờ check-in + cảm xúc</span>
                 </div>
                 {/* Giữ 5 cột cả ở 390px: ô co còn ~60px, vừa đủ vòng tròn cảm xúc 52px.
@@ -136,7 +136,7 @@ export function ThisWeekView({
                           : "flex flex-col items-center gap-2 rounded-2xl border-[1.5px] border-[#EDF1F7] px-1 py-3 md:px-2.5 md:py-4"
                       }
                     >
-                      <span className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-navy" : "text-[#5B6B80]"}`}>
+                      <span className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-cardtitle" : "text-[#93A9C8]"}`}>
                         {day.dayLabel}
                       </span>
                       {day.mood ? (
@@ -156,12 +156,12 @@ export function ThisWeekView({
                         // Vòng tròn rỗng = hôm đó KHÔNG có ô cảm xúc nào của em. Viền đỏ cũ
                         // đọc thành "ngày xấu"; nhưng nguyên nhân thường nhất là em bận,
                         // quên, hoặc cô chưa điểm danh — không có gì để trách. Xám.
-                        <span className={`h-[52px] w-[52px] rounded-full border-2 border-dashed ${day.isFuture ? "border-[#C9D2DE]" : "border-[#B9C4D4]"}`} />
+                        <span className={`h-[52px] w-[52px] rounded-full border-2 border-dashed ${day.isFuture ? "border-[#27467E]" : "border-[#B9C4D4]"}`} />
                       )}
                       {/* Cùng một hàm với /diem-danh (attendance-view.tsx). Trước 01/08/2026
                           hai lưới tuần này chép tay hai câu khác nhau cho cùng một dữ liệu,
                           và cả hai đều in "vắng" cho ngày chưa ai điểm danh. */}
-                      <span className={`text-center text-[11px] font-bold leading-tight ${day.isToday ? "text-navy" : "text-caption"}`}>
+                      <span className={`text-center text-[11px] font-bold leading-tight ${day.isToday ? "text-cardtitle" : "text-caption"}`}>
                         {dayCaptionText(day)}
                         {day.isToday && day.checkedInAt ? (
                           <span className="block md:inline">
@@ -181,8 +181,8 @@ export function ThisWeekView({
               <div className="mt-[18px] flex flex-wrap items-start gap-[18px]">
                 <div className="min-w-0 flex-[2_1_520px] flex flex-col gap-[18px]">
                   {report.data.report.glow.length > 0 && (
-                    <div className="rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
-                      <h2 className="flex items-center gap-2 text-[16px] font-black text-navy">
+                    <div className="rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+                      <h2 className="flex items-center gap-2 text-[16px] font-black text-cardtitle">
                         <span aria-hidden="true" className="msr text-[20px] text-[#F5A300]">sunny</span>
                         Con đang tỏa sáng ở
                       </h2>
@@ -206,16 +206,16 @@ export function ThisWeekView({
                   )}
 
                   {report.data.report.grow.length > 0 && (
-                    <div className="rounded-[22px] bg-white p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
-                      <h2 className="flex items-center gap-2 text-[16px] font-black text-navy">
-                        <span aria-hidden="true" className="msr text-[20px] text-[#00A05F]">psychiatry</span>
+                    <div className="rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+                      <h2 className="flex items-center gap-2 text-[16px] font-black text-cardtitle">
+                        <span aria-hidden="true" className="msr text-[20px] text-[#4EE39B]">psychiatry</span>
                         Con đang lớn lên ở
                       </h2>
                       <div className="mt-4 flex flex-wrap items-center gap-4">
                         <Mascot pose="think" width={56} />
                         <div className="min-w-0 flex-1 basis-[280px]">
                           <div className="text-[15px] font-black text-ink">{report.data.report.grow[0]!.title}</div>
-                          <div className="mt-1.5 text-[13px] leading-relaxed text-[#5B6B80]">{report.data.report.grow[0]!.detail}</div>
+                          <div className="mt-1.5 text-[13px] leading-relaxed text-[#93A9C8]">{report.data.report.grow[0]!.detail}</div>
                         </div>
                       </div>
                     </div>
@@ -223,8 +223,8 @@ export function ThisWeekView({
                 </div>
 
                 <div className="min-w-0 flex-[1_1_300px] flex flex-col gap-[18px]">
-                  <div className="rounded-[20px] bg-white p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
-                    <h2 className="text-[15px] font-black text-navy">Cảm xúc cả tuần</h2>
+                  <div className="rounded-[20px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+                    <h2 className="text-[15px] font-black text-cardtitle">Cảm xúc cả tuần</h2>
                     {recordedDays > 0 ? (
                       <>
                         <div className="mt-4 flex h-4 overflow-hidden rounded-lg">
@@ -257,8 +257,8 @@ export function ThisWeekView({
                     href="/bao-cao"
                     className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-gold to-[#FFDD66] p-5"
                   >
-                    <div aria-hidden className="absolute -bottom-11 -right-[30px] h-[130px] w-[130px] rounded-full bg-white/35" />
-                    <div className="relative text-[15px] font-black text-navy">
+                    <div aria-hidden className="absolute -bottom-11 -right-[30px] h-[130px] w-[130px] rounded-full bg-card/35" />
+                    <div className="relative text-[15px] font-black text-cardtitle">
                       Báo cáo Trưởng thành · {formatWeekLabel(report.data.report.weekLabel)}
                     </div>
                     {/* CẮT 06/08/2026 (§1.5): "Bản đầy đủ thầy cô gửi bố mẹ — con xem trước

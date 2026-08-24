@@ -3,6 +3,65 @@
 
 ---
 
+## 0. GIAO DIỆN TỐI "MAJOR OS" — đổi 24/08/2026
+
+Chủ đầu tư: *"trang home phải là thay trang home cũ đi chứ, có tương tác thật luôn mà, thay
+cho tất cả các vai, không phải đồ giả nữa đâu"*.
+
+**Mọi vai dùng chung PHONG CÁCH mới, giữ nguyên NỘI DUNG theo vai.** Hiệu trưởng vẫn thấy
+việc của hiệu trưởng — chỉ khác nước sơn. Không vai nào bị đổi sang trang của vai khác.
+
+### Cách thi hành: đổi ĐỊNH NGHĨA token, không đổi chỗ dùng
+
+App vốn dùng token ngữ nghĩa (`text-ink`, `bg-surface-alt`, `border-line`…) ở phần lớn chỗ,
+nên đổi một chỗ trong `tailwind.config.ts` là **mọi màn đổi theo** — kể cả màn chưa ai mở
+ra xem. Đợt này đổi **27 token**, quét **265 lớp CSS** và **372 mã hex** viết thẳng, trên
+**47 file**.
+
+### Hai token mới, và vì sao KHÔNG ghi đè `white`
+
+`card` (#0E1E3C) và `cardline` (#1E3A6B). Cám dỗ là ghi đè thẳng token `white` cho gọn —
+nhưng `bg-white` (133 chỗ) là **nền**, còn `text-white` (70 chỗ) là **chữ trắng trên nền
+màu** (nút navy, ô cảm xúc). Ghi đè `white` thì cả hai cùng tối và **chữ biến mất**. Hai
+vai trò khác nhau phải là hai token khác nhau.
+
+### `color-scheme: dark` không phải trang trí
+
+Nó bảo trình duyệt vẽ thanh cuộn, ô nhập, ô chọn theo hệ tối. Thiếu dòng đó thì mọi
+`<input>`/`<select>` vẫn nền trắng chữ đen nằm giữa các thẻ tối — **chỗ hở dễ bỏ sót nhất**
+khi đổi tông, vì nó chỉ lộ ra ở đúng những màn có biểu mẫu.
+
+### Tương phản: đã tính lại toàn bộ, KHÔNG hạ ngưỡng
+
+Luật §11 không đổi một chữ — vẫn ≥4,5:1 trên mặt nền tệ nhất. Chỉ danh sách mặt nền đổi
+theo thực tế: `#0E1E3C` · `#050F26` · `#12244A` · `#16294B` · `#081730`, tệ nhất là
+`#16294B`. Cả **12 token chữ đều đạt**, thấp nhất `caption2` ở **4,91:1**.
+
+Bộ test tương phản **bắt được ba lỗi thật** trong lượt đổi này, cả ba đều là "chữ và nền
+đi ngược chiều nhau":
+
+| Chỗ | Hỏng thế nào | Sửa |
+|---|---|---|
+| Chữ gợi ý ô nhập | `#5B6B80` trên nền thẻ tối — 3,04:1. Nằm trong `.css` nên lọt lưới quét `.tsx` | `#8298B8` — 5,62:1 |
+| Ô lịch điểm danh `late` | Chữ `#6B4A00` giữ nguyên nhưng **nền của nó tối đi** — 1,65:1 | `#FFD98A` — 9,87:1 |
+| Nút điểm danh đang chọn | `#00A05F` bị brighten vì tưởng là chữ, nhưng ở đây nó là **nền**, chữ trắng nằm trên — 1,64:1 | nền sáng + chữ tối, 6,8–8,9:1 |
+
+Bài học: **một mã hex có thể vừa là chữ vừa là nền tuỳ chỗ.** Quét máy móc theo mã màu sẽ
+brighten cả hai, và ca "nó là nền" sẽ hỏng lặng lẽ. Chỉ bộ test tương phản bắt được.
+
+### Cái chuông đã reo xong
+
+`tests/unit/a11y-man-nguoi-lon.test.ts` từng ghim: *"`muted` KHÔNG đạt trên nền
+`/dieu-khoan`"* — một chỗ hụt đã biết, cố ý khoá lại. Sang bảng tối cả hai token đều đạt,
+nên bài đã lật thành *"cả hai đều đạt"*. Giữ nguyên câu cũ là để CI bảo vệ một lời nói dối.
+
+### Người canh
+
+`tests/unit/giao-dien-toi.test.ts` — cấm `bg-white` và bảy mã hex nền sáng cũ quay lại bất
+kỳ file `.tsx` nào, cấm ghi đè token `white`, đòi `color-scheme: dark`. Đã thử ngược cả ba.
+
+---
+
 ## 1. Nguyên tắc cốt lõi
 
 1. **Một cửa vào chung**: mọi vai trò (học sinh, giáo viên, BGH, kế toán…) đăng nhập xong đều vào **cùng một trang chủ super app**. Không thiết kế "trang chủ riêng cho từng vai trò" — chỉ **lưới mini app đổi theo quyền** (SSO trả danh sách app).
