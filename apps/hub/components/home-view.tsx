@@ -94,11 +94,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useIsDesktop } from "@/lib/viewport";
-import type { GetLichHomNayOutput, HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/core/contracts";
+import type { HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/core/contracts";
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { MiniAppTile } from "./mini-app-tile";
 import { MOOD_STYLE } from "./mood-tile";
-import { LichHomNay } from "./lich-hom-nay";
 import { useCongCheckin } from "./cong-checkin";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
@@ -123,8 +122,6 @@ export function statState(query: { isPending: boolean; isError: boolean }): Stat
 }
 
 interface HomeData {
-  /** Lịch hôm nay dựng sẵn phía máy chủ (ADR-034). `null` = đọc hỏng, thẻ tự thử lại. */
-  lichBanDau: GetLichHomNayOutput | null;
   displayName: string;
   email: string;
   /** Vai thật — bản mobile cần để dựng đúng bộ tab (tab-bar.tsx: resolveTabs). */
@@ -173,7 +170,6 @@ export function HomeView({
   roles,
   classCode,
   initialMiniApps,
-  initialLich,
   khoManBanDau,
 }: {
   displayName: string;
@@ -186,8 +182,6 @@ export function HomeView({
   classCode?: string | null;
   /** Lưới tính sẵn phía server (app/home/page.tsx) — có mặt ngay từ HTML đầu tiên. */
   initialMiniApps: MiniAppTileType[];
-  /** Lịch dựng sẵn phía máy chủ. `null` = đọc hỏng — thẻ tự thử lại bằng query. */
-  initialLich: GetLichHomNayOutput | null;
   /**
    * Khổ màn trình duyệt tự khai (`Sec-CH-UA-Mobile`). `null` = nó không khai.
    * Chỉ dùng cho LƯỢT VẼ ĐẦU; sau hydrate `useIsDesktop()` giành lại quyền quyết định.
@@ -230,7 +224,6 @@ export function HomeView({
   }, [isHomeroom, isStudent, router, utils]);
 
   const data: HomeData = {
-    lichBanDau: initialLich,
     // Gọi TÊN, không gọi chức danh: core.users.full_name mang hậu tố "(GVCN 6A1)" nên
     // in thẳng ra là vừa dài vừa lọt từ vựng vận hành vào lời chào. Không có tên sạch
     // thì mới dùng lại chuỗi gốc — không bao giờ để trống lời chào.
@@ -488,13 +481,6 @@ function MobileHome({ data }: { data: HomeData }) {
       <div className="flex flex-1 flex-col px-4">
         {khoi.theCheckin && <CheckinCardMobile data={data} />}
 
-        {/* Lịch đứng TRƯỚC lưới app (ADR-034): câu hỏi đầu tiên mỗi sáng là "hôm nay có
-            gì", không phải "mở app nào". Đặt sau lưới là đặt dưới màn hình gập ở khổ
-            390px, tức là không ai thấy. */}
-        <div className={data.isStudent ? "mt-3.5" : "mt-5"}>
-          <LichHomNay ban_dau={data.lichBanDau} />
-        </div>
-
         <h2 className="mt-4 mb-2 text-[14px] font-black text-cardtitle">Mini App</h2>
         {/* Ô tìm đứng NGAY TRÊN thứ nó lọc ở khổ này. Bản máy tính đặt nó ở hero cạnh
             chuông (brief mục 5.1) — hero 390px không còn chỗ cho một ô nhập bên cạnh tên
@@ -739,10 +725,6 @@ function DesktopHome({ data }: { data: HomeData }) {
               />
             )}
             {data.isStudent && data.checkedInToday && data.checkedInAt && <TodayCard checkedInAt={data.checkedInAt} />}
-            {/* Lịch đứng SAU hai thẻ của bản vẽ trong rail này (bản vẽ không có lịch;
-                nội dung thật thì phải ở lại — ADR-034 chỉ ép "lịch trước lưới" cho khổ
-                điện thoại vì màn hình gập, khổ này không có ràng buộc đó). */}
-            <LichHomNay ban_dau={data.lichBanDau} />
             {khoi.khoiNguoiLon && <CotPhaiNguoiLon roles={data.roles} />}
           </div>
         </div>

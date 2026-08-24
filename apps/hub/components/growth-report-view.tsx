@@ -291,8 +291,8 @@ function DesktopReport({
   if (!report) return null;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-pagebgDesktop">
-      <div className="flex flex-none items-center gap-3.5 border-b border-[#16294B] bg-card px-7 py-3.5">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden s-home">
+      <div className="hv-thanh flex flex-none items-center gap-3.5 px-7 py-3.5">
         <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-[#9D6BFF] to-[#7434E8]">
           <span aria-hidden="true" className="msr text-[19px] text-white">workspace_premium</span>
         </span>
@@ -351,7 +351,7 @@ function DesktopReport({
               </div>
             </div>
 
-            <div className="rounded-[22px] bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+            <div className="hv-card-toi p-6">
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="msr text-[21px] text-[#F5A300]">sunny</span>
                 <h2 className="text-[17px] font-black text-cardtitle">Tỏa sáng (Glow)</h2>
@@ -379,7 +379,7 @@ function DesktopReport({
             </div>
 
             {report.grow.length > 0 && (
-              <div className="rounded-[22px] bg-card p-6 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+              <div className="hv-card-toi p-6">
                 <div className="flex items-center gap-2">
                   <span aria-hidden="true" className="msr text-[21px] text-[#4EE39B]">psychiatry</span>
                   <h2 className="text-[17px] font-black text-cardtitle">Đang lớn lên (Grow)</h2>
@@ -403,7 +403,7 @@ function DesktopReport({
                 cho người mà cả trang này sinh ra để phục vụ. Đo thật ngay lần đầu mở bản
                 desktop bằng phiên phụ huynh. */}
             {isStudent && (
-            <div className="rounded-[20px] bg-card p-5 shadow-[0_3px_14px_rgba(10,42,94,.06)]">
+            <div className="hv-card-toi p-5">
               <div className="text-[15px] font-black text-cardtitle">Báo cáo này gửi cho ai?</div>
               <div className="mt-3.5 flex flex-col gap-3">
                 {/* "Chưa có phụ huynh nào" là một KHẲNG ĐỊNH — không được nói nó khi

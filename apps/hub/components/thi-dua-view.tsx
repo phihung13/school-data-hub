@@ -76,8 +76,8 @@ export function ThiDuaView({
         <HubSidebar roles={roles} active="thi-dua" fullName={displayName} email={email} classCode={classCode} />
       </div>
 
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-        <div className="flex flex-none items-center gap-3.5 border-b border-[#16294B] bg-card px-4 py-3 md:px-7 md:py-3.5">
+      <MainContent className="flex min-w-0 flex-1 flex-col s-home md:overflow-hidden">
+        <div className="hv-thanh flex flex-none items-center gap-3.5 px-4 py-3 md:px-7 md:py-3.5">
           <div className="min-w-0 flex-1">
             <h1 className="text-[16px] font-black text-ink">Bảng thi đua</h1>
             {/* ĐỘ TƯƠI đứng ngay dưới tiêu đề, không giấu trong một góc. Ca "chưa tính
@@ -98,7 +98,7 @@ export function ThiDuaView({
           {d && (
             <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
               {/* ── Xếp hạng cá nhân ───────────────────────────────────────── */}
-              <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
+              <section className="hv-card-toi p-4">
                 <h2 className="text-[14px] font-black text-cardtitle">Cá nhân</h2>
                 {d.caNhan.length === 0 ? (
                   <p className="mt-2 text-[12.5px] text-muted2">
@@ -134,7 +134,7 @@ export function ThiDuaView({
                   Xếp theo ĐIỂM TRUNG BÌNH mỗi em: xếp bằng tổng thì lớp đông luôn
                   thắng, và bảng đo sĩ số chứ không đo thi đua. */}
               <div className="grid gap-4 md:grid-cols-2">
-                <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
+                <section className="hv-card-toi p-4">
                   <h2 className="text-[14px] font-black text-cardtitle">Lớp</h2>
                   <p className="mt-0.5 text-[11px] text-caption">Điểm trung bình mỗi bạn</p>
                   <ol className="mt-2 flex flex-col">
@@ -156,7 +156,7 @@ export function ThiDuaView({
                   </ol>
                 </section>
 
-                <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
+                <section className="hv-card-toi p-4">
                   <h2 className="text-[14px] font-black text-cardtitle">Khối</h2>
                   <p className="mt-0.5 text-[11px] text-caption">Điểm trung bình mỗi bạn</p>
                   <ol className="mt-2 flex flex-col">

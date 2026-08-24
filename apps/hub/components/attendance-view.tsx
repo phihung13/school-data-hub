@@ -60,8 +60,8 @@ export function AttendanceView({
       <div className="hidden md:flex md:w-[240px] md:flex-none">
         <HubSidebar roles={roles} active="attendance" fullName={displayName} email={email} classCode={classCode} />
       </div>
-      <MainContent className="flex min-w-0 flex-1 flex-col bg-pagebgDesktop md:overflow-hidden">
-        <div className="flex flex-none items-center gap-3 border-b border-[#16294B] bg-card px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
+      <MainContent className="flex min-w-0 flex-1 flex-col s-home md:overflow-hidden">
+        <div className="hv-thanh flex flex-none items-center gap-3 px-4 py-3 md:gap-3.5 md:px-7 md:py-3.5">
           <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-[#2C7BF2] to-[#0A4FBF]">
             <span aria-hidden="true" className="msr text-[19px] text-white">fact_check</span>
           </span>
@@ -101,7 +101,7 @@ export function AttendanceView({
               <StatCard icon="schedule" iconBg="bg-[#3A2E08]" iconColor="text-[#FFD98A]" label="Gửi muộn" value={String(query.data.lateCount)} sub="gồm cả ngày đang chờ cô xác nhận" />
             </div>
 
-            <div className="mt-[18px] rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:p-6">
+            <div className="mt-[18px] hv-card-toi p-4 md:p-6">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-[16px] font-black text-cardtitle">Tuần này</h2>
                 <span className="text-[11.5px] font-bold text-caption">giờ check-in mỗi ngày</span>
@@ -158,7 +158,7 @@ export function AttendanceView({
             </div>
 
             <div className="mt-[18px] flex flex-wrap items-start gap-[18px]">
-              <div className="min-w-0 flex-[2_1_320px] rounded-[22px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:flex-[2_1_520px] md:p-6">
+              <div className="min-w-0 flex-[2_1_320px] hv-card-toi p-4 md:flex-[2_1_520px] md:p-6">
                 <h2 className="text-[16px] font-black text-cardtitle">Lịch sử gần đây</h2>
                 <div className="mt-3.5 flex flex-col">
                   {query.data.history.map((h, i) => (
@@ -416,7 +416,7 @@ function StatCard({ icon, iconBg, iconColor, label, value, sub }: { icon: string
   return (
     // basis nhỏ hơn ở điện thoại để 4 thẻ xếp 2×2 thay vì 4 hàng cao (390px chỉ chứa
     // được một thẻ basis-200 mỗi hàng — phải cuộn hết màn hình mới thấy lịch tuần).
-    <div className="flex-1 basis-[140px] rounded-[20px] bg-card p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] md:basis-[200px] md:p-[22px]">
+    <div className="flex-1 basis-[140px] hv-card-toi p-4 md:basis-[200px] md:p-[22px]">
       <div className="flex items-start justify-between gap-2">
         <span className="text-[12px] font-extrabold text-[#93A9C8]">{label}</span>
         <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${iconBg}`}>

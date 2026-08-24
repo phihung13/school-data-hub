@@ -90,9 +90,11 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
     expect(HOME).toMatch(/<LuoiMiniApp[\s\S]*?sang/);
   });
 
-  it("nội dung thật ở lại dù bản vẽ không có: lịch hôm nay + cột phải người lớn vẫn trong rail", () => {
-    expect(HOME).toMatch(/hv-r[\s\S]*?<LichHomNay/);
+  it("cột phải người lớn ở lại; thẻ 'Lịch hôm nay' đã GỠ theo lệnh trực tiếp 24/08 ('bỏ thẻ khung Lịch hôm nay')", () => {
     expect(HOME).toMatch(/hv-r[\s\S]*?<CotPhaiNguoiLon/);
+    // Gỡ CẢ ống dẫn: không render, không import, không đọc lịch server-side cho thứ
+    // không vẽ. Muốn đưa lịch trở lại phải có lệnh mới — không phải "sửa lỗi thiếu thẻ".
+    expect(HOME).not.toContain("LichHomNay");
   });
 
   it("UFO có não như bản vẽ (24/08: 'ufo phải thông minh hơn và tương tác chuột tốt hơn'): đúng hằng số vật lý + đủ kỷ luật nền", () => {

@@ -4,7 +4,6 @@ import { resolveIdentity } from "@hub/core/auth-adapter";
 import { HomeView } from "@/components/home-view";
 import { buildMiniAppsWithEmbedded, ghimAppDungNhieu } from "@/server/mini-apps";
 import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
-import { docLichHomNay } from "@/server/lich";
 import { docKhoManTuRequest } from "@/server/kho-man-request";
 import { log, describeError } from "@/lib/logger";
 
@@ -68,7 +67,6 @@ export default async function HomePage() {
       // nháy từ "…" sang nội dung là đúng cảnh đã bắt gặp 30/07/2026 với lưới app.
       // Hỏng thì trả lịch RỖNG chứ không đổ trang chủ — thẻ tự nói "không có lịch",
       // và query tRPC bên trong vẫn thử lại được.
-      initialLich={await docLichHomNay(session.authUid).catch(() => null)}
       // Khổ màn do TRÌNH DUYỆT TỰ KHAI, dùng cho đúng lượt vẽ đầu — `null` khi nó không
       // khai (Safari, Firefox) và khi đó rơi về đúng hành vi cũ. Xem `lib/viewport.ts`.
       khoManBanDau={docKhoManTuRequest()}
