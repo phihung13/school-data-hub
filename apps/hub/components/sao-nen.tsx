@@ -111,7 +111,15 @@ export function SaoNen({ className = "" }: { className?: string }) {
     };
 
     let raf = 0;
+    let truocVe = 0;
     const vong = (t: number) => {
+      // 30fps (25/08 — săn lag): trời sao trôi chậm, mắt không phân biệt được với 60fps,
+      // còn máy yếu thì nửa số lần vẽ 420 chấm — cùng phép hạ đã áp cho UFO.
+      if (t - truocVe < 30) {
+        raf = requestAnimationFrame(vong);
+        return;
+      }
+      truocVe = t;
       chuotX += (dichX - chuotX) * 0.06;
       chuotY += (dichY - chuotY) * 0.06;
       ve(t);

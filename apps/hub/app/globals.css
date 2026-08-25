@@ -248,9 +248,12 @@ textarea::placeholder {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-7px); }
 }
+/* 25/08: đổi từ background-position sang transform — bg-pos là animation PAINT, mỗi
+   khung vẽ lại cả panel (kèm chuỗi drop-shadow của tổ tiên); transform được compositor
+   cache. Quy đổi giữ nguyên hình: dải rộng 260%, p% bg-pos ⇔ translateX(-0.61538p% dải). */
 @keyframes panelSheen {
-  0%, 55% { background-position: 120% 0; }
-  100% { background-position: -60% 0; }
+  0%, 55% { transform: translate3d(-73.85%, 0, 0); }
+  100% { transform: translate3d(36.92%, 0, 0); }
 }
 @keyframes glowPulse {
   0%, 100% { opacity: .45; transform: scale(1); }

@@ -354,10 +354,16 @@ export function LoginForm({
             aria-hidden
             className="absolute inset-[1.5px] z-0 bg-[radial-gradient(120%_90%_at_12%_0%,rgba(94,150,230,.3),transparent_52%),radial-gradient(95%_75%_at_100%_100%,rgba(255,198,41,.15),transparent_56%),linear-gradient(rgba(53,224,255,.055)_1px,transparent_1px),linear-gradient(90deg,rgba(53,224,255,.055)_1px,transparent_1px),linear-gradient(160deg,rgba(8,20,46,.94),rgba(4,12,30,.88))] bg-[length:auto,auto,100%_46px,46px_100%,auto] [clip-path:polygon(0_0,calc(100%-25px)_0,100%_25px,100%_100%,25px_100%,0_calc(100%-25px))]"
           />
+          {/* SHEEN chạy bằng TRANSFORM, không phải background-position (25/08 — săn lag):
+              bg-pos là animation paint, mỗi khung vẽ lại cả panel kèm chuỗi drop-shadow;
+              dải 260% dịch transform thì compositor cache, panel đứng yên. Khung ngoài giữ
+              nguyên clip-path; dải trong mang đúng gradient 115deg cũ. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-[1.5px] z-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,.1)_46%,rgba(53,224,255,.12)_51%,transparent_67%)] bg-[length:260%_100%] [clip-path:polygon(0_0,calc(100%-25px)_0,100%_25px,100%_100%,25px_100%,0_calc(100%-25px))] motion-safe:animate-[panelSheen_5.4s_ease-in-out_infinite]"
-          />
+            className="pointer-events-none absolute inset-[1.5px] z-0 overflow-hidden [clip-path:polygon(0_0,calc(100%-25px)_0,100%_25px,100%_100%,25px_100%,0_calc(100%-25px))]"
+          >
+            <div className="h-full w-[260%] will-change-transform bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,.1)_46%,rgba(53,224,255,.12)_51%,transparent_67%)] motion-safe:animate-[panelSheen_5.4s_ease-in-out_infinite]" />
+          </div>
 
           {/* Cột nội dung — padding 32/28/24 và gap 13px của `.cin-main` cuối; căn TRÁI
               (bản nháp căn phải đã bị thiết kế bỏ). */}

@@ -103,8 +103,12 @@ describe("màn đăng nhập khớp TRẠNG THÁI CUỐI của bản thiết k�
     expect(LOGIN, "backdrop-blur quay lại — nguồn giật đã trị").not.toContain("backdrop-blur-[10px]");
     const sheen = giaTriCuoi(".cin-main::after", "background")!;
     expect(sheen).toContain("115deg");
+    // 25/08: sheen đổi cơ chế bg-position -> transform (săn lag: bg-pos là animation
+    // paint, vẽ lại cả panel kèm drop-shadow mỗi khung). GRADIENT của bản vẽ vẫn phải
+    // còn nguyên — chỉ chuyển sang dải 260% chạy transform.
     expect(gon(LOGIN), "mất vệt sáng sheen").toContain(gon(sheen.replace(/\s*0 0\/260% 100%\s*$/, "")));
     expect(LOGIN).toContain("panelSheen_5.4s");
+    expect(LOGIN, "sheen phải là dải transform, không phải bg-position").toContain('w-[260%]');
   });
 
   it("CHỮ: 33px lh 1.1 ls -.02em, bóng 0 12px 40px; <em> vàng + quầng 32px + nowrap", () => {
