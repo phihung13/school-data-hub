@@ -458,6 +458,19 @@ textarea::placeholder {
       trắng (chip số liệu, đầu trang) nên hai loại thẻ đứng cạnh nhau là một ngôn ngữ. ── */
 .hv-thanh { position: relative; border: 0; background: linear-gradient(92deg, #0A1A3E 0%, #0E2A5E 74%, #123A7E 100%); border-bottom: 1px solid rgba(53,224,255,.4); }
 .hv-thanh::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, #35E0FF, transparent 60%); }
+/* CHỮ TOKEN TRONG DẢI TỐI (25/08 — "chữ đen trên nền tối kìa: Bảng thi đua"). Bảng token
+   là bảng SÁNG: text-ink/text-caption nay là chữ tối, dán vào dải lệnh navy là tối-trên-
+   tối. Luật scoped này thắng utility (0-2-0 > 0-1-0) nên MỌI token chữ đứng trong dải tối
+   tự đổi sang bản sáng tương ứng — kể cả chỗ người sau quên. Nút/ô nhập mang màu tường
+   minh (bg trắng chữ navy…) không bị đụng vì chúng không dùng các lớp token này. */
+.hv-thanh h1, .hv-thanh h2, .hv-thanh .text-cardtitle { color: #ffffff; }
+.hv-thanh .text-ink { color: #EAF2FF; }
+.hv-thanh .text-caption, .hv-thanh .text-caption2, .hv-thanh .text-muted, .hv-thanh .text-subtle { color: #9CC7FF; }
+.hv-thanh .text-cardtitle2 { color: #A9C4E8; }
+.hv-head h1, .hv-head h2, .hv-head .text-cardtitle { color: #ffffff; }
+.hv-head .text-ink { color: #EAF2FF; }
+.hv-head .text-caption, .hv-head .text-caption2, .hv-head .text-muted, .hv-head .text-subtle { color: #9CC7FF; }
+.hv-head .text-cardtitle2 { color: #A9C4E8; }
 .hv-card-toi {
   position: relative; overflow: hidden; border: 0; border-radius: 0;
   background: #0B1E44; box-shadow: inset 0 0 18px rgba(53,224,255,.06);

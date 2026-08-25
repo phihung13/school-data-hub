@@ -91,14 +91,14 @@ export function AttendanceView({
                   Đây đúng loại lỗi mà đợt 01/08 chỉ vá được một chỗ trong bảy. (05/08/2026) */}
               <StatCard icon="local_fire_department" iconBg="bg-[#2A2208]" iconColor="text-gold-textDark" label="Chuỗi hiện tại" value={String(query.data.streakDays)} sub="ngày liên tiếp" />
               <StatCard icon="military_tech" iconBg="bg-[#F0E9FD]" iconColor="text-[#7434E8]" label="Kỷ lục" value={String(query.data.longestStreakDays)} sub="chuỗi dài nhất" />
-              <StatCard icon="event_available" iconBg="bg-surface-success" iconColor="text-[#4EE39B]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
+              <StatCard icon="event_available" iconBg="bg-surface-success" iconColor="text-[#00A85E]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
               {/* Phụ đề cũ là "cô đã xác nhận" — nói ngược với chính con số: câu SQL đếm
                   `status in ('late','queued_late')`, mà `queued_late` đúng là những ngày
                   CHƯA ai xác nhận (care.acknowledgeLate đổi chúng thành 'present'). Một
                   con số mà dòng chữ dưới nó nói sai về chính nó thì tệ hơn không có số.
                   Icon cũng đổi sang màu #FFD98A: #E8940D trên nền #3A2E08 chỉ 2,15:1,
                   dưới mốc 3:1 cho thành phần phi văn bản. (01/08/2026) */}
-              <StatCard icon="schedule" iconBg="bg-[#3A2E08]" iconColor="text-[#FFD98A]" label="Gửi muộn" value={String(query.data.lateCount)} sub="gồm cả ngày đang chờ cô xác nhận" />
+              <StatCard icon="schedule" iconBg="bg-surface-warnSoft" iconColor="text-[#A16207]" label="Gửi muộn" value={String(query.data.lateCount)} sub="gồm cả ngày đang chờ cô xác nhận" />
             </div>
 
             <div className="mt-[18px] hv-card p-4 md:p-6">

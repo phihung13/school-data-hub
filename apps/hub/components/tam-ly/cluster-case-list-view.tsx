@@ -53,7 +53,7 @@ function Pill({
     tone === "urgent"
       ? "bg-[#3D141A] text-[#FF8A8F]"
       : tone === "open"
-        ? "bg-[#0E2647] text-[#35E0FF]"
+        ? "bg-surface-info text-link"
         : tone === "quiet"
           ? "bg-[#3A2E08] text-gold-textDark"
           : "bg-chip text-caption";

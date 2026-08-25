@@ -342,7 +342,7 @@ function CheckinStrip({
             không vẽ một icon riêng: vẽ icon cho cuối tuần là quay lại đúng chuyện vừa
             sửa — bịa một tín hiệu cho một ngày không có tín hiệu nào. */}
         <span className="flex items-center gap-1 text-[11px] font-bold text-subtle">
-          <span aria-hidden className="h-[18px] w-[18px] flex-none rounded-md bg-[#050F26]" />
+          <span aria-hidden className="h-[18px] w-[18px] flex-none rounded-md bg-surface-muted" />
           Cuối tuần
         </span>
       </div>
@@ -461,7 +461,7 @@ function DayCell({
         entry
           ? ""
           : weekend
-            ? "bg-[#050F26]"
+            ? "bg-surface-muted"
             : "border border-dashed border-[#D8DFE9] bg-card"
       }`}
       style={tone ? { background: tone.bg, color: tone.fg } : undefined}

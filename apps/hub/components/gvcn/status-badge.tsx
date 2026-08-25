@@ -24,7 +24,7 @@ const STATUS_TONE: Record<AttendanceStatus, { bg: string; fg: string }> = {
   present: { bg: "bg-surface-success", fg: "text-successText" },
   late: { bg: "bg-[#3A2E08]", fg: "text-gold-textDark" },
   absent: { bg: "bg-[#3D141A]", fg: "text-[#FF8A8F]" },
-  excused: { bg: "bg-[#0E2647]", fg: "text-link" },
+  excused: { bg: "bg-surface-info", fg: "text-link" },
   // Dùng CHUNG cặp màu với `late` — nên bắt buộc phải khác icon (hourglass_top vs
   // schedule) và khác chữ ("Gửi muộn — chờ xác nhận" vs "Đi muộn"). §11: hai trạng thái
   // khác nghĩa không được chỉ khác nhau ở màu.

@@ -250,7 +250,7 @@ export function TermsGateView({ displayName }: { displayName: string }) {
             tests/unit/dieu-khoan.test.ts đối chiếu chúng với chính bản điều khoản trong
             CSDL. Sửa chữ ở đây mà không sửa hệ là làm bài test đỏ, đúng như mong muốn. */}
         <div className="mt-4 rounded-2xl border-[1.5px] border-[#CFE0D4] bg-[#F2F8F4] p-4">
-          <p className="flex items-center gap-1.5 text-[13px] font-black text-[#4EE39B]">
+          <p className="flex items-center gap-1.5 text-[13px] font-black text-successText">
             <span aria-hidden="true" className="msr text-[18px]">
               verified_user
             </span>

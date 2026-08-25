@@ -50,13 +50,13 @@ const GLOW_BG: Record<"green" | "blue" | "amber", string> = {
 };
 const GLOW_ICON_BG: Record<"green" | "blue" | "amber", string> = {
   green: "bg-surface-success",
-  blue: "bg-[#0E2647]",
-  amber: "bg-[#3A2E08]",
+  blue: "bg-surface-info",
+  amber: "bg-surface-warnSoft",
 };
 const GLOW_ICON_COLOR: Record<"green" | "blue" | "amber", string> = {
-  green: "text-[#4EE39B]",
+  green: "text-[#00A85E]",
   blue: "text-[#2C7BF2]",
-  amber: "text-[#E8940D]",
+  amber: "text-[#A16207]",
 };
 
 /**
@@ -173,7 +173,7 @@ function MobileReport({
   return (
     // flex-col + min-h-screen: thanh tab phải nằm ĐÁY MÀN HÌNH, không trôi ngay dưới nội
     // dung khi báo cáo ngắn. <PageShell> đã tự căn giữa nên nó ở trong, không ở ngoài.
-    <div className="flex min-h-screen w-full flex-col bg-[#081730]">
+    <div className="flex min-h-screen w-full flex-col bg-pagebg">
       <PageShell>
       <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light px-5 pb-12 pt-4">
         <div
@@ -381,7 +381,7 @@ function DesktopReport({
             {report.grow.length > 0 && (
               <div className="hv-card p-6">
                 <div className="flex items-center gap-2">
-                  <span aria-hidden="true" className="msr text-[21px] text-[#4EE39B]">psychiatry</span>
+                  <span aria-hidden="true" className="msr text-[21px] text-[#00A85E]">psychiatry</span>
                   <h2 className="text-[17px] font-black text-cardtitle">Đang lớn lên (Grow)</h2>
                 </div>
                 <div className="mt-4 flex flex-wrap items-start gap-4">

@@ -278,11 +278,11 @@ function QueueFailureNotice({
           <div
             key={item.clientId}
             className={`flex flex-col items-center gap-1.5 rounded-[14px] border-[1.6px] p-3.5 text-center ${
-              moodOnly ? "border-[#DDE6F2] bg-[#F4F8FD]" : "border-[#4A3A0C] bg-[#2A2208]"
+              moodOnly ? "border-[#DDE6F2] bg-[#F4F8FD]" : "border-[#F0DFAE] bg-surface-warnSoft"
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <span aria-hidden className="msr text-[18px] text-[#FFD98A]">
+              <span aria-hidden className="msr text-[18px] text-gold-text">
                 {moodOnly ? "info" : "schedule_send"}
               </span>
               <p className="text-[12.5px] font-black leading-relaxed text-cardtitle">
@@ -303,7 +303,7 @@ function QueueFailureNotice({
                   · nhánh còn lại: bỏ "Máy đã giữ lần bấm ấy trong điện thoại và thử gửi lại" +
                     "lần này con sẽ thấy ngay là đã ghi xong" — cả hai đều kể chuyện bên trong
                     máy, không đổi việc em phải làm (ghi lại). */}
-            <p className="text-[11.5px] leading-relaxed text-[#FFD98A]">
+            <p className="text-[11.5px] leading-relaxed text-gold-text">
               {moodOnly
                 ? "Chưa có phiếu đồng ý — không phải lỗi của con."
                 : expired

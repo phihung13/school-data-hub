@@ -295,7 +295,7 @@ export function HelpRequestView({
                       // điện thoại rẻ, 2,45:1 là biến mất. Màu nay đến từ MỘT chỗ duy nhất
                       // trong globals.css (#93A9C8 = 5,34:1 trên #0B1B38) nên mọi ô nhập của
                       // app cùng đọc được, không phải ô nào có người nhớ thì ô đó mới đạt.
-                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-line2 bg-[#0B1B38] p-4 text-[13.5px] leading-relaxed text-ink focus:border-navy"
+                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-line2 bg-card p-4 text-[13.5px] leading-relaxed text-ink focus:border-navy"
                     />
                   </div>
 
@@ -349,7 +349,7 @@ export function HelpRequestView({
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 rounded-[20px] border-[1.5px] border-[#1E4E8C] bg-[#0C1F3C] p-5">
+                  <div className="flex flex-col gap-3 rounded-[20px] border-[1.5px] border-[#B7D2F0] bg-surface-infoSoft p-5">
                     <div className="flex items-center gap-2">
                       <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">lock</span>
                       <span className="text-[14px] font-black text-link">Ai đọc được lời con?</span>
