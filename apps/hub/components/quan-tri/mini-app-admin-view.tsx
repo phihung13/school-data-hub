@@ -174,6 +174,26 @@ function TheApp({
   const quaHan = app.overdueDays > 0;
   const sapHan = !quaHan && app.overdueDays >= -30;
 
+  // XOÁ KHỎI SỔ (25/08/2026 — "app factory lỗi quá… gửi lại md cho bên kia làm lại
+  // r cắm lại"). Backend admin.miniApp.remove có sẵn từ 07/08; đây là cái nút.
+  // Hai hàng rào, mỗi cái một lý do:
+  //   · chỉ hiện khi app ĐANG TẮT — tắt là bước một của quy trình thay app, và không
+  //     rút thảm dưới chân người đang đứng trong app;
+  //   · xác nhận bằng cách GÕ LẠI mã app — xoá là vĩnh viễn, mã app "không đổi được
+  //     về sau" (§10.2 của phiếu), nên gõ lại mã là hàng rào chống xoá nhầm thẻ bên
+  //     cạnh. Dán lại phiếu cùng mã sau đó là một app MỚI trong sổ, lịch sử sự kiện
+  //     cũ (ops.embedded_app_events) vẫn nằm nguyên theo app_id — cố ý không xoá:
+  //     dữ liệu đã nhận là dữ liệu đã nhận.
+  const utils = trpc.useUtils();
+  const [moXoa, setMoXoa] = useState(false);
+  const [maGo, setMaGo] = useState("");
+  const xoa = trpc.admin.miniApp.remove.useMutation({
+    onSuccess: () => {
+      setMoXoa(false);
+      void utils.admin.miniApp.list.invalidate();
+    },
+  });
+
 
   return (
     // TRẠNG THÁI TẮT NÓI BẰNG NỀN, KHÔNG BẰNG ĐỘ MỜ (sửa 05/08/2026).
@@ -197,7 +217,7 @@ function TheApp({
               className={
                 app.enabled
                   ? "rounded-full bg-surface-success px-2.5 py-0.5 text-[10.5px] font-black text-[#126B45]"
-                  : "rounded-full bg-[#12244A] px-2.5 py-0.5 text-[10.5px] font-black text-muted"
+                  : "rounded-full bg-chip px-2.5 py-0.5 text-[10.5px] font-black text-muted"
               }
             >
               {app.enabled ? "ĐANG BẬT" : "ĐANG TẮT"}
@@ -212,7 +232,7 @@ function TheApp({
           disabled={dangDoi}
           className={
             app.enabled
-              ? "flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-[#F0C9CB] bg-card px-4 text-[12.5px] font-extrabold text-[#FF8A8F] disabled:opacity-50"
+              ? "flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-[#F0C9CB] bg-card px-4 text-[12.5px] font-extrabold text-dangerText disabled:opacity-50"
               : "flex min-h-[44px] items-center gap-1.5 rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 text-[12.5px] font-black text-white disabled:opacity-50"
           }
         >
@@ -221,7 +241,63 @@ function TheApp({
           </span>
           {dangDoi ? "Đang lưu…" : app.enabled ? "Tắt app" : "Bật app"}
         </button>
+        {!app.enabled && !moXoa && (
+          <button
+            type="button"
+            onClick={() => {
+              setMaGo("");
+              setMoXoa(true);
+            }}
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-[1.5px] border-[#F0C9CB] bg-card px-4 text-[12.5px] font-extrabold text-dangerText"
+          >
+            <span className="msr text-[18px]" aria-hidden>
+              delete
+            </span>
+            Xoá khỏi sổ
+          </button>
+        )}
       </div>
+
+      {moXoa && (
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border-[1.5px] border-[#F0C9CB] bg-surface-danger p-3">
+          <p className="text-[12.5px] font-bold text-dangerText">
+            Xoá vĩnh viễn <b>{app.displayName}</b> khỏi sổ đăng ký? Vai đã cấp và cấu hình mất
+            theo; lịch sử sự kiện đã nhận thì ở lại. Muốn cắm lại chỉ cần dán lại phiếu.
+          </p>
+          <label htmlFor={`xoa-${app.appId}`} className="text-[11.5px] font-black text-cardtitle2">
+            Gõ lại mã app (<span className="font-mono">{app.appId}</span>) để xác nhận:
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              id={`xoa-${app.appId}`}
+              value={maGo}
+              onChange={(e) => setMaGo(e.target.value)}
+              autoComplete="off"
+              className="min-h-[44px] rounded-xl border border-line2 bg-card px-3 font-mono text-[13px] text-ink outline-none focus:border-navy"
+            />
+            <button
+              type="button"
+              disabled={maGo.trim() !== app.appId || xoa.isPending}
+              onClick={() => xoa.mutate({ appId: app.appId })}
+              className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-dangerText px-4 text-[12.5px] font-black text-white disabled:opacity-40"
+            >
+              {xoa.isPending ? "Đang xoá…" : "Xoá vĩnh viễn"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMoXoa(false)}
+              className="flex min-h-[44px] items-center rounded-xl border border-line2 bg-card px-4 text-[12.5px] font-extrabold text-cardtitle2"
+            >
+              Thôi
+            </button>
+          </div>
+          {xoa.isError && (
+            <p role="alert" className="rounded-xl bg-[#FFF3F3] px-3 py-2 text-[12px] font-bold text-dangerText">
+              {xoa.error.message}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* role="alert" — máy chủ từ chối thì phải NGHE được (sửa 05/08/2026).
           Ba câu lỗi sau cú bấm của màn này (tắt/bật app · lưu cấu hình · khai app mới) đều
