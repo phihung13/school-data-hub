@@ -27,7 +27,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mascot } from "./mascot";
-import { SaoNen } from "./sao-nen";
 import { CO_INTRO } from "./intro-cinematic";
 import { MainContent } from "./page-shell";
 import { resolveThenPath } from "@/lib/trpc-client";
@@ -302,7 +301,7 @@ export function LoginForm({
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#04102A]">
         <video
           key={epH264 ? "h264" : "tu-chon"}
-          className="h-full w-auto max-w-none object-cover [filter:brightness(1.18)_saturate(1.08)]"
+          className="h-full w-auto max-w-none object-cover"
           poster="/trinh-dien/uploads/su-tu-poster.webp"
           preload="auto"
           loop
@@ -325,8 +324,9 @@ export function LoginForm({
             video". MẶT NẠ trùng hình với ba lớp loang đen ở trên (dải đứng 270° + lớp xéo
             292° + vầng góc, thu hẹp một chút để sao dứt hẳn trước mép sáng): trong mask,
             đen = hiện, trong suốt = ẩn — sao sống đúng trong vùng tối, video sạch.
-            Tự vẽ canvas 2D, không three.js — xem lý lẽ trong sao-nen.tsx. */}
-        <SaoNen className="[mask-image:linear-gradient(270deg,#000_0%,#000_16%,transparent_40%),linear-gradient(292deg,#000_0%,#000_24%,transparent_52%),radial-gradient(900px_700px_at_103%_104%,#000_30%,transparent_70%)]" />
+            TRỜI SAO ĐÃ GỠ 25/08/2026 — lệnh "cái gì gây nặng nhất, bỏ luôn": 420 chấm
+            canvas vẽ trên main thread mỗi khung là món nặng nhất còn lại của màn này,
+            đứng SAU một video vốn đã gánh cả cảnh. Component sao-nen.tsx xoá cùng lượt. */}
       </div>
 
       {/* DẤU THƯƠNG HIỆU — `.cin-brand`, góc trái trên. aria-hidden: tên đã có trong h1. */}

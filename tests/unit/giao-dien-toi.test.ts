@@ -17,7 +17,7 @@
 //      Làm thế thì `text-white` (70 chỗ — chữ trắng trên nút navy, trên ô cảm xúc) cũng
 //      tối theo và chữ biến mất. Hai vai trò khác nhau phải là hai token khác nhau.
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -231,24 +231,16 @@ describe("màn đen chặn cho intro", () => {
 // chặn đứng đó trong lúc file chảy qua mạng.
 describe("nền sao và hover không dịch chuyển — hai lệnh 24/08", () => {
   const LOGIN4 = readFileSync(join(goc, "apps/hub/components/login-form.tsx"), "utf8");
-  // BÓC CHÚ THÍCH trước khi soát — lần THỨ SÁU trong đợt này một guard suýt đỏ vì chính
-  // lời giải thích của nó: chú thích sao-nen.tsx kể vì sao KHÔNG dùng unpkg, và guard dò
-  // chữ "unpkg" đọc trúng câu kể đó.
-  const SAO = readFileSync(join(goc, "apps/hub/components/sao-nen.tsx"), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^[ 	]*\/\/.*$/gm, "");
 
-  it("nền đen có sao, tự vẽ — KHÔNG three.js, không CDN", () => {
-    // "bôi đen nhiều mà nó không chứa gì thì cũng ko tốt" — nhưng mạng trường có lọc nội
-    // dung: kéo three.js từ unpkg là canvas trắng trơn không báo lỗi (DOC-TRUOC đã ghi).
-    // "chỉ dồn bên phần có loang đen thôi, không được tràn qua video" (chỉnh lần hai
-    // 24/08): sao phải mang MẶT NẠ trùng hình vùng tối — bỏ mặt nạ là sao phủ lên video.
-    expect(LOGIN4).toMatch(/<SaoNen className="\[mask-image:/);
-    expect(LOGIN4, "mặt nạ phải có lớp xéo 292° trùng với lớp bóng").toMatch(/mask-image:[^"]*292deg/);
-    expect(SAO, "cấm import thư viện ngoài cho hiệu ứng nền").not.toMatch(/from "three|unpkg|cdn/);
-    expect(SAO, "phải tôn trọng giảm-chuyển-động").toContain("prefers-reduced-motion");
-    expect(SAO, "tab nền không được ăn pin").toContain("visibilitychange");
-    expect(SAO, "trang trí không được chặn cú bấm nào").toContain("pointer-events-none");
+  it("trời sao ĐÃ GỠ HẲN (25/08: 'cái gì gây nặng nhất, bỏ luôn') — không được rước lại", () => {
+    // Lịch sử một dòng: sao ra đời theo lệnh 24/08 ("cho thêm thiên hà…"), rồi bị chính
+    // chủ đầu tư xử 25/08 khi săn lag — 420 chấm canvas vẽ trên main thread mỗi khung là
+    // món nặng nhất còn lại của màn đăng nhập, đứng SAU một video vốn đã gánh cả cảnh.
+    // Filter brightness/saturate trên video đi cùng lượt (GPU xử lý lại từng khung toàn
+    // màn chỉ để +18% sáng).
+    expect(LOGIN4).not.toContain("SaoNen");
+    expect(existsSync(join(goc, "apps/hub/components/sao-nen.tsx")), "sao-nen.tsx phải xoá hẳn, không để mã chết").toBe(false);
+    expect(LOGIN4, "filter từng-khung trên video đã bỏ").not.toContain("brightness(1.18)");
   });
 
   it("hover KHÔNG dịch chuyển phần tử — nguồn giật đã trị, không được rước lại", () => {

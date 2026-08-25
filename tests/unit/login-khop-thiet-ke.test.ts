@@ -190,9 +190,10 @@ describe("màn đăng nhập khớp TRẠNG THÁI CUỐI của bản thiết k�
     // tư đổi: video giữ nguyên tỉ lệ cao bằng trang (sư tử không bị cắt), phần phải là
     // nền đen, mép video TAN DẦN vào đen. Bài này canh trạng thái ĐÃ DUYỆT đó — quay về
     // tràn-viền hay dựng lại 5 tầng đều là làm trái một lệnh trực tiếp.
-    expect(gon(LOGIN), "mất bộ lọc sáng/bão hoà của thiết kế").toContain(
-      gon(giaTriCuoi(".cin-bg", "filter")!),
-    );
+    // 25/08: BỘ LỌC sáng/bão hoà của thiết kế đã GỠ theo lệnh "cái gì gây nặng nhất,
+    // bỏ luôn" — filter trên video là GPU xử lý lại TỪNG KHUNG toàn màn chỉ để +18%
+    // sáng. Cần chỉnh sáng thì chỉnh lúc encode, không trả bằng khung hình mỗi giây.
+    expect(LOGIN, "filter từng-khung trên video không được quay lại").not.toContain("brightness(1.18)");
     expect(LOGIN, "video phải giữ tỉ lệ, cao bằng trang, neo trái").toContain("h-full w-auto max-w-none");
     expect(LOGIN, "khung bọc phải có nền đen cho phần hụt bên phải").toMatch(
       /aria-hidden className="pointer-events-none absolute inset-0 bg-\[#04102A\]"/,

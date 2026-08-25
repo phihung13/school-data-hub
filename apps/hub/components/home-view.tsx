@@ -977,7 +977,7 @@ function StreakCard({ streakDays }: { streakDays: number }) {
 //   · prefers-reduced-motion: không chạy vòng rAF nào (CSS đã giấu cả .ufo-track —
 //     media query trong globals.css — nên cũng không có gì để vẽ);
 //   · giấu tab thì dừng rAF (một hiệu ứng nền không được phép ăn pin ở tab nền),
-//     mở lại thì đi tiếp — cùng khuôn với sao-nen.tsx.
+//     mở lại thì đi tiếp — cùng khuôn nền-sao cũ của màn đăng nhập (đã gỡ 25/08 vì nặng).
 // Toạ độ tính trong KHUNG .ufo-track (bản vẽ dùng viewport vì cảnh của nó fixed;
 // ở đây track nằm sau sidebar 240px nên chuột phải trừ gốc track).
 // ---------------------------------------------------------------------------
