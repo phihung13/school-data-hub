@@ -112,7 +112,7 @@ describe("giao diện tối — token nền và token chữ KHÔNG được gộ
     // Ba khối CỐ Ý đứng ngoài hệ sáng — cảnh đăng nhập, sidebar, đầu trang hv-thanh —
     // không dùng token; token lật thì chúng không được đổi theo.
     const SIDEBAR = readFileSync(join(goc, "apps/hub/components/hub-sidebar.tsx"), "utf8");
-    expect(SIDEBAR).toContain('bg-[#081226]');
+    expect(SIDEBAR).toContain('bg-[linear-gradient(168deg,#0E3C8C_0%,#0A2A5E_34%,#082049_62%,#051530_100%)]');
   });
 });
 

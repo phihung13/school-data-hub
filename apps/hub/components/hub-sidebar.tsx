@@ -131,7 +131,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
   const roleTag = trimmedClass ? `${roleLabel} · ${trimmedClass}` : roleLabel;
 
   return (
-    <nav className="flex h-full w-full flex-col border-r border-[rgba(53,224,255,.32)] bg-[#081226]">
+    <nav className="flex h-full w-full flex-col border-r border-[rgba(53,224,255,.32)] bg-[linear-gradient(168deg,#0E3C8C_0%,#0A2A5E_34%,#082049_62%,#051530_100%)]">
       <div className="flex items-center gap-[11px] border-b border-[rgba(53,224,255,.16)] px-[18px] pb-[14px] pt-[18px]">
         {/* Logo WebP 180×180, 3.870 B. Đổi từ /logo.jpg (74.181 B) ngày 31/07/2026: bản
             WebP đã được tạo từ đợt trước nhưng KHÔNG ai tham chiếu tới, nên mọi lần mở

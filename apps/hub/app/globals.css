@@ -293,6 +293,7 @@ textarea::placeholder {
   position: absolute; left: 0; right: 0; top: 0; height: 120px; pointer-events: none; z-index: 2;
   background: linear-gradient(180deg, transparent, rgba(30,95,184,.045) 45%, rgba(255,255,255,.5) 50%, rgba(30,95,184,.045) 55%, transparent);
   animation: scanY 8s linear infinite;
+  will-change: transform;
 }
 
 /* ── Đầu trang "command strip" ── */
@@ -303,7 +304,7 @@ textarea::placeholder {
   border: 1px solid rgba(53,224,255,.4);
   clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
   box-shadow: 0 16px 40px rgba(10,30,70,.25);
-  filter: drop-shadow(1.5px 0 0 rgba(53,224,255,.55)) drop-shadow(-1.5px 0 0 rgba(53,224,255,.55)) drop-shadow(0 1.5px 0 rgba(53,224,255,.55)) drop-shadow(0 -1.5px 0 rgba(53,224,255,.55)) drop-shadow(0 20px 16px rgba(10,42,94,.28));
+  filter: drop-shadow(1.5px 0 0 rgba(53,224,255,.55)) drop-shadow(-1.5px 0 0 rgba(53,224,255,.55)) drop-shadow(0 1.5px 0 rgba(53,224,255,.55)) drop-shadow(0 -1.5px 0 rgba(53,224,255,.55)) drop-shadow(0 12px 10px rgba(10,42,94,.28));
   animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) .05s backwards;
 }
 .hv-head::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, #35E0FF, transparent 60%); }
@@ -328,7 +329,7 @@ textarea::placeholder {
   position: relative; overflow: hidden; padding: 17px 20px; border: 0; border-radius: 0;
   background: rgba(255,255,255,.95); box-shadow: none;
   clip-path: polygon(0 0, 36% 0, calc(36% + 8px) 7px, calc(64% - 8px) 7px, 64% 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
-  filter: drop-shadow(1.5px 0 0 #8FB6E4) drop-shadow(-1.5px 0 0 #8FB6E4) drop-shadow(0 1.5px 0 #8FB6E4) drop-shadow(0 -1.5px 0 #8FB6E4) drop-shadow(0 9px 0 rgba(10,42,94,.28)) drop-shadow(0 22px 18px rgba(10,42,94,.32));
+  filter: drop-shadow(1.5px 0 0 #8FB6E4) drop-shadow(-1.5px 0 0 #8FB6E4) drop-shadow(0 1.5px 0 #8FB6E4) drop-shadow(0 -1.5px 0 #8FB6E4) drop-shadow(0 9px 0 rgba(10,42,94,.28)) drop-shadow(0 14px 10px rgba(10,42,94,.30));
   animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) backwards;
 }
 .hv-card::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: linear-gradient(90deg, transparent, rgba(14,159,216,.5), transparent); }
@@ -339,14 +340,14 @@ textarea::placeholder {
 .hv-r > *:nth-child(1) { animation-delay: .18s; }
 .hv-r > *:nth-child(2) { animation-delay: .26s; }
 .hv-r > *:nth-child(3) { animation-delay: .34s; }
-.card-sweep { position: absolute; top: 0; bottom: 0; width: 52%; pointer-events: none; background: linear-gradient(105deg, transparent, rgba(255,255,255,.5), transparent); animation: cardSweep 5.5s ease-in-out infinite; }
+.card-sweep { position: absolute; top: 0; bottom: 0; width: 52%; pointer-events: none; background: linear-gradient(105deg, transparent, rgba(255,255,255,.5), transparent); animation: cardSweep 5.5s ease-in-out 2; }
 .hv-ct { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: static; }
 .hv-ct::after { content: ""; position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; border-bottom: 3px solid rgba(14,159,216,.75); border-right: 3px solid rgba(14,159,216,.75); pointer-events: none; }
 .hv-tt { display: flex; align-items: center; gap: 8px; font-size: 15.5px; font-weight: 900; color: #0A2A5E; white-space: nowrap; }
 .hv-kick { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; font-weight: 800; letter-spacing: .12em; color: #4A78C2; }
 
 /* ── Thẻ check-in vàng kem ── */
-.hv-check { background: linear-gradient(135deg, #FFF9E8 0%, #FFEFC2 58%, #FFE49A 100%); filter: drop-shadow(1.5px 0 0 #E8C15A) drop-shadow(-1.5px 0 0 #E8C15A) drop-shadow(0 1.5px 0 #E8C15A) drop-shadow(0 -1.5px 0 #E8C15A) drop-shadow(0 9px 0 rgba(160,105,10,.32)) drop-shadow(0 22px 18px rgba(180,120,20,.35)); }
+.hv-check { background: linear-gradient(135deg, #FFF9E8 0%, #FFEFC2 58%, #FFE49A 100%); filter: drop-shadow(1.5px 0 0 #E8C15A) drop-shadow(-1.5px 0 0 #E8C15A) drop-shadow(0 1.5px 0 #E8C15A) drop-shadow(0 -1.5px 0 #E8C15A) drop-shadow(0 9px 0 rgba(160,105,10,.32)) drop-shadow(0 14px 10px rgba(180,120,20,.33)); }
 .hv-check::before { background: linear-gradient(90deg, transparent, rgba(245,163,0,.75), transparent); }
 .hv-check::after { border-color: #B77E00; }
 .hv-check .hv-tt, .hv-check .hv-q { color: #5A3E00; }
@@ -358,13 +359,11 @@ textarea::placeholder {
   border: 0; border-radius: 0; color: #fff; font-family: inherit; cursor: pointer;
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
   filter: drop-shadow(0 8px 14px rgba(4,13,32,.28));
-  animation: moodBob 3s ease-in-out infinite; transition: transform .16s cubic-bezier(.34,1.56,.64,1);
+  transition: transform .16s cubic-bezier(.34,1.56,.64,1);
 }
-.hv-m:nth-child(2) { animation-delay: .4s; }
-.hv-m:nth-child(4) { animation-delay: 1.2s; }
 /* Khác nút của panel đăng nhập (giật vì rời khỏi con trỏ ở mép): ô này PHÓNG TO tại chỗ
    nên con trỏ vẫn nằm trong nó — không có vòng lặp hover-rời-hover. */
-.hv-m:hover { animation-play-state: paused; transform: translateY(-4px) scale(1.12); }
+.hv-m:hover { transform: translateY(-4px) scale(1.12); }
 .hv-m .msr { font-size: 24px; }
 .hv-m::after { content: attr(title); font-size: 10.5px; font-weight: 800; letter-spacing: .01em; }
 .hv-cta {
@@ -384,7 +383,7 @@ textarea::placeholder {
   padding: 15px 18px 15px 30px; font-family: inherit; cursor: pointer; text-align: left; border-radius: 0;
   background: linear-gradient(100deg, #FFC629, #F5A300); transition: transform .16s;
   clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
-  filter: drop-shadow(1.5px 0 0 #B77E00) drop-shadow(-1.5px 0 0 #B77E00) drop-shadow(0 1.5px 0 #B77E00) drop-shadow(0 -1.5px 0 #B77E00) drop-shadow(0 9px 0 rgba(160,105,10,.38)) drop-shadow(0 22px 18px rgba(245,163,0,.5));
+  filter: drop-shadow(1.5px 0 0 #B77E00) drop-shadow(-1.5px 0 0 #B77E00) drop-shadow(0 1.5px 0 #B77E00) drop-shadow(0 -1.5px 0 #B77E00) drop-shadow(0 9px 0 rgba(160,105,10,.38)) drop-shadow(0 14px 10px rgba(245,163,0,.45));
   animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) backwards;
 }
 .hv-bn:hover { transform: translateY(-2px); }
@@ -405,7 +404,6 @@ textarea::placeholder {
 .hv-wl { font-size: 11.5px; font-weight: 800; margin-bottom: 6px; color: #33507C; }
 .hv-bar { position: relative; height: 9px; overflow: hidden; border-radius: 0; background: #E1EAF5; }
 .hv-fill { position: relative; display: block; height: 100%; transition: width .8s cubic-bezier(.2,.8,.2,1); }
-.hv-fill::after { content: ""; position: absolute; top: 0; bottom: 0; width: 36%; background: linear-gradient(105deg, transparent, rgba(255,255,255,.4), transparent); animation: barShimmer 2.6s ease-in-out infinite; }
 .hv-seg { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 3px), #fff calc(20% - 3px) 20%); }
 .hv-wn { font-size: 13.5px; font-weight: 900; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .hv-link {
@@ -444,7 +442,6 @@ textarea::placeholder {
 @keyframes fadeUp { 0% { opacity: 0; transform: translateY(18px); } 100% { opacity: 1; transform: none; } }
 @keyframes cardSweep { 0%, 55% { transform: translateX(-130%); } 100% { transform: translateX(260%); } }
 @keyframes moodBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes barShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } }
 @keyframes rdSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 @keyframes ufoBob { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
 @keyframes ufoBeam { 0%, 100% { opacity: .3; } 50% { opacity: .8; } }
@@ -494,5 +491,5 @@ textarea::placeholder {
    đã giữ ở intro và nền sao. Thẻ vẫn hiện (fadeUp tắt), dữ liệu không mất gì. */
 @media (prefers-reduced-motion: reduce) {
   .fx-scan, .ufo-track { display: none; }
-  .hv-head, .hv-stats, .hv-card, .hv-bn, .hv-m, .card-sweep, .hv-fill::after, .rd-beam, .rd-dot { animation: none; }
+  .hv-head, .hv-stats, .hv-card, .hv-bn, .card-sweep, .rd-beam, .rd-dot { animation: none; }
 }

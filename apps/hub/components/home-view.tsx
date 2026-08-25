@@ -1017,6 +1017,12 @@ function UfoBay() {
     let raf = 0;
     let truoc = performance.now();
     const buoc = (now: number) => {
+      // 30fps là đủ cho một vật trôi chậm — nửa số lần raster lại cái đĩa có filter
+      // (25/08: "web cứ giật giật" — mọi hiệu ứng nền đều phải trả bớt khung hình).
+      if (now - truoc < 30) {
+        raf = requestAnimationFrame(buoc);
+        return;
+      }
       const dt = Math.min(50, now - truoc) / 1000;
       truoc = now;
 
