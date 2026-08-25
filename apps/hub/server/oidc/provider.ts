@@ -374,12 +374,34 @@ async function buildProvider(): Promise<Provider> {
   provider.use(async (ctx: any, next: () => Promise<void>) => {
     await next();
     if (!String(ctx.path ?? "").includes("token") || ctx.status < 400) return;
-    const coBasic = !!ctx.req?.headers?.authorization?.startsWith?.("Basic ");
+    const authHeader: string | undefined = ctx.req?.headers?.authorization;
+    const coBasic = !!authHeader?.startsWith?.("Basic ");
     const coBodySecret = !!ctx.oidc?.body?.client_secret;
-    const clientId = ctx.oidc?.body?.client_id ?? (coBasic ? "(trong Basic header)" : "(khong ro)");
+    let clientId = ctx.oidc?.body?.client_id ?? "(khong ro)";
+    let chanDoanBasic = "";
+    if (coBasic) {
+      // Nấc hai của đèn (25/08, lượt thật của Factory ra "gửi Basic=true" mà vẫn 401):
+      // giải mã header để phân biệt SAI client_id với SAI chuỗi. Ghi client_id, ĐỘ DÀI
+      // chuỗi họ gửi và một boolean khớp/không — GIÁ TRỊ chuỗi không bao giờ vào log.
+      try {
+        const giaiMa = Buffer.from(authHeader!.slice(6), "base64").toString("utf8");
+        const sep = giaiMa.indexOf(":");
+        if (sep > 0) {
+          const idGui = decodeURIComponent(giaiMa.slice(0, sep));
+          const secretGui = decodeURIComponent(giaiMa.slice(sep + 1));
+          clientId = idGui;
+          const chuan = (process.env.EMBED_WEBHOOK_SECRET_CHUNG ?? "").trim() || "vietanh2026";
+          chanDoanBasic =
+            ` · secret dài ${secretGui.length} ký tự, khớp chuỗi chung=${secretGui === chuan}` +
+            (secretGui !== chuan && secretGui.trim() === chuan ? " (LỆCH DO KHOẢNG TRẮNG thừa đầu/cuối)" : "");
+        }
+      } catch {
+        chanDoanBasic = " · (không giải mã được Basic header)";
+      }
+    }
     console.warn(
       `[oidc] /token ${ctx.status} ${ctx.body?.error ?? ""} · client_id=${clientId} · ` +
-        `gửi Basic=${coBasic} · secret trong body=${coBodySecret}` +
+        `gửi Basic=${coBasic} · secret trong body=${coBodySecret}` + chanDoanBasic +
         (coBodySecret && !coBasic ? " ← client_secret_post — hợp đồng §5.2 đòi client_secret_basic, đây là chỗ gãy" : ""),
     );
   });
