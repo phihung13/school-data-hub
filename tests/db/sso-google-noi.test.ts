@@ -35,8 +35,8 @@ describe("SSO Google — nối tài khoản trường", () => {
     });
   });
 
-  afterAll(async ({ skip }) => {
-    if (!ready) return skip();
+  afterAll(async () => {
+    if (!ready) return;
     await asSystem(async (c) => {
       await c.query("delete from core.identity_links where external_id in ($1, $2)", [AUTH_UID_TAM, AUTH_UID_KHAC]);
       await c.query("update core.users set auth_uid = null where email = $1", [EMAIL_TAM]);
