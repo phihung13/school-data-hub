@@ -600,4 +600,23 @@ Nhà trường có thể **tắt app trong mười giây, bất cứ lúc nào**
 
 ---
 
+## 12. SỔ BỆNH ÁN — hai app đầu tiên đã ngã ở đâu, để bạn khỏi ngã lại
+
+Mỗi dòng dưới đây là một ca CÓ THẬT (Factory và Việt Anh Class, 08/2026), không phải phòng xa. Đọc bảng này TRƯỚC khi kết luận "lỗi bên Hub" — cả hai đội đi trước đều kết luận vậy, và cả hai lần đều sai.
+
+| Bạn thấy gì | Nghĩa là gì | Soi ở đâu | Ai sửa |
+|---|---|---|---|
+| Đăng nhập báo `server responded with a challenge in the WWW-Authenticate HTTP Header` | Hub từ chối ở vòng XÁC THỰC CLIENT — sai `client_id`, sai chuỗi bí mật, hoặc gửi secret trong body thay vì header Basic | Chạy lệnh curl mục 9.SSO với đúng cặp id/chuỗi bạn ĐANG cấu hình: ra `invalid_grant` là cặp đó đúng, ra `invalid_client` là cặp đó sai. Ca thật: một app cấu hình chuỗi 21 ký tự trong khi chuỗi chung dài 11 — kiểm `echo -n "$BI_MAT" \| wc -c` | App |
+| Curl ra `invalid_grant` mà app vẫn không vào được | Cặp id/chuỗi ĐÚNG rồi — app đang gửi một cặp KHÁC với cái bạn vừa curl (biến môi trường chưa nạp, deploy chưa build lại) | So từng ký tự biến môi trường trên máy chạy THẬT, không phải file .env trong repo | App |
+| `invalid_grant` khi đăng nhập thật (không phải curl) | Mã đăng nhập dùng lại hoặc hết hạn (mã sống ≤60 giây, dùng đúng một lần) | Bạn vừa F5 một trang callback cũ? Mở lại app từ ĐẦU luồng, đừng F5 | App |
+| Màn lỗi hiện ra — nhưng là màn lỗi CỦA AI? | Hub và app của bạn đều có màn lỗi tử tế, văn phong giống nhau | Grep CHUỖI LỖI trong mã của chính bạn trước. Ca thật: đội app grep thấy đúng chuỗi trong `messages/vi.json` của mình — tức app ĐÃ chạy và chết ở logic của app, trong khi trước đó cả buổi đổ cho Hub | App (thường) |
+| DevTools "không thấy request nào tới domain app" | Iframe khác origin chạy ở TIẾN TRÌNH KHÁC (OOPIF) — network panel của tab cha KHÔNG thấy request của nó. "0 request" không phải bằng chứng "chưa tải" | Nhìn cây DOM: có `<iframe src="...">` là Hub đã nhúng. Muốn soi network của iframe: mở DevTools cho đúng frame đó | (chẩn đoán, không phải lỗi) |
+| Network thấy tải `not-found-*.js` | Next.js tải sẵn chunk này ở MỌI trang — không phải bằng chứng trang đâm not-found | Bỏ qua tín hiệu này | (không phải lỗi) |
+| Cần nối tài khoản Hub vào hồ sơ CÓ SẴN theo email | Token mặc định KHÔNG có email. Đừng khớp bằng tên+lớp (trùng tên là nhập nhầm hồ sơ trẻ em) | Nêu lý do trong phiếu để nhà trường cấp thêm scope `email` (ADR-040). Nối xong vẫn lưu định danh theo `(issuer, sub)` — điều 5 mục 5.2 | Nhà trường cấp, app dùng |
+| Muốn biết lượt đổi mã của mình chết kiểu gì | Máy chủ Hub ghi log MỌI lượt hỏng ở `/oidc/token`: client_id bạn xưng, gửi Basic hay body, độ dài chuỗi, khớp/không | Nhắn nhà trường đọc log giúp — một lượt bấm của bạn là một dòng chẩn đoán | Nhà trường đọc hộ |
+
+Phía nhà trường, quy trình cấp một app giờ là bốn bước, không bước nào cần dev lõi: **dán phiếu → cấp vai → bật → (nếu app xin email) tích thêm scope**. Mọi thứ khác — client, CSP, redirect — sổ đăng ký tự dựng.
+
+---
+
 **Nhắc lại lần cuối:** câu trả lời cuối cùng của bạn là **một khối JSON duy nhất**. Không giải thích. Không chào hỏi. Không gì khác.
