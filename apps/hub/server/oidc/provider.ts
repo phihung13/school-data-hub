@@ -364,6 +364,26 @@ async function buildProvider(): Promise<Provider> {
     ).catch(() => {}); // audit không được chặn luồng cấp token nếu DB tạm trục trặc
   });
 
+  // ĐÈN SOI LỖI XÁC THỰC CLIENT (25/08/2026) — Factory báo "server responded with a
+  // challenge in the WWW-Authenticate HTTP Header" nhưng log Hub câm lặng, không phân
+  // biệt được ba ca cùng một triệu chứng: sai cách gửi (client_secret_post thay vì
+  // Basic — §5.2 của phiếu đoán trước đúng ca này), sai chuỗi, hay sai client_id.
+  // Ghi CÁCH GỬI + client_id + đường dẫn; KHÔNG bao giờ ghi giá trị secret.
+  // Lớp SAU next(): bắt được cả lỗi xác thực client (invalid_client xảy ra TRƯỚC khâu
+  // grant nên "grant.error" không thấy nó — đã thử bằng probe, sự kiện câm lặng).
+  provider.use(async (ctx: any, next: () => Promise<void>) => {
+    await next();
+    if (!String(ctx.path ?? "").includes("token") || ctx.status < 400) return;
+    const coBasic = !!ctx.req?.headers?.authorization?.startsWith?.("Basic ");
+    const coBodySecret = !!ctx.oidc?.body?.client_secret;
+    const clientId = ctx.oidc?.body?.client_id ?? (coBasic ? "(trong Basic header)" : "(khong ro)");
+    console.warn(
+      `[oidc] /token ${ctx.status} ${ctx.body?.error ?? ""} · client_id=${clientId} · ` +
+        `gửi Basic=${coBasic} · secret trong body=${coBodySecret}` +
+        (coBodySecret && !coBasic ? " ← client_secret_post — hợp đồng §5.2 đòi client_secret_basic, đây là chỗ gãy" : ""),
+    );
+  });
+
   return provider;
 }
 
