@@ -48,10 +48,12 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
   });
 
   it("thẻ trắng: viền drop-shadow #8FB6E4 4 hướng + bóng đáy đậm (khối FINAL), vát góc + rãnh notch 36%", () => {
-    // 25/08: bóng mờ hạ 22px/18px -> 14px/10px theo lệnh hiệu năng ("web cứ giật giật")
-    // — pass blur là phần đắt nhất của chuỗi filter; viền 4 hướng giữ nguyên bản vẽ.
+    // Bóng thẻ đi hai lượt 25/08: hạ 22->14 vì "web giật" (blur là pass đắt nhất khi thẻ
+    // còn animation bên trong), rồi NÂNG 26px/.40 — đậm hơn cả bản vẽ — theo lệnh "bóng
+    // phải đè lên cái nền vi mạch". Nâng được vì mọi animation vô hạn TRONG thẻ đã gỡ:
+    // filter tĩnh raster một lần rồi cache, bóng đậm không còn tốn khung hình mỗi giây.
     const KHOP =
-      /\.hv-card\s*\{[^}]*drop-shadow\(1\.5px 0 0 #8FB6E4\)[^}]*drop-shadow\(0 9px 0 rgba\(10,42,94,\.28\)\) drop-shadow\(0 14px 10px rgba\(10,42,94,\.30\)\)/;
+      /\.hv-card\s*\{[^}]*drop-shadow\(1\.5px 0 0 #8FB6E4\)[^}]*drop-shadow\(0 10px 0 rgba\(10,42,94,\.30\)\) drop-shadow\(0 26px 22px rgba\(10,42,94,\.40\)\)/;
     expect(CSS).toMatch(KHOP);
     expect(CSS).toMatch(/\.hv-card\s*\{[^}]*clip-path:\s*polygon\(0 0, 36% 0, calc\(36% \+ 8px\) 7px/);
     // border-radius 0 (đời SQUARE-OFF) — không được lấy 12px của đời đầu.
