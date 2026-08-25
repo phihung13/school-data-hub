@@ -508,6 +508,18 @@ textarea::placeholder {
   .s-home-md > * { position: relative; z-index: 1; }
 }
 
+/* ── GHIM THẺ THÀNH LỚP COMPOSITOR (25/08 — "trang mini app, tôi chỉ lướt lên xuống
+      thôi mà nó lag nó giật ko kéo được luôn"). Chuỗi drop-shadow (blur 26px) là ảnh
+      ĐẮT để vẽ; không ghim lớp thì mỗi khung hình cuộn trình duyệt vẽ lại nó cho từng
+      thẻ trong vùng nhìn — trang ngắn như trang chủ không lộ, trang danh sách dài lộ
+      ngay. `will-change: transform` bảo compositor raster thẻ (kèm bóng) MỘT lần rồi
+      cache; cuộn chỉ còn là trượt các lớp đã vẽ. Giá: bộ nhớ ~diện tích thẻ × số thẻ
+      trong vùng nhìn — vài chục thẻ là mức an toàn; KHÔNG áp cho phần tử nhỏ lặp hàng
+      trăm lần (dòng danh sách, chip…). ── */
+.hv-card, .hv-check, .hv-bn, .hv-stat, .hv-head, .hv-thanh, .hv-cta {
+  will-change: transform;
+}
+
 /* GIẢM CHUYỂN ĐỘNG: mọi trang trí động của trang chủ đứng yên hoặc biến mất — cùng luật
    đã giữ ở intro và nền sao. Thẻ vẫn hiện (fadeUp tắt), dữ liệu không mất gì. */
 @media (prefers-reduced-motion: reduce) {
