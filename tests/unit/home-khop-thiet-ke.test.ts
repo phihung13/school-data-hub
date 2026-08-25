@@ -39,12 +39,14 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
     expect(CSS).toMatch(/\.s-home\s*\{[^}]*background:\s*#FFFFFF/);
   });
 
-  it("::after của #s-home giữ MẠCH VI !important — khối 'lưới gắt hơn' đứng sau nhưng THUA vì không !important", () => {
-    // Luật cascade: khai báo !important thắng khai báo thường đứng sau nó.
-    expect(THIET_KE).toMatch(/#s-home::after\s*\{[^}]*url\("data:image\/svg\+xml[^}]*!important/);
-    expect(CSS).toMatch(/\.s-home::after\s*\{[^}]*url\("data:image\/svg\+xml/);
-    // Còn ::before là lưới chấm lam — không có đời sau nào đè.
-    expect(CSS).toMatch(/\.s-home::before\s*\{[^}]*rgba\(53,224,255,\.14\)/);
+  it("nền ĐÈ LÊN bản vẽ (25/08): quầng sáng lan + chòm nơ-ron KHÔNG lặp — cấm hoa văn tile quay lại", () => {
+    // Lệnh trực tiếp: "nền không phải vi mạch xếp đều... nền hiện tại rất xấu và rối".
+    // Bản vẽ VẪN mang lưới chấm + mạch vi tile 220px — đồng bộ lại với bản vẽ mà phục
+    // hồi tile là làm trái lệnh, không phải sửa lỗi.
+    expect(CSS).toMatch(/\.s-home::before\s*\{[^}]*radial-gradient\(1000px 640px at 86% -6%/);
+    expect(CSS).toMatch(/\.s-home::after\s*\{[^}]*no-repeat/);
+    expect(CSS).not.toMatch(/\.s-home::(before|after)\s*\{[^}]*background-size:\s*220px/);
+    expect(CSS).not.toMatch(/\.s-home::before\s*\{[^}]*110px 110px/);
   });
 
   it("thẻ trắng: viền drop-shadow #8FB6E4 4 hướng + bóng đáy đậm (khối FINAL), vát góc + rãnh notch 36%", () => {
