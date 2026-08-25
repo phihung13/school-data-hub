@@ -31,7 +31,7 @@ const beVietnamPro = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "Viet Anh School Hub",
+  title: "Major OS · Trường Việt Anh",
   description: "Super App — Hệ thống Trường Việt Anh",
 };
 

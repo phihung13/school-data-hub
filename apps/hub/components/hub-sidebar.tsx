@@ -144,7 +144,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
         {/* eslint-disable-next-line @next/next/no-img-element -- logo tĩnh, kích thước cố định nhỏ */}
         <img src="/logo.webp?v=ddafa976" alt="" className="h-9 w-9 flex-none rounded-[10px]" />
         <div className="min-w-0">
-          <div className="text-[15px] font-black leading-[1.15] text-white">School Hub</div>
+          <div className="text-[15px] font-black leading-[1.15] text-white">Major OS</div>
           <div className="text-[9.5px] font-extrabold tracking-wide text-[#6FB6FF]">{roleTag}</div>
         </div>
       </div>

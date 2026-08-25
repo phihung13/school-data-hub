@@ -338,7 +338,7 @@ export function LoginForm({
           <img src="/logo.webp?v=ddafa976" alt="" className="h-9 w-9 rounded-[9px] object-cover" />
         </span>
         <span className="flex flex-col gap-0.5">
-          <span className="text-[16px] font-black text-white">School Hub</span>
+          <span className="text-[16px] font-black text-white">Major OS</span>
           <span className="text-[9px] font-extrabold tracking-[.22em] text-[#FFE3A6]">TRƯỜNG VIỆT ANH</span>
         </span>
       </div>
@@ -383,7 +383,7 @@ export function LoginForm({
             <h1 className="text-[33px] font-black leading-[1.1] tracking-[-.02em] text-white [text-shadow:0_12px_40px_rgba(0,0,0,.65)]">
               Viet Anh
               <br />
-              <em className="whitespace-nowrap not-italic text-gold [text-shadow:0_0_32px_rgba(255,198,41,.55)]">School Hub</em>
+              <em className="whitespace-nowrap not-italic text-gold [text-shadow:0_0_32px_rgba(255,198,41,.55)]">Major OS</em>
             </h1>
 
             {error && (

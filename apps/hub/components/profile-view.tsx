@@ -436,7 +436,7 @@ function VersionLine() {
   // caption2 = 5,03:1. (01/08/2026)
   return (
     <div className="text-center text-[10.5px] font-semibold text-caption2">
-      School Hub v1.0 · Giai đoạn 1 · Trường Việt Anh
+      Major OS v1.0 · Giai đoạn 1 · Trường Việt Anh
     </div>
   );
 }
