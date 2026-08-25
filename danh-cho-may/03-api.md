@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: none
-sync-version: 5
+sync-version: 6
 ---
 
 # API — tRPC routers, 2 đường ghi duy nhất
@@ -105,7 +105,13 @@ Scope `hub_profile` (RP phải khai mới nhận được; mặc định vẫn c
 | `hub_school` | string | `VA-Q7` (mã cơ sở) |
 | `hub_classes` | array | `["6A1"]` — lớp đang học / đang dạy |
 
-Không có claim nào chứa tên thật, `student_code`, số điện thoại hay địa chỉ. Cập nhật theo **lần đăng nhập kế tiếp** của user — Hub không đẩy thông báo chủ động sang RP khi em chuyển lớp (thêm một đường là thêm một thứ hỏng được; độ trễ thực tế thường dưới một ngày).
+Scope `email` (ADR-040 — trường cấp theo TỪNG app trong sổ đăng ký, không mặc định, RP không tự xin được):
+
+| Claim | Kiểu | Ví dụ |
+|---|---|---|
+| `email` | string \| null | `minh@va.edu.vn` — email do trường phát hành (`core.users.email`) |
+
+Không có claim nào chứa tên thật, `student_code`, số điện thoại hay địa chỉ (email trường cấp là định danh trường phát hành, cùng vai với `sub` — không phải thông tin đời tư). Cập nhật theo **lần đăng nhập kế tiếp** của user — Hub không đẩy thông báo chủ động sang RP khi em chuyển lớp (thêm một đường là thêm một thứ hỏng được; độ trễ thực tế thường dưới một ngày).
 
 ### Đăng ký Relying Party (RP) — từ 07/08/2026 nằm trong sổ Mini App, không còn trong mã (ADR-032, `0055`)
 

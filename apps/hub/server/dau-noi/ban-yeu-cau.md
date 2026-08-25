@@ -433,7 +433,7 @@ export async function banVeHub(eventType, actorUserId, payload, ...khoa) {
 | `hub_school` | chuỗi hoặc `null` | Mã cơ sở |
 | `hub_classes` | mảng chuỗi | Mã các lớp của người này. Học sinh: lớp đang học. Giáo viên: lớp đang dạy/chủ nhiệm |
 
-Ba trường `hub_*` đi kèm scope `hub_profile`, và **nhà trường cấp sẵn cho mọi app** — bạn không khai `scopes`, không phải xin. Nếu bạn nhận được token mà thiếu ba trường đó thì đấy là lỗi cấu hình phía nhà trường, **báo lại ngay** chứ đừng viết mã đoán vai.
+Ba trường `hub_*` đi kèm scope `hub_profile`, và **nhà trường cấp sẵn cho mọi app** — bạn không khai `scopes`, không phải xin. Riêng claim `email` (email trường phát hành) KHÔNG mặc định: chỉ app cần nối tài khoản Hub vào hồ sơ có sẵn gắn theo email mới được nhà trường cấp thêm scope `email` trong sổ đăng ký (nêu lý do khi gửi phiếu là đủ) — và kể cả khi có email, định danh lưu trữ vẫn phải là cặp `(issuer, subject)` như điều 5 mục 5.2. Nếu bạn nhận được token mà thiếu ba trường đó thì đấy là lỗi cấu hình phía nhà trường, **báo lại ngay** chứ đừng viết mã đoán vai.
 
 **`hub_role` chỉ có bốn giá trị.** Hub gộp `counselor`/`principal`/`board`/`admin` thành `staff` — app không cần phân biệt sâu hơn, và ngày nhà trường thêm một vai mới thì app của bạn không gãy.
 

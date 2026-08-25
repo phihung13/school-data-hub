@@ -218,11 +218,16 @@ async function buildProvider(): Promise<Provider> {
     // `offline_access` là scope RP phải xin thì mới được refresh_token (mặc định của thư
     // viện). Không tự phát cho mọi phiên: app chỉ cần đăng nhập một lần thì không có lý
     // do giữ một chiếc chìa quay lại dùng được 12 tiếng.
-    scopes: ["openid", "profile", "hub_profile", "offline_access"],
+    // `email` (ADR-040, 25/08/2026): KHÔNG mặc định — trường cấp theo từng app qua
+    // `sso_scopes` trong sổ đăng ký, cho app cần nối tài khoản Hub vào hồ sơ có sẵn
+    // gắn theo email trường phát hành (ca đầu tiên: Việt Anh Class, 16 hồ sơ thật —
+    // khớp theo tên+lớp bị bác vì trùng tên là nhập nhầm hồ sơ trẻ em).
+    scopes: ["openid", "profile", "hub_profile", "email", "offline_access"],
     claims: {
       openid: ["sub"],
       profile: ["name"],
       hub_profile: ["hub_role", "hub_school", "hub_classes"],
+      email: ["email"],
     },
     ttl: {
       AccessToken: 900, // 15 phút (ADR-016)
@@ -285,6 +290,18 @@ async function buildProvider(): Promise<Provider> {
           const base: Record<string, unknown> = { sub };
           if (scope.includes("hub_profile")) {
             Object.assign(base, await resolveHubProfileClaims(sub));
+          }
+          if (scope.includes("email")) {
+            // Chỉ đọc khi RP THẬT SỰ được cấp scope này (sso_scopes của sổ đăng ký đã
+            // chặn từ /oidc/auth — đây là vòng hai). Email trong core.users là email
+            // trường phát hành, không phải email cá nhân tự khai.
+            base.email = await withSystemContext(async (client) => {
+              const { rows } = await client.query<{ email: string | null }>(
+                "select email from core.users where id = $1",
+                [sub],
+              );
+              return rows[0]?.email ?? null;
+            });
           }
           return base;
         },

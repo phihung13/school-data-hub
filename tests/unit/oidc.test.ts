@@ -588,6 +588,10 @@ describe("provider thật — kiểm qua HTTP", () => {
     // Lỗi cũ: tài liệu hứa có refresh, code chỉ khai authorization_code.
     expect(meta.grant_types_supported).toContain("refresh_token");
     expect(meta.scopes_supported).toContain("offline_access");
+    // ADR-040 (25/08/2026): scope email được provider công bố, nhưng cấp theo TỪNG app
+    // qua sso_scopes trong sổ đăng ký — ràng buộc 0071 giữ danh sách trắng.
+    expect(meta.scopes_supported).toContain("email");
+    expect(meta.claims_supported).toContain("email");
     expect(meta.backchannel_logout_supported).toBe(true);
   });
 

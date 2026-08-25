@@ -1,6 +1,6 @@
 ---
 ban-doi-ung: ../danh-cho-nguoi/ho-so-he-thong.html
-sync-version: 41
+sync-version: 42
 ---
 
 # Database — một PostgreSQL, schema theo domain, Core Data Model là Single Source of Truth
@@ -884,7 +884,7 @@ Gói này làm cho miền **đăng nhập** đúng việc mà `0052` đã làm c
 | `sso_enabled` | Công tắc RIÊNG, không suy ra từ `enabled`. Có app nhúng mà không cần đăng nhập (trang tin), có app đăng nhập mà không nhúng (Đường A). Suy ra thì mọi app nhúng tự nhiên thành RP xin được token — cấp quyền bằng cách quên không khai |
 | `sso_redirect_uris text[]` | So khớp tuyệt đối theo OIDC. **Không** chứa `/embed/relay`: URI đó thuộc về Hub, `clients.ts` tự thêm từ `HUB_URL` cho app có nhúng — nạp vào bảng là ghi cứng một tên miền của chính mình vào dữ liệu |
 | `sso_backchannel_logout_uri` | ADR-016 "thoát Hub = thoát mọi RP" dựa vào cột này |
-| `sso_scopes text[]` | Bốn scope `provider.ts` công bố, bắt buộc có `openid` |
+| `sso_scopes text[]` | Các scope `provider.ts` công bố, bắt buộc có `openid`. Từ `0071` (ADR-040) danh sách trắng có thêm `email` — trường cấp theo TỪNG app cần nối hồ sơ có sẵn theo email trường phát hành, không mặc định |
 | `sso_client_secret_env` | **TÊN** biến môi trường, không phải giá trị — y hệt `webhook_secret_env`. Ba lý do ở đầu `0052` không đổi một chữ khi đối tượng là secret OIDC: bản sao lưu đi ra khỏi máy chủ, `pg_dump` nhân bản secret thật, người được đọc bảng quản trị ≠ người được biết secret |
 | `core.v_oidc_clients` (view) | Phép lọc `enabled and sso_enabled` nằm ở **đúng một chỗ**. Đây chính là chỗ vế nguy hiểm ở trên hỏng lần trước: một tầng quên một điều kiện thì app đã thu hồi vẫn cấp được token |
 | `core.moi_uri_la_https(text[])` (immutable) | CHECK trong Postgres **không nhận subquery**, mà điều cần kiểm là "mọi phần tử của mảng đều thoả" — thứ chỉ viết được bằng `unnest`. Bọc vào hàm là đường duy nhất còn lại, và hai ràng buộc dùng chung một định nghĩa "URI hợp lệ" nên chúng không thể lệch nhau về sau |
@@ -1273,3 +1273,7 @@ Nên đợt này dựng phần **chạy được ngay và đo được ngay** �
 - **`external_id` phải lặp lại được cho cùng một sự kiện.** Hub từ chối webhook thiếu `external_id`; App Manifest của Mini App ngoài phải khai cách sinh nó (công cụ no-code hay sinh mã mới mỗi lần gửi lại — khi đó unique constraint vô hiệu và gửi lại sẽ ghi thêm bản mới). Test go-live: bắn 2 lần cùng payload → 1 dòng.
 - Flag engine: UNIQUE `(student_id, rule_code, as_of_date)` — chạy lại là no-op.
 - Bản tin Zalo: outbox `ops.outbox_messages (dedup_key UNIQUE, sent_at)` — chỉ gửi khi claim được dòng chưa sent.
+
+## Đợt L (`0071`, 25/08/2026) — scope `email` vào danh sách trắng SSO (ADR-040)
+
+Một câu: nối dài ràng buộc `embedded_apps_sso_scope_biet_truoc` thêm đúng một phần tử `email`, giữ nguyên triết lý danh-sách-trắng của `0055` (scope lạ chết ngay lúc ghi sổ, không thành quyền lặng lẽ). Giá trị claim đọc từ `core.users.email` — email do trường phát hành, cùng vai định danh với `sub`; app đầu tiên được cấp: `viet-anh-class` (16 hồ sơ học sinh thật gắn theo email, cần nối ở lần đăng nhập đầu — khớp tên+lớp bị bác vì trùng tên là nhập nhầm hồ sơ trẻ em).
