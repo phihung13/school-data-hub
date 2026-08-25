@@ -31,6 +31,7 @@ import { SaoNen } from "./sao-nen";
 import { CO_INTRO } from "./intro-cinematic";
 import { MainContent } from "./page-shell";
 import { resolveThenPath } from "@/lib/trpc-client";
+import { av1Muot } from "@/lib/chon-video";
 
 interface DevAccount {
   authUid: string;
@@ -101,6 +102,16 @@ export function LoginForm({
     }
   }, [devAccounts, chon]);
 
+  // Máy giải mã AV1 không mượt (decodingInfo trả smooth:false — đo thật 25/08 trên máy
+  // chủ đầu tư) thì ép video nền sang H.264: nặng hơn vài trăm KB nhưng chạy bằng phần
+  // cứng. `key` đổi để trình duyệt dựng lại thẻ video và bỏ dở lượt tải AV1 đã lỡ bắt đầu.
+  const [epH264, setEpH264] = useState(false);
+  useEffect(() => {
+    void av1Muot().then((muot) => {
+      if (!muot) setEpH264(true);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     // TẢI TRƯỚC VIDEO INTRO trong lúc người dùng còn đứng ở màn đăng nhập (24/08/2026,
     // chủ đầu tư: "ấn đăng nhập xong load video lâu cực kì" — ba lần, và họ đúng).
@@ -115,15 +126,18 @@ export function LoginForm({
     // gấp đôi băng thông cho một file không bao giờ phát. Lùi 1,2s để nhường những giây
     // đầu cho video nền của chính màn này (poster đã che nên không ai thấy khoảng lùi).
     const t = window.setTimeout(() => {
-      try {
-        const co = document.createElement("video").canPlayType('video/mp4; codecs="av01.0.08M.08"');
-        const file = co ? "/trinh-dien/uploads/intro-av1.mp4" : "/trinh-dien/uploads/intro-software.mp4";
-        // Hỏng thì thôi — đây là tối ưu, không phải điều kiện: IntroCinematic có trần
-        // chờ 2,5s và tự bỏ intro khi mạng không kịp.
-        void fetch(file, { cache: "force-cache" }).catch(() => {});
-      } catch {
-        // canPlayType/fetch không có (môi trường lạ): bỏ qua, không chặn đăng nhập.
-      }
+      // ĐỔI 25/08: chọn theo av1Muot() (decodingInfo — "mở có MƯỢT không") thay vì
+      // canPlayType ("có mở được không"): máy không giải mã cứng AV1 đã đo được
+      // smooth:false, CPU gánh phần mềm là cả app ì theo. Cùng phép chọn với thẻ
+      // <video> bên dưới — tải trước bản nào thì phát đúng bản đó.
+      void av1Muot()
+        .then((muot) => {
+          const file = muot ? "/trinh-dien/uploads/intro-av1.mp4" : "/trinh-dien/uploads/intro-software.mp4";
+          // Hỏng thì thôi — đây là tối ưu, không phải điều kiện: IntroCinematic có trần
+          // chờ 2,5s và tự bỏ intro khi mạng không kịp.
+          return fetch(file, { cache: "force-cache" });
+        })
+        .catch(() => {});
     }, 1200);
     return () => window.clearTimeout(t);
   }, []);
@@ -287,6 +301,7 @@ export function LoginForm({
           `aria-hidden` + `pointer-events-none`: trang trí thuần. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#04102A]">
         <video
+          key={epH264 ? "h264" : "tu-chon"}
           className="h-full w-auto max-w-none object-cover [filter:brightness(1.18)_saturate(1.08)]"
           poster="/trinh-dien/uploads/su-tu-poster.webp"
           preload="auto"
@@ -295,7 +310,7 @@ export function LoginForm({
           playsInline
           autoPlay
         >
-          <source src="/trinh-dien/uploads/su-tu-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />
+          {!epH264 && <source src="/trinh-dien/uploads/su-tu-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />}
           <source src="/trinh-dien/uploads/su-tu-chay.mp4" type="video/mp4" />
         </video>
         {/* BÓNG LAN KHÔNG ĐỀU — chủ đầu tư 24/08: "lan ra không đều mới đẹp, tôi đã cố

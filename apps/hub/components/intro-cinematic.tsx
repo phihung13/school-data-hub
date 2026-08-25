@@ -27,12 +27,22 @@
 // Chạy câm là chọn có chủ ý, không phải hạn chế kỹ thuật: đây là app dùng trong lớp học.
 // Một đoạn nhạc tự bật khi cô giáo đăng nhập giữa giờ là thứ không ai muốn.
 import { useEffect, useRef, useState } from "react";
+import { av1Muot } from "@/lib/chon-video";
 
 /** Cờ do `login-form.tsx` đặt ngay trước khi nạp trang đích. */
 export const CO_INTRO = "hub:intro";
 
 export function IntroCinematic() {
   const [dangChay, setDangChay] = useState(false);
+  // Cùng phép chọn codec với màn đăng nhập (xem lib/chon-video.ts): máy AV1 không mượt
+  // thì phát bản H.264. Quyết định xong TRƯỚC khi video dựng (video chỉ dựng khi
+  // dangChay bật — sau một lần nạp trang), nên <source> đã đúng ngay từ đầu.
+  const [epH264, setEpH264] = useState(false);
+  useEffect(() => {
+    void av1Muot().then((muot) => {
+      if (!muot) setEpH264(true);
+    }).catch(() => {});
+  }, []);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -110,7 +120,7 @@ export function IntroCinematic() {
         // Video hỏng (mạng rớt, file thiếu) KHÔNG được để lại một màn đen phủ cả app.
         onError={() => setDangChay(false)}
       >
-        <source src="/trinh-dien/uploads/intro-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />
+        {!epH264 && <source src="/trinh-dien/uploads/intro-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />}
         <source src="/trinh-dien/uploads/intro-software.mp4" type="video/mp4" />
       </video>
 

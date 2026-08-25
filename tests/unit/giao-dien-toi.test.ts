@@ -268,7 +268,10 @@ describe("intro không bắt người dùng đợi", () => {
     expect(LOGIN3, "mất tải-trước — màn đen sẽ lại chờ 3,4 MB").toContain("intro-av1.mp4");
     // Phải CHỌN codec như thẻ <video> sẽ chọn — tải cả hai là phí gấp đôi băng thông
     // cho một file không bao giờ phát.
-    expect(LOGIN3).toContain("canPlayType");
+    // 25/08: phép chọn codec đổi từ canPlayType ("có mở được không") sang av1Muot()
+    // (decodingInfo — "mở có MƯỢT không"): đo thật trên máy chủ đầu tư, AV1 1080p trả
+    // smooth:false trong khi H.264 smooth:true — "lag lag" là CPU gánh AV1 phần mềm.
+    expect(LOGIN3).toContain("av1Muot");
     expect(LOGIN3, "thiếu bản dự phòng cho máy không đọc AV1").toContain("intro-software.mp4");
     expect(LOGIN3, "force-cache để lần hai lấy từ cache, không hỏi lại mạng").toContain('cache: "force-cache"');
   });
