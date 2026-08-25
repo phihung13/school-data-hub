@@ -55,7 +55,11 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
     const KHOP =
       /\.hv-card\s*\{[^}]*drop-shadow\(1\.5px 0 0 #8FB6E4\)[^}]*drop-shadow\(0 10px 0 rgba\(10,42,94,\.30\)\) drop-shadow\(0 26px 22px rgba\(10,42,94,\.40\)\)/;
     expect(CSS).toMatch(KHOP);
-    expect(CSS).toMatch(/\.hv-card\s*\{[^}]*clip-path:\s*polygon\(0 0, 36% 0, calc\(36% \+ 8px\) 7px/);
+    // 25/08: điểm đầu đa giác kéo ra -60px — clip-path cắt cả BÓNG filter tràn ngoài hộp
+    // (đo bằng thí nghiệm bóng đỏ trên trang thật); mở đáy + hai bên để bóng thoát,
+    // hình nhìn thấy (rãnh notch 36%, vát góc) không đổi một pixel.
+    expect(CSS).toMatch(/\.hv-card\s*\{[^}]*clip-path:\s*polygon\(-60px 0, 36% 0, calc\(36% \+ 8px\) 7px/);
+    expect(CSS).toMatch(/\.hv-card\s*\{[^}]*calc\(100% \+ 60px\) calc\(100% \+ 80px\)/);
     // border-radius 0 (đời SQUARE-OFF) — không được lấy 12px của đời đầu.
     expect(CSS).toMatch(/\.hv-card\s*\{[^}]*border-radius:\s*0/);
   });
