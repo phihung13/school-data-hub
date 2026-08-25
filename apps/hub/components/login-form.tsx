@@ -41,9 +41,12 @@ interface DevAccount {
 
 export function LoginForm({
   devAccounts,
+  ssoGoogleUrl,
   then,
 }: {
   devAccounts: DevAccount[];
+  /** URL authorize của Supabase (SSO Google thật). null = chưa bật, nút giữ hành vi dev. */
+  ssoGoogleUrl: string | null;
   /** Đích đã hẹn trong `?then=` (app/login/page.tsx đã lọc). Không có thì về /home. */
   then?: string | null;
 }) {
@@ -402,8 +405,11 @@ export function LoginForm({
                 // quầng vàng 42px): viền vẽ bằng shadow để không cộng 3px vào kích thước.
                 <button
                   type="button"
-                  disabled={loading || !chon}
-                  onClick={() => loginDev(chon)}
+                  // SSO THẬT khi đã cấu hình: rời hẳn trang, đi Google qua Supabase.
+                  // Chưa cấu hình: giữ hành vi cửa dev (nút này từng là đồ giả có chủ ý
+                  // cho demo — nay là công tắc theo môi trường, không phải hai bản UI).
+                  disabled={ssoGoogleUrl ? loading : loading || !chon}
+                  onClick={() => (ssoGoogleUrl ? window.location.assign(ssoGoogleUrl) : loginDev(chon))}
                   className="flex h-14 w-full items-center justify-center gap-[10px] whitespace-nowrap rounded-[10px] bg-white px-[26px] text-[15.5px] font-black text-[#1B1C3A] shadow-[0_20px_50px_rgba(2,8,22,.55),0_0_0_1.5px_rgba(255,198,41,.65),0_0_42px_rgba(255,198,41,.3)] transition hover:brightness-95 active:scale-[.985] disabled:opacity-50"
                 >
                   <GoogleMark />

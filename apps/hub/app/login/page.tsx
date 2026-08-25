@@ -46,5 +46,15 @@ export default async function LoginPage({
     header: headers().get(DEV_GATE_HEADER),
   });
 
-  return <LoginForm devAccounts={gate === "open" ? DEV_ACCOUNTS : []} then={then} />;
+  // SSO Google THẬT (25/08/2026): bật bằng đúng MỘT biến SUPABASE_URL. Chưa đặt →
+  // ssoGoogleUrl null → nút Google giữ hành vi cửa dev như cũ. URL dựng Ở MÁY CHỦ để
+  // SUPABASE_URL không cần thành biến NEXT_PUBLIC_*.
+  const supa = (process.env.SUPABASE_URL ?? "").trim().replace(/\/+$/, "");
+  const hub = (process.env.HUB_URL ?? "").trim().replace(/\/+$/, "");
+  const ssoGoogleUrl =
+    supa.startsWith("https://") && hub
+      ? `${supa}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${hub}/dang-nhap/google`)}`
+      : null;
+
+  return <LoginForm devAccounts={gate === "open" ? DEV_ACCOUNTS : []} then={then} ssoGoogleUrl={ssoGoogleUrl} />;
 }
