@@ -538,7 +538,7 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
     <div className="relative z-[2] -mt-[46px] flex flex-col gap-2.5 rounded-[22px] bg-card p-3.5 shadow-[0_14px_32px_rgba(10,42,94,.14)]">
       <div className="flex items-center justify-between">
         <h2 className="text-[14.5px] font-black text-cardtitle">Check-in cảm xúc</h2>
-        <span className="rounded-full bg-[#3A2E08] px-2.5 py-1 text-[10px] font-black text-gold-textDark">TRƯỚC 8:00</span>
+        <span className="rounded-full bg-surface-warn px-2.5 py-1 text-[10px] font-black text-gold-text">TRƯỚC 8:00</span>
       </div>
       <div className="flex items-center gap-2.5">
         <Mascot pose="wave" width={42} />
@@ -574,7 +574,7 @@ function CheckinCardMobile({ data }: { data: HomeData }) {
         <button
           type="button"
           onClick={data.retryStats}
-          className="flex min-h-[44px] items-center justify-center rounded-[13px] border-[1.5px] border-[#1E3A6B] py-2.5 text-center text-[12.5px] font-extrabold text-link"
+          className="flex min-h-[44px] items-center justify-center rounded-[13px] border-[1.5px] border-line2 py-2.5 text-center text-[12.5px] font-extrabold text-link"
         >
           Thử lại
         </button>
@@ -950,7 +950,7 @@ function GrowthBanner() {
 function StreakCard({ streakDays }: { streakDays: number }) {
   return (
     <div className="flex items-center gap-2.5 rounded-2xl bg-card px-3.5 py-[10px] shadow-[0_3px_12px_rgba(10,42,94,.07)]">
-      <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-[#0C2E22]">
+      <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-xl bg-surface-success">
         <span aria-hidden="true" className="msr text-[19px] text-domain-studyDark">local_fire_department</span>
       </span>
       {/* BỎ 06/08/2026 (§1.5): "Giữ đều mỗi ngày để chuỗi không đứt" là lời dặn dò, không

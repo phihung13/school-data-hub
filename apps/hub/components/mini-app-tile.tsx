@@ -44,7 +44,7 @@ export function MiniAppTile({ tile }: { tile: MiniAppTileType }) {
             DESIGN-GUIDELINES §3 muốn `opacity:.45` cho app chưa mở, §11 nói tương phản chữ
             không có ngoại lệ. Hai điều đó chỉ mâu thuẫn khi mờ cả khối: giữ tín hiệu "chưa
             mở" cho MẮT bằng ô icon mờ, giữ chữ đặc màu cho người đọc chữ. */}
-        <span aria-hidden="true" className="flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl bg-[#16294B] opacity-45">
+        <span aria-hidden="true" className="flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-2xl bg-surface-muted opacity-45">
           {tile.iconImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- logo app ngoài, kích thước cố định nhỏ
             <img src={tile.iconImageUrl} alt="" className="h-full w-full object-cover" />

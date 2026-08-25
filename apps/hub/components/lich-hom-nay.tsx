@@ -38,7 +38,7 @@ export function LichHomNay({ ban_dau }: { ban_dau: GetLichHomNayOutput | null })
   if (q.error) return null;
 
   return (
-    <section className="rounded-[18px] border border-[#1E3A6B] bg-card p-4">
+    <section className="rounded-[18px] border border-line2 bg-card p-4">
       <div className="mb-2 flex items-center gap-2">
         <span aria-hidden className="msr text-[19px] text-[#2C7BF2]">event</span>
         <h2 className="text-[14px] font-black text-cardtitle">Lịch hôm nay</h2>

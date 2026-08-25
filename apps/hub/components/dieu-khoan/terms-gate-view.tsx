@@ -219,7 +219,7 @@ export function TermsGateView({ displayName }: { displayName: string }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#081730]">
+    <div className="flex min-h-screen w-full flex-col bg-pagebg">
       <MiniAppHeader title="Điều khoản & đồng ý" subtitle={displayName} icon="shield" />
 
       {/* `focus:outline-none` đã nằm sẵn trong chính <MainContent> (page-shell.tsx) —
@@ -375,7 +375,7 @@ export function TermsGateView({ displayName }: { displayName: string }) {
                 type="button"
                 disabled={decide.isPending}
                 onClick={() => bam("declined")}
-                className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-5 py-3 text-[13px] font-extrabold text-[#93A9C8] disabled:opacity-40"
+                className="flex min-h-[44px] items-center rounded-xl border-[1.5px] border-line2 bg-card px-5 py-3 text-[13px] font-extrabold text-caption disabled:opacity-40"
               >
                 Tôi chưa đồng ý
               </button>

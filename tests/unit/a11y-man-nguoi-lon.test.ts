@@ -558,12 +558,15 @@ describe("/dieu-khoan: nền trang đậm hơn ba mặt nền mà §11 đem ra �
   const tailwind = readFileSync(join(repoRoot, "apps", "hub", "tailwind.config.ts"), "utf8");
   const token = (name: string) =>
     new RegExp(`\\b${name}:\\s*"(#[0-9A-Fa-f]{6})"`).exec(tailwind)?.[1] ?? "";
-  const pageBg = /bg-\[(#[0-9A-Fa-f]{6})\]/.exec(src)?.[1] ?? "";
+  // 25/08/2026: trang về nền TOKEN (bg-pagebg) theo lượt lật bảng màu sáng "SCI-FI
+  // HUD" — nền đo là giá trị token, đọc sống từ tailwind.config.ts như mọi token khác.
+  const pageBg = token("pagebg");
 
   it("nền trang vẫn là mã màu đã được đem đi đo", () => {
     // Đổi nền mà không đo lại là cách hai token xám âm thầm rơi xuống dưới ngưỡng.
-    // ĐỔI 24/08/2026 cùng lượt chuyển giao diện tối: `#EAEFF6` -> `#081730`.
-    expect(pageBg).toBe("#081730");
+    // 24/08: `#EAEFF6` -> `#081730` (tối). 25/08: về token pagebg (#F4F9FF, sáng).
+    expect(src).toContain("flex-col bg-pagebg");
+    expect(pageBg).toBe("#F4F9FF");
   });
 
   it("CẢ HAI token xám nay đều đạt trên nền này — cái chuông ở đây đã reo xong", () => {

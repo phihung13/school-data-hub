@@ -5,22 +5,23 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GIAO DIỆN TỐI "MAJOR OS" — đổi 24/08/2026 theo quyết định của chủ đầu tư: trang chủ
-   thật mang phong cách bản trình diễn, giữ nguyên nội dung theo vai.
+/* GIAO DIỆN SÁNG "SCI-FI HUD" — 25/08/2026, thay giao diện tối 24/08 theo lệnh:
+   "phải là phong cách AI, vi mạch, đậm chất ngầu, NỀN SÁNG, ưu tiên trắng". Hệ theme
+   phân tích từ cascade cuối của bản vẽ #s-home: mặt bằng là trang trắng + thẻ trắng
+   chữ navy; khối tối (đầu trang, chip số liệu) chỉ là điểm nhấn. Bảng token trong
+   tailwind.config.ts đã lật cùng lượt — đổi tông là đổi Ở HAI FILE NÀY, không đi vá
+   từng component.
 
-   `color-scheme: dark` KHÔNG phải trang trí: nó bảo trình duyệt vẽ thanh cuộn, ô nhập
-   và ô chọn theo hệ tối. Thiếu dòng này thì mọi <input>/<select> vẫn nền trắng chữ đen
-   nằm giữa các thẻ tối — chỗ hở dễ bỏ sót nhất khi đổi tông, vì nó chỉ lộ ra ở đúng
-   những màn có biểu mẫu. */
+   `color-scheme: light`: trình duyệt vẽ thanh cuộn, ô nhập, ô chọn theo hệ sáng —
+   cùng lý do dòng dark cũ tồn tại, chiều ngược lại. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background: radial-gradient(1200px 800px at 50% -10%, #123E8A 0%, #071634 55%, #050F26 100%);
-  background-attachment: fixed;
+  background: #ffffff;
   font-family: var(--font-be-vietnam-pro), system-ui, sans-serif;
-  color: #EAF2FF;
+  color: #1d3b6e;
   /* Khóa hiệu ứng "lò xo" (rubber-band/overscroll bounce) khi trang không có gì để cuộn —
      lướt 2 ngón trên trackpad kéo lộ màu trắng ngoài viền trang (bắt gặp thật ở khung
      Embed Bridge, 29/07/2026). overscroll-behavior chặn browser tự bounce khi đã hết nội
@@ -76,7 +77,7 @@ html {
    về #9CA3AF nữa. */
 input::placeholder,
 textarea::placeholder {
-  color: #8298b8;
+  color: #5b6b80; /* số đo trong khối chú thích trên: 5,44:1 trắng · 4,84:1 #FFF1C9 */
   opacity: 1;
 }
 
@@ -185,22 +186,22 @@ textarea::placeholder {
    xuyên qua được vào bên trong iframe khác domain (Factory...) — giới hạn bảo mật trình
    duyệt, không phải thiếu sót ở đây (yêu cầu 29/07/2026). */
 * {
-  scrollbar-color: #ffc629 #0a2a5e; /* Firefox: thumb rồi track */
+  scrollbar-color: #0a2a5e #e8f1fc; /* Firefox: thumb navy trên track lam nhạt — vàng trên nền trắng chói và mất chất "vi mạch" */
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-track {
-  background: #0a2a5e;
+  background: #e8f1fc;
 }
 *::-webkit-scrollbar-thumb {
-  background: #ffc629;
+  background: #0a2a5e;
   border-radius: 999px;
-  border: 2px solid #0a2a5e;
+  border: 2px solid #e8f1fc;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: #e6b023;
+  background: #123b7e;
 }
 
 @media (prefers-reduced-motion: reduce) {

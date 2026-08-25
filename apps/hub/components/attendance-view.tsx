@@ -91,7 +91,7 @@ export function AttendanceView({
                   Đây đúng loại lỗi mà đợt 01/08 chỉ vá được một chỗ trong bảy. (05/08/2026) */}
               <StatCard icon="local_fire_department" iconBg="bg-[#2A2208]" iconColor="text-gold-textDark" label="Chuỗi hiện tại" value={String(query.data.streakDays)} sub="ngày liên tiếp" />
               <StatCard icon="military_tech" iconBg="bg-[#F0E9FD]" iconColor="text-[#7434E8]" label="Kỷ lục" value={String(query.data.longestStreakDays)} sub="chuỗi dài nhất" />
-              <StatCard icon="event_available" iconBg="bg-[#0C2E22]" iconColor="text-[#4EE39B]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
+              <StatCard icon="event_available" iconBg="bg-surface-success" iconColor="text-[#4EE39B]" label="Tổng ngày có mặt" value={String(query.data.presentDays)} sub="đã ghi nhận" />
               {/* Phụ đề cũ là "cô đã xác nhận" — nói ngược với chính con số: câu SQL đếm
                   `status in ('late','queued_late')`, mà `queued_late` đúng là những ngày
                   CHƯA ai xác nhận (care.acknowledgeLate đổi chúng thành 'present'). Một
@@ -101,7 +101,7 @@ export function AttendanceView({
               <StatCard icon="schedule" iconBg="bg-[#3A2E08]" iconColor="text-[#FFD98A]" label="Gửi muộn" value={String(query.data.lateCount)} sub="gồm cả ngày đang chờ cô xác nhận" />
             </div>
 
-            <div className="mt-[18px] hv-card-toi p-4 md:p-6">
+            <div className="mt-[18px] hv-card p-4 md:p-6">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-[16px] font-black text-cardtitle">Tuần này</h2>
                 <span className="text-[11.5px] font-bold text-caption">giờ check-in mỗi ngày</span>
@@ -122,7 +122,7 @@ export function AttendanceView({
                         được bỏ đi: bỏ rồi thì ngày hôm nay chỉ còn được đánh dấu bằng
                         màu viền — màu là tín hiệu duy nhất, DESIGN-GUIDELINES §11 cấm. */}
                     <span
-                      className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-cardtitle" : "text-[#93A9C8]"}`}
+                      className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-cardtitle" : "text-caption"}`}
                     >
                       {day.dayLabel}
                       {day.isToday && (
@@ -145,7 +145,7 @@ export function AttendanceView({
                         </span>
                       </span>
                     )}
-                    <span className={`text-center text-[11.5px] font-bold leading-tight ${day.isToday ? "text-cardtitle" : "text-[#A9C4E8]"}`}>
+                    <span className={`text-center text-[11.5px] font-bold leading-tight ${day.isToday ? "text-cardtitle" : "text-cardtitle2"}`}>
                       {dayCaptionText(day)}
                     </span>
                     {/* Dòng chữ ngắn cho ĐÚNG những ngày không phải "có mặt". Ngày có mặt
@@ -158,7 +158,7 @@ export function AttendanceView({
             </div>
 
             <div className="mt-[18px] flex flex-wrap items-start gap-[18px]">
-              <div className="min-w-0 flex-[2_1_320px] hv-card-toi p-4 md:flex-[2_1_520px] md:p-6">
+              <div className="min-w-0 flex-[2_1_320px] hv-card p-4 md:flex-[2_1_520px] md:p-6">
                 <h2 className="text-[16px] font-black text-cardtitle">Lịch sử gần đây</h2>
                 <div className="mt-3.5 flex flex-col">
                   {query.data.history.map((h, i) => (
@@ -391,7 +391,7 @@ function DayMark({ status }: { status: string }) {
   if (!style) {
     return (
       <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed border-[#27467E]">
-        <span aria-hidden="true" className="msr text-[20px] text-[#93A9C8]">question_mark</span>
+        <span aria-hidden="true" className="msr text-[20px] text-caption">question_mark</span>
         <span className="sr-only">{label}</span>
       </span>
     );
@@ -416,9 +416,9 @@ function StatCard({ icon, iconBg, iconColor, label, value, sub }: { icon: string
   return (
     // basis nhỏ hơn ở điện thoại để 4 thẻ xếp 2×2 thay vì 4 hàng cao (390px chỉ chứa
     // được một thẻ basis-200 mỗi hàng — phải cuộn hết màn hình mới thấy lịch tuần).
-    <div className="flex-1 basis-[140px] hv-card-toi p-4 md:basis-[200px] md:p-[22px]">
+    <div className="flex-1 basis-[140px] hv-card p-4 md:basis-[200px] md:p-[22px]">
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[12px] font-extrabold text-[#93A9C8]">{label}</span>
+        <span className="text-[12px] font-extrabold text-caption">{label}</span>
         <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${iconBg}`}>
           <span aria-hidden="true" className={`msr text-[19px] ${iconColor}`}>{icon}</span>
         </span>
@@ -433,7 +433,7 @@ function RuleRow({ n, bg, color, children }: { n: number; bg: string; color: str
   return (
     <div className="mt-3 flex items-start gap-2.5">
       <span className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-black ${bg} ${color}`}>{n}</span>
-      <span className="text-[12.5px] leading-relaxed text-[#35E0FF]">{children}</span>
+      <span className="text-[12.5px] leading-relaxed text-link">{children}</span>
     </div>
   );
 }

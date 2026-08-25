@@ -49,7 +49,7 @@ const GLOW_BG: Record<"green" | "blue" | "amber", string> = {
   amber: "bg-[#FFFBF2]",
 };
 const GLOW_ICON_BG: Record<"green" | "blue" | "amber", string> = {
-  green: "bg-[#0C2E22]",
+  green: "bg-surface-success",
   blue: "bg-[#0E2647]",
   amber: "bg-[#3A2E08]",
 };
@@ -302,7 +302,7 @@ function DesktopReport({
         </div>
         <button
           onClick={onPrevWeek}
-          className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
+          className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-line2 bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
         >
           <span aria-hidden="true" className="msr text-[17px] text-subtle">chevron_left</span>
           Tuần trước
@@ -310,7 +310,7 @@ function DesktopReport({
         {weekOffset < 0 && (
           <button
             onClick={onNextWeek}
-            className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
+            className="flex min-h-[44px] items-center gap-2 rounded-xl border-[1.5px] border-line2 bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:border-[#C9D6E6]"
           >
             Tuần sau
             <span aria-hidden="true" className="msr text-[17px] text-subtle">chevron_right</span>
@@ -351,7 +351,7 @@ function DesktopReport({
               </div>
             </div>
 
-            <div className="hv-card-toi p-6">
+            <div className="hv-card p-6">
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="msr text-[21px] text-[#F5A300]">sunny</span>
                 <h2 className="text-[17px] font-black text-cardtitle">Tỏa sáng (Glow)</h2>
@@ -379,7 +379,7 @@ function DesktopReport({
             </div>
 
             {report.grow.length > 0 && (
-              <div className="hv-card-toi p-6">
+              <div className="hv-card p-6">
                 <div className="flex items-center gap-2">
                   <span aria-hidden="true" className="msr text-[21px] text-[#4EE39B]">psychiatry</span>
                   <h2 className="text-[17px] font-black text-cardtitle">Đang lớn lên (Grow)</h2>
@@ -388,7 +388,7 @@ function DesktopReport({
                   <Mascot pose="think" width={56} />
                   <div className="min-w-0 flex-1 basis-[320px]">
                     <div className="text-[15px] font-black text-ink">{report.grow[0]!.title}</div>
-                    <div className="mt-1.5 text-[13px] leading-relaxed text-[#93A9C8]">{report.grow[0]!.detail}</div>
+                    <div className="mt-1.5 text-[13px] leading-relaxed text-caption">{report.grow[0]!.detail}</div>
                   </div>
                 </div>
               </div>
@@ -403,7 +403,7 @@ function DesktopReport({
                 cho người mà cả trang này sinh ra để phục vụ. Đo thật ngay lần đầu mở bản
                 desktop bằng phiên phụ huynh. */}
             {isStudent && (
-            <div className="hv-card-toi p-5">
+            <div className="hv-card p-5">
               <div className="text-[15px] font-black text-cardtitle">Báo cáo này gửi cho ai?</div>
               <div className="mt-3.5 flex flex-col gap-3">
                 {/* "Chưa có phụ huynh nào" là một KHẲNG ĐỊNH — không được nói nó khi

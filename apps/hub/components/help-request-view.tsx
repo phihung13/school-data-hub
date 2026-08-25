@@ -197,7 +197,7 @@ export function HelpRequestView({
                       GẶP CÔ" chứ không phải một dãy nút rời không rõ thuộc về câu hỏi nào.
                       aria-pressed nói trạng thái đã chọn — trước đó chỉ có màu viền. */}
                   <fieldset className="min-w-0 border-0 p-0">
-                    <legend className="text-[13px] font-black tracking-wide text-[#93A9C8]">
+                    <legend className="text-[13px] font-black tracking-wide text-caption">
                       1 · CHUYỆN GÌ KHIẾN CON MUỐN GẶP CÔ?
                     </legend>
                     <div className="mt-3 flex flex-wrap gap-2.5">
@@ -216,12 +216,12 @@ export function HelpRequestView({
                             className={
                               active
                                 ? "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.7px] border-navy bg-[#F5F8FF] px-[18px] py-3 text-[13.5px] font-extrabold text-cardtitle shadow-[0_0_0_3px_rgba(30,95,184,.1)]"
-                                : "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.5px] border-[#1E3A6B] px-[18px] py-3 text-[13.5px] font-bold text-[#A9C4E8] hover:border-[#C9D6E6]"
+                                : "flex min-h-[44px] items-center gap-2 rounded-2xl border-[1.5px] border-line2 px-[18px] py-3 text-[13.5px] font-bold text-cardtitle2 hover:border-[#C9D6E6]"
                             }
                           >
                             <span
                               aria-hidden="true"
-                              className={`msr text-[19px] ${active ? "text-[#2C7BF2]" : "text-[#93A9C8]"}`}
+                              className={`msr text-[19px] ${active ? "text-[#2C7BF2]" : "text-caption"}`}
                             >
                               {TOPIC_ICON[key]}
                             </span>
@@ -233,7 +233,7 @@ export function HelpRequestView({
                   </fieldset>
 
                   <fieldset className="min-w-0 border-0 p-0">
-                    <legend className="text-[13px] font-black tracking-wide text-[#93A9C8]">
+                    <legend className="text-[13px] font-black tracking-wide text-caption">
                       2 · CON MUỐN GẶP KHI NÀO?
                     </legend>
                     <div className="mt-3 flex flex-wrap gap-2.5">
@@ -269,7 +269,7 @@ export function HelpRequestView({
                       {/* <label htmlFor> thật, không phải <span> đứng cạnh: chạm vào chữ là
                           con trỏ nhảy vào ô (vùng chạm rộng gấp mấy lần trên điện thoại),
                           và trình đọc màn hình nói được ô này để làm gì. */}
-                      <label htmlFor="loi-nhan-cho-co" className="text-[13px] font-black tracking-wide text-[#93A9C8]">
+                      <label htmlFor="loi-nhan-cho-co" className="text-[13px] font-black tracking-wide text-caption">
                         3 · CON MUỐN NÓI GÌ TRƯỚC KHÔNG?
                       </label>
                       {/* #9AA5B5 → token muted. Đo sống ở 360px: "không bắt buộc" là 2,49:1
@@ -295,7 +295,7 @@ export function HelpRequestView({
                       // điện thoại rẻ, 2,45:1 là biến mất. Màu nay đến từ MỘT chỗ duy nhất
                       // trong globals.css (#93A9C8 = 5,34:1 trên #0B1B38) nên mọi ô nhập của
                       // app cùng đọc được, không phải ô nào có người nhớ thì ô đó mới đạt.
-                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-[#1E3A6B] bg-[#0B1B38] p-4 text-[13.5px] leading-relaxed text-ink focus:border-navy"
+                      className="mt-3 min-h-[96px] w-full resize-none rounded-2xl border-[1.5px] border-line2 bg-[#0B1B38] p-4 text-[13.5px] leading-relaxed text-ink focus:border-navy"
                     />
                   </div>
 
@@ -320,7 +320,7 @@ export function HelpRequestView({
                     </button>
                     <button
                       onClick={() => router.push("/home")}
-                      className="rounded-2xl border-[1.5px] border-[#1E3A6B] bg-card px-5 py-4 text-[14px] font-extrabold text-[#93A9C8]"
+                      className="rounded-2xl border-[1.5px] border-line2 bg-card px-5 py-4 text-[14px] font-extrabold text-caption"
                     >
                       Để sau
                     </button>
@@ -352,11 +352,11 @@ export function HelpRequestView({
                   <div className="flex flex-col gap-3 rounded-[20px] border-[1.5px] border-[#1E4E8C] bg-[#0C1F3C] p-5">
                     <div className="flex items-center gap-2">
                       <span aria-hidden="true" className="msr text-[20px] text-[#2C7BF2]">lock</span>
-                      <span className="text-[14px] font-black text-[#35E0FF]">Ai đọc được lời con?</span>
+                      <span className="text-[14px] font-black text-link">Ai đọc được lời con?</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span aria-hidden="true" className="msr flex-none text-[17px] text-[#4EE39B]">check_circle</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#35E0FF]">
+                      <span className="text-[12.5px] leading-relaxed text-link">
                         {teacherFirstWord} — chủ nhiệm của con
                       </span>
                     </div>
@@ -373,7 +373,7 @@ export function HelpRequestView({
                         hỏi ("ai đọc được?"), nên mỗi dòng chỉ cần một cái tên. */}
                     <div className="flex items-start gap-2">
                       <span aria-hidden="true" className="msr flex-none text-[17px] text-[#4EE39B]">check_circle</span>
-                      <span className="text-[12.5px] leading-relaxed text-[#35E0FF]">
+                      <span className="text-[12.5px] leading-relaxed text-link">
                         Thầy cô tâm lý của trường — đọc cùng {teacherFirstWord}
                       </span>
                     </div>
@@ -387,12 +387,12 @@ export function HelpRequestView({
                     <div className="flex items-start gap-2">
                       <span aria-hidden="true" className="msr flex-none text-[17px] text-[#FF8A8F]">cancel</span>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[12.5px] font-black text-[#35E0FF]">Không nhìn thấy</div>
+                        <div className="text-[12.5px] font-black text-link">Không nhìn thấy</div>
                         <div className="mt-1 flex flex-wrap gap-1.5">
                           {["Bạn cùng lớp", "Thầy cô dạy môn", "Thầy cô lớp khác", "Bố mẹ"].map((ai) => (
                             <span
                               key={ai}
-                              className="rounded-full bg-card px-2.5 py-1 text-[11px] font-bold text-[#35E0FF]"
+                              className="rounded-full bg-card px-2.5 py-1 text-[11px] font-bold text-link"
                             >
                               {ai}
                             </span>
@@ -621,7 +621,7 @@ function SentStatusStrip({
         aria-live="polite"
         className="mb-4 flex items-center gap-2 rounded-[18px] bg-card px-4 py-3 text-[12.5px] font-semibold text-caption shadow-[0_3px_14px_rgba(10,42,94,.06)]"
       >
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#1E3A6B] border-t-navy" aria-hidden />
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line2 border-t-navy" aria-hidden />
         Đang xem lại những lần con đã gửi…
       </div>
     );
@@ -642,10 +642,10 @@ function SentStatusStrip({
         <span className="msr text-[18px] text-gold-textDark" aria-hidden>
           cloud_off
         </span>
-        <span className="text-[12.5px] font-semibold text-[#93A9C8]">
+        <span className="text-[12.5px] font-semibold text-caption">
           Chưa xem được những lần con đã gửi trước đó.
         </span>
-        <button type="button" onClick={onRetry} className="text-[12.5px] font-black text-[#35E0FF] underline underline-offset-2">
+        <button type="button" onClick={onRetry} className="text-[12.5px] font-black text-link underline underline-offset-2">
           Thử lại
         </button>
       </div>
@@ -670,7 +670,7 @@ function SentStatusStrip({
     // = 6,12:1 — cả hai vượt 4,5:1.
     <div
       className={`mb-4 flex flex-col gap-1.5 rounded-[18px] border p-4 shadow-[0_3px_14px_rgba(10,42,94,.06)] ${
-        waiting ? "border-[#4A3A0C] bg-[#2A2208]" : "border-[#B7E6CE] bg-[#0C2E22]"
+        waiting ? "border-[#4A3A0C] bg-[#2A2208]" : "border-[#B7E6CE] bg-surface-success"
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -687,7 +687,7 @@ function SentStatusStrip({
         </span>
       </div>
 
-      <div className="text-[12px] font-semibold text-[#93A9C8]">
+      <div className="text-[12px] font-semibold text-caption">
         Con gửi {dayWord(latest.requestedOn)} lúc {latest.requestedAtTime}
         {latest.acknowledged && latest.acknowledgedOn
           ? ` · nhận ${dayWord(latest.acknowledgedOn)}${latest.acknowledgedAtTime ? ` lúc ${latest.acknowledgedAtTime}` : ""}`

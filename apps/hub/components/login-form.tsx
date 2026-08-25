@@ -443,7 +443,7 @@ export function LoginForm({
                     value={chon}
                     disabled={loading}
                     onChange={(e) => setChon(e.target.value)}
-                    className="min-w-0 flex-1 rounded-[8px] border border-[rgba(127,208,255,.4)] bg-[rgba(13,38,80,.85)] px-3 py-[11px] text-[12.5px] font-extrabold text-ink focus:border-gold disabled:opacity-50"
+                    className="min-w-0 flex-1 rounded-[8px] border border-[rgba(127,208,255,.4)] bg-[rgba(13,38,80,.85)] px-3 py-[11px] text-[12.5px] font-extrabold text-[#EAF2FF] focus:border-gold disabled:opacity-50"
                   >
                     {chiaNhom(devAccounts).map((nhom) => (
                       <optgroup key={nhom.ten} label={nhom.ten}>
@@ -556,13 +556,13 @@ function UnlockPanel({
 }) {
   return (
     <form onSubmit={onSubmit} className="flex w-full flex-col gap-3 border-t border-[rgba(199,216,240,.22)] pt-[14px] text-left">
-      <p className="flex items-center gap-2 text-[11px] font-bold text-caption">
-        <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase text-caption">DEV</span>
+      <p className="flex items-center gap-2 text-[11px] font-bold text-[#93A9C8]">
+        <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase text-[#93A9C8]">DEV</span>
         Bản đang thử — cần mã mở khoá
       </p>
       {/* <label htmlFor> THẬT, không dùng placeholder làm nhãn: placeholder biến mất
           ngay khi gõ ký tự đầu (WCAG 3.3.2), và trình đọc màn hình chỉ nghe ô trống. */}
-      <label htmlFor="ma-mo-khoa-ban-thu" className="text-[11.5px] font-black text-muted">
+      <label htmlFor="ma-mo-khoa-ban-thu" className="text-[11.5px] font-black text-[#8FA9CC]">
         Mã mở khoá
       </label>
       <input
@@ -573,7 +573,7 @@ function UnlockPanel({
         // `current-password` để trình duyệt/điện thoại lưu hộ: người demo nhập một lần
         // trên máy này, lần sau cookie đã nhớ, còn máy mới thì trình duyệt gợi ý lại.
         autoComplete="current-password"
-        className="rounded-[10px] border border-[#5B7BAB] bg-[#0B1B38] px-4 py-3 text-[15px] font-bold text-ink focus:border-gold"
+        className="rounded-[10px] border border-[#5B7BAB] bg-[#0B1B38] px-4 py-3 text-[15px] font-bold text-[#EAF2FF] placeholder:text-[#8298B8] focus:border-gold"
       />
       <button
         type="submit"
@@ -582,7 +582,7 @@ function UnlockPanel({
       >
         Mở khoá
       </button>
-      <p className="text-[11px] leading-[1.5] text-caption">
+      <p className="text-[11px] leading-[1.5] text-[#93A9C8]">
         Nhập một lần, máy này nhớ 30 ngày. Chưa có mã thì hỏi nhóm kỹ thuật của trường.
       </p>
     </form>
@@ -594,9 +594,9 @@ function GateClosedNotice() {
   return (
     <div
       role="status"
-      className="w-full border-t border-[rgba(199,216,240,.22)] pt-[14px] text-left text-[12px] leading-[1.55] text-muted"
+      className="w-full border-t border-[rgba(199,216,240,.22)] pt-[14px] text-left text-[12px] leading-[1.55] text-[#8FA9CC]"
     >
-      <b className="text-ink">Cửa đăng nhập thử đang đóng.</b> Máy chủ chưa được cấu hình mã mở khoá,
+      <b className="text-[#EAF2FF]">Cửa đăng nhập thử đang đóng.</b> Máy chủ chưa được cấu hình mã mở khoá,
       nên không tài khoản thử nào dùng được — kể cả từ máy của người quản trị. Đây là trạng thái
       mặc định có chủ ý.
     </div>
@@ -621,11 +621,11 @@ function GuardianPanel({
     >
       <div className="flex flex-col items-center gap-1">
         <Mascot pose="thumbsup" width={52} />
-        <div className="text-[15px] font-black text-ink">Chào bố mẹ!</div>
+        <div className="text-[15px] font-black text-[#EAF2FF]">Chào bố mẹ!</div>
         {/* "GVCN" là từ vựng vận hành — DESIGN-GUIDELINES §8 chỉ cho nó sống ở buồng lái,
             tâm lý cụm và điều hành. Bảng này là bảng dành RIÊNG cho phụ huynh, tức là đúng
             chỗ nó không được xuất hiện. Sửa 01/08/2026: nói như người ta nói. */}
-        <p className="text-center text-[11.5px] text-muted">
+        <p className="text-center text-[11.5px] text-[#8FA9CC]">
           Mở link mời trong Zalo, hoặc nhập mã mời thầy cô chủ nhiệm đã gửi.
         </p>
       </div>
@@ -634,7 +634,7 @@ function GuardianPanel({
           (WCAG 3.3.2 Labels or Instructions), nên đúng lúc cần đối chiếu "mình đang gõ cái
           gì vào đâu" thì không còn gì trên màn hình trả lời. Trình đọc màn hình cũng chỉ
           nghe "edit text" trống trơn. help-request-view.tsx đã làm đúng cách này rồi. */}
-      <label htmlFor="ma-moi-phu-huynh" className="text-center text-[11.5px] font-black text-muted">
+      <label htmlFor="ma-moi-phu-huynh" className="text-center text-[11.5px] font-black text-[#8FA9CC]">
         Mã mời 6 ký tự
       </label>
       <input
@@ -645,7 +645,7 @@ function GuardianPanel({
         placeholder="ABC123"
         // KHÔNG outline-none trần: nó đè lưới an toàn :focus-visible của globals.css và
         // để lại đúng một tín hiệu focus là màu viền — thứ người mù màu không thấy.
-        className="rounded-[10px] border border-[#5B7BAB] bg-[#0B1B38] px-4 py-3 text-center text-[18px] font-black tracking-[0.3em] text-ink focus:border-gold"
+        className="rounded-[10px] border border-[#5B7BAB] bg-[#0B1B38] px-4 py-3 text-center text-[18px] font-black tracking-[0.3em] text-[#EAF2FF] placeholder:text-[#8298B8] focus:border-gold"
       />
       <button
         type="submit"
@@ -654,8 +654,8 @@ function GuardianPanel({
       >
         Xác nhận mã mời
       </button>
-      <p className="text-center text-[11px] text-caption">
-        Thất lạc mã? <b className="text-cardtitle">Nhắn thầy cô chủ nhiệm</b>
+      <p className="text-center text-[11px] text-[#93A9C8]">
+        Thất lạc mã? <b className="text-white">Nhắn thầy cô chủ nhiệm</b>
       </p>
     </form>
   );

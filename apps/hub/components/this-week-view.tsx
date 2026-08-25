@@ -50,7 +50,7 @@ const MOOD_GRADIENT: Record<MoodValue, string> = {
 const MOOD_NAME: Record<MoodValue, string> = { 4: "Vui", 3: "Bình thường", 2: "Mệt", 1: "Buồn" };
 const MOOD_DOT: Record<MoodValue, string> = { 4: "#00C96F", 3: "#2C7BF2", 2: "#F5A300", 1: "#F0474D" };
 const GLOW_BG: Record<string, string> = { green: "bg-[#F6FEF9]", blue: "bg-[#F6FAFF]", amber: "bg-[#FFFBF2]" };
-const GLOW_ICON_BG: Record<string, string> = { green: "bg-[#0C2E22]", blue: "bg-[#0E2647]", amber: "bg-[#3A2E08]" };
+const GLOW_ICON_BG: Record<string, string> = { green: "bg-surface-success", blue: "bg-[#0E2647]", amber: "bg-[#3A2E08]" };
 // Mỗi màu icon đo trên ĐÚNG nền ô của nó (GLOW_ICON_BG cùng khoá), mốc 3:1 của WCAG 1.4.11:
 //   green #4EE39B trên #0C2E22 = 3,05:1 · blue #2C7BF2 trên #0E2647 = 3,47:1 — giữ nguyên.
 //   amber #E8940D trên #3A2E08 = 2,15:1 — trượt, nay là #FFD98A (gold-textDark) = 5,93:1.
@@ -136,7 +136,7 @@ export function ThisWeekView({
                           : "flex flex-col items-center gap-2 rounded-2xl border-[1.5px] border-[#EDF1F7] px-1 py-3 md:px-2.5 md:py-4"
                       }
                     >
-                      <span className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-cardtitle" : "text-[#93A9C8]"}`}>
+                      <span className={`text-center text-[12px] font-black leading-tight ${day.isToday ? "text-cardtitle" : "text-caption"}`}>
                         {day.dayLabel}
                       </span>
                       {day.mood ? (
@@ -215,7 +215,7 @@ export function ThisWeekView({
                         <Mascot pose="think" width={56} />
                         <div className="min-w-0 flex-1 basis-[280px]">
                           <div className="text-[15px] font-black text-ink">{report.data.report.grow[0]!.title}</div>
-                          <div className="mt-1.5 text-[13px] leading-relaxed text-[#93A9C8]">{report.data.report.grow[0]!.detail}</div>
+                          <div className="mt-1.5 text-[13px] leading-relaxed text-caption">{report.data.report.grow[0]!.detail}</div>
                         </div>
                       </div>
                     </div>

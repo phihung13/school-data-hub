@@ -593,7 +593,7 @@ export function GvcnDashboard({
         {d.totals.openCareCases > 0 ? (
           <Link
             href="/gvcn/lop"
-            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#16294B] bg-card px-[15px] py-2.5 hover:border-navy"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-line bg-card px-[15px] py-2.5 hover:border-navy"
           >
             {/* aria-hidden: chữ ngay cạnh đã nói đủ. 10 icon khác trong file này đã khai
                 đúng; thiếu ở đây thì trình đọc màn hình đọc thành "folder_open 2 hồ sơ…". */}
@@ -606,7 +606,7 @@ export function GvcnDashboard({
             <span aria-hidden className="msr text-[16px] text-subtle">chevron_right</span>
           </Link>
         ) : (
-          <span className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#16294B] bg-card px-[15px] py-2.5">
+          <span className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-line bg-card px-[15px] py-2.5">
             <span className="msr text-[17px] text-subtle" aria-hidden>
               folder_open
             </span>
@@ -656,7 +656,7 @@ export function GvcnDashboard({
         tabIndex={0}
         className="mt-[18px] -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:gap-4 md:overflow-visible md:px-0 md:pb-0"
       >
-        <StatCard label="Đã check-in" icon="how_to_reg" iconBg="bg-[#0C2E22]" iconColor="text-[#4EE39B]" value={`${d.totals.checkinCount}/${d.totals.totalStudents}`} sub="tính đến giờ" />
+        <StatCard label="Đã check-in" icon="how_to_reg" iconBg="bg-surface-success" iconColor="text-[#4EE39B]" value={`${d.totals.checkinCount}/${d.totals.totalStudents}`} sub="tính đến giờ" />
         <StatCard label="Chờ xác nhận" icon="hourglass_top" iconBg="bg-[#3A2E08]" iconColor="text-[#E8940D]" value={String(d.totals.pendingLateCount)} sub="gửi muộn — chưa phải vắng" accentTop="#FFC629" />
         {/* "Cờ đang mở" → "Em cần để ý" (02/08/2026). Chủ đầu tư mở trang và hỏi thẳng:
             "cờ đang mở là cờ gì?" — câu hỏi đó CHÍNH LÀ câu trả lời về cái nhãn. "Cờ" là
@@ -746,7 +746,7 @@ export function GvcnDashboard({
               Câu đó KHÔNG biến mất khỏi sản phẩm: nó vẫn đứng ở đúng chỗ người ta thật sự
               đi tìm cảm xúc của một em — `gvcn/student-detail-view.tsx`, ngay dưới lịch
               điểm danh. Nói một lần ở đúng chỗ, thay vì nói mọi lúc ở chỗ không liên quan. */}
-          <div className="hv-card-toi p-5">
+          <div className="hv-card p-5">
             <h2 className="text-[15px] font-black text-cardtitle">Hành động gần đây</h2>
             <div className="mt-3.5 flex flex-col gap-3">
               {d.recentActions.length === 0 && (
@@ -1264,7 +1264,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
                 helpRequestIds: openHelp.map((h) => h.helpRequestId),
               })
             }
-            className="min-h-[44px] rounded-xl border-[1.6px] border-[#4EE39B] bg-[#0C2E22] px-5 py-3 text-[12.5px] font-black text-successText disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
+            className="min-h-[44px] rounded-xl border-[1.6px] border-[#4EE39B] bg-surface-success px-5 py-3 text-[12.5px] font-black text-successText disabled:cursor-not-allowed disabled:border-line disabled:bg-none disabled:bg-chip disabled:text-muted disabled:shadow-none"
           >
             {acknowledgeHelp.isPending
               ? "Đang ghi…"
@@ -1280,7 +1280,7 @@ function FlagCard({ flag }: { flag: FlagSummary }) {
           <button
             type="button"
             onClick={() => setClosing(true)}
-            className="min-h-[44px] rounded-xl border-[1.5px] border-[#1E3A6B] bg-card px-5 py-3 text-[12.5px] font-extrabold text-subtle"
+            className="min-h-[44px] rounded-xl border-[1.5px] border-line2 bg-card px-5 py-3 text-[12.5px] font-extrabold text-subtle"
           >
             Đóng hồ sơ
           </button>

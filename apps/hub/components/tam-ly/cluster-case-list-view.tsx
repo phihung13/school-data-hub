@@ -56,7 +56,7 @@ function Pill({
         ? "bg-[#0E2647] text-[#35E0FF]"
         : tone === "quiet"
           ? "bg-[#3A2E08] text-gold-textDark"
-          : "bg-chip text-[#93A9C8]";
+          : "bg-chip text-caption";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-black ${cls}`}>
       <span className="msr text-[14px]" aria-hidden>
@@ -110,7 +110,7 @@ export function ClusterCaseListView() {
             360px, và nội dung "hồ sơ đang mở + cờ khẩn" đã được ba StatTile ngay dưới nói
             bằng số. §1.5 — caption tối đa một dòng. Khoảng thời gian thì GIỮ: nó là điều
             duy nhất trong câu mà không con số nào bên dưới nói ra. */}
-        <p className="mt-1 text-[12.5px] font-semibold text-[#93A9C8]">
+        <p className="mt-1 text-[12.5px] font-semibold text-caption">
           {data ? `Nhìn lại ${data.urgentWindowDays} ngày` : "Đang xác định phạm vi cụm…"}
         </p>
       </div>

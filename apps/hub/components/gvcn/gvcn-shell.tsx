@@ -170,7 +170,7 @@ export function GvcnShell({
 /** Thẻ trắng chuẩn của Hub (DESIGN.md §Components) — bo 20px, bóng nhẹ, không viền màu. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`hv-card-toi p-4 md:p-5 ${className}`}>
+    <div className={`hv-card p-4 md:p-5 ${className}`}>
       {children}
     </div>
   );

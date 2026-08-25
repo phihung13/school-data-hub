@@ -54,7 +54,7 @@ export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps =
     // aria-label trên <nav>: trang có thể có nhiều landmark điều hướng (menu trái +
     // tab bar), trình đọc màn hình liệt kê chúng bằng nhãn — không nhãn thì người dùng
     // nghe "navigation, navigation" và không biết cái nào là cái nào.
-    <nav aria-label="Thanh điều hướng chính" className="mt-auto flex items-end justify-between border-t border-[#16294B] bg-card px-4 pb-2.5 pt-2">
+    <nav aria-label="Thanh điều hướng chính" className="mt-auto flex items-end justify-between border-t border-line bg-card px-4 pb-2.5 pt-2">
       {/* aria-hidden cho MỌI icon trang trí: nội dung DOM của .msr là chữ thô ("home",
           "person"...), font chỉ đổi HÌNH hiển thị chứ không đổi nội dung. Không ẩn thì
           trình đọc màn hình đọc nguyên "home Trang chủ person Hồ sơ" (WCAG 1.1.1/4.1.2).
@@ -86,11 +86,11 @@ export function StudentTabBar({ fullName = "", email, roleTag }: TaiKhoanProps =
         >
           <span className="msr text-[25px] text-cardtitle">sentiment_satisfied</span>
         </span>
-        {/* gold-textDark (#FFD98A) chứ không phải #E8940D: chữ cam trên nền trắng chỉ đạt
-            2,42:1 — dưới chuẩn 4,5:1 và đúng ở nhãn của HÀNH ĐỘNG CHÍNH mỗi sáng của em.
-            #FFD98A là màu "chữ trên vàng" đã chốt ở DESIGN-GUIDELINES §3/§7, đạt 5,93:1.
-            Vòng tròn vàng bên trên vẫn giữ nguyên — nó là hình khối, không phải chữ. */}
-        <span className="text-[9.5px] font-black text-gold-textDark">Check-in</span>
+        {/* gold-text (#6B4A00) từ 25/08 — thanh tab về nền SÁNG theo hệ token mới, nên
+            "chữ trên vàng" cho nền tối (#FFD98A, 1,35:1 trên trắng) đổi về bản cho nền
+            sáng đã chốt ở DESIGN-GUIDELINES §3/§7. Vòng tròn vàng giữ nguyên — hình khối,
+            không phải chữ. */}
+        <span className="text-[9.5px] font-black text-gold-text">Check-in</span>
       </button>
 
       {/* Ô thứ ba KHÔNG còn là <Link> tới /ho-so (02/08/2026). Trước đó thanh tab chỉ có
@@ -161,7 +161,7 @@ function AdultTabBar({ roles, fullName = "", email, roleTag }: { roles: HubRole[
   return (
     <nav
       aria-label="Thanh điều hướng chính"
-      className="mt-auto flex items-stretch justify-around border-t border-[#16294B] bg-card px-2 pb-2.5 pt-2"
+      className="mt-auto flex items-stretch justify-around border-t border-line bg-card px-2 pb-2.5 pt-2"
     >
       {items.map((item) => {
         const isActive = pathname === item.href;

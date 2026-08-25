@@ -98,7 +98,7 @@ export function ThiDuaView({
           {d && (
             <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
               {/* ── Xếp hạng cá nhân ───────────────────────────────────────── */}
-              <section className="hv-card-toi p-4">
+              <section className="hv-card p-4">
                 <h2 className="text-[14px] font-black text-cardtitle">Cá nhân</h2>
                 {d.caNhan.length === 0 ? (
                   <p className="mt-2 text-[12.5px] text-muted2">
@@ -119,9 +119,9 @@ export function ThiDuaView({
                   <>
                     {/* Dấu ngắt: nói rõ đây không phải hạng kế tiếp của danh sách trên. */}
                     <div className="my-1.5 flex items-center gap-2 px-1 text-[11px] text-caption">
-                      <span className="h-px flex-1 bg-[#16294B]" />
+                      <span className="h-px flex-1 bg-surface-muted" />
                       <span>vị trí của con</span>
-                      <span className="h-px flex-1 bg-[#16294B]" />
+                      <span className="h-px flex-1 bg-surface-muted" />
                     </div>
                     <ol className="flex flex-col">
                       <DongCaNhan r={toiNgoaiBang} />
@@ -134,7 +134,7 @@ export function ThiDuaView({
                   Xếp theo ĐIỂM TRUNG BÌNH mỗi em: xếp bằng tổng thì lớp đông luôn
                   thắng, và bảng đo sĩ số chứ không đo thi đua. */}
               <div className="grid gap-4 md:grid-cols-2">
-                <section className="hv-card-toi p-4">
+                <section className="hv-card p-4">
                   <h2 className="text-[14px] font-black text-cardtitle">Lớp</h2>
                   <p className="mt-0.5 text-[11px] text-caption">Điểm trung bình mỗi bạn</p>
                   <ol className="mt-2 flex flex-col">
@@ -156,7 +156,7 @@ export function ThiDuaView({
                   </ol>
                 </section>
 
-                <section className="hv-card-toi p-4">
+                <section className="hv-card p-4">
                   <h2 className="text-[14px] font-black text-cardtitle">Khối</h2>
                   <p className="mt-0.5 text-[11px] text-caption">Điểm trung bình mỗi bạn</p>
                   <ol className="mt-2 flex flex-col">

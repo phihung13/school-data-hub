@@ -131,8 +131,8 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
   const roleTag = trimmedClass ? `${roleLabel} · ${trimmedClass}` : roleLabel;
 
   return (
-    <nav className="flex h-full w-full flex-col border-r border-line bg-card">
-      <div className="flex items-center gap-[11px] border-b border-[#12244A] px-[18px] pb-[14px] pt-[18px]">
+    <nav className="flex h-full w-full flex-col border-r border-[rgba(53,224,255,.32)] bg-[#081226]">
+      <div className="flex items-center gap-[11px] border-b border-[rgba(53,224,255,.16)] px-[18px] pb-[14px] pt-[18px]">
         {/* Logo WebP 180×180, 3.870 B. Đổi từ /logo.jpg (74.181 B) ngày 31/07/2026: bản
             WebP đã được tạo từ đợt trước nhưng KHÔNG ai tham chiếu tới, nên mọi lần mở
             trang vẫn kéo về bản JPEG nặng gấp 19 lần cho một ô 36×36 — 70 KB thừa trên
@@ -144,8 +144,8 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
         {/* eslint-disable-next-line @next/next/no-img-element -- logo tĩnh, kích thước cố định nhỏ */}
         <img src="/logo.webp?v=ddafa976" alt="" className="h-9 w-9 flex-none rounded-[10px]" />
         <div className="min-w-0">
-          <div className="text-[15px] font-black leading-[1.15] text-cardtitle">School Hub</div>
-          <div className="text-[9.5px] font-extrabold tracking-wide text-muted">{roleTag}</div>
+          <div className="text-[15px] font-black leading-[1.15] text-white">School Hub</div>
+          <div className="text-[9.5px] font-extrabold tracking-wide text-[#6FB6FF]">{roleTag}</div>
         </div>
       </div>
 
@@ -161,14 +161,14 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
               // đích bấm, và sidebar này cũng hiện trên máy bảng cảm ứng.
               className={
                 isActive
-                  ? "flex min-h-[44px] items-center gap-[11px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-3 py-[11px] shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                  : "flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px] hover:bg-[#0E1E3C]"
+                  ? "flex min-h-[44px] items-center gap-[11px] rounded-xl bg-gradient-to-r from-gold to-gold-dark px-3 py-[11px] shadow-[0_6px_14px_rgba(245,163,0,.35)]"
+                  : "flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px] hover:bg-[#0E2647]"
               }
             >
-              <span className={`msr text-[20px] ${isActive ? "text-gold" : "text-caption"}`} aria-hidden>
+              <span className={`msr text-[20px] ${isActive ? "text-navy" : "text-[#5B79AC]"}`} aria-hidden>
                 {item.icon}
               </span>
-              <span className={`flex-1 text-[13.5px] ${isActive ? "font-extrabold text-white" : "font-bold text-cardtitle2"}`}>
+              <span className={`flex-1 text-[13.5px] ${isActive ? "font-extrabold text-navy" : "font-bold text-[#9DB4DE]"}`}>
                 {item.label}
               </span>
               {!isActive && item.badge ? (
@@ -195,16 +195,16 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
             aria-disabled="true"
             className="flex min-h-[44px] items-center gap-[11px] rounded-xl px-3 py-[11px]"
           >
-            <span className="msr text-[20px] text-caption opacity-45" aria-hidden>
+            <span className="msr text-[20px] text-[#5B79AC] opacity-45" aria-hidden>
               {item.icon}
             </span>
-            <span className="flex-1 text-[13.5px] font-bold text-subtle">
+            <span className="flex-1 text-[13.5px] font-bold text-[#9DB4DE]">
               {item.label}
               {/* `aria-disabled` nói với API trợ năng rằng mục bị vô hiệu, nhưng đây không
                   phải nút nên nhiều trình đọc màn hình bỏ qua. Câu này nói bằng lời. */}
               <span className="sr-only"> — sắp có, chưa mở</span>
             </span>
-            <span className="rounded-full bg-chip px-[7px] py-[3px] text-[9px] font-black text-muted">
+            <span className="rounded-full bg-[#12244A] px-[7px] py-[3px] text-[9px] font-black text-[#8298B8]">
               {item.soonBadge ?? "GĐ2"}
             </span>
           </div>
@@ -215,7 +215,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
           thứ hai (đầu trang điện thoại) — xem lý lẽ ở đầu user-menu.tsx. Mục "Hồ sơ" đã
           rời khỏi danh sách điều hướng bên trên và về đây, nên đây KHÔNG còn là lối tắt
           tiện tay mà là đường DUY NHẤT tới hồ sơ và tới nút đăng xuất. */}
-      <div className="border-t border-[#12244A] p-2.5 pb-[14px]">
+      <div className="border-t border-[rgba(53,224,255,.16)] p-2.5 pb-[14px]">
         <UserMenu variant="sidebar" fullName={fullName} email={email} roleTag={roleTag} />
       </div>
     </nav>

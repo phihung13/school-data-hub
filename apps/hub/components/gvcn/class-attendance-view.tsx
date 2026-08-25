@@ -45,10 +45,10 @@ const CHOICES: TeacherAttendanceStatus[] = ["present", "late", "absent", "excuse
  * `tests/unit/a11y-man-nguoi-lon.test.ts` đo lại từ chính bảng này, không chép số.
  */
 export const CHOICE_STYLE: Record<TeacherAttendanceStatus, { on: string; off: string }> = {
-  present: { on: "bg-[#4EE39B] text-[#00301C]", off: "text-[#4EE39B] hover:bg-[#0C2E22]" },
+  present: { on: "bg-[#4EE39B] text-[#00301C]", off: "text-[#4EE39B] hover:bg-surface-success" },
   late: { on: "bg-[#F5A300] text-[#4A3200]", off: "text-gold-textDark hover:bg-[#3A2E08]" },
   absent: { on: "bg-[#FF8A8F] text-[#4A0D11]", off: "text-[#FF8A8F] hover:bg-[#3D141A]" },
-  excused: { on: "bg-[#35E0FF] text-[#04303B]", off: "text-[#35E0FF] hover:bg-[#0E2647]" },
+  excused: { on: "bg-[#35E0FF] text-[#04303B]", off: "text-link hover:bg-chip" },
 };
 
 export function ClassAttendanceView({ displayName, email }: { displayName: string; email: string }) {

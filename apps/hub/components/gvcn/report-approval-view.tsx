@@ -74,8 +74,8 @@ import { newMutationId } from "./mutation-id";
 
 const STATUS_META = {
   pending: { label: "Chờ duyệt", bg: "bg-chip", fg: "text-subtle", icon: "hourglass_empty" },
-  approved: { label: "Đã duyệt", bg: "bg-[#0C2E22]", fg: "text-successText", icon: "check_circle" },
-  rejected: { label: "Đã trả lại", bg: "bg-[#3D141A]", fg: "text-[#FF8A8F]", icon: "undo" },
+  approved: { label: "Đã duyệt", bg: "bg-surface-success", fg: "text-successText", icon: "check_circle" },
+  rejected: { label: "Đã trả lại", bg: "bg-[#3D141A]", fg: "text-dangerText", icon: "undo" },
 } as const;
 
 /**
@@ -85,11 +85,11 @@ const STATUS_META = {
  *
  * Đo trên nền thật (WCAG 2.x): #4EE39B/#0C2E22 = 6,12:1 · #FFD98A/#3A2E08 = 5,27:1.
  * Nút chưa chọn: #93A9C8 trên trắng = 5,44:1. Không mã hex mới nào — cả hai cặp đã có
- * tên token (`surface-success`/`successText`, `surface-warn`/`gold-textDark`).
+ * tên token (`surface-success`/`successText`, `surface-warn`/`gold-text`).
  */
 const DECISION_ON: Record<ReportDecision, string> = {
   approved: "border-[#4EE39B] bg-surface-success text-successText",
-  rejected: "border-gold-dark bg-surface-warn text-gold-textDark",
+  rejected: "border-gold-dark bg-surface-warn text-gold-text",
 };
 
 /**
@@ -251,7 +251,7 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
               type="button"
               onClick={() => shiftWeek(-7)}
               aria-label="Tuần trước"
-              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[#0E1E3C]"
+              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-chip"
             >
               <span className="msr text-[18px] text-cardtitle" aria-hidden>
                 chevron_left
@@ -273,7 +273,7 @@ export function ReportApprovalView({ displayName, email }: { displayName: string
               type="button"
               onClick={() => shiftWeek(7)}
               aria-label="Tuần sau"
-              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[#0E1E3C]"
+              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-chip"
             >
               <span className="msr text-[18px] text-cardtitle" aria-hidden>
                 chevron_right
@@ -484,7 +484,7 @@ function ApprovalBoard({
               checked={xacNhanGhiDe}
               onChange={() => setXacNhanGhiDe((v) => !v)}
             />
-            <span className="text-[12.5px] font-black text-gold-textDark">
+            <span className="text-[12.5px] font-black text-gold-text">
               Đổi quyết định đã ký cho {daKy.length} em
             </span>
           </label>

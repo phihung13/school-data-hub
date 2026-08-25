@@ -121,7 +121,7 @@ export function OperationsShell({
 /** Thẻ trắng chuẩn của Hub — cùng hình dạng với Card của GvcnShell. */
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`hv-card-toi p-4 md:p-5 ${className}`}>
+    <div className={`hv-card p-4 md:p-5 ${className}`}>
       {children}
     </div>
   );

@@ -543,7 +543,12 @@ describe("tương phản chữ ≥ 4,5:1 trong các file thuộc gói này", () 
    * trước khi đổi: cả 12 token chữ đều đạt, thấp nhất là `caption2` ở 4,91:1. Bảng màu đạt
    * chuẩn THẬT, không phải hạ ngưỡng cho vừa.
    */
-  const SURFACES = ["#0E1E3C", "#050F26", "#12244A", "#16294B", "#081730"];
+  // 25/08/2026 — bảng token lật về hệ SÁNG "SCI-FI HUD" (lệnh: "nền sáng, ưu tiên
+  // trắng"). Đây là các mặt nền SÁNG chở chữ token: thẻ trắng, nền trang, chip, nền xen
+  // kẽ. #E1EAF5 (surface-muted) KHÔNG vào danh sách: nó là rãnh thanh tiến trình và ô
+  // icon app tắt — không chở chữ token nào; các cặp nền-chữ trạng thái (EDFBF4/00693F…)
+  // đo riêng ở dưới theo đúng cặp thật.
+  const SURFACES = ["#FFFFFF", "#F4F9FF", "#E8F1FC", "#EEF3FA"];
 
   const CHECKED = [
     "apps/hub/components/tab-bar.tsx",
@@ -619,9 +624,18 @@ describe("tương phản chữ ≥ 4,5:1 trong các file thuộc gói này", () 
     // `#0B1B38` là nền ô tâm sự ở giao diện tối (đổi 24/08/2026 từ `#FCFDFE`). Ô đó là
     // chỗ riêng tư nhất cả app, và placeholder ở đấy đang gánh việc của NHÃN — nó dạy em
     // biết ô này viết được gì — nên nó phải đọc được, không phải "đủ mờ cho đẹp".
-    for (const bg of [...SURFACES, "#0B1B38"]) {
+    // #0B1B38 (ô nhập tối ở màn đăng nhập) đã RỜI danh sách 25/08: login là cảnh tối
+    // riêng và hai ô của nó tự mang placeholder:text-[#8298B8] — guard ngay dưới giữ cửa.
+    for (const bg of SURFACES) {
       expect(contrast(hex.toUpperCase(), bg), `placeholder ${hex} trên ${bg}`).toBeGreaterThanOrEqual(4.5);
     }
+    // Cảnh tối đăng nhập: lưới an toàn toàn cục là màu cho nền sáng, nên hai ô nhập
+    // tối phải TỰ khai màu gợi ý — thiếu là chữ mẫu chìm 3,0:1 trên #0B1B38.
+    const login = readFileSync(join(appDir, "..", "components", "login-form.tsx"), "utf8");
+    const oToi = login.split('bg-[#0B1B38]').length - 1;
+    expect(oToi, "số ô nhập tối ở login đổi — cập nhật guard").toBe(2);
+    expect(login.split('bg-[#0B1B38]' ).slice(1).every(x => x.slice(0, 200).includes("placeholder:text-[#8298B8]")), "ô nhập tối thiếu placeholder riêng").toBe(true);
+
     // Firefox hạ placeholder xuống opacity .54 nếu không nói gì — màu tính đúng vẫn bị
     // pha loãng lần nữa ngay sau đó.
     expect(rule).toMatch(/opacity:\s*1/);

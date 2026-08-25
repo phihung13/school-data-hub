@@ -33,7 +33,7 @@ import { HuongDanTichHop, QuyTrinhDauNoi } from "./huong-dan-tich-hop";
 import { DanPhieuDauNoi } from "./dan-phieu-dau-noi";
 
 const NHAN_RO: Record<string, { chu: string; nen: string; mau: string }> = {
-  xanh: { chu: "Rổ Xanh · không gắn tên em nào", nen: "bg-[#0C2E22]", mau: "text-[#126B45]" },
+  xanh: { chu: "Rổ Xanh · không gắn tên em nào", nen: "bg-surface-success", mau: "text-[#126B45]" },
   vang: { chu: "Rổ Vàng · có gắn tên từng em", nen: "bg-[#2A2208]", mau: "text-[#FFD98A]" },
 };
 
@@ -196,7 +196,7 @@ function TheApp({
             <span
               className={
                 app.enabled
-                  ? "rounded-full bg-[#0C2E22] px-2.5 py-0.5 text-[10.5px] font-black text-[#126B45]"
+                  ? "rounded-full bg-surface-success px-2.5 py-0.5 text-[10.5px] font-black text-[#126B45]"
                   : "rounded-full bg-[#12244A] px-2.5 py-0.5 text-[10.5px] font-black text-muted"
               }
             >

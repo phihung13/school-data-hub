@@ -121,7 +121,7 @@ export function EmbedIntro({
         // Thanh chạy — KHÔNG giả vờ biết còn bao nhiêu phần trăm. Không ai đo được app
         // ngoài còn bao lâu, nên một thanh đầy dần theo phần trăm bịa là nói dối bằng
         // hình. Thanh này chỉ nói "vẫn đang chạy", đúng chừng đó.
-        <div className="mt-1 h-[3px] w-[180px] overflow-hidden rounded-full bg-[#16294B]">
+        <div className="mt-1 h-[3px] w-[180px] overflow-hidden rounded-full bg-surface-muted">
           <div className="h-full w-1/3 animate-embedSlide rounded-full bg-navy" />
         </div>
       )}

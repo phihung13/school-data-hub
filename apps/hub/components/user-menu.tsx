@@ -125,7 +125,7 @@ export function UserMenu({ fullName, email, roleTag, variant, placement = "duoi"
         aria-label={variant === "avatar" ? `Tài khoản của ${fullName}` : undefined}
         className={
           variant === "sidebar"
-            ? "flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2.5 py-[9px] hover:bg-[#0E1E3C]"
+            ? "flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2.5 py-[9px] hover:bg-[#0E2647]"
             : // 44×44 đúng ngưỡng vùng bấm §11. Vòng tròn hiển thị 42px, vùng bấm phủ đủ.
               "flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-card/10"
         }
@@ -142,10 +142,10 @@ export function UserMenu({ fullName, email, roleTag, variant, placement = "duoi"
         {variant === "sidebar" && (
           <>
             <div className="min-w-0 flex-1 text-left">
-              <div className="truncate text-[12.5px] font-extrabold text-ink">{fullName}</div>
-              <div className="truncate text-[10px] text-muted">{email}</div>
+              <div className="truncate text-[12.5px] font-extrabold text-white">{fullName}</div>
+              <div className="truncate text-[10px] text-[#6FB6FF]">{email}</div>
             </div>
-            <span className="msr text-[18px] text-caption" aria-hidden>
+            <span className="msr text-[18px] text-[#5B79AC]" aria-hidden>
               unfold_more
             </span>
           </>

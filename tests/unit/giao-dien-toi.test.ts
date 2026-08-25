@@ -101,11 +101,18 @@ describe("giao diện tối — token nền và token chữ KHÔNG được gộ
     expect(TW, "ghi đè `white` sẽ nuốt luôn text-white").not.toMatch(/^\s*white:\s*"/m);
   });
 
-  it("nền trang và color-scheme đều đã là tối", () => {
-    expect(CSS, "color-scheme còn light — ô nhập và thanh cuộn vẫn vẽ theo hệ sáng").toContain(
-      "color-scheme: dark",
+  it("nền trang và color-scheme về hệ SÁNG (25/08/2026 — 'nền sáng, ưu tiên trắng')", () => {
+    // Lật ngược guard 24/08: theme tối chỉ sống đúng một ngày; hệ chốt là SÁNG "SCI-FI
+    // HUD" đọc từ cascade cuối của bản vẽ. color-scheme: light để ô nhập/thanh cuộn/ô
+    // chọn vẽ theo hệ sáng — cùng lý do dòng dark từng tồn tại, chiều ngược lại.
+    expect(CSS, "color-scheme còn dark — ô nhập và thanh cuộn vẫn vẽ theo hệ tối").toContain(
+      "color-scheme: light",
     );
-    expect(CSS, "body chưa đổi nền").not.toMatch(/body\s*\{[^}]*background:\s*#f7f9fc/i);
+    expect(CSS, "body phải nền trắng của bản vẽ").toMatch(/body\s*\{[^}]*background:\s*#ffffff/i);
+    // Ba khối CỐ Ý đứng ngoài hệ sáng — cảnh đăng nhập, sidebar, đầu trang hv-thanh —
+    // không dùng token; token lật thì chúng không được đổi theo.
+    const SIDEBAR = readFileSync(join(goc, "apps/hub/components/hub-sidebar.tsx"), "utf8");
+    expect(SIDEBAR).toContain('bg-[#081226]');
   });
 });
 

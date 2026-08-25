@@ -708,7 +708,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
                   Chip nói nhanh hơn câu ở đúng chỗ này, vì em đang quét màn hình tìm xem
                   mình có mất gì không. */}
               <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="flex items-center gap-1 rounded-full bg-[#0C2E22] px-2.5 py-1 text-[11px] font-black text-successText">
+                <span className="flex items-center gap-1 rounded-full bg-surface-success px-2.5 py-1 text-[11px] font-black text-successText">
                   <span aria-hidden className="msr text-[14px]">check_circle</span>
                   Điểm danh vẫn ghi
                 </span>
@@ -757,7 +757,7 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
             // RÚT NGẮN 06/08/2026 (§1.5): bỏ phần nhắc lại nguyên văn nhãn của nút em vừa
             // bấm ("Lời “Mình cần gặp thầy cô” của con…") — em vừa bấm nó xong, không cần
             // đọc lại. Chữ còn lại giữ ĐÚNG mệnh đề của QĐ-2 ("đã tới", không phải "đã đọc").
-            <p className="flex items-center gap-1.5 rounded-full bg-[#0C2E22] px-3.5 py-2 text-[12px] font-black text-successText">
+            <p className="flex items-center gap-1.5 rounded-full bg-surface-success px-3.5 py-2 text-[12px] font-black text-successText">
               <span aria-hidden className="msr flex-none text-[16px]">waving_hand</span>
               Lời cần gặp đã tới chỗ thầy cô
             </p>

@@ -190,7 +190,7 @@ export function StudentDetailView({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/gvcn/lop"
-            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#0E1E3C]"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-chip"
           >
             <span className="msr text-[17px]" aria-hidden>
               arrow_back
@@ -207,7 +207,7 @@ export function StudentDetailView({
                 className={
                   days === choice
                     ? "min-h-[44px] rounded-xl bg-gradient-to-br from-navy to-navy-light px-4 py-2.5 text-[12.5px] font-black text-white shadow-[0_6px_14px_rgba(10,42,94,.24)]"
-                    : "min-h-[44px] rounded-xl border border-line bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-[#0E1E3C]"
+                    : "min-h-[44px] rounded-xl border border-line bg-card px-4 py-2.5 text-[12.5px] font-extrabold text-cardtitle2 hover:bg-chip"
                 }
               >
                 {choice} ngày
@@ -676,7 +676,7 @@ function InterventionCard({
 // 4. Trạng thái duyệt Báo cáo Trưởng thành.
 // ---------------------------------------------------------------------------
 const APPROVAL_TONE: Record<string, { bg: string; fg: string; icon: string; label: string }> = {
-  approved: { bg: "bg-[#0C2E22]", fg: "text-successText", icon: "task_alt", label: "Đã duyệt" },
+  approved: { bg: "bg-surface-success", fg: "text-successText", icon: "task_alt", label: "Đã duyệt" },
   rejected: { bg: "bg-[#3D141A]", fg: "text-[#FF8A8F]", icon: "undo", label: "Đã trả lại" },
   pending: { bg: "bg-chip", fg: "text-subtle", icon: "hourglass_top", label: "Chưa quyết định" },
 };

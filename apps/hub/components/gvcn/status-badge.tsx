@@ -21,7 +21,7 @@ import type { AttendanceStatus } from "@hub/core/contracts";
  * bảng đã trôi lệch nhau — cùng một dữ liệu, hai màn của cùng một người, hai cách vẽ.
  */
 const STATUS_TONE: Record<AttendanceStatus, { bg: string; fg: string }> = {
-  present: { bg: "bg-[#0C2E22]", fg: "text-successText" },
+  present: { bg: "bg-surface-success", fg: "text-successText" },
   late: { bg: "bg-[#3A2E08]", fg: "text-gold-textDark" },
   absent: { bg: "bg-[#3D141A]", fg: "text-[#FF8A8F]" },
   excused: { bg: "bg-[#0E2647]", fg: "text-link" },

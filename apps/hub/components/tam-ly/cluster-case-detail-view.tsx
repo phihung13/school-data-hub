@@ -329,7 +329,7 @@ export function ClusterCaseDetailView({ studentId }: { studentId: string }) {
                         className={
                           action === a
                             ? "min-h-[44px] rounded-full bg-domain-counselor px-4 py-1.5 text-[11.5px] font-black text-white"
-                            : "min-h-[44px] rounded-full border border-line bg-card px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-[#0E1E3C]"
+                            : "min-h-[44px] rounded-full border border-line bg-card px-4 py-1.5 text-[11.5px] font-bold text-cardtitle2 hover:bg-chip"
                         }
                       >
                         {a}
