@@ -65,7 +65,7 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
   });
 
   it("markup desktop dựng đủ bộ phận của bản vẽ, gắn vào dữ liệu THẬT", () => {
-    for (const lop of ['className="s-home', 'className="hv-head"', 'className="hv-grid"', 'className="hv-card hv-check"', 'className="hv-bn"', 'className="radar"', 'className="fx-scan"']) {
+    for (const lop of ['className="s-home', 'className="hv-head"', 'className="hv-grid"', 'className="hv-card hv-check"', 'className="hv-bn"', 'className="radar"']) {
       expect(HOME, `thiếu ${lop}`).toContain(lop);
     }
     // Số liệu chip là query thật, không phải số dán cứng của bản vẽ ("4/5", "11").
@@ -82,7 +82,11 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
 
   it("GIẢM CHUYỂN ĐỘNG: scan + UFO biến mất, mọi animation hv-* tắt", () => {
     const giam = CSS.slice(CSS.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
-    expect(giam).toMatch(/\.fx-scan, \.ufo-track \{ display: none; \}/);
+    // fx-scan đã GỠ HẲN 25/08 theo lệnh ("bỏ cái vệt trắng ngang") — guard đổi chiều:
+    // không được quay lại, kể cả qua một lần đồng bộ với bản vẽ (bản vẽ VẪN có nó).
+    expect(CSS).not.toMatch(/animation:\s*scanY/);
+    expect(HOME).not.toContain('fx-scan');
+    expect(giam).toMatch(/\.ufo-track \{ display: none; \}/);
     expect(giam).toMatch(/animation: none/);
   });
 

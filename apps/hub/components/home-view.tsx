@@ -616,7 +616,6 @@ function DesktopHome({ data }: { data: HomeData }) {
   return (
     <div className="s-home flex min-w-0 flex-1 flex-col overflow-hidden">
       <UfoBay />
-      <div className="fx-scan" aria-hidden />
       <div className="flex-1 overflow-y-auto px-7 pb-[26px] pt-[18px]">
         <header className="hv-head">
           <div className="hv-hello min-w-0">

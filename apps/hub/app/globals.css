@@ -289,12 +289,9 @@ textarea::placeholder {
 }
 /* Nội dung phải nổi TRÊN hai lớp trang trí ::before/::after (chúng phủ inset:0). */
 .s-home > * { position: relative; z-index: 1; }
-.fx-scan {
-  position: absolute; left: 0; right: 0; top: 0; height: 120px; pointer-events: none; z-index: 2;
-  background: linear-gradient(180deg, transparent, rgba(30,95,184,.045) 45%, rgba(255,255,255,.5) 50%, rgba(30,95,184,.045) 55%, transparent);
-  animation: scanY 8s linear infinite;
-  will-change: transform;
-}
+/* fx-scan (vệt sáng quét dọc màn) ĐÃ GỠ 25/08/2026 theo lệnh trực tiếp: "bỏ cái vệt
+   trắng ngang chạy từ trên xuống đi" — nó cũng là animation vô hạn cuối cùng phủ toàn
+   màn. Gỡ cả keyframe scanY và markup trong home-view cùng lượt. */
 
 /* ── Đầu trang "command strip" ── */
 .hv-head {
@@ -438,7 +435,6 @@ textarea::placeholder {
 .ufo-fly.scared .ufo-bob { animation: ufoShiver .14s linear infinite; }
 .ufo-fly.scared .ufo-beam { opacity: 0; animation: none; }
 
-@keyframes scanY { 0% { transform: translateY(-40vh); } 100% { transform: translateY(130vh); } }
 @keyframes fadeUp { 0% { opacity: 0; transform: translateY(18px); } 100% { opacity: 1; transform: none; } }
 @keyframes cardSweep { 0%, 55% { transform: translateX(-130%); } 100% { transform: translateX(260%); } }
 @keyframes moodBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
@@ -503,6 +499,6 @@ textarea::placeholder {
 /* GIẢM CHUYỂN ĐỘNG: mọi trang trí động của trang chủ đứng yên hoặc biến mất — cùng luật
    đã giữ ở intro và nền sao. Thẻ vẫn hiện (fadeUp tắt), dữ liệu không mất gì. */
 @media (prefers-reduced-motion: reduce) {
-  .fx-scan, .ufo-track { display: none; }
+  .ufo-track { display: none; }
   .hv-head, .hv-stats, .hv-card, .hv-bn, .card-sweep, .rd-beam, .rd-dot { animation: none; }
 }
