@@ -511,6 +511,44 @@ textarea::placeholder {
   .s-home-md > * { position: relative; z-index: 1; }
 }
 
+/* ── BUỒNG LÁI NGƯỜI LỚN — SỐ LIỆU MẪU (26/08/2026, bản vẽ Major OS artifact 05157091,
+      lưu tại public/trinh-dien/buong-lai-nguoi-lon.html). Chủ đầu tư: "mọi trang người
+      lớn vào, đều có 1 dashboard như vậy, NỀN TRẮNG… đưa sample data vào… để demo cho
+      mọi người biết đây là dashboard, cần đi đúng hướng". Bố cục + ngôn ngữ của bản vẽ
+      (KPI đứng vị trí số một, mũi tên tách khỏi màu — VÀNG = tốt, HỒNG = cần chú ý,
+      góc sắc, ngoặc góc) phối lại trên nền sáng của hệ hv-*. Mọi khối số mẫu mang nhãn
+      MẪU — demo tầm nhìn, không nói dối màn hình. ── */
+.bl-kpi-luoi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.bl-kpi { position: relative; padding: 14px 16px 12px; background: rgba(255,255,255,.95); clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, calc(100% - 8px) calc(100% + 60px), -40px calc(100% + 60px), -40px 8px, 0 8px); filter: drop-shadow(1px 0 0 #B7D2F0) drop-shadow(-1px 0 0 #B7D2F0) drop-shadow(0 1px 0 #B7D2F0) drop-shadow(0 -1px 0 #B7D2F0) drop-shadow(0 8px 0 rgba(10,42,94,.16)) drop-shadow(0 16px 14px rgba(10,42,94,.20)); will-change: transform; }
+.bl-kpi::before { content: ""; position: absolute; left: 0; top: 0; width: 12px; height: 12px; border-top: 3px solid #F5A300; border-left: 3px solid #F5A300; }
+.bl-kpi-ten { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: .14em; color: #4A78C2; }
+.bl-so { margin-top: 6px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 27px; font-weight: 800; line-height: 1; color: #0A2A5E; }
+.bl-so small { font-size: 12px; font-weight: 700; color: #33507C; margin-left: 5px; }
+.bl-phu { margin-top: 6px; font-size: 10.5px; font-weight: 700; color: #5B6B80; }
+/* Mũi tên tách khỏi màu — luật số 3 của bản vẽ: VÀNG = tốt, HỒNG = cần chú ý,
+   bất kể chiều tăng giảm. */
+.bl-delta { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; font-family: ui-monospace, Consolas, monospace; font-size: 10px; font-weight: 800; }
+.bl-delta.tot { background: #FFF6DF; color: #8A5A00; border: 1px solid #EFD48E; }
+.bl-delta.chu-y { background: #FFF0F1; color: #C7333A; border: 1px solid #F0C9CB; }
+/* Nhãn MẪU — đứng ở mọi khối số liệu mẫu, không có ngoại lệ. */
+.bl-mau { position: absolute; right: 8px; top: 8px; z-index: 1; padding: 2px 7px; font-family: ui-monospace, Consolas, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: .12em; color: #7A93B8; border: 1px dashed #B7D2F0; background: rgba(255,255,255,.8); }
+/* Thanh phân bố cảm xúc 5 đoạn */
+.bl-cx { display: flex; height: 9px; margin-top: 9px; overflow: hidden; background: #E1EAF5; }
+.bl-cx i { display: block; height: 100%; }
+/* Dòng dữ liệu — feed mono */
+.bl-feed { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; }
+.bl-feed li { display: flex; gap: 9px; align-items: baseline; list-style: none; border-bottom: 1px solid #EEF3FA; padding-bottom: 6px; }
+.bl-feed .luc { color: #7A93B8; flex: none; }
+.bl-feed .loai { color: #8A5A00; font-weight: 800; }
+.bl-feed .noi { color: #33507C; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Xếp hạng */
+.bl-hang { display: flex; align-items: center; gap: 10px; min-height: 40px; border-bottom: 1px solid #EEF3FA; }
+.bl-hang .stt { font-family: ui-monospace, Consolas, monospace; font-size: 11px; font-weight: 800; color: #7A93B8; width: 20px; }
+.bl-hang .ten { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 800; color: #1D3B6E; }
+.bl-hang .diem { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; font-weight: 800; color: #0A2A5E; }
+/* Sparkline */
+.bl-spark { width: 100%; height: 64px; }
+
 /* ── GHIM THẺ THÀNH LỚP COMPOSITOR (25/08 — "trang mini app, tôi chỉ lướt lên xuống
       thôi mà nó lag nó giật ko kéo được luôn"). Chuỗi drop-shadow (blur 26px) là ảnh
       ĐẮT để vẽ; không ghim lớp thì mỗi khung hình cuộn trình duyệt vẽ lại nó cho từng

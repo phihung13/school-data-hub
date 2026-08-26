@@ -98,6 +98,7 @@ import type { HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/co
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { MiniAppTile } from "./mini-app-tile";
 import { MOOD_STYLE } from "./mood-tile";
+import { BuongLaiMau } from "./buong-lai-mau";
 import { useCongCheckin } from "./cong-checkin";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
@@ -673,6 +674,21 @@ function DesktopHome({ data }: { data: HomeData }) {
           )}
         </header>
 
+        {/* NGƯỜI LỚN (26/08/2026): "mọi trang người lớn vào, đều có 1 dashboard như vậy,
+            nền trắng… đưa sample data vào… để demo cho mọi người biết đây là dashboard".
+            Buồng lái mẫu theo bản vẽ Major OS (buong-lai-mau.tsx — luật số mẫu ghi ở đó);
+            khối SỐ THẬT còn lại của vai (lớp chủ nhiệm, hạn báo cáo…) đứng ngay dưới,
+            không nhãn MẪU — ranh giới thật/mẫu phải nhìn thấy được. */}
+        {khoi.khoiNguoiLon && (
+          <>
+            <BuongLaiMau miniApps={data.miniApps} />
+            <div className="hv-r mt-4 max-w-[560px]">
+              <CotPhaiNguoiLon roles={data.roles} />
+            </div>
+          </>
+        )}
+
+        {data.isStudent && (
         <div className="hv-grid">
           <div className="hv-l">
             {khoi.theCheckin && <CheckinCardDesktop data={data} />}
@@ -724,9 +740,9 @@ function DesktopHome({ data }: { data: HomeData }) {
               />
             )}
             {data.isStudent && data.checkedInToday && data.checkedInAt && <TodayCard checkedInAt={data.checkedInAt} />}
-            {khoi.khoiNguoiLon && <CotPhaiNguoiLon roles={data.roles} />}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
