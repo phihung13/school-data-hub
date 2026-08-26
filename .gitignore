@@ -29,3 +29,5 @@ apps/hub/.next-prod
 
 # Log máy chủ sinh khi chạy nền (mọi biến thể).
 .hub*.log
+.cloudflared.log
+.cloudflared-err.log
