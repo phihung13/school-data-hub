@@ -149,7 +149,7 @@ Số đo dựng bệnh 02/08/2026: đổi tên đúng một tệp (`apps/hub/.ne
 **KIỂM ĐÃ CHỮA XONG.** Hai điều, phải đủ cả hai:
 
 - `bash tools/start-local.sh` chạy tới hết và in `✓ N tệp JS đều tải được — trang bấm được thật`, mã thoát **0**. Đây là phép kiểm bằng máy: nó lấy đúng danh sách tệp mà trình duyệt sẽ tải rồi thử từng tệp một.
-- Mở `https://hub.truongvietanh.com/login` trên **điện thoại**, gõ mã mở khoá, và **thấy màn hình đổi**. Bấm được thật, không phải nhìn thấy nút.
+- Mở `https://os.truongvietanh.com/login` trên **điện thoại**, gõ mã mở khoá, và **thấy màn hình đổi**. Bấm được thật, không phải nhìn thấy nút.
 
 **KHÔNG chấp nhận** kết luận từ việc trang mở ra và chữ hiện đủ — đó đúng là phép kiểm đã lừa hai lần.
 
@@ -204,7 +204,7 @@ Bốn câu trả lời, cả bốn đã đo thật:
 
 ```bash
 curl -s -o /dev/null -w 'trong nha  = %{http_code}\n' -m 8  http://localhost:3000/login
-curl -s -o /dev/null -w 'ngoai duong = %{http_code}\n' -m 12 https://hub.truongvietanh.com/login
+curl -s -o /dev/null -w 'ngoai duong = %{http_code}\n' -m 12 https://os.truongvietanh.com/login
 ```
 
 | Máy in ra | Nghĩa là |

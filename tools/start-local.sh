@@ -5,7 +5,7 @@
 # Cloudflare — đều là tiến trình rời, không cái nào tự khởi động lại. Ngày
 # 31/07/2026 mất thời gian hai lần vì đúng chuyện đó: Docker tắt làm 22 test tự
 # bỏ qua (bộ test vẫn báo xanh, không ai biết), rồi cloudflared tắt làm
-# hub.truongvietanh.com trả lỗi 1033 trong khi Hub vẫn chạy bình thường.
+# os.truongvietanh.com trả lỗi 1033 trong khi Hub vẫn chạy bình thường.
 #
 # Đây là bản vá tạm cho máy dev. Bản thật là chuyển lên máy chủ có tự khởi động
 # lại (ADR-018/019) — script này KHÔNG thay thế việc đó.
@@ -42,7 +42,7 @@ done
 DB_CONTAINER="pg_hub"
 DB_URL="postgres://postgres:postgres@localhost:5434/hub_dev"
 HUB_URL="http://localhost:3000"
-PUBLIC_URL="https://hub.truongvietanh.com"
+PUBLIC_URL="https://os.truongvietanh.com"
 CF_CONFIG="$HOME/.cloudflared/config.yml"
 
 ok()   { echo "  ✓ $1"; }

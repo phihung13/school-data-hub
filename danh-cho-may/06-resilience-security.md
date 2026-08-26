@@ -73,11 +73,11 @@ Check-in cảm xúc là tự khai — gian lận không phá được gì. **Đi
 
 ## 6b. Cửa đăng nhập tạm (`dev-login`) đã khoá — 02/08/2026, ADR-028, nợ #19
 
-**Cái hỏng thật, đo hai lần.** `apps/hub/app/api/auth/dev-login/route.ts` dài 34 dòng và **không có một phép kiểm môi trường nào** — không `NODE_ENV`, không địa chỉ, không mật khẩu. Nó nhận một `authUid` bất kỳ trong danh sách tài khoản mẫu rồi cấp cookie phiên đúng vai đó. Route nằm sau tên miền công khai `hub.truongvietanh.com`, và dãy UUID mẫu (`90000000-0000-0000-0000-0000000000NN`) đoán được bằng mắt.
+**Cái hỏng thật, đo hai lần.** `apps/hub/app/api/auth/dev-login/route.ts` dài 34 dòng và **không có một phép kiểm môi trường nào** — không `NODE_ENV`, không địa chỉ, không mật khẩu. Nó nhận một `authUid` bất kỳ trong danh sách tài khoản mẫu rồi cấp cookie phiên đúng vai đó. Route nằm sau tên miền công khai `os.truongvietanh.com`, và dãy UUID mẫu (`90000000-0000-0000-0000-0000000000NN`) đoán được bằng mắt.
 
 | Phép thử | Trước 02/08/2026 | Từ 02/08/2026 |
 |---|---|---|
-| `POST https://hub.truongvietanh.com/api/auth/dev-login` không mã | **200** + cookie phiên vai `principal` | **401** |
+| `POST https://os.truongvietanh.com/api/auth/dev-login` không mã | **200** + cookie phiên vai `principal` | **401** |
 | cùng lời gọi, mã sai | **200** | **401** |
 | cùng lời gọi, mã đúng (header `x-hub-dev-secret`) | 200 | 200 |
 | chưa đặt `DEV_LOGIN_SECRET` | 200 (cửa mở) | **503, đóng với tất cả** |
@@ -100,7 +100,7 @@ Màn `/login` hỏi trạng thái cửa **một lần** lúc mở trang rồi v�
 **Vì sao KHÔNG chặn theo địa chỉ máy** — phần dễ làm sai nhất, và là lý do ADR-028 tồn tại:
 
 1. **Nó cắt đúng người cần đi qua.** Chủ đầu tư demo bằng điện thoại, qua chính tên miền công khai, và hôm 01/08/2026 đã phàn nàn "tôi không vào được bằng điện thoại". Một cửa "chỉ cho localhost" đóng lỗ hổng bằng cách đóng luôn người dùng chính.
-2. **Nó không chặn được ai.** `~/.cloudflared/config.yml` trỏ `hub.truongvietanh.com → http://localhost:3000`, nên **mọi request từ Internet đi qua đường hầm tới Node đều mang địa chỉ nguồn 127.0.0.1**. Phép kiểm loopback ở đây **xanh cho cả thế giới**, đồng thời làm cả nhóm tin rằng cửa đã khoá — **cổng tệ hơn không có cổng**. Có một bài test canh không file route nào nhắc tới `localhost`/`127.0.0.1`.
+2. **Nó không chặn được ai.** `~/.cloudflared/config.yml` trỏ `os.truongvietanh.com → http://localhost:3000`, nên **mọi request từ Internet đi qua đường hầm tới Node đều mang địa chỉ nguồn 127.0.0.1**. Phép kiểm loopback ở đây **xanh cho cả thế giới**, đồng thời làm cả nhóm tin rằng cửa đã khoá — **cổng tệ hơn không có cổng**. Có một bài test canh không file route nào nhắc tới `localhost`/`127.0.0.1`.
 
 Hệ quả: `x-forwarded-for` chỉ được dùng để **đếm số lần thử**, không bao giờ để **cấp quyền**; bộ đếm 5 lần/phút của người vào từ localhost gom chung một xô (`loopback`) — chấp nhận được, vì cái nó bảo vệ là bí mật chứ không phải địa chỉ.
 

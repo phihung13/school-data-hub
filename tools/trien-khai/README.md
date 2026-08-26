@@ -31,7 +31,7 @@ pm2 start tools/trien-khai/ecosystem.config.cjs && pm2 save && pm2 startup
 sudo cp tools/trien-khai/nginx-hub.conf /etc/nginx/sites-available/hub
 sudo ln -s /etc/nginx/sites-available/hub /etc/nginx/sites-enabled/hub
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d hub.truongvietanh.com
+sudo certbot --nginx -d os.truongvietanh.com
 ```
 
 ## Lên bản mới / lùi bản
