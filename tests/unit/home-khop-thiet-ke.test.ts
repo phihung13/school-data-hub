@@ -49,20 +49,21 @@ describe("trang chủ khớp thiết kế #s-home — trạng thái cascade CU�
     expect(CSS).not.toMatch(/\.s-home::before\s*\{[^}]*110px 110px/);
   });
 
-  it("thẻ trắng: viền drop-shadow #8FB6E4 4 hướng + bóng đáy đậm (khối FINAL), vát góc + rãnh notch 36%", () => {
-    // Bóng thẻ đi hai lượt 25/08: hạ 22->14 vì "web giật" (blur là pass đắt nhất khi thẻ
-    // còn animation bên trong), rồi NÂNG 26px/.40 — đậm hơn cả bản vẽ — theo lệnh "bóng
-    // phải đè lên cái nền vi mạch". Nâng được vì mọi animation vô hạn TRONG thẻ đã gỡ:
-    // filter tĩnh raster một lần rồi cache, bóng đậm không còn tốn khung hình mỗi giây.
-    const KHOP =
-      /\.hv-card\s*\{[^}]*drop-shadow\(1\.5px 0 0 #8FB6E4\)[^}]*drop-shadow\(0 10px 0 rgba\(10,42,94,\.30\)\) drop-shadow\(0 26px 22px rgba\(10,42,94,\.40\)\)/;
-    expect(CSS).toMatch(KHOP);
-    // 25/08: điểm đầu đa giác kéo ra -60px — clip-path cắt cả BÓNG filter tràn ngoài hộp
-    // (đo bằng thí nghiệm bóng đỏ trên trang thật); mở đáy + hai bên để bóng thoát,
-    // hình nhìn thấy (rãnh notch 36%, vát góc) không đổi một pixel.
-    expect(CSS).toMatch(/\.hv-card\s*\{[^}]*clip-path:\s*polygon\(-60px 0, 36% 0, calc\(36% \+ 8px\) 7px/);
-    expect(CSS).toMatch(/\.hv-card\s*\{[^}]*calc\(100% \+ 60px\) calc\(100% \+ 80px\)/);
-    // border-radius 0 (đời SQUARE-OFF) — không được lấy 12px của đời đầu.
+  it("thẻ trắng: viền #8FB6E4 + BÓNG BOX-SHADOW hai lớp — đời thứ BA của bóng thẻ, vì máy demo", () => {
+    // Phả hệ bóng thẻ, giữ đủ để không ai đi lại vòng cũ:
+    //   đời 1 (24/08): chuỗi drop-shadow 6 pass + clip-path — đúng bản vẽ, nhưng clip
+    //     NUỐT bóng (thí nghiệm bóng đỏ) → mở đáy đa giác cho bóng thoát;
+    //   đời 2 (25/08): bóng thoát, đậm 26px — rồi máy demo kêu lag lần ba: mỗi thẻ một
+    //     lớp compositor + N pass filter là combo đắt nhất với GPU yếu;
+    //   đời 3 (26/08 — hiện tại): VIỀN THẬT + box-shadow hai lớp (lớp cứng sát mép +
+    //     lớp mờ lan). Rẻ hơn cả chục lần, không cần clip mở đáy, không cần will-change.
+    //     Hy sinh rãnh notch trên đỉnh thẻ — chi tiết nhỏ nhất của chữ ký thị giác.
+    // hv-stat/hv-cta/hv-m NHỎ nên vẫn giữ clip + filter — đừng "đồng bộ" chúng theo.
+    expect(CSS).toMatch(/\.hv-card\s*\{[^}]*border:\s*1\.5px solid #8FB6E4/);
+    expect(CSS).toMatch(/\.hv-card\s*\{[^}]*box-shadow:\s*0 10px 0 -3px rgba\(10,42,94,\.28\), 0 24px 26px rgba\(10,42,94,\.30\)/);
+    expect(CSS).not.toMatch(/\.hv-card\s*\{[^}]*drop-shadow/);
+    expect(CSS).not.toMatch(/\.hv-card\s*\{[^}]*clip-path/);
+    // border-radius 0 (đời SQUARE-OFF) — góc vuông sắc là chữ ký còn lại, giữ.
     expect(CSS).toMatch(/\.hv-card\s*\{[^}]*border-radius:\s*0/);
   });
 

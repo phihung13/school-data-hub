@@ -335,10 +335,10 @@ textarea::placeholder {
 .hv-grid { display: grid; grid-template-columns: 7fr 5fr; gap: 13px; align-items: start; }
 .hv-l, .hv-r { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
 .hv-card {
-  position: relative; overflow: hidden; padding: 17px 20px; border: 0; border-radius: 0;
-  background: rgba(255,255,255,.95); box-shadow: none;
-  clip-path: polygon(-60px 0, 36% 0, calc(36% + 8px) 7px, calc(64% - 8px) 7px, 64% 0, calc(100% - 14px) 0, 100% 14px, calc(100% + 60px) 14px, calc(100% + 60px) calc(100% + 80px), -60px calc(100% + 80px));
-  filter: drop-shadow(1.5px 0 0 #8FB6E4) drop-shadow(-1.5px 0 0 #8FB6E4) drop-shadow(0 1.5px 0 #8FB6E4) drop-shadow(0 -1.5px 0 #8FB6E4) drop-shadow(0 10px 0 rgba(10,42,94,.30)) drop-shadow(0 26px 22px rgba(10,42,94,.40));
+  position: relative; overflow: hidden; padding: 17px 20px; border-radius: 0;
+  background: rgba(255,255,255,.97);
+  border: 1.5px solid #8FB6E4;
+  box-shadow: 0 10px 0 -3px rgba(10,42,94,.28), 0 24px 26px rgba(10,42,94,.30);
   animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) backwards;
 }
 .hv-card::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: linear-gradient(90deg, transparent, rgba(14,159,216,.5), transparent); }
@@ -356,7 +356,7 @@ textarea::placeholder {
 .hv-kick { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; font-weight: 800; letter-spacing: .12em; color: #4A78C2; }
 
 /* ── Thẻ check-in vàng kem ── */
-.hv-check { background: linear-gradient(135deg, #FFF9E8 0%, #FFEFC2 58%, #FFE49A 100%); filter: drop-shadow(1.5px 0 0 #E8C15A) drop-shadow(-1.5px 0 0 #E8C15A) drop-shadow(0 1.5px 0 #E8C15A) drop-shadow(0 -1.5px 0 #E8C15A) drop-shadow(0 10px 0 rgba(160,105,10,.34)) drop-shadow(0 26px 22px rgba(180,120,20,.42)); }
+.hv-check { background: linear-gradient(135deg, #FFF9E8 0%, #FFEFC2 58%, #FFE49A 100%); border-color: #E8C15A; box-shadow: 0 10px 0 -3px rgba(160,105,10,.30), 0 24px 26px rgba(180,120,20,.34); }
 .hv-check::before { background: linear-gradient(90deg, transparent, rgba(245,163,0,.75), transparent); }
 .hv-check::after { border-color: #B77E00; }
 .hv-check .hv-tt, .hv-check .hv-q { color: #5A3E00; }
@@ -519,7 +519,7 @@ textarea::placeholder {
       góc sắc, ngoặc góc) phối lại trên nền sáng của hệ hv-*. Mọi khối số mẫu mang nhãn
       MẪU — demo tầm nhìn, không nói dối màn hình. ── */
 .bl-kpi-luoi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.bl-kpi { position: relative; padding: 14px 16px 12px; background: rgba(255,255,255,.95); clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, calc(100% - 8px) calc(100% + 60px), -40px calc(100% + 60px), -40px 8px, 0 8px); filter: drop-shadow(1px 0 0 #B7D2F0) drop-shadow(-1px 0 0 #B7D2F0) drop-shadow(0 1px 0 #B7D2F0) drop-shadow(0 -1px 0 #B7D2F0) drop-shadow(0 8px 0 rgba(10,42,94,.16)) drop-shadow(0 16px 14px rgba(10,42,94,.20)); will-change: transform; }
+.bl-kpi { position: relative; padding: 14px 16px 12px; background: rgba(255,255,255,.97); border: 1px solid #B7D2F0; box-shadow: 0 7px 0 -2px rgba(10,42,94,.14), 0 15px 16px rgba(10,42,94,.18); }
 .bl-kpi::before { content: ""; position: absolute; left: 0; top: 0; width: 12px; height: 12px; border-top: 3px solid #F5A300; border-left: 3px solid #F5A300; }
 .bl-kpi-ten { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: .14em; color: #4A78C2; }
 .bl-so { margin-top: 6px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 27px; font-weight: 800; line-height: 1; color: #0A2A5E; }
@@ -557,7 +557,7 @@ textarea::placeholder {
       cache; cuộn chỉ còn là trượt các lớp đã vẽ. Giá: bộ nhớ ~diện tích thẻ × số thẻ
       trong vùng nhìn — vài chục thẻ là mức an toàn; KHÔNG áp cho phần tử nhỏ lặp hàng
       trăm lần (dòng danh sách, chip…). ── */
-.hv-card, .hv-check, .hv-bn, .hv-stat, .hv-head, .hv-thanh, .hv-cta {
+.hv-bn, .hv-stat, .hv-head, .hv-thanh, .hv-cta {
   will-change: transform;
 }
 
