@@ -22,7 +22,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createServer, type Server } from "node:http";
 import { type AddressInfo } from "node:net";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 // KHÔNG import thẳng `jose` ở đây: gói đó nằm trong node_modules của apps/hub và
@@ -593,6 +593,23 @@ describe("provider thật — kiểm qua HTTP", () => {
     expect(meta.scopes_supported).toContain("email");
     expect(meta.claims_supported).toContain("email");
     expect(meta.backchannel_logout_supported).toBe(true);
+  });
+
+  it("id_token phải MANG claim như §7.1 đã hứa — conformIdTokenClaims tắt, không ai được 'dọn' dòng này", () => {
+    // Ca thật 27/08/2026 (Việt Anh Class): sổ đăng ký cấp scope email, audit ghi
+    // `oidc_token_issued ok`, người dùng vẫn không vào được — vì mặc định của thư viện
+    // (conformIdTokenClaims: true) chuyển MỌI claim xin qua scope sang /oidc/me khi
+    // userinfo bật, id_token chỉ còn `sub`. Hợp đồng ban-yeu-cau.md §7.1 lại hứa
+    // email/name/hub_* nằm TRONG id_token. Dòng cấu hình này là thứ giữ lời hứa đó —
+    // xoá nó là app ngoài gãy trong khi mọi audit vẫn báo "ok".
+    const src = readFileSync(
+      join(__dirname, "..", "..", "apps", "hub", "server", "oidc", "provider.ts"),
+      "utf8",
+    ).replace(/^\s*\/\/.*$/gm, "");
+    // KHÔNG lột block-comment /* */ ở đây: provider.ts có chú thích chứa "/oidc/*",
+    // regex block sẽ tưởng là mở comment và nuốt luôn cả dòng cấu hình bên dưới.
+    expect(src).toMatch(/conformIdTokenClaims:\s*false/);
+    expect(src).not.toMatch(/conformIdTokenClaims:\s*true/);
   });
 
   it("/oidc/session/end LUÔN kèm Set-Cookie xoá hub_session — đăng xuất hai chiều", async () => {

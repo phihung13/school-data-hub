@@ -229,6 +229,13 @@ async function buildProvider(): Promise<Provider> {
       hub_profile: ["hub_role", "hub_school", "hub_classes"],
       email: ["email"],
     },
+    // Hợp đồng §7.1 ban-yeu-cau.md hứa các claim này nằm TRONG id_token. Mặc định của
+    // thư viện (`true`) lại theo OIDC Core nghiêm ngặt: có bật userinfo thì claim xin qua
+    // scope CHỈ trả ở /oidc/me, id_token chỉ còn `sub`. Ca thật 27/08/2026: Việt Anh Class
+    // đổi mã thành công (audit `oidc_token_issued ok` 08:56:45Z) rồi chết ở nhánh
+    // "id_token thiếu email" của chính họ — token thiếu email THẬT, dù sổ đăng ký đã cấp
+    // scope. `false` = id_token mang đủ claim như hợp đồng đã phát cho các đội app.
+    conformIdTokenClaims: false,
     ttl: {
       AccessToken: 900, // 15 phút (ADR-016)
       IdToken: 900,
