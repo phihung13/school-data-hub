@@ -59,8 +59,17 @@ async function docCong() {
   const session = await getCurrentSession();
   if (!session) return null;
   const laHocSinh = session.roles.includes("student");
+  // DEMO (27/08/2026, chủ đầu tư: *"vào là với học sinh thì auto bật checkin"*): cờ
+  // DEMO_CHECKIN_LUON ép popup HIỆN NGAY mỗi lần học sinh vào, KHÔNG hỏi CSDL. Vì bản
+  // trình diễn chưa có phiếu đồng ý thật cho các tài khoản mẫu (RLS chặn mức tâm trạng,
+  // popup sẽ kẹt ở nhánh "chưa có phiếu"), nên nhánh demo còn tắt luôn việc lưu — xem
+  // `demo` truyền xuống CheckinView. Cờ này CHỈ bật ở máy trình diễn; đóng cửa demo là
+  // tắt (close-demo-door.ps1). Không có cờ → giữ nguyên cổng thật theo phiếu đồng ý.
+  const demoCheckin = process.env.DEMO_CHECKIN_LUON === "1";
   let batBuoc = false;
-  if (laHocSinh) {
+  if (laHocSinh && demoCheckin) {
+    batBuoc = true;
+  } else if (laHocSinh) {
     try {
       batBuoc = await phaiDungOCheckin(session.authUid);
     } catch (err) {
@@ -74,6 +83,7 @@ async function docCong() {
   const identity = laHocSinh ? await resolveIdentity(session.authUid).catch(() => null) : null;
   return {
     batBuoc,
+    demo: demoCheckin,
     displayName: session.displayName,
     email: identity?.email ?? "",
     roles: session.roles,
@@ -150,6 +160,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {cong ? (
             <CongCheckinProvider
               batBuoc={cong.batBuoc}
+              demo={cong.demo}
               displayName={cong.displayName}
               email={cong.email}
               roles={cong.roles}

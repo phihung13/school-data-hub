@@ -31,3 +31,7 @@ apps/hub/.next-prod
 .hub*.log
 .cloudflared.log
 .cloudflared-err.log
+
+# Cấu hình AI demo (chứa API key) — không lên git
+.leo-ai.local.json
+apps/hub/.leo-ai.local.json

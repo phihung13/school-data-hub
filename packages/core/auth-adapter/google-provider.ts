@@ -34,6 +34,34 @@ export function laEmailTruong(email: string): boolean {
   return e.length > EMAIL_TRUONG_DOMAIN.length && e.endsWith(EMAIL_TRUONG_DOMAIN);
 }
 
+/**
+ * DANH SÁCH EMAIL QUẢN TRỊ (27/08/2026, DEMO) — chủ đầu tư: đăng nhập Google bằng email
+ * thật của mình phải vào thẳng vai QUẢN TRỊ, không phải nhân viên ("2 cái là 1"). Email
+ * trong sổ của Hùng là `admin.hung@va.edu.vn` nên khớp-theo-email không tìm ra; danh sách
+ * này nối riêng email Google thật → vai `admin`. Chỉ tác dụng khi DEMO_AUTO_STAFF bật.
+ * Ngày dựng thật: nối tài khoản đúng cách (đặt email Google vào sổ), bỏ danh sách này.
+ */
+const EMAIL_QUAN_TRI = new Set(["hung.nguyen@truongvietanh.com"]);
+
+/** Thuần, test được: email này có được cấp thẳng vai quản trị trong bản trình diễn không. */
+export function laEmailQuanTri(email: string): boolean {
+  return EMAIL_QUAN_TRI.has(email.trim().toLowerCase());
+}
+
+/**
+ * CỜ DEMO (26/08/2026): tự tạo tài khoản NHÂN VIÊN (vai `staff`) cho email @truongvietanh
+ * chưa có trong sổ, thay vì từ chối "chưa có trong sổ". Mặc định TẮT — thiếu cờ thì code
+ * này trơ, `noiTaiKhoanTruong` giữ nguyên hành vi an toàn gốc (trường tạo tài khoản sẵn).
+ * Bật cho demo Super App đa phòng ban bằng `DEMO_AUTO_STAFF=1` trong .env.local.
+ *
+ * RỦI RO đã biết (giống cửa thử): bất kỳ ai có tài khoản Google @truongvietanh đều tự tạo
+ * được một tài khoản nhân viên THẬT trong DB — các dòng này NẰM LẠI kể cả sau khi tắt cờ.
+ * Tắt cờ trước khi có dữ liệu thật, và dọn các user staff tự tạo nếu cần.
+ */
+export function demoAutoStaffEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return (env.DEMO_AUTO_STAFF ?? "").trim() === "1";
+}
+
 export interface DanhTinhSupabase {
   /** `sub` của Supabase Auth = auth.users.id — chính là core.users.auth_uid. */
   authUid: string;
@@ -96,7 +124,42 @@ export async function noiTaiKhoanTruong(dt: DanhTinhSupabase): Promise<KetQuaNoi
       "select id from core.users where auth_uid = $1 and status = 'active'",
       [dt.authUid],
     );
-    if (daCo.rows[0]) return { trangThai: "ok", userId: daCo.rows[0].id } as const;
+    if (daCo.rows[0]) {
+      // "2 cái là 1" (27/08): nếu email nằm trong danh sách quản trị mà tài khoản đã lỡ
+      // được tạo thành `staff` ở lần trước, NÂNG lên `admin` ngay tại đây (idempotent).
+      if (laEmailQuanTri(dt.email)) {
+        await client.query("insert into core.roles (code, name) values ('admin', 'Quản trị') on conflict (code) do nothing");
+        await client.query(
+          "insert into core.user_role_scopes (user_id, role_code) values ($1, 'admin') on conflict do nothing",
+          [daCo.rows[0].id],
+        );
+      }
+      return { trangThai: "ok", userId: daCo.rows[0].id } as const;
+    }
+
+    // EMAIL QUẢN TRỊ (demo "2 cái là 1", 27/08) — xử lý TRƯỚC luồng thường: Hùng phải LUÔN
+    // vào được vai quản trị bằng chính email Google của mình. Kể cả khi sổ đã có dòng
+    // email này nối một `auth_uid` CŨ (đăng nhập trước, hoặc dòng dựng sẵn) — với CHÍNH CHỦ
+    // thì NỐI LẠI về lần đăng nhập hiện tại, KHÔNG báo "đã kích hoạt ở tài khoản khác".
+    // An toàn vì nhánh nhanh trên vừa xác nhận KHÔNG dòng nào đang mang `auth_uid` hiện tại,
+    // nên gán nó cho dòng email này không đụng ràng buộc duy nhất.
+    if (laEmailQuanTri(dt.email)) {
+      await client.query("insert into core.roles (code, name) values ('admin', 'Quản trị') on conflict (code) do nothing");
+      const qt = await client.query<{ id: string }>(
+        `insert into core.users (email, full_name, status, auth_uid)
+           values (lower($1), $2, 'active', $3)
+         on conflict (email) do update set auth_uid = excluded.auth_uid, status = 'active'
+         returning id`,
+        [dt.email, "Hùng (Quản trị)", dt.authUid],
+      );
+      const uid = qt.rows[0]!.id;
+      await client.query(
+        "insert into core.user_role_scopes (user_id, role_code) values ($1, 'admin') on conflict do nothing",
+        [uid],
+      );
+      await client.query("select core.link_identity('supabase', $1, $2)", [dt.authUid, uid]);
+      return { trangThai: "ok", userId: uid } as const;
+    }
 
     // Lần đầu: tìm theo email trường cấp. `lower()` vì Google trả email thường hoá
     // nhưng sổ có thể nhập tay; KHÔNG khớp mờ hơn thế (không bỏ dấu chấm kiểu Gmail —
@@ -106,7 +169,34 @@ export async function noiTaiKhoanTruong(dt: DanhTinhSupabase): Promise<KetQuaNoi
       [dt.email],
     );
     const dong = theoEmail.rows[0];
-    if (!dong) return { trangThai: "chua-co-trong-so" } as const;
+    if (!dong) {
+      // DEMO Super App (26/08/2026): email trường mới → tự tạo NHÂN VIÊN vai `staff`.
+      // Chỉ khi cờ bật; thiếu cờ giữ nguyên chốt bảo mật gốc. Tất cả IDEMPOTENT (§9):
+      // đăng nhập lại rơi vào nhánh SELECT-theo-auth_uid ở trên, không tạo thêm gì.
+      if (!demoAutoStaffEnabled()) return { trangThai: "chua-co-trong-so" } as const;
+
+      // (Email quản trị đã được xử lý sớm ở trên — tới đây chỉ còn nhân viên thường.)
+      await client.query(
+        "insert into core.roles (code, name) values ('staff', 'Nhân viên') on conflict (code) do nothing",
+      );
+      const tenMac = dt.email.split("@")[0] ?? dt.email; // tên tạm từ phần trước @
+      const tao = await client.query<{ id: string }>(
+        `insert into core.users (email, full_name, status, auth_uid)
+           values (lower($1), $2, 'active', $3)
+         on conflict (email) do update
+           set auth_uid = coalesce(core.users.auth_uid, excluded.auth_uid)
+         returning id`,
+        [dt.email, tenMac, dt.authUid],
+      );
+      const uid = tao.rows[0]!.id;
+      // Vai `staff` KHÔNG phạm vi trường/lớp: nhân viên phòng ban không gắn cơ sở học sinh.
+      await client.query(
+        "insert into core.user_role_scopes (user_id, role_code) values ($1, 'staff') on conflict do nothing",
+        [uid],
+      );
+      await client.query("select core.link_identity('supabase', $1, $2)", [dt.authUid, uid]);
+      return { trangThai: "ok", userId: uid } as const;
+    }
     if (dong.auth_uid && dong.auth_uid !== dt.authUid) {
       // Email này đã kích hoạt bằng MỘT tài khoản đăng nhập khác — không âm thầm
       // chiếm chỗ: đây hoặc là đổi provider có chủ ý (việc của quản trị) hoặc là

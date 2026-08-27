@@ -307,7 +307,7 @@ textarea::placeholder {
 
 /* ── Đầu trang "command strip" ── */
 .hv-head {
-  position: relative; display: flex; align-items: flex-start; justify-content: space-between;
+  position: relative; z-index: 40; display: flex; align-items: flex-start; justify-content: space-between;
   gap: 20px; margin-bottom: 14px; flex-wrap: wrap; padding: 14px 20px;
   background: linear-gradient(92deg, #0A1A3E 0%, #0E2A5E 74%, #123A7E 100%);
   border: 1px solid rgba(53,224,255,.4);
@@ -354,6 +354,13 @@ textarea::placeholder {
 .hv-ct::after { content: ""; position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; border-bottom: 3px solid rgba(14,159,216,.75); border-right: 3px solid rgba(14,159,216,.75); pointer-events: none; }
 .hv-tt { display: flex; align-items: center; gap: 8px; font-size: 15.5px; font-weight: 900; color: #0A2A5E; white-space: nowrap; }
 .hv-kick { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; font-weight: 800; letter-spacing: .12em; color: #4A78C2; }
+/* ĐỒNG BỘ THẺ DASHBOARD (26/08) — thẻ dưới mang ĐÚNG bộ mặt của thẻ KPI (.bl-kpi):
+   góc sắc, viền nhạt, BÓNG NỔI (bỏ "lớp đen ledge"), thanh nhấn vàng góc trên,
+   bỏ ngoặc góc vàng/cyan. Chỉ trong dashboard (class .the-dong-bo), không đụng màn khác. */
+.the-dong-bo.hv-card { border: 1px solid #E1E8F2; box-shadow: 0 14px 28px -16px rgba(10,42,94,.42), 0 3px 8px -4px rgba(10,42,94,.16); }
+.the-dong-bo.hv-card::before { left: 0; right: auto; bottom: auto; top: 0; height: 5px; width: 52px; background: #F5A300; }
+.the-dong-bo.hv-card::after { display: none; }
+.the-dong-bo .hv-ct::after { display: none; }
 
 /* ── Thẻ check-in vàng kem ── */
 .hv-check { background: linear-gradient(135deg, #FFF9E8 0%, #FFEFC2 58%, #FFE49A 100%); border-color: #E8C15A; box-shadow: 0 10px 0 -3px rgba(160,105,10,.30), 0 24px 26px rgba(180,120,20,.34); }
@@ -519,19 +526,70 @@ textarea::placeholder {
       góc sắc, ngoặc góc) phối lại trên nền sáng của hệ hv-*. Mọi khối số mẫu mang nhãn
       MẪU — demo tầm nhìn, không nói dối màn hình. ── */
 .bl-kpi-luoi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.bl-kpi { position: relative; padding: 14px 16px 12px; background: rgba(255,255,255,.97); border: 1px solid #B7D2F0; box-shadow: 0 7px 0 -2px rgba(10,42,94,.14), 0 15px 16px rgba(10,42,94,.18); }
-.bl-kpi::before { content: ""; position: absolute; left: 0; top: 0; width: 12px; height: 12px; border-top: 3px solid #F5A300; border-left: 3px solid #F5A300; }
-.bl-kpi-ten { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: .14em; color: #4A78C2; }
-.bl-so { margin-top: 6px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 27px; font-weight: 800; line-height: 1; color: #0A2A5E; }
-.bl-so small { font-size: 12px; font-weight: 700; color: #33507C; margin-left: 5px; }
+/* ── EDITORIAL BOLD (26/08) — số KHỔNG LỒ, khối màu vàng/navy, tối giản, thanh nhấn dày ── */
+.bl-kpi {
+  position: relative; overflow: hidden; display: flex; flex-direction: column;
+  padding: 20px 22px 18px; background: #fff; border: 1px solid #E1E8F2;
+  box-shadow: 0 14px 28px -16px rgba(10,42,94,.42), 0 3px 8px -4px rgba(10,42,94,.16);
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+/* Thanh nhấn DÀY ở đầu thẻ — chữ ký editorial. */
+.bl-kpi::before { content: ""; position: absolute; left: 0; top: 0; width: 52px; height: 5px; background: #F5A300; }
+.bl-kpi:hover { transform: translateY(-4px); border-color: #C7D5E8; box-shadow: 0 26px 44px -18px rgba(10,42,94,.5), 0 8px 16px -6px rgba(10,42,94,.24); }
+/* Biến thể KHỐI MÀU đậm — nhịp editorial giữa các thẻ trắng. */
+.bl-kpi--navy { background: #0A2A5E; border-color: #0A2A5E; }
+.bl-kpi--navy::before { background: #F5A300; }
+.bl-kpi--navy .bl-kpi-ten { color: #86B4F2; }
+.bl-kpi--navy .bl-phu { color: #A9C4EC; }
+.bl-kpi--gold { background: #F5A300; border-color: #E39400; }
+.bl-kpi--gold::before { background: #0A2A5E; }
+.bl-kpi--gold .bl-kpi-ten { color: #7A4E00; }
+.bl-kpi--gold .bl-phu { color: #5A3A00; }
+.bl-kpi-ten { padding-right: 50px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; font-weight: 800; letter-spacing: .2em; color: #33507C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* SỐ KHỔNG LỒ — nhân vật chính. Solid, nặng, tracking âm; đơn vị xuống dòng nếu chật. */
+.bl-so { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 44px; font-weight: 800; line-height: .9; letter-spacing: -.03em; color: #0A2A5E; }
+.bl-so small { font-size: 14px; font-weight: 700; color: #5B7BAB; margin-left: 0; letter-spacing: 0; }
+.bl-kpi--navy .bl-so { color: #fff; }
+.bl-kpi--navy .bl-so small { color: #A9C4EC; }
+.bl-kpi--gold .bl-so { color: #1A1000; }
+.bl-kpi--gold .bl-so small { color: #5A3A00; }
 .bl-phu { margin-top: 6px; font-size: 10.5px; font-weight: 700; color: #5B6B80; }
+/* Chân thẻ KPI: mũi tên delta + phụ đề nằm CHUNG một hàng, tách khỏi hàng nhãn để
+   không bao giờ đè lên nhãn MẪU (lỗi cũ: delta trong hàng nhãn đâm vào chip MẪU). */
+.bl-kpi-chan { margin-top: auto; padding-top: 10px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.bl-kpi-chan .bl-phu { margin-top: 0; }
 /* Mũi tên tách khỏi màu — luật số 3 của bản vẽ: VÀNG = tốt, HỒNG = cần chú ý,
    bất kể chiều tăng giảm. */
 .bl-delta { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; font-family: ui-monospace, Consolas, monospace; font-size: 10px; font-weight: 800; }
 .bl-delta.tot { background: #FFF6DF; color: #8A5A00; border: 1px solid #EFD48E; }
 .bl-delta.chu-y { background: #FFF0F1; color: #C7333A; border: 1px solid #F0C9CB; }
-/* Nhãn MẪU — đứng ở mọi khối số liệu mẫu, không có ngoại lệ. */
-.bl-mau { position: absolute; right: 8px; top: 8px; z-index: 1; padding: 2px 7px; font-family: ui-monospace, Consolas, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: .12em; color: #7A93B8; border: 1px dashed #B7D2F0; background: rgba(255,255,255,.8); }
+/* Delta + chip MẪU đọc được trên khối màu navy/gold. */
+.bl-kpi--navy .bl-delta.tot { background: rgba(255,255,255,.14); color: #FFE3A6; border-color: rgba(255,227,166,.45); }
+.bl-kpi--navy .bl-delta.chu-y { background: rgba(255,120,130,.20); color: #FFC2C7; border-color: rgba(255,150,160,.45); }
+.bl-kpi--gold .bl-delta.tot { background: rgba(10,42,94,.14); color: #0A2A5E; border-color: rgba(10,42,94,.32); }
+.bl-kpi--gold .bl-delta.chu-y { background: rgba(120,10,20,.14); color: #7A0E14; border-color: rgba(120,10,20,.3); }
+.bl-kpi--navy .bl-mau { color: rgba(255,255,255,.85); background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); }
+.bl-kpi--gold .bl-mau { color: #241300; background: rgba(0,0,0,.12); border-color: rgba(0,0,0,.22); }
+/* ── ĐỒNG HỒ ĐIỀU HÀNH trên thanh chào (27/08) — gộp từ dải hero riêng về hv-head ── */
+.bl-hero-gio { font-size: 20px; font-weight: 800; letter-spacing: .04em; color: #EAF3FF; text-shadow: 0 0 14px rgba(53,224,255,.35); }
+/* Pill LIVE·DEMO trên nền navy của thanh chào — sáng nhẹ thay vì nền trắng. */
+.hv-head .bl-demo-pill { color: #BFE0FF; background: rgba(255,255,255,.08); border-color: rgba(127,176,240,.4); }
+@media (max-width: 640px) { .bl-hero-gio { font-size: 17px; } }
+/* Nhãn MẪU — chip nhẹ, đặt sát góc; nội dung chừa chỗ bằng padding-right ở trên. */
+.bl-mau { position: absolute; right: 10px; top: 10px; z-index: 1; padding: 1px 6px; font-family: ui-monospace, Consolas, monospace; font-size: 8px; font-weight: 800; letter-spacing: .16em; color: #93A9C8; background: #EDF2F9; border: 1px solid #DCE7F4; }
+/* Pill trạng thái DEMO ở đầu dashboard — chấm hổ phách thở, đúng chất "buồng lái sống". */
+@keyframes blDot { 0%,100% { opacity: 1; box-shadow: 0 0 0 3px rgba(245,163,0,.20); } 50% { opacity: .5; box-shadow: 0 0 0 5px rgba(245,163,0,.04); } }
+.bl-demo-pill { display: inline-flex; align-items: center; gap: 7px; padding: 3px 11px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; font-weight: 800; letter-spacing: .14em; color: #3E70BE; background: rgba(255,255,255,.75); border: 1px solid #CBDCF1; }
+.bl-demo-dot { width: 6px; height: 6px; border-radius: 999px; background: #F5A300; animation: blDot 2.2s ease-in-out infinite; }
+/* Nền thanh menu — gradient nền + glow cyan trên/vàng dưới + lưới mờ, để khoảng trống
+   không còn phẳng chết. Dùng chung mọi vai; tất cả rất mờ nên chỉ thêm chiều sâu. */
+.hub-nav-bg {
+  background:
+    radial-gradient(70% 26% at 50% 0%, rgba(53,224,255,.14), transparent 72%),
+    radial-gradient(90% 34% at 50% 100%, rgba(245,163,0,.09), transparent 74%),
+    linear-gradient(rgba(53,224,255,.045) 1px, transparent 1px) 0 -1px / 100% 30px,
+    linear-gradient(168deg, #0E3C8C 0%, #0A2A5E 34%, #082049 62%, #051530 100%);
+}
 /* Thanh phân bố cảm xúc 5 đoạn */
 .bl-cx { display: flex; height: 9px; margin-top: 9px; overflow: hidden; background: #E1EAF5; }
 .bl-cx i { display: block; height: 100%; }
@@ -548,6 +606,44 @@ textarea::placeholder {
 .bl-hang .diem { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; font-weight: 800; color: #0A2A5E; }
 /* Sparkline */
 .bl-spark { width: 100%; height: 64px; }
+/* Chart tự vẽ: đường chuẩn hoá pathLength=1, chạy dashoffset 1→0; fill hiện sau khi vẽ xong. */
+.bl-spark-a { stroke-dasharray: 1; stroke-dashoffset: 1; animation: blDraw 1.5s cubic-bezier(.4,0,.2,1) .15s forwards, blLineGlow 2.4s ease-in-out 1.7s infinite; }
+/* Đường Cash in THỞ GLOW sau khi vẽ — cảm giác "đang theo dõi số sống". */
+@keyframes blLineGlow { 0%,100% { filter: drop-shadow(0 2px 4px rgba(245,163,0,.4)); } 50% { filter: drop-shadow(0 0 8px rgba(245,163,0,.95)); } }
+/* Dòng dữ liệu: item mới TRƯỢT VÀO + lóe cyan rồi tắt. */
+@keyframes feedIn { from { opacity: 0; transform: translateY(-8px); background: rgba(53,224,255,.14); } to { opacity: 1; transform: translateY(0); background: transparent; } }
+.bl-feed li { animation: feedIn .45s ease backwards; }
+.bl-spark-b { stroke-dasharray: 1; stroke-dashoffset: 1; animation: blDraw 1.5s cubic-bezier(.4,0,.2,1) forwards; }
+.bl-spark-fill { opacity: 0; animation: blFade .9s ease .95s forwards; }
+@keyframes blDraw { to { stroke-dashoffset: 0; } }
+@keyframes blFade { to { opacity: 1; } }
+/* Thẻ KPI hiện LẦN LƯỢT khi vào màn — vào có nhịp, không bụp một phát. */
+.bl-kpi-luoi > * { animation: fadeUp .55s cubic-bezier(.2,.8,.2,1) backwards; }
+.bl-kpi-luoi > *:nth-child(1) { animation-delay: .04s; }
+.bl-kpi-luoi > *:nth-child(2) { animation-delay: .10s; }
+.bl-kpi-luoi > *:nth-child(3) { animation-delay: .16s; }
+.bl-kpi-luoi > *:nth-child(4) { animation-delay: .22s; }
+.bl-kpi-luoi > *:nth-child(5) { animation-delay: .28s; }
+.bl-kpi-luoi > *:nth-child(6) { animation-delay: .34s; }
+.bl-kpi-luoi > *:nth-child(7) { animation-delay: .40s; }
+.bl-kpi-luoi > *:nth-child(8) { animation-delay: .46s; }
+.bl-kpi-luoi > *:nth-child(9) { animation-delay: .52s; }
+/* MỞ MÀN /home (27/08) — thẻ dưới NỔI LÊN DẦN sau lưới KPI: menu trượt vào → thẻ chào →
+   KPI → hàng thẻ dưới → thẻ ứng dụng. Nối liền cú "bóc trắng" của reveal-trang.tsx. */
+.bl-duoi > * { animation: fadeUp .55s cubic-bezier(.2,.8,.2,1) backwards; }
+.bl-duoi > *:nth-child(1) { animation-delay: .58s; }
+.bl-duoi > *:nth-child(2) { animation-delay: .66s; }
+.bl-duoi > *:nth-child(3) { animation-delay: .74s; }
+.bl-vao-cuoi { animation: fadeUp .55s cubic-bezier(.2,.8,.2,1) .82s backwards; }
+/* Menu trái TRƯỢT VÀO từ mép — "menu đi vào" trước khi thẻ hiện. */
+.hub-nav-bg { animation: navVao .5s cubic-bezier(.2,.8,.2,1) backwards; }
+@keyframes navVao { 0% { opacity: 0; transform: translateX(-26px); } 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .bl-kpi-luoi > *, .bl-spark-a, .bl-spark-b, .bl-spark-fill, .bl-feed li,
+  .bl-duoi > *, .bl-vao-cuoi, .hub-nav-bg { animation: none; }
+  .bl-spark-a, .bl-spark-b { stroke-dashoffset: 0; }
+  .bl-spark-fill { opacity: 1; }
+}
 
 /* ── GHIM THẺ THÀNH LỚP COMPOSITOR (25/08 — "trang mini app, tôi chỉ lướt lên xuống
       thôi mà nó lag nó giật ko kéo được luôn"). Chuỗi drop-shadow (blur 26px) là ảnh

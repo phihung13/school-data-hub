@@ -60,9 +60,11 @@ const ROLE_LABEL: Record<HubRole, string> = {
   principal: "HIỆU TRƯỞNG",
   board: "BAN GIÁM HIỆU",
   admin: "QUẢN TRỊ",
+  staff: "NHÂN VIÊN",
+  ceo: "CEO",
 };
 /** Thứ tự ưu tiên khi một người mang nhiều vai (vd giáo viên đồng thời là phụ huynh). */
-const ROLE_PRIORITY: HubRole[] = ["student", "homeroom", "guardian", "counselor", "principal", "board", "admin", "teacher"];
+const ROLE_PRIORITY: HubRole[] = ["ceo", "student", "homeroom", "guardian", "counselor", "principal", "board", "admin", "teacher", "staff"];
 
 export interface NavSet {
   items: NavItem[];
@@ -131,7 +133,7 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
   const roleTag = trimmedClass ? `${roleLabel} · ${trimmedClass}` : roleLabel;
 
   return (
-    <nav className="flex h-full w-full flex-col border-r border-[rgba(53,224,255,.32)] bg-[linear-gradient(168deg,#0E3C8C_0%,#0A2A5E_34%,#082049_62%,#051530_100%)]">
+    <nav className="hub-nav-bg flex h-full w-full flex-col border-r border-[rgba(53,224,255,.32)]">
       <div className="flex items-center gap-[11px] border-b border-[rgba(53,224,255,.16)] px-[18px] pb-[14px] pt-[18px]">
         {/* Logo WebP 180×180, 3.870 B. Đổi từ /logo.jpg (74.181 B) ngày 31/07/2026: bản
             WebP đã được tạo từ đợt trước nhưng KHÔNG ai tham chiếu tới, nên mọi lần mở
@@ -216,6 +218,12 @@ export function HubSidebar({ role, roles, active, fullName, email, classCode }: 
           rời khỏi danh sách điều hướng bên trên và về đây, nên đây KHÔNG còn là lối tắt
           tiện tay mà là đường DUY NHẤT tới hồ sơ và tới nút đăng xuất. */}
       <div className="border-t border-[rgba(53,224,255,.16)] p-2.5 pb-[14px]">
+        {/* Trạng thái hệ thống — chấm xanh thở, chất "buồng lái sống". Trang trí, aria ẩn. */}
+        <div className="mb-2.5 flex items-center gap-2 px-1.5 font-mono text-[8.5px] font-bold tracking-[.18em] text-[#6FB6FF]">
+          <span aria-hidden className="h-1.5 w-1.5 flex-none rounded-full bg-[#37E0A0] shadow-[0_0_8px_#37E0A0] motion-safe:animate-pulse" />
+          HỆ THỐNG · TRỰC TUYẾN
+          <span className="ml-auto tracking-normal text-[#3E6BA8]">v0.1</span>
+        </div>
         <UserMenu variant="sidebar" fullName={fullName} email={email} roleTag={roleTag} />
       </div>
     </nav>

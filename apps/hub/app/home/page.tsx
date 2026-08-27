@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/lib/session";
 import { resolveIdentity } from "@hub/core/auth-adapter";
 import { HomeView } from "@/components/home-view";
+import { RevealTrang } from "@/components/reveal-trang";
 import { buildMiniAppsWithEmbedded, ghimAppDungNhieu } from "@/server/mini-apps";
 import { canHoiDieuKhoan, readConsentChildren } from "@/server/consent-gate";
 import { docKhoManTuRequest } from "@/server/kho-man-request";
@@ -43,7 +44,9 @@ export default async function HomePage() {
   const identity = await resolveIdentity(session.authUid);
 
   return (
-    <HomeView
+    <>
+      <RevealTrang />
+      <HomeView
       displayName={session.displayName}
       email={identity?.email ?? ""}
       isStudent={session.roles.includes("student")}
@@ -70,6 +73,7 @@ export default async function HomePage() {
       // Khổ màn do TRÌNH DUYỆT TỰ KHAI, dùng cho đúng lượt vẽ đầu — `null` khi nó không
       // khai (Safari, Firefox) và khi đó rơi về đúng hành vi cũ. Xem `lib/viewport.ts`.
       khoManBanDau={docKhoManTuRequest()}
-    />
+      />
+    </>
   );
 }

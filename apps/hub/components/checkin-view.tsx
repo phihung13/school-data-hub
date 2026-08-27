@@ -376,6 +376,13 @@ export type CheckinViewProps = {
    */
   trongPopup?: boolean;
   /**
+   * Chế độ TRÌNH DIỄN (DEMO_CHECKIN_LUON, 27/08/2026): chọn cảm xúc là báo "xong" NGAY
+   * tại máy, KHÔNG gọi `submitMood`. Bản trình diễn chưa có phiếu đồng ý thật cho tài
+   * khoản mẫu → đường lưu qua RLS chặn mức tâm trạng và giữ popup kẹt lại. Nhánh này chỉ
+   * cho luồng người-xem mượt; nó KHÔNG ghi gì vào kho, và chỉ bật ở máy demo.
+   */
+  demo?: boolean;
+  /**
    * Em đã bấm xong phần của em. Kèm theo là hai sự thật RỜI NHAU, mỗi cái một câu hỏi:
    *
    *   · `moodSaved` — mức tâm trạng có vào kho không (0047: nhà chưa có phiếu đồng ý thì
@@ -456,7 +463,7 @@ function CheckinShell({
   );
 }
 
-export function CheckinView({ displayName, email, roles, classCode, trongPopup, onGhiXong, chuaKhaiHomNay }: CheckinViewProps) {
+export function CheckinView({ displayName, email, roles, classCode, trongPopup, demo = false, onGhiXong, chuaKhaiHomNay }: CheckinViewProps) {
   const utils = trpc.useUtils();
   const [state, setState] = useState<ViewState>("pick");
   const [wantsHelp, setWantsHelp] = useState(false);
@@ -609,6 +616,16 @@ export function CheckinView({ displayName, email, roles, classCode, trongPopup, 
     setHelpAtSubmit(wantsHelp);
     setFailure(null);
     setMoodBlocked(false);
+    if (demo) {
+      // TRÌNH DIỄN: báo "xong" ngay tại máy, không đụng máy chủ (không phiếu đồng ý thật →
+      // RLS sẽ chặn và giữ popup kẹt). moodSaved=true + choMang=false → onGhiXong đóng popup
+      // kèm câu cảm ơn. Không ghi gì vào kho — đây chỉ là luồng cho người xem.
+      setChangedFrom(previous);
+      setQueuedOffline(false);
+      setSavedAt(localTimeNow());
+      setState("success");
+      return true;
+    }
     if (!navigator.onLine) {
       const { replacedMood } = await enqueueCheckin({ mood, wantsHelp });
       // Máy chủ chưa biết gì, nên vế "từ …" chỉ có thể đến từ trạng thái đã tải

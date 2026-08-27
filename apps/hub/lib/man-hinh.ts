@@ -313,6 +313,25 @@ export const MAN_HINH: ManHinh[] = [
     // vài tháng một lần — đặt nó cạnh Check-in là sai nhịp.
   },
 
+  // ── Phòng ban (Super App) — placeholder MỜ cho vai `staff` (26/08/2026) ─────────
+  // Nhân viên back-office (HR/tài chính/marketing…) KHÔNG quản lý học sinh; menu của họ
+  // trước đây rỗng. Các mục `sapCo` này CHỈ hiện với vai `staff`, không chạm màn học sinh,
+  // và là bản mờ (href "#", không bấm) — demo tầm nhìn đa phòng ban. Ngày dựng thật thì
+  // thay bằng mục có `href` thật, đừng để mờ mãi (bài học mục 316 bên dưới).
+  { key: "hr", href: "#", icon: "badge", nhan: "Nhân sự", vai: ["staff", "ceo"], menu: { thuTu: 40 }, sapCo: "sắp" },
+  { key: "finance", href: "#", icon: "calculate", nhan: "Tài chính", vai: ["staff", "ceo"], menu: { thuTu: 41 }, sapCo: "sắp" },
+  { key: "marketing", href: "#", icon: "campaign", nhan: "Marketing", vai: ["staff", "ceo"], menu: { thuTu: 42 }, sapCo: "sắp" },
+  { key: "admission", href: "#", icon: "how_to_reg", nhan: "Tuyển sinh", vai: ["staff", "ceo"], menu: { thuTu: 43 }, sapCo: "sắp" },
+  { key: "facility", href: "#", icon: "apartment", nhan: "Cơ sở vật chất", vai: ["staff", "ceo"], menu: { thuTu: 44 }, sapCo: "sắp" },
+
+  // ── Điều hành cấp cao — CHỈ vai `ceo` (27/08/2026, bản trình diễn) ────────────────
+  // CEO "Dương" thấy buồng lái điều hành ở /home; đây là các cửa đi sâu (mờ, demo tầm
+  // nhìn). Đứng TRƯỚC phòng ban theo thuТự để khối điều hành nằm trên cùng menu CEO.
+  { key: "dieu-hanh", href: "#", icon: "insights", nhan: "Điều hành", vai: ["ceo"], menu: { thuTu: 30 }, sapCo: "sắp" },
+  { key: "tang-truong", href: "#", icon: "trending_up", nhan: "Tăng trưởng", vai: ["ceo"], menu: { thuTu: 31 }, sapCo: "sắp" },
+  { key: "chien-luoc", href: "#", icon: "flag", nhan: "Chiến lược", vai: ["ceo"], menu: { thuTu: 32 }, sapCo: "sắp" },
+  { key: "cong-dong", href: "#", icon: "groups", nhan: "Cộng đồng", vai: ["ceo"], menu: { thuTu: 33 }, sapCo: "sắp" },
+
   // HAI MỤC MỜ "Học tập · GĐ2" và "Y tế · GĐ2" ĐÃ GỠ 22/08/2026 — không dựng lại.
   //
   // Cả hai trỏ `href: "#"`, tức là hai ô bấm vào không đi đâu cả, có mặt trên lưới trang

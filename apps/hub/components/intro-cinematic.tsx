@@ -98,9 +98,15 @@ export function IntroCinematic() {
     const daChay = () => window.clearTimeout(tran);
     v.addEventListener("playing", daChay);
 
-    // Câm — xem khối lý lẽ đầu file. Hỏng thì đóng luôn, không để màn đen treo.
-    v.muted = true;
-    v.play().catch(() => setDangChay(false));
+    // CÓ NHẠC (27/08/2026): thử phát KÈM TIẾNG. Trình duyệt chặn autoplay-có-tiếng sau
+    // khi chuyển trang (trừ khi người dùng hay vào site — MEI cao); bị chặn thì phát lại
+    // KHÔNG TIẾNG để intro vẫn hiện, và nếu vẫn hỏng thì đóng, không để màn đen treo.
+    v.muted = false;
+    v.volume = 0.85;
+    v.play().catch(() => {
+      v.muted = true;
+      v.play().catch(() => setDangChay(false));
+    });
     return () => {
       window.clearTimeout(tran);
       v.removeEventListener("playing", daChay);
@@ -120,8 +126,7 @@ export function IntroCinematic() {
         // Video hỏng (mạng rớt, file thiếu) KHÔNG được để lại một màn đen phủ cả app.
         onError={() => setDangChay(false)}
       >
-        {!epH264 && <source src="/trinh-dien/uploads/intro-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />}
-        <source src="/trinh-dien/uploads/intro-software.mp4" type="video/mp4" />
+        <source src="/trinh-dien/uploads/intro-software.mp4?v=7" type="video/mp4" />
       </video>
 
       {/* ĐƯỜNG RA LUÔN CÓ MẶT, ngay từ khung hình đầu. Một đoạn phim 10 giây không bỏ qua

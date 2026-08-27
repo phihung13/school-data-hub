@@ -46,6 +46,8 @@ const NHAN_VAI: Record<HubRole, string> = {
   principal: "hiệu trưởng",
   board: "ban giám hiệu",
   admin: "quản trị",
+  staff: "nhân viên",
+  ceo: "CEO",
 };
 
 export function MiniAppAdminView({

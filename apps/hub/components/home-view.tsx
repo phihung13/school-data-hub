@@ -98,11 +98,12 @@ import type { HubRole, MiniAppTile as MiniAppTileType, MoodValue } from "@hub/co
 import { MOOD_LABEL } from "@hub/core/contracts";
 import { MiniAppTile } from "./mini-app-tile";
 import { MOOD_STYLE } from "./mood-tile";
-import { BuongLaiMau } from "./buong-lai-mau";
+import { BuongLaiMau, DongHo } from "./buong-lai-mau";
 import { useCongCheckin } from "./cong-checkin";
 import { HubTabBar } from "./tab-bar";
 import { Mascot } from "./mascot";
 import { HubSidebar } from "./hub-sidebar";
+import { BanDongHanh } from "./ban-dong-hanh";
 import { MainContent } from "./page-shell";
 import { ChuongViecCho, useViecCho, type ViecChoQuery } from "./chuong-viec-cho";
 import { CotPhaiNguoiLon, coRailNguoiLon } from "./cot-phai-nguoi-lon";
@@ -253,20 +254,34 @@ export function HomeView({
 
   // MỘT nhánh, không hai. `md:hidden`/`hidden md:flex` vẫn dựng cả hai cây trong DOM —
   // xem ghi chú 2 đầu file và lib/viewport.ts.
-  if (!isDesktop) return <MobileHome data={data} />;
+  //
+  // BẠN ĐỒNG HÀNH "SAO" (27/08/2026) — chỉ HỌC SINH, và `position:fixed` nên đặt cạnh
+  // nhánh nào cũng nổi đúng góc phải dưới. Bọc fragment để một lần khai cho cả hai khổ màn.
+  const banDongHanh = isStudent ? <BanDongHanh /> : null;
+
+  if (!isDesktop)
+    return (
+      <>
+        <MobileHome data={data} />
+        {banDongHanh}
+      </>
+    );
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <div className="flex w-[240px] flex-none">
-        <HubSidebar roles={roles} active="home" fullName={displayName} email={email} classCode={classCode} />
+    <>
+      <div className="flex h-screen w-full overflow-hidden">
+        <div className="flex w-[240px] flex-none">
+          <HubSidebar roles={roles} active="home" fullName={displayName} email={email} classCode={classCode} />
+        </div>
+        {/* Menu trái nằm NGOÀI <MainContent>, nếu không thì đường tắt "Bỏ qua menu" không bỏ
+            qua được gì. Hai nhánh khổ màn loại trừ nhau (useIsDesktop), nên mỗi nhánh một
+            <MainContent> vẫn giữ đúng luật "một trang một id noi-dung". */}
+        <MainContent className="flex min-w-0 flex-1 overflow-hidden">
+          <DesktopHome data={data} />
+        </MainContent>
       </div>
-      {/* Menu trái nằm NGOÀI <MainContent>, nếu không thì đường tắt "Bỏ qua menu" không bỏ
-          qua được gì. Hai nhánh khổ màn loại trừ nhau (useIsDesktop), nên mỗi nhánh một
-          <MainContent> vẫn giữ đúng luật "một trang một id noi-dung". */}
-      <MainContent className="flex min-w-0 flex-1 overflow-hidden">
-        <DesktopHome data={data} />
-      </MainContent>
-    </div>
+      {banDongHanh}
+    </>
   );
 }
 
@@ -664,6 +679,15 @@ function DesktopHome({ data }: { data: HomeData }) {
           )}
           {khoi.khoiNguoiLon && (
             <div className="flex flex-none items-center gap-3 self-start">
+              {/* BUỒNG LÁI ĐIỀU HÀNH — gộp vào thanh chào (27/08): đồng hồ sống + pill
+                  LIVE·DEMO, thay cho dải hero riêng từng tách thành hai băng. */}
+              <div className="hidden flex-col items-end md:flex">
+                <DongHo />
+                <span className="bl-demo-pill mt-1">
+                  <span aria-hidden className="bl-demo-dot" />
+                  LIVE · DEMO
+                </span>
+              </div>
               {loc.hienOTim && (
                 <div className="w-[248px]">
                   <OTimMiniApp tuKhoa={loc.tuKhoa} datTuKhoa={loc.datTuKhoa} nen="hero" />
@@ -1015,24 +1039,71 @@ function UfoBay() {
       goc = vet.getBoundingClientRect();
     };
 
-    let x = W * 0.6, y = 110, vx = 0, vy = 0, tx = 0, ty = 0, dau = 0, so = 0;
+    let x = W * 0.6, y = -160, vx = 0, vy = 0, tx = 0, ty = 0, dau = 0;
     let mx = -9e3, my = -9e3;
-    const bocDiem = () => {
-      tx = 40 + Math.random() * Math.max(1, W - 240);
-      ty = 40 + Math.random() * Math.max(1, H - 260);
-      dau = 500 + Math.random() * 2200;
-    };
-    bocDiem();
+    let toc = 90;      // tốc độ tuần du của CHẶNG hiện tại — đổi mỗi điểm (bay nhanh/chậm)
+    let baoDong = 0;   // >0 = còn hiện "!"; đếm lùi để bình tĩnh dần, không dính mãi
 
+    // ── VÒNG ĐỜI XUẤT HIỆN (26/08 — chủ đầu tư: "đừng ở mãi trên màn, lâu lâu ghé thôi") ──
+    //   "an"  : ẩn ngoài màn, chờ LÂU (30–80s) tới lượt sau
+    //   "vao" : bay vào từ một mép, chưa né chuột
+    //   "choi": lượn + né chuột một lúc (12–23s)
+    //   "ra"  : bay ra khỏi màn, mờ dần, rồi về "an"
+    let pha: "an" | "vao" | "choi" | "ra" = "an";
+    let nghi = 6 + Math.random() * 8; // lần ĐẦU ghé sau ~6–14s (cho thấy một lần rồi thôi)
+    let song = 0;                     // thời gian còn "chơi" trên màn
+
+    const bocDiem = () => {
+      tx = 50 + Math.random() * Math.max(1, W - 260);
+      ty = 45 + Math.random() * Math.max(1, H - 260);
+      dau = 500 + Math.random() * 2400;
+      toc = 42 + Math.random() * 92; // 42..134: có chặng thong thả, có chặng lướt nhanh
+    };
+    // Đặt đĩa ngoài một mép ngẫu nhiên rồi bay vào.
+    const vaoMan = () => {
+      const canh = Math.floor(Math.random() * 4);
+      if (canh === 0) { x = -180; y = 40 + Math.random() * Math.max(1, H - 230); }
+      else if (canh === 1) { x = W + 40; y = 40 + Math.random() * Math.max(1, H - 230); }
+      else if (canh === 2) { x = 40 + Math.random() * Math.max(1, W - 230); y = -150; }
+      else { x = 40 + Math.random() * Math.max(1, W - 230); y = H + 40; }
+      vx = 0; vy = 0;
+      bocDiem();
+      song = 12 + Math.random() * 11;
+      baoDong = 0; bay.classList.remove("scared");
+      bay.style.opacity = "1";
+      pha = "vao";
+    };
+    // Nhắm một mép để bay RA khỏi màn.
+    const roiMan = () => {
+      const canh = Math.floor(Math.random() * 4);
+      if (canh === 0) { tx = -300; ty = y; }
+      else if (canh === 1) { tx = W + 240; ty = y; }
+      else if (canh === 2) { tx = x; ty = -280; }
+      else { tx = x; ty = H + 260; }
+      baoDong = 0; bay.classList.remove("scared");
+      pha = "ra";
+    };
+
+    // Toạ độ chuột TRONG khung track. Tính lại gốc MỖI lần chuột động — trang cuộn được
+    // nên gốc track đổi; không cập nhật thì sau khi cuộn, đĩa "sợ" một vị trí ma.
     const onMouse = (e: MouseEvent) => {
+      goc = vet.getBoundingClientRect();
       mx = e.clientX - goc.left;
       my = e.clientY - goc.top;
     };
+    // Chuột rời khỏi trang thì quên nó đi — hết cớ để sợ.
+    const onRoi = () => { mx = -9e3; my = -9e3; };
+
+    const R_NE = 140;   // bán kính bắt đầu NÉ (lượn tránh mượt)
+    const R_HOANG = 78; // bán kính HOẢNG — mới hiện "!" và run
+    const BINH_TINH = 0.35;
+
+    bay.style.opacity = "0"; // khởi đầu: ẩn
 
     let raf = 0;
     let truoc = performance.now();
     const buoc = (now: number) => {
-      // 30fps là đủ cho một vật trôi chậm — nửa số lần raster lại cái đĩa có filter
+      // 30fps là đủ cho một vật trôi — nửa số lần raster lại cái đĩa có filter
       // (25/08: "web cứ giật giật" — mọi hiệu ứng nền đều phải trả bớt khung hình).
       if (now - truoc < 30) {
         raf = requestAnimationFrame(buoc);
@@ -1041,53 +1112,98 @@ function UfoBay() {
       const dt = Math.min(50, now - truoc) / 1000;
       truoc = now;
 
-      // Sợ chuột: tâm thân tàu (~70,48 trong SVG 140×100) so với con trỏ.
+      // ẨN: không tính physics, chỉ đếm giờ tới lượt ghé sau.
+      if (pha === "an") {
+        nghi -= dt;
+        if (nghi <= 0) vaoMan();
+        raf = requestAnimationFrame(buoc);
+        return;
+      }
+
+      // Tâm thân tàu (~70,48 trong SVG 140×100) so với con trỏ. CHỈ né khi đang "choi".
       const cx = x + 70, cy = y + 48;
-      const dxm = cx - mx, dym = cy - my;
-      const dm = Math.hypot(dxm, dym) || 1;
-      if (dm < 180) {
-        const f = (180 - dm) / 180;
-        vx += (dxm / dm) * 3200 * f * dt;
-        vy += (dym / dm) * 3200 * f * dt;
-        if (so <= 0) bay.classList.add("scared");
-        so = 1;
-      } else if (so > 0) {
-        so -= dt;
-        if (so <= 0) bay.classList.remove("scared");
+      const dxm = cx - mx, dym = cy - my, dm = Math.hypot(dxm, dym) || 1;
+      const ne = pha === "choi" && dm < R_NE;
+
+      // VẬN TỐC MONG MUỐN — nguồn của mọi chuyển động; sau đó LÁI mượt về nó (không đẩy nảy).
+      let wx = 0, wy = 0;
+      if (ne) {
+        // Càng gần càng gấp (cong theo gap²); ra xa dần thì tự chậm lại — không phải cú nảy.
+        const gap = (R_NE - dm) / R_NE; // 0..1
+        const spd = 70 + gap * gap * 360; // 70..430
+        wx = (dxm / dm) * spd;
+        wy = (dym / dm) * spd;
+        if (dm < R_HOANG) {
+          bay.classList.add("scared");
+          baoDong = BINH_TINH;
+        }
+      } else {
+        const dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy) || 1;
+        if (pha === "choi" && d < 24) {
+          if (dau > 0) dau -= dt * 1000;
+          else bocDiem();
+        } else {
+          // "vao"/"ra" đi thẳng đều; "choi" tới gần điểm thì giảm tốc (arrive).
+          const cham = pha === "choi" ? Math.min(1, d / 130) : 1;
+          wx = (dx / d) * toc * cham;
+          wy = (dy / d) * toc * cham;
+        }
       }
 
-      // Lang thang khi không sợ: bay về điểm đậu, tới nơi thì nghỉ rồi bốc điểm mới.
-      const dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy) || 1;
-      if (d < 26) {
-        if (dau > 0) dau -= dt * 1000;
-        else bocDiem();
-      } else if (so <= 0) {
-        vx += (dx / d) * 130 * dt;
-        vy += (dy / d) * 130 * dt;
+      // Bình tĩnh lại: ra ngoài bán kính hoảng thì đếm lùi rồi TẮT "!" — không dính mãi.
+      if (dm >= R_HOANG && baoDong > 0) {
+        baoDong -= dt;
+        if (baoDong <= 0) bay.classList.remove("scared");
       }
 
-      // Ma sát + trần tốc độ — hai chế độ: thong thả 75, bỏ chạy 680.
-      const k = Math.pow(so > 0 ? 0.9 : 0.93, dt * 60);
-      vx *= k;
-      vy *= k;
-      const vmax = so > 0 ? 680 : 75;
-      const v = Math.hypot(vx, vy);
-      if (v > vmax) {
-        vx *= vmax / v;
-        vy *= vmax / v;
+      // Tránh mép MỀM + đếm giờ chơi — CHỈ khi đang "choi" (lúc vào/ra phải qua được mép).
+      if (pha === "choi") {
+        const M = 46;
+        if (x < M) wx += (M - x) * 7;
+        if (x > W - 150 - M) wx -= (x - (W - 150 - M)) * 7;
+        if (y < M) wy += (M - y) * 7;
+        if (y > H - 170 - M) wy -= (y - (H - 170 - M)) * 7;
+        song -= dt;
+        if (song <= 0 && !ne) roiMan(); // hết giờ (và không đang bị dí) thì bay ra
       }
+
+      // LÁI vận tốc về mong muốn với TRẦN GIA TỐC: né thì tăng tốc mạnh, thong dong thì
+      // đổi hướng từ tốn. Đây là "não" bay — mượt, có đà, không giật không nảy.
+      const sx = wx - vx, sy = wy - vy, sm = Math.hypot(sx, sy) || 1;
+      const buocMax = (ne ? 1500 : 520) * dt;
+      const s = Math.min(1, buocMax / sm);
+      vx += sx * s;
+      vy += sy * s;
+
       x += vx * dt;
       y += vy * dt;
 
-      // Nảy ở bốn mép khung.
-      if (x < 8) { x = 8; vx = Math.abs(vx); }
-      if (x > W - 150) { x = W - 150; vx = -Math.abs(vx); }
-      if (y < 8) { y = 8; vy = Math.abs(vy); }
-      if (y > H - 170) { y = H - 170; vy = -Math.abs(vy); }
+      // Chạm mép thì DỪNG (không nảy) — CHỈ khi "choi". Vào/ra để đĩa xuyên mép tự nhiên.
+      if (pha === "choi") {
+        if (x < 6) { x = 6; if (vx < 0) vx = 0; }
+        if (x > W - 150) { x = W - 150; if (vx > 0) vx = 0; }
+        if (y < 6) { y = 6; if (vy < 0) vy = 0; }
+        if (y > H - 170) { y = H - 170; if (vy > 0) vy = 0; }
+      }
+
+      // VÀO: lọt hẳn vào khung thì chuyển sang chơi.
+      if (pha === "vao" && x > 4 && x < W - 148 && y > 4 && y < H - 168) {
+        pha = "choi";
+      }
+      // RA: mờ dần theo khoảng cách tới mép; khuất hẳn thì ẩn và hẹn LÂU.
+      if (pha === "ra") {
+        const bien = Math.min(x + 170, W + 30 - x, y + 150, H + 30 - y);
+        bay.style.opacity = String(Math.max(0, Math.min(1, bien / 130)));
+        if (x < -170 || x > W + 30 || y < -150 || y > H + 30) {
+          bay.style.opacity = "0";
+          nghi = 30 + Math.random() * 50; // vắng mặt 30–80s
+          pha = "an";
+        }
+      }
 
       // Nghiêng theo vận tốc ngang; càng thấp càng gần mắt nên càng to.
-      const nghieng = Math.max(-18, Math.min(18, vx * 0.05));
-      const sau = 0.78 + (y / (H || 1)) * 0.5;
+      const nghieng = Math.max(-16, Math.min(16, vx * 0.05));
+      const sau = 0.78 + (Math.max(0, y) / (H || 1)) * 0.5;
       bay.style.transform =
         "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) rotate(" + nghieng.toFixed(1) + "deg) scale(" + sau.toFixed(3) + ")";
       raf = requestAnimationFrame(buoc);
@@ -1105,11 +1221,13 @@ function UfoBay() {
     };
     document.addEventListener("visibilitychange", onHidden);
     window.addEventListener("mousemove", onMouse, { passive: true });
+    document.documentElement.addEventListener("mouseleave", onRoi);
     window.addEventListener("resize", doKhung);
 
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("mousemove", onMouse);
+      document.documentElement.removeEventListener("mouseleave", onRoi);
       window.removeEventListener("resize", doKhung);
       document.removeEventListener("visibilitychange", onHidden);
     };

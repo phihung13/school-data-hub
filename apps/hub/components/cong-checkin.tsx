@@ -103,6 +103,7 @@ export function useCongCheckin(): CongCheckinCtx {
 
 export function CongCheckinProvider({
   batBuoc,
+  demo = false,
   displayName,
   email,
   roles,
@@ -111,6 +112,12 @@ export function CongCheckinProvider({
 }: {
   /** Máy chủ tính: em là học sinh, nhà có phiếu đồng ý, và CHƯA khai hôm nay. */
   batBuoc: boolean;
+  /**
+   * Chế độ TRÌNH DIỄN (DEMO_CHECKIN_LUON): chọn cảm xúc là đóng ngay + cảm ơn, KHÔNG gọi
+   * máy chủ. Bản trình diễn chưa có phiếu đồng ý thật nên đường lưu qua RLS sẽ chặn mức
+   * tâm trạng và giữ popup kẹt lại — nhánh demo bỏ hẳn bước lưu để luồng mượt cho người xem.
+   */
+  demo?: boolean;
   displayName: string;
   email: string;
   roles: HubRole[];
@@ -198,6 +205,7 @@ export function CongCheckinProvider({
       >
         <CheckinView
           trongPopup
+          demo={demo}
           // Chỉ ở nhánh cổng: khi em TỰ mở để đổi tâm trạng thì trạng thái hôm nay là
           // thứ chưa ai biết, và đoán bừa là nói dối.
           chuaKhaiHomNay={khoaCung}

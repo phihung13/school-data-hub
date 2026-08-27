@@ -23,43 +23,42 @@
 // đóng với tất cả**, không có nhánh nào chạy không khoá. Cùng luật `dev-gate.ts`: một
 // cửa "tạm mở khi chưa cấu hình" là cửa sẽ ở lại mở.
 import type { NhaCungCap } from "./tram";
-
-const URL_MAC_DINH = "https://api.anthropic.com/v1/messages";
-const MODEL_MAC_DINH = "claude-haiku-4-5-20251001";
+import { docCauHinhAi, type CauHinhAi } from "./cau-hinh";
 
 /** Trạm đã cắm khoá chưa — màn hình dùng để nói "chưa bật" thay vì "đang lỗi". */
-export function daCoKhoaAi(): boolean {
-  return (process.env.AI_API_KEY ?? "").trim().length > 0;
+export async function daCoKhoaAi(): Promise<boolean> {
+  return (await docCauHinhAi()).khoa.length > 0;
 }
 
 /**
- * Bộ nối HTTP thuần. Không SDK, không phụ thuộc mới.
+ * Bộ nối HTTP thuần tới OpenRouter (chuẩn OpenAI: Bearer + choices[].message.content).
+ * Không SDK, không phụ thuộc mới — đúng tinh thần file này. Khoá/model lấy từ `cau-hinh`
+ * (env của trường thắng; nếu không có thì lấy key nhập ở UI Cài đặt).
  *
- * Ném khi thiếu khoá thay vì trả một câu trả lời giả: một trạm AI "chạy" mà không gọi
- * ai là thứ nguy hiểm hơn một trạm báo lỗi — người dùng tin câu trả lời, và không ai
- * biết nó từ đâu ra.
+ * Ném khi thiếu khoá thay vì trả câu giả: một trạm AI "chạy" mà không gọi ai còn nguy
+ * hiểm hơn một trạm báo lỗi — người dùng tin câu trả lời mà không biết nó từ đâu ra.
  */
-export function nhaCungCapMacDinh(): NhaCungCap {
-  const khoa = (process.env.AI_API_KEY ?? "").trim();
-  const model = (process.env.AI_MODEL ?? MODEL_MAC_DINH).trim();
-
+export async function nhaCungCapMacDinh(): Promise<NhaCungCap> {
+  const cfg: CauHinhAi = await docCauHinhAi();
   return {
-    ten: "anthropic",
-    model,
+    ten: "openrouter",
+    model: cfg.model,
     async hoi(chuSach: string) {
-      if (!khoa) {
-        throw new Error("AI_API_KEY chưa đặt — trạm AI đóng. Xem apps/hub/server/ai/nha-cung-cap.ts.");
+      if (!cfg.khoa) {
+        throw new Error("AI chưa cấu hình khoá — vào Cài đặt để nhập OpenRouter API key.");
       }
-      const res = await fetch(process.env.AI_API_URL ?? URL_MAC_DINH, {
+      const res = await fetch(cfg.url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-api-key": khoa,
-          "anthropic-version": "2023-06-01",
+          authorization: `Bearer ${cfg.khoa}`,
+          // OpenRouter khuyến nghị hai header này để nhận diện ứng dụng.
+          "HTTP-Referer": "https://os.truongvietanh.com",
+          "X-Title": "Major OS",
         },
         body: JSON.stringify({
-          model,
-          max_tokens: 1024,
+          model: cfg.model,
+          max_tokens: 800,
           messages: [{ role: "user", content: chuSach }],
         }),
       });
@@ -69,13 +68,13 @@ export function nhaCungCapMacDinh(): NhaCungCap {
         throw new Error(`nhà cung cấp trả ${res.status}`);
       }
       const data = (await res.json()) as {
-        content?: Array<{ text?: string }>;
-        usage?: { input_tokens?: number; output_tokens?: number };
+        choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
       return {
-        traLoi: data.content?.map((c) => c.text ?? "").join("") ?? "",
-        tokenVao: data.usage?.input_tokens,
-        tokenRa: data.usage?.output_tokens,
+        traLoi: data.choices?.[0]?.message?.content ?? "",
+        tokenVao: data.usage?.prompt_tokens,
+        tokenRa: data.usage?.completion_tokens,
       };
     },
   };

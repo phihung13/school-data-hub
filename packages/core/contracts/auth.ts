@@ -10,6 +10,14 @@ export const HubRole = z.enum([
   "principal",
   "board",
   "admin",
+  // Nhân viên phòng ban (marketing, HR, tài chính…) — KHÔNG quản lý học sinh, không thấy
+  // dữ liệu trẻ em. Vào /home thấy dashboard mẫu người lớn (khoiNguoiLon = !isStudent).
+  // Thêm 26/08/2026 cho tầm nhìn Super App đa phòng ban; auto-cấp qua DEMO_AUTO_STAFF.
+  "staff",
+  // CEO — người điều hành cao nhất. Buồng lái điều hành toàn hệ thống (sỹ số, dòng tiền,
+  // cộng đồng, đề xuất). Thêm 27/08/2026 cho bản trình diễn; vai "Dương" vào bằng phiên
+  // TỔNG HỢP ở dev-login (không cần bản ghi CSDL). Cũng là khoiNguoiLon = !isStudent.
+  "ceo",
 ]);
 export type HubRole = z.infer<typeof HubRole>;
 

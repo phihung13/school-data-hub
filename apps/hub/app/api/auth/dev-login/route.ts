@@ -98,6 +98,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tài khoản dev không tồn tại" }, { status: 404 });
   }
 
+  // PHIÊN TỔNG HỢP (CEO "Dương") — không có bản ghi CSDL, dựng token thẳng từ tài khoản.
+  // Bỏ qua resolveIdentity (sẽ trả null vì không có core.users). /home chịu được: buồng
+  // lái là số MẪU, lưới app thuần theo vai, query DB đều bọc lỗi/RLS-rỗng cho user lạ.
+  if (account.synthetic) {
+    const roles = account.roles ?? [];
+    const token = await createSessionToken({ sub: account.authUid, roles, displayName: account.displayName });
+    const res = NextResponse.json({ ok: true, displayName: account.displayName, roles });
+    res.cookies.set(SESSION_COOKIE.name, token, sessionCookieOptionsFor(req.url));
+    return res;
+  }
+
   const identity = await resolveIdentity(account.authUid);
   if (!identity) {
     return NextResponse.json({ error: "Không dựng được phiên — đã seed dữ liệu dev chưa?" }, { status: 500 });

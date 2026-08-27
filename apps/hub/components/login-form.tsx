@@ -24,10 +24,9 @@
 // của mỗi thuộc tính) và so với đây. Sửa màn này thì chạy bài đó trước tiên.
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mascot } from "./mascot";
-import { CO_INTRO } from "./intro-cinematic";
 import { MainContent } from "./page-shell";
 import { resolveThenPath } from "@/lib/trpc-client";
 import { av1Muot } from "@/lib/chon-video";
@@ -51,6 +50,10 @@ export function LoginForm({
   then?: string | null;
 }) {
   const router = useRouter();
+  // Intro phát NGAY TẠI trang login (giữ được quyền click → có tiếng). `introSrc` = đích
+  // sẽ nạp sau khi phim xong.
+  const [introSrc, setIntroSrc] = useState<string | null>(null);
+  const introRef = useRef<HTMLVideoElement | null>(null);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -128,18 +131,11 @@ export function LoginForm({
     // gấp đôi băng thông cho một file không bao giờ phát. Lùi 1,2s để nhường những giây
     // đầu cho video nền của chính màn này (poster đã che nên không ai thấy khoảng lùi).
     const t = window.setTimeout(() => {
-      // ĐỔI 25/08: chọn theo av1Muot() (decodingInfo — "mở có MƯỢT không") thay vì
-      // canPlayType ("có mở được không"): máy không giải mã cứng AV1 đã đo được
-      // smooth:false, CPU gánh phần mềm là cả app ì theo. Cùng phép chọn với thẻ
-      // <video> bên dưới — tải trước bản nào thì phát đúng bản đó.
-      void av1Muot()
-        .then((muot) => {
-          const file = muot ? "/trinh-dien/uploads/intro-av1.mp4" : "/trinh-dien/uploads/intro-software.mp4";
-          // Hỏng thì thôi — đây là tối ưu, không phải điều kiện: IntroCinematic có trần
-          // chờ 2,5s và tự bỏ intro khi mạng không kịp.
-          return fetch(file, { cache: "force-cache" });
-        })
-        .catch(() => {});
+      // SỬA 27/08: intro giờ CHỈ H.264 (không còn AV1) — tải THẲNG, không bọc qua
+      // `av1Muot()`. Bọc cũ là di sản thời AV1 và có thể TREO (decodingInfo không settle),
+      // khiến intro KHÔNG bao giờ được cache → lúc bấm phải tải 11MB nên vượt trần chờ và
+      // bị bỏ qua ("intro không ăn thua"). Tải thẳng thì cache ấm, bấm là phát ngay.
+      void fetch("/trinh-dien/uploads/intro-software.mp4?v=7", { cache: "force-cache" }).catch(() => {});
     }, 1200);
     return () => window.clearTimeout(t);
   }, []);
@@ -174,6 +170,56 @@ export function LoginForm({
    */
   const target = resolveThenPath(then);
 
+  // Khi `introSrc` bật (login xong): phát intro CÓ TIẾNG. Vẫn đang ở trang /login mà người
+  // dùng vừa bấm → tài liệu có user-activation nên trình duyệt cho phát kèm tiếng. Bị chặn
+  // thì phát TẮT TIẾNG; cache lạnh/đứt mạng quá 3s thì đi thẳng, không treo màn đen.
+  useEffect(() => {
+    if (!introSrc) return;
+    const v = introRef.current;
+    // Đặt cờ để /home mở màn TỪ TRẮNG (reveal-trang.tsx), rồi mới nạp trang.
+    const di = () => {
+      try {
+        sessionStorage.setItem("hub:reveal", "1");
+      } catch {
+        // riêng tư chặn sessionStorage: bỏ hiệu ứng mở màn, vẫn vào app.
+      }
+      window.location.assign(introSrc);
+    };
+    if (!v) {
+      di();
+      return;
+    }
+    // 9s: intro giờ 1440p ~17MB (chủ đầu tư 27/08: "4K giật lag lắm" → hạ xuống). Cache
+    // ẤM (preload màn login) thì phát tức thì; trần chỉ cắn ở cache lạnh (vào thẳng URL).
+    const tran = window.setTimeout(di, 9000);
+    const daChay = () => window.clearTimeout(tran);
+    // BỎ lớp phủ TRẮNG cuối intro (27/08: "khúc cuối bỏ phần trắng luôn"). Màn trắng giờ
+    // sống ở /home (reveal-trang.tsx). Ở đây phim hết là đi thẳng, cờ hub:reveal do `di()` đặt.
+    v.addEventListener("playing", daChay, { once: true });
+    // CHỐT CHỐNG-KẸT (27/08 — chủ đầu tư: "chỉ là màn hình đen"). Video đã `autoPlay muted`
+    // (autoplay CÂM luôn được phép → luôn chạy). Khi ta THỬ mở tiếng bên dưới mà trình duyệt
+    // chặn, nó sẽ PAUSE video → kẹt ở khung đen. Nghe 'pause': nếu phim CHƯA hết thì lập tức
+    // câm lại và phát tiếp. Nhờ vậy tệ nhất là mất tiếng, KHÔNG bao giờ đứng hình.
+    const chongKet = () => {
+      if (!v.ended) {
+        v.muted = true;
+        v.play().catch(() => {});
+      }
+    };
+    v.addEventListener("pause", chongKet);
+    // Thử mở tiếng (cử chỉ click có thể còn hiệu lực). Chặn thì chongKet lo phần chạy tiếp.
+    v.muted = false;
+    v.volume = 0.85;
+    v.play().catch(() => {
+      v.muted = true;
+      v.play().catch(() => {});
+    });
+    return () => {
+      window.clearTimeout(tran);
+      v.removeEventListener("pause", chongKet);
+    };
+  }, [introSrc]);
+
   /**
    * Nạp lại cả trang thay vì `router.push`: (a) cookie phiên vừa được Set-Cookie ở response
    * trên, hard navigation là cách chắc chắn nhất để mọi Server Component đọc được nó thay vì
@@ -181,16 +227,14 @@ export function LoginForm({
    * `/oidc/interaction/<uid>` — đường do server.mjs phục vụ, router của Next không biết tới.
    */
   function goAfterLogin() {
-    // Đặt cờ intro NGAY TRƯỚC khi nạp trang. `sessionStorage` sống sót qua hard navigation
-    // (cùng tab, cùng origin) và chết theo tab — xem khối lý lẽ ở `intro-cinematic.tsx`.
-    //
-    // CHỈ khi đích là trang chủ. `?then=` hợp lệ có thể là `/oidc/interaction/<uid>` —
-    // người dùng đang giữa một luồng đăng nhập của app khác, chen một đoạn phim toàn màn
-    // vào đó là chặn đúng việc họ đang làm.
-    try {
-      if (target === "/home") sessionStorage.setItem(CO_INTRO, "1");
-    } catch {
-      // Chế độ riêng tư chặn sessionStorage: bỏ intro, không chặn đăng nhập.
+    // ĐÍCH LÀ TRANG CHỦ → phát intro NGAY TẠI ĐÂY (trang /login mà người dùng vừa bấm còn
+    // giữ "user activation"), rồi mới nạp /home khi phim xong. Đây là cách DUY NHẤT bật
+    // được TIẾNG cho intro: nếu nạp /home trước rồi mới phát, trang mới không có cú bấm
+    // nào nên trình duyệt chặn autoplay-có-tiếng. `?then=` khác /home (vd /oidc/interaction)
+    // thì đi thẳng, không chen phim vào giữa luồng đăng nhập của app khác.
+    if (target === "/home") {
+      setIntroSrc(target);
+      return;
     }
     window.location.assign(target);
   }
@@ -288,6 +332,51 @@ export function LoginForm({
     // flexbox thay vì absolute để khi các bảng phụ (mã mời, mở khoá) bung ra làm panel
     // cao hơn màn, trang còn cuộn được.
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#04102A] p-4 md:h-screen md:justify-end md:p-0 md:pr-[104px]">
+      {introSrc && (
+        <div className="fixed inset-0 z-[90] bg-[#04102A]">
+          <video
+            ref={introRef}
+            className="h-full w-full object-cover"
+            playsInline
+            autoPlay
+            muted
+            preload="auto"
+            // POSTER = khung sáng đầu phim → KHÔNG BAO GIỜ đen trong lúc video đang đệm
+            // (chủ đầu tư 27/08: "chỉ là màn hình đen"). Hiện ngay, video chạy đè lên sau.
+            poster="/trinh-dien/uploads/intro-poster.webp?v=7"
+            onEnded={() => {
+              try {
+                sessionStorage.setItem("hub:reveal", "1");
+              } catch {
+                /* riêng tư: bỏ mở màn, vẫn vào app */
+              }
+              window.location.assign(introSrc);
+            }}
+            onError={() => window.location.assign(introSrc)}
+          >
+            <source src="/trinh-dien/uploads/intro-software.mp4?v=7" type="video/mp4" />
+          </video>
+          {/* Lớp phủ TRẮNG cuối intro ĐÃ BỎ (27/08) — màn trắng chuyển sang /home
+              (reveal-trang.tsx: bóc trắng → thẻ nổi lên dần). */}
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                sessionStorage.setItem("hub:reveal", "1");
+              } catch {
+                /* bỏ mở màn */
+              }
+              window.location.assign(introSrc);
+            }}
+            className="absolute bottom-[calc(13.5%-20px)] right-[calc(6.5%-5px)] z-[2] flex min-h-[44px] items-center gap-2 rounded-full border border-white/25 bg-black/60 px-6 text-[13.5px] font-extrabold text-white backdrop-blur-sm"
+          >
+            Vào trang chủ
+            <span aria-hidden className="msr text-[18px]">
+              arrow_forward
+            </span>
+          </button>
+        </div>
+      )}
       {/* NỀN VIDEO — lệnh chủ đầu tư 24/08/2026: "cho video bằng chiều cao với web đi,
           chiều rộng có thiếu bên phải cũng được, xong rồi cho màu đen đè lên".
 
@@ -303,17 +392,16 @@ export function LoginForm({
           `aria-hidden` + `pointer-events-none`: trang trí thuần. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#04102A]">
         <video
-          key={epH264 ? "h264" : "tu-chon"}
+          key="su-tu"
           className="h-full w-auto max-w-none object-cover"
-          poster="/trinh-dien/uploads/su-tu-poster.webp"
+          poster="/trinh-dien/uploads/su-tu-poster.webp?v=3"
           preload="auto"
           loop
           muted
           playsInline
           autoPlay
         >
-          {!epH264 && <source src="/trinh-dien/uploads/su-tu-av1.mp4" type='video/mp4; codecs="av01.0.08M.08"' />}
-          <source src="/trinh-dien/uploads/su-tu-chay.mp4" type="video/mp4" />
+          <source src="/trinh-dien/uploads/su-tu-chay.mp4?v=3" type="video/mp4" />
         </video>
         {/* BÓNG LAN KHÔNG ĐỀU — chủ đầu tư 24/08: "lan ra không đều mới đẹp, tôi đã cố
             tình làm nó xéo xéo hoặc lệch lệch". Lấy lại chất của .cin-shade gốc (lớp xéo
@@ -321,7 +409,7 @@ export function LoginForm({
             video: dải đứng hẹp đen đặc 0–14% từ mép phải là lưới an toàn (mép video nằm
             ~88–95% tuỳ tỉ lệ màn), còn đường ranh nhìn thấy là lớp xéo + vầng cong phủ
             lên trên — lan lệch, không thẳng hàng. */}
-        <div className="absolute inset-0 bg-[radial-gradient(900px_700px_at_103%_104%,#04102A,rgba(4,13,32,.75)_48%,transparent_76%),linear-gradient(270deg,#04102A_0%,#04102A_14%,rgba(4,16,42,.6)_26%,rgba(4,16,42,0)_42%),linear-gradient(292deg,#04102A_0%,rgba(4,13,32,.85)_26%,rgba(4,13,32,.35)_50%,rgba(4,13,32,0)_68%),linear-gradient(180deg,rgba(4,13,32,.22),rgba(4,13,32,.38))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(900px_700px_at_103%_104%,#04102A,rgba(4,13,32,.75)_48%,transparent_76%),linear-gradient(270deg,#04102A_0%,#04102A_14%,rgba(4,16,42,.6)_26%,rgba(4,16,42,0)_42%),linear-gradient(292deg,#04102A_0%,rgba(4,13,32,.85)_26%,rgba(4,13,32,.35)_50%,rgba(4,13,32,0)_68%),linear-gradient(180deg,rgba(4,13,32,.08),rgba(4,13,32,.20))]" />
         {/* NỀN SAO — chủ đầu tư 24/08: "bôi đen nhiều mà nó không chứa gì thì cũng ko
             tốt", rồi chỉnh tiếp: "chỉ dồn bên phần có loang đen thôi, không được tràn qua
             video". MẶT NẠ trùng hình với ba lớp loang đen ở trên (dải đứng 270° + lớp xéo
@@ -400,9 +488,14 @@ export function LoginForm({
                 (56px, bo 10px, 100%), Zalo DƯỚI (52px, bo 10px, 100%). Bản nháp
                 row-reverse đã bị thiết kế bỏ. */}
             <div className="mt-[12px] flex flex-col items-stretch gap-[10px]">
-              {gate === "open" && (
+              {(ssoGoogleUrl || gate === "open") && (
                 // `.sso` — ba lớp bóng trong MỘT box-shadow (bóng sâu · viền vàng 1,5px ·
                 // quầng vàng 42px): viền vẽ bằng shadow để không cộng 3px vào kích thước.
+                //
+                // HIỆN KHI: SSO Google thật đã cấu hình (ssoGoogleUrl) — luôn hiện, KHÔNG phụ
+                // thuộc cửa dev; HOẶC cửa dev đang mở (nút giữ hành vi dev-login cũ). Trước
+                // 26/08/2026 nút chỉ bọc trong `gate === "open"`, nên trên máy thật (cửa dev
+                // đã xoá → gate "absent") nút Google biến mất dù SSO đã sống — chỉ còn nút phụ huynh.
                 <button
                   type="button"
                   // SSO THẬT khi đã cấu hình: rời hẳn trang, đi Google qua Supabase.
@@ -420,7 +513,7 @@ export function LoginForm({
                   </span>
                 </button>
               )}
-              {gate === "unknown" && (
+              {!ssoGoogleUrl && gate === "unknown" && (
                 <div aria-hidden className="h-14 w-full animate-pulse rounded-[10px] bg-white/15" />
               )}
 

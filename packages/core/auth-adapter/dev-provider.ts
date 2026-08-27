@@ -17,6 +17,16 @@ export interface DevAccount {
   email: string;
   displayName: string;
   audience: "staff" | "student"; // tab "Học sinh & Thầy cô"
+  /**
+   * Tài khoản TỔNG HỢP cho bản trình diễn (27/08/2026): KHÔNG có bản ghi trong CSDL.
+   * dev-login dựng phiên thẳng từ `roles`/`displayName` dưới đây, bỏ qua resolveIdentity.
+   * Dùng cho vai chưa seed (CEO "Dương") mà không phải ghi vào CSDL sản xuất. /home vẫn
+   * chạy vì buồng lái dùng số MẪU, lưới app là hàm thuần theo vai, và các query DB đều
+   * đã bọc lỗi/RLS trả rỗng cho user lạ.
+   */
+  synthetic?: boolean;
+  /** Vai gán cho phiên tổng hợp (chỉ dùng khi `synthetic`). */
+  roles?: HubRole[];
 }
 
 /**
@@ -48,6 +58,16 @@ export const DEV_ACCOUNTS: DevAccount[] = [
   { authUid: "90000000-0000-0000-0000-00000000000a", email: "gvbomon2@va.edu.vn", displayName: "Cô Diệp (bộ môn Ngữ văn)", audience: "staff" },
   { authUid: "90000000-0000-0000-0000-000000000003", email: "tamly@va.edu.vn", displayName: "Cô Mai (tâm lý cụm)", audience: "staff" },
   { authUid: "90000000-0000-0000-0000-000000000007", email: "admin.hung@va.edu.vn", displayName: "Hùng (Quản trị)", audience: "staff" },
+  // CEO "Dương" — phiên TỔNG HỢP (không seed CSDL), thêm 27/08/2026 cho bản trình diễn.
+  // authUid dc… nằm ngoài dải 9000… của seed để không đè lên ai. Xem `synthetic` ở trên.
+  {
+    authUid: "dc000000-0000-0000-0000-0000000000ce",
+    email: "duong.ceo@truongvietanh.com",
+    displayName: "Dương (CEO)",
+    audience: "staff",
+    synthetic: true,
+    roles: ["ceo"],
+  },
   { authUid: "90000000-0000-0000-0000-000000000005", email: "minh@va.edu.vn", displayName: "Học sinh Minh (6A1)", audience: "student" },
   // Thêm 02/08/2026 — chủ đầu tư: "quá nhiều thầy cô nhưng lại chỉ 1 học sinh?".
   //

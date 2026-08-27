@@ -77,6 +77,8 @@ export const MiniAppRole = z.enum([
   "principal",
   "board",
   "admin",
+  "staff", // nhân viên phòng ban — được gán mini-app phòng ban (Super App, 26/08/2026)
+  "ceo", // người điều hành cao nhất — buồng lái điều hành toàn hệ thống (27/08/2026)
 ]);
 
 /** Một dòng trong sổ, như màn quản trị nhìn thấy. */
